@@ -27,25 +27,27 @@ public class BackendManager : MonoBehaviour
 
     void TestLogin()
     {
-        var bro = Backend.BMember.CustomLogin("testuser", "1234");
+        var bro = Backend.BMember.CustomLogin("testuser2", "3456");
 
         if (bro.IsSuccess())
         {
-            Debug.Log("테스트 로그인 성공: " + bro.GetInDate());
-            UnityEngine.SceneManagement.SceneManager.LoadScene("GameScene");
+            Debug.Log("테스트 로그인 성공");
+            
+            EmployeeManager.Instance.LoadAllData(() =>
+            {
+                //UnityEngine.SceneManagement.SceneManager.LoadScene("GameScene");
+            });
         }
         else
         {
-            // 없는 계정이면 가입
-            var signUp = Backend.BMember.CustomSignUp("testuser", "1234");
+            var signUp = Backend.BMember.CustomSignUp("testuser2", "3456");
             if (signUp.IsSuccess())
             {
-                Debug.Log("테스트 계정 가입 성공");
-                UnityEngine.SceneManagement.SceneManager.LoadScene("GameScene");
-            }
-            else
-            {
-                Debug.LogError("테스트 로그인 실패: " + bro);
+                // 신규 유저도 LoadAllData (기본 직원 생성 후 이동)
+                EmployeeManager.Instance.LoadAllData(() =>
+                {
+                    UnityEngine.SceneManagement.SceneManager.LoadScene("GameScene");
+                });
             }
         }
     }
