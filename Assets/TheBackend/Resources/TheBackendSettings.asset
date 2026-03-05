@@ -12,10 +12,10 @@ MonoBehaviour:
   m_Script: {fileID: 660911240, guid: f624596d5fe1bd5459a5da424a8abc1b, type: 3}
   m_Name: TheBackendSettings
   m_EditorClassIdentifier: TheBackendSettings.dll::TheBackendSettings
-  clientAppID: 32e346c0-16c5-11f1-9440-0dc7fa81bf2911041
-  signatureKey: 32e346c1-16c5-11f1-9440-0dc7fa81bf2911041
+  clientAppID: 7fde73e0-1888-11f1-b746-d12312fda90d11058
+  signatureKey: 7fde73e1-1888-11f1-b746-d12312fda90d11058
   functionAuthKey: 
-  packageName: com.DefaultCompany.2D-URP
+  packageName: com.es.get
   sendLogReport: 1
   timeOutSec: 100
   Version: 5.18.3
