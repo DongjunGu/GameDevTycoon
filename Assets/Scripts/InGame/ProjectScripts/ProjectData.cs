@@ -11,9 +11,9 @@ public class ProjectData
 
     public string ScaleToString() => scale switch
     {
-        ProjectScale.Small  => "Small",
-        ProjectScale.Medium => "Medium",
-        ProjectScale.Large  => "Large",
+        ProjectScale.Small  => "소규모(1인개발)",
+        ProjectScale.Medium => "중형(팀)",
+        ProjectScale.Large  => "대규모(AAA)",
         _ => ""
     };
 

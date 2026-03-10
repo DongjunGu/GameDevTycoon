@@ -158,8 +158,9 @@ public class ProjectSetupUI : MonoBehaviour
     {
         Debug.Log($"개발 시작! {_projectData.ScaleToString()} / {_projectData.GenreToString()} / {_projectData.PlatformToString()}");
         gameObject.SetActive(false);
+        DevelopmentManager.Instance.StartDevelopment();
         // 나중에 ProjectManager에 데이터 넘기는 포인트
-        HiringUI.Instance.OpenHiring();
+        
         // ProjectManager.Instance.StartProject(_projectData);
     }
 }
