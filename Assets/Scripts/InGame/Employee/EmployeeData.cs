@@ -1,7 +1,7 @@
 using System;
 using LitJson;
 
-public enum EmployeeRole  { Planner, Programmer, Artist }
+public enum EmployeeRole { Planner, Programmer, Artist }
 public enum EmployeeGrade { F, D, C, B, A, S }
 public enum EmployeeState { Idle, Working }
 
@@ -15,108 +15,116 @@ public class EmployeeData
     public EmployeeRole role;
     public EmployeeGrade grade;
 
-    // ── 확정 수치 (인게임) ────────────────────
+    // ── 확정 수치 ─────────────────────────────
     public int developSkill;
     public int planningSkill;
     public int artSkill;
+    public int perfectionSkill;
 
-    // ── 범위 수치 (채용 UI 표시용) ────────────
-    public int developMin;  public int developMax;
+    // ── 범위 수치 ─────────────────────────────
+    public int developMin; public int developMax;
     public int planningMin; public int planningMax;
-    public int artMin;      public int artMax;
+    public int artMin; public int artMax;
+    public int perfectionMin; public int perfectionMax;
 
     public EmployeeState state;
     public string assignedProjectId;
 
-    // ── 생성자 (범위 포함) ────────────────────
     public EmployeeData(string id, string name, EmployeeRole role, EmployeeGrade grade,
         int developMin, int developMax,
         int planningMin, int planningMax,
-        int artMin, int artMax)
+        int artMin, int artMax,
+        int perfectionMin, int perfectionMax)
     {
-        this.id           = id;
+        this.id = id;
         this.employeeName = name;
-        this.role         = role;
-        this.grade        = grade;
+        this.role = role;
+        this.grade = grade;
 
-        this.developMin  = developMin;  this.developMax  = developMax;
+        this.developMin = developMin; this.developMax = developMax;
         this.planningMin = planningMin; this.planningMax = planningMax;
-        this.artMin      = artMin;      this.artMax      = artMax;
+        this.artMin = artMin; this.artMax = artMax;
+        this.perfectionMin = perfectionMin; this.perfectionMax = perfectionMax;
 
-        // 확정 수치는 범위 내 랜덤
-        this.developSkill  = UnityEngine.Random.Range(developMin,  developMax  + 1);
+        this.developSkill = UnityEngine.Random.Range(developMin, developMax + 1);
         this.planningSkill = UnityEngine.Random.Range(planningMin, planningMax + 1);
-        this.artSkill      = UnityEngine.Random.Range(artMin,      artMax      + 1);
+        this.artSkill = UnityEngine.Random.Range(artMin, artMax + 1);
+        this.perfectionSkill = UnityEngine.Random.Range(perfectionMin, perfectionMax + 1);
 
-        this.state              = EmployeeState.Idle;
-        this.assignedProjectId  = "";
+        this.state = EmployeeState.Idle;
+        this.assignedProjectId = "";
     }
 
-    // ── 서버 → EmployeeData 변환 ──────────────
-public static EmployeeData FromServerRow(JsonData row)
-{
-    var data = new EmployeeData(
-        id:          row["id"].ToString(),
-        name:        row["employeeName"].ToString(),
-        role:        (EmployeeRole) int.Parse(row["role"].ToString()),
-        grade:       (EmployeeGrade)int.Parse(row["grade"].ToString()),
-        developMin:  int.Parse(row["developMin"].ToString()),
-        developMax:  int.Parse(row["developMax"].ToString()),
-        planningMin: int.Parse(row["planningMin"].ToString()),
-        planningMax: int.Parse(row["planningMax"].ToString()),
-        artMin:      int.Parse(row["artMin"].ToString()),
-        artMax:      int.Parse(row["artMax"].ToString())
-    );
+    public static EmployeeData FromServerRow(JsonData row)
+    {
+        var data = new EmployeeData(
+            id: row["id"].ToString(),
+            name: row["employeeName"].ToString(),
+            role: (EmployeeRole)int.Parse(row["role"].ToString()),
+            grade: (EmployeeGrade)int.Parse(row["grade"].ToString()),
+            developMin: SafeInt(row, "developMin", 0),
+            developMax: SafeInt(row, "developMax", 0),
+            planningMin: SafeInt(row, "planningMin", 0),
+            planningMax: SafeInt(row, "planningMax", 0),
+            artMin: SafeInt(row, "artMin", 0),
+            artMax: SafeInt(row, "artMax", 0),
+            perfectionMin: SafeInt(row, "perfectionMin", 0),
+            perfectionMax: SafeInt(row, "perfectionMax", 0)
+        );
 
-    // 생성자에서 랜덤으로 만든 수치를 서버 저장값으로 덮어쓰기
-    data.developSkill  = int.Parse(row["developSkill"].ToString());
-    data.planningSkill = int.Parse(row["planningSkill"].ToString());
-    data.artSkill      = int.Parse(row["artSkill"].ToString());
+        data.developSkill = SafeInt(row, "developSkill", 0);
+        data.planningSkill = SafeInt(row, "planningSkill", 0);
+        data.artSkill = SafeInt(row, "artSkill", 0);
+        data.perfectionSkill = SafeInt(row, "perfectionSkill", 0);
 
-    data.rowInDate         = row["inDate"].ToString();
-    data.state             = (EmployeeState)int.Parse(row["state"].ToString());
-    data.assignedProjectId = row["assignedProjectId"].ToString();
+        data.rowInDate = row["inDate"].ToString();
+        data.state = (EmployeeState)SafeInt(row, "state", 0);
+        data.assignedProjectId = SafeString(row, "assignedProjectId", "");
 
-    return data;
-}
+        return data;
+    }
 
-    // ── 서버 저장용 Param ─────────────────────
     public BackEnd.Param ToParam()
     {
         var param = new BackEnd.Param();
-        param.Add("id",                id);
-        param.Add("employeeName",      employeeName);
-        param.Add("role",              (int)role);
-        param.Add("grade",             (int)grade);
-        param.Add("developSkill",      developSkill);
-        param.Add("planningSkill",     planningSkill);
-        param.Add("artSkill",          artSkill);
-        param.Add("developMin",        developMin);
-        param.Add("developMax",        developMax);
-        param.Add("planningMin",       planningMin);
-        param.Add("planningMax",       planningMax);
-        param.Add("artMin",            artMin);
-        param.Add("artMax",            artMax);
-        param.Add("state",             (int)state);
+        param.Add("id", id);
+        param.Add("employeeName", employeeName);
+        param.Add("role", (int)role);
+        param.Add("grade", (int)grade);
+        param.Add("developSkill", developSkill);
+        param.Add("planningSkill", planningSkill);
+        param.Add("artSkill", artSkill);
+        param.Add("perfectionSkill", perfectionSkill);
+        param.Add("developMin", developMin);
+        param.Add("developMax", developMax);
+        param.Add("planningMin", planningMin);
+        param.Add("planningMax", planningMax);
+        param.Add("artMin", artMin);
+        param.Add("artMax", artMax);
+        param.Add("perfectionMin", perfectionMin);
+        param.Add("perfectionMax", perfectionMax);
+        param.Add("state", (int)state);
         param.Add("assignedProjectId", assignedProjectId);
         return param;
     }
 
-    // ── 범위 표시용 ───────────────────────────
-    public string DevelopRangeText()  => $"개발: {developMin}~{developMax}";
+    // ── 범위 표시 ─────────────────────────────
+    public string DevelopRangeText() => $"개발: {developMin}~{developMax}";
     public string PlanningRangeText() => $"기획: {planningMin}~{planningMax}";
-    public string ArtRangeText()      => $"아트: {artMin}~{artMax}";
+    public string ArtRangeText() => $"아트: {artMin}~{artMax}";
+    public string PerfectionRangeText() => $"완성도: {perfectionMin}~{perfectionMax}";
 
-    // ── 확정 수치 표시용 ──────────────────────
-    public string DevelopText()  => $"개발: {developSkill}";
+    // ── 확정 수치 표시 ────────────────────────
+    public string DevelopText() => $"개발: {developSkill}";
     public string PlanningText() => $"기획: {planningSkill}";
-    public string ArtText()      => $"아트: {artSkill}";
+    public string ArtText() => $"아트: {artSkill}";
+    public string PerfectionText() => $"완성도: {perfectionSkill}";
 
     public string RoleToString() => role switch
     {
-        EmployeeRole.Planner    => "기획자",
+        EmployeeRole.Planner => "기획자",
         EmployeeRole.Programmer => "프로그래머",
-        EmployeeRole.Artist     => "아티스트",
+        EmployeeRole.Artist => "아티스트",
         _ => ""
     };
 
@@ -133,8 +141,19 @@ public static EmployeeData FromServerRow(JsonData row)
 
     public string StateToString() => state switch
     {
-        EmployeeState.Idle    => "대기중",
+        EmployeeState.Idle => "대기중",
         EmployeeState.Working => "근무중",
         _ => ""
     };
+    static int SafeInt(JsonData row, string key, int defaultValue)
+    {
+        try { return int.Parse(row[key].ToString()); }
+        catch { return defaultValue; }
+    }
+
+    static string SafeString(JsonData row, string key, string defaultValue)
+    {
+        try { return row[key].ToString(); }
+        catch { return defaultValue; }
+    }
 }

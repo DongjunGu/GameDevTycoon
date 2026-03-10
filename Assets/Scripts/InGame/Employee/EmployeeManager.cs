@@ -10,26 +10,27 @@ public class EmployeeManager : MonoBehaviour
     public List<EmployeeData> poolEmployees = new();   // 전체 직원 풀
     private List<EmployeeData> _defaultEmployees;
     // 기본 직원 데이터 (최초 1회 서버에 저장)
-void Awake()
-{
-    if (Instance != null) { Destroy(gameObject); return; }
-    Instance = this;
-    DontDestroyOnLoad(gameObject);
-
-    _defaultEmployees = new List<EmployeeData>
+    void Awake()
     {
-        new EmployeeData("emp_01", "김기획", EmployeeRole.Planner,    EmployeeGrade.A, 18,25, 80,90, 25,35),
-        new EmployeeData("emp_02", "이코딩", EmployeeRole.Programmer, EmployeeGrade.S, 88,95, 20,30, 10,18),
-        new EmployeeData("emp_03", "박아트", EmployeeRole.Artist,     EmployeeGrade.B,  8,15, 15,25, 82,92),
-        new EmployeeData("emp_04", "최사운", EmployeeRole.Programmer, EmployeeGrade.C, 25,35, 35,45, 48,62),
-        new EmployeeData("emp_05", "정기획", EmployeeRole.Planner,    EmployeeGrade.B, 12,20, 70,80, 20,30),
-        new EmployeeData("emp_06", "한개발", EmployeeRole.Programmer, EmployeeGrade.A, 80,90, 30,40, 15,25),
-        new EmployeeData("emp_07", "오아트", EmployeeRole.Artist,     EmployeeGrade.S,  8,15, 14,22, 90,99),
-        new EmployeeData("emp_08", "윤기획", EmployeeRole.Planner,    EmployeeGrade.C,  8,14, 60,70, 15,25),
-        new EmployeeData("emp_09", "장개발", EmployeeRole.Programmer, EmployeeGrade.B, 73,82, 25,35, 14,22),
-        new EmployeeData("emp_10", "강아트", EmployeeRole.Artist,     EmployeeGrade.A, 12,20, 18,26, 78,88),
+        if (Instance != null) { Destroy(gameObject); return; }
+        Instance = this;
+        DontDestroyOnLoad(gameObject);
+
+        _defaultEmployees = new List<EmployeeData>
+    {
+        //                                                                          dev      plan     art      perfection
+        new EmployeeData("emp_01", "김기획", EmployeeRole.Planner,    EmployeeGrade.A, 18,25, 80,90, 25,35, 15,25),
+        new EmployeeData("emp_02", "이코딩", EmployeeRole.Programmer, EmployeeGrade.S, 88,95, 20,30, 10,18, 20,30),
+        new EmployeeData("emp_03", "박아트", EmployeeRole.Artist,     EmployeeGrade.B,  8,15, 15,25, 82,92, 11,22),
+        new EmployeeData("emp_04", "최사운", EmployeeRole.Programmer, EmployeeGrade.C, 25,35, 35,45, 48,62, 10,20),
+        new EmployeeData("emp_05", "정기획", EmployeeRole.Planner,    EmployeeGrade.B, 12,20, 70,80, 20,30, 11,22),
+        new EmployeeData("emp_06", "한개발", EmployeeRole.Programmer, EmployeeGrade.A, 80,90, 30,40, 15,25, 15,25),
+        new EmployeeData("emp_07", "오아트", EmployeeRole.Artist,     EmployeeGrade.S,  8,15, 14,22, 90,99, 20,30),
+        new EmployeeData("emp_08", "윤기획", EmployeeRole.Planner,    EmployeeGrade.C,  8,14, 60,70, 15,25, 10,20),
+        new EmployeeData("emp_09", "장개발", EmployeeRole.Programmer, EmployeeGrade.B, 73,82, 25,35, 14,22, 11,22),
+        new EmployeeData("emp_10", "강아트", EmployeeRole.Artist,     EmployeeGrade.A, 12,20, 18,26, 78,88, 15,25),
     };
-}
+    }
 
     // ── 초기 로드 (LoadingScene에서 호출) ─────
     public void LoadAllData(System.Action onComplete = null)
@@ -62,7 +63,20 @@ void Awake()
 
             poolEmployees.Clear();
             foreach (var row in rows)
-                poolEmployees.Add(EmployeeData.FromServerRow((LitJson.JsonData)row));
+            {
+                var employee = EmployeeData.FromServerRow((LitJson.JsonData)row);
+                poolEmployees.Add(employee);
+
+                // 새 컬럼이 없던 기존 유저 → 서버에 업데이트
+                if (employee.perfectionSkill == 0 && employee.perfectionMax == 0)
+                {
+                    // 기본값 채워주기
+                    employee.perfectionMin = 1;
+                    employee.perfectionMax = 2;
+                    employee.perfectionSkill = UnityEngine.Random.Range(1, 2);
+                    UpdateEmployeePool(employee);
+                }
+            }
 
             Debug.Log($"EmployeePool {poolEmployees.Count}명 로드 완료");
             onComplete?.Invoke();
@@ -137,13 +151,16 @@ void Awake()
             planningMin: poolEmployee.planningMin,
             planningMax: poolEmployee.planningMax,
             artMin: poolEmployee.artMin,
-            artMax: poolEmployee.artMax
+            artMax: poolEmployee.artMax,
+            perfectionMin: poolEmployee.perfectionMin,
+            perfectionMax: poolEmployee.perfectionMax
         );
 
         // 확정 수치는 poolEmployee 값 그대로 복사 (랜덤 재생성 방지)
         inGameEmployee.developSkill = poolEmployee.developSkill;
         inGameEmployee.planningSkill = poolEmployee.planningSkill;
         inGameEmployee.artSkill = poolEmployee.artSkill;
+        inGameEmployee.perfectionSkill = poolEmployee.perfectionSkill;
         inGameEmployee.assignedProjectId = "";
 
         ownedEmployees.Add(inGameEmployee);

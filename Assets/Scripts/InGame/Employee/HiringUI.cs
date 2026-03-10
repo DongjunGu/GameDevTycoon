@@ -22,7 +22,8 @@ public class HiringUI : MonoBehaviour
     public TextMeshProUGUI confirmDevelopText;
     public TextMeshProUGUI confirmPlanningText;
     public TextMeshProUGUI confirmArtText;
-    public TextMeshProUGUI confirmStateText;
+    public TextMeshProUGUI confirmPerfectionText;
+    //public TextMeshProUGUI confirmStateText;
 
     [Header("Settings")]
     public int candidateCount = 4;
@@ -71,13 +72,14 @@ public void OnSelectEmployee(EmployeeData employee)
 {
     _selectedEmployee = employee;
 
-    confirmNameText.text     = employee.employeeName;
-    confirmRoleText.text     = employee.RoleToString();
-    confirmGradeText.text    = employee.GradeToString();
-    confirmDevelopText.text  = employee.DevelopRangeText();
-    confirmPlanningText.text = employee.PlanningRangeText(); 
-    confirmArtText.text      = employee.ArtRangeText();      
-    //confirmStateText.text    = employee.StateToString();
+    confirmNameText.text       = employee.employeeName;
+    confirmRoleText.text       = employee.RoleToString();
+    confirmGradeText.text      = employee.GradeToString();
+    confirmDevelopText.text    = employee.DevelopRangeText();
+    confirmPlanningText.text   = employee.PlanningRangeText();
+    confirmArtText.text        = employee.ArtRangeText();
+    confirmPerfectionText.text = employee.PerfectionRangeText();
+    //confirmStateText.text      = employee.StateToString();
 
     hiringPanel.SetActive(false);
     confirmPanel.SetActive(true);

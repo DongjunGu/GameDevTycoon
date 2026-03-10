@@ -21,6 +21,7 @@ public class EmployeeListUI : MonoBehaviour
     public TextMeshProUGUI confirmDevelopText;
     public TextMeshProUGUI confirmPlanningText;
     public TextMeshProUGUI confirmArtText;
+    public TextMeshProUGUI confirmPerfectionText;
     public TextMeshProUGUI confirmDescText;
 
     private EmployeeData _selectedEmployee;
@@ -60,15 +61,14 @@ public class EmployeeListUI : MonoBehaviour
         confirmNameText.text = employee.employeeName;
         confirmRoleText.text = employee.RoleToString();
         confirmGradeText.text = employee.GradeToString();
-        confirmDevelopText.text = $"개발: {employee.developSkill}";
-        confirmPlanningText.text = $"기획: {employee.planningSkill}";
-        confirmArtText.text = $"아트: {employee.artSkill}";
-        confirmDescText.text = $"해고하기";
+        confirmDevelopText.text = employee.DevelopText();
+        confirmPlanningText.text = employee.PlanningText();
+        confirmArtText.text = employee.ArtText();
+        confirmPerfectionText.text = employee.PerfectionText();
 
         listPanel.SetActive(false);
         confirmPanel.SetActive(true);
     }
-
     // 해고 확정
     public void OnClickConfirmFire()
     {

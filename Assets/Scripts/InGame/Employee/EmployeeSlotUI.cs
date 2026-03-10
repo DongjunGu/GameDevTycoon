@@ -11,17 +11,18 @@ public class EmployeeSlotUI : MonoBehaviour
     public TextMeshProUGUI developSkillText;
     public TextMeshProUGUI planningSkillText;
     public TextMeshProUGUI artSkillText;
-    //public TextMeshProUGUI stateText;
+    public TextMeshProUGUI perfectionSkillText;
     public Button selectButton;
 
     public void Setup(EmployeeData data, HiringUI hiringUI)
     {
-        nameText.text = data.employeeName;
-        roleText.text = data.RoleToString();
-        gradeText.text = data.GradeToString();
-        developSkillText.text = data.DevelopRangeText();  // 범위
-        planningSkillText.text = data.PlanningRangeText(); // 범위
-        artSkillText.text = data.ArtRangeText();      // 범위
+        nameText.text           = data.employeeName;
+        roleText.text           = data.RoleToString();
+        gradeText.text          = data.GradeToString();
+        developSkillText.text   = data.DevelopRangeText();
+        planningSkillText.text  = data.PlanningRangeText();
+        artSkillText.text       = data.ArtRangeText();
+        perfectionSkillText.text= data.PerfectionRangeText();
 
         selectButton.onClick.RemoveAllListeners();
         selectButton.onClick.AddListener(() => hiringUI.OnSelectEmployee(data));

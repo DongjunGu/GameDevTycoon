@@ -11,6 +11,7 @@ public class OwnedEmployeeSlotUI : MonoBehaviour
     public TextMeshProUGUI developSkillText;
     public TextMeshProUGUI planningSkillText;
     public TextMeshProUGUI artSkillText;
+    public TextMeshProUGUI perfectionSkillText;
     public TextMeshProUGUI stateText;
     public Button fireButton;
 
@@ -19,15 +20,19 @@ public class OwnedEmployeeSlotUI : MonoBehaviour
 
     public void Setup(EmployeeData data, EmployeeListUI listUI)
     {
-        nameText.text = data.employeeName;
-        roleText.text = data.RoleToString();
-        gradeText.text = data.GradeToString();
-        developSkillText.text = data.DevelopText();  // 확정 수치
-        planningSkillText.text = data.PlanningText(); // 확정 수치
-        artSkillText.text = data.ArtText();      // 확정 수치
-                                                 //stateText.text         = data.StateToString();
+        _data   = data;
+        _listUI = listUI;
+
+        nameText.text            = data.employeeName;
+        roleText.text            = data.RoleToString();
+        gradeText.text           = data.GradeToString();
+        developSkillText.text    = data.DevelopText();
+        planningSkillText.text   = data.PlanningText();
+        artSkillText.text        = data.ArtText();
+        perfectionSkillText.text = data.PerfectionText();
+        //stateText.text           = data.StateToString();
 
         fireButton.onClick.RemoveAllListeners();
-        fireButton.onClick.AddListener(() => listUI.OnClickFire(data));
+        fireButton.onClick.AddListener(() => _listUI.OnClickFire(_data));
     }
 }
