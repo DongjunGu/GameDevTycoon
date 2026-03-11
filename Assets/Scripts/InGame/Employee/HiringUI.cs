@@ -23,6 +23,7 @@ public class HiringUI : MonoBehaviour
     public TextMeshProUGUI confirmPlanningText;
     public TextMeshProUGUI confirmArtText;
     public TextMeshProUGUI confirmPerfectionText;
+    public TextMeshProUGUI confirmSalaryText;
     //public TextMeshProUGUI confirmStateText;
 
     [Header("Settings")]
@@ -79,6 +80,7 @@ public void OnSelectEmployee(EmployeeData employee)
     confirmPlanningText.text   = employee.PlanningRangeText();
     confirmArtText.text        = employee.ArtRangeText();
     confirmPerfectionText.text = employee.PerfectionRangeText();
+    confirmSalaryText.text     = employee.SalaryRangeText();
     //confirmStateText.text      = employee.StateToString();
 
     hiringPanel.SetActive(false);

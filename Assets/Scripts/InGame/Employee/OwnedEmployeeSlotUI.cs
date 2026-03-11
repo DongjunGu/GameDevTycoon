@@ -12,7 +12,8 @@ public class OwnedEmployeeSlotUI : MonoBehaviour
     public TextMeshProUGUI planningSkillText;
     public TextMeshProUGUI artSkillText;
     public TextMeshProUGUI perfectionSkillText;
-    public TextMeshProUGUI stateText;
+    public TextMeshProUGUI salaryText;
+    //public TextMeshProUGUI stateText;
     public Button fireButton;
 
     private EmployeeData _data;
@@ -30,6 +31,7 @@ public class OwnedEmployeeSlotUI : MonoBehaviour
         planningSkillText.text   = data.PlanningText();
         artSkillText.text        = data.ArtText();
         perfectionSkillText.text = data.PerfectionText();
+        salaryText.text = data.SalaryText();
         //stateText.text           = data.StateToString();
 
         fireButton.onClick.RemoveAllListeners();

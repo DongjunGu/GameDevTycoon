@@ -34,19 +34,19 @@ public class LeaderScoreUI : MonoBehaviour
         _onComplete = onComplete;
 
         _planningTotal = 0f;
-        _developTotal  = 0f;
-        _artTotal      = 0f;
+        _developTotal = 0f;
+        _artTotal = 0f;
 
-        leaderNameText.text  = employee.employeeName;
-        leaderRoleText.text  = employee.RoleToString();
+        leaderNameText.text = employee.employeeName;
+        leaderRoleText.text = employee.RoleToString();
         leaderGradeText.text = employee.GradeToString();
-        tickCountText.text   = "0회째";
+        tickCountText.text = "0회째";
 
         UpdateScoreText();
 
         confirmButton.interactable = false;
-        gameObject.SetActive(true);
-        
+        leaderscorePanel.SetActive(true);
+
         StartCoroutine(ApplyScoreCoroutine(type, n, r, tickDelay));
     }
 
@@ -55,6 +55,8 @@ public class LeaderScoreUI : MonoBehaviour
         yield return new WaitForSeconds(1.5f);
         for (int i = 0; i < n; i++)
         {
+            tickCountText.text = $"{i + 1}회째";
+
             int target = Mathf.RoundToInt(r);
             int current = 0;
 
@@ -66,20 +68,20 @@ public class LeaderScoreUI : MonoBehaviour
 
                 switch (type)
                 {
-                    case LeaderType.Planner:    _planningTotal += 1f; break;
-                    case LeaderType.Programmer: _developTotal  += 1f; break;
-                    case LeaderType.Artist:     _artTotal      += 1f; break;
+                    case LeaderType.Planner: _planningTotal += 1f; break;
+                    case LeaderType.Programmer: _developTotal += 1f; break;
+                    case LeaderType.Artist: _artTotal += 1f; break;
                 }
 
                 UpdateScoreText();
                 DevelopmentPanelUI.Instance.AddValues(
-                    type == LeaderType.Planner    ? 1f : 0f,
+                    type == LeaderType.Planner ? 1f : 0f,
                     type == LeaderType.Programmer ? 1f : 0f,
-                    type == LeaderType.Artist     ? 1f : 0f
+                    type == LeaderType.Artist ? 1f : 0f,
+                    0f, // bug
+                    0f  // creativity
                 );
             }
-
-            tickCountText.text = $"{i + 1}회째";
 
             // 마지막 tick이 아니면 1.5초 대기
             if (i < n - 1)

@@ -7,19 +7,19 @@ public class DevelopmentTimerUI : MonoBehaviour
     public TextMeshProUGUI timerText;
     public TextMeshProUGUI progressText;
 
-    void Update()
-    {
-        if (DevelopmentManager.Instance == null) return;
+void Update()
+{
+    if (!DevelopmentManager.Instance.IsStarted) return;
 
-        float elapsed  = DevelopmentManager.Instance.GetElapsed();
-        float duration = DevelopmentManager.Instance.developmentDuration;
-        float remain   = Mathf.Max(0f, duration - elapsed);
-        float progress = DevelopmentManager.Instance.GetProgress();
+    float remaining = DevelopmentManager.Instance.developmentDuration
+                    - DevelopmentManager.Instance.GetElapsed();
+    remaining = Mathf.Max(0f, remaining);
 
-        int minutes = (int)(remain / 60f);
-        int seconds = (int)(remain % 60f);
+    int min = (int)(remaining / 60f);
+    int sec = (int)(remaining % 60f);
+    timerText.text = $"{min:00}:{sec:00}";
 
-        timerText.text   = $"{minutes:00}:{seconds:00}";
-        progressText.text = $"{(int)(progress * 100f)}%";
-    }
+    float progress = DevelopmentManager.Instance.GetProgress();
+    progressText.text = $"{Mathf.RoundToInt(progress * 100f)}%";
+}
 }

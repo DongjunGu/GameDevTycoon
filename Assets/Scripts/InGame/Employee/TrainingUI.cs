@@ -173,6 +173,6 @@ public class TrainingUI : MonoBehaviour
 
     public void OnClickClose()
     {
-        gameObject.SetActive(false);
+        listPanel.SetActive(false);
     }
 }
