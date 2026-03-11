@@ -73,6 +73,7 @@ public class EmployeeListUI : MonoBehaviour
     public void OnClickConfirmFire()
     {
         EmployeeManager.Instance.FireEmployee(_selectedEmployee);
+        HUDUI.Instance.RefreshAll();
         ShowList();
         confirmPanel.SetActive(false);
     }

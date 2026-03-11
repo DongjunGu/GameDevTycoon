@@ -26,6 +26,11 @@ public class EmployeeData
     public int planningMin; public int planningMax;
     public int artMin; public int artMax;
     public int perfectionMin; public int perfectionMax;
+    public int salaryMin;
+    public int salaryMax;
+    public int salary; // 확정값
+    public string SalaryRangeText() => $"연봉: {salary:N0}G";
+    public string SalaryText() => $"연봉: {salary:N0}G";
 
     public EmployeeState state;
     public string assignedProjectId;
@@ -34,7 +39,7 @@ public class EmployeeData
         int developMin, int developMax,
         int planningMin, int planningMax,
         int artMin, int artMax,
-        int perfectionMin, int perfectionMax)
+        int perfectionMin, int perfectionMax, int salaryMin, int salaryMax)
     {
         this.id = id;
         this.employeeName = name;
@@ -50,6 +55,11 @@ public class EmployeeData
         this.planningSkill = UnityEngine.Random.Range(planningMin, planningMax + 1);
         this.artSkill = UnityEngine.Random.Range(artMin, artMax + 1);
         this.perfectionSkill = UnityEngine.Random.Range(perfectionMin, perfectionMax + 1);
+        this.salaryMin = salaryMin;
+        this.salaryMax = salaryMax;
+
+        int steps = (salaryMax - salaryMin) / 50;
+        this.salary = salaryMin + (UnityEngine.Random.Range(0, steps + 1) * 50);
 
         this.state = EmployeeState.Idle;
         this.assignedProjectId = "";
@@ -69,17 +79,18 @@ public class EmployeeData
             artMin: SafeInt(row, "artMin", 0),
             artMax: SafeInt(row, "artMax", 0),
             perfectionMin: SafeInt(row, "perfectionMin", 0),
-            perfectionMax: SafeInt(row, "perfectionMax", 0)
+            perfectionMax: SafeInt(row, "perfectionMax", 0),
+            salaryMin: SafeInt(row, "salaryMin", 400),
+            salaryMax: SafeInt(row, "salaryMax", 500)
         );
+        data.rowInDate = SafeString(row, "inDate", "");
 
+        // 확정 수치 덮어쓰기 (서버에 저장된 값 사용)
         data.developSkill = SafeInt(row, "developSkill", 0);
         data.planningSkill = SafeInt(row, "planningSkill", 0);
         data.artSkill = SafeInt(row, "artSkill", 0);
         data.perfectionSkill = SafeInt(row, "perfectionSkill", 0);
-
-        data.rowInDate = row["inDate"].ToString();
-        data.state = (EmployeeState)SafeInt(row, "state", 0);
-        data.assignedProjectId = SafeString(row, "assignedProjectId", "");
+        data.salary = SafeInt(row, "salary", data.salary);
 
         return data;
     }
@@ -105,6 +116,9 @@ public class EmployeeData
         param.Add("perfectionMax", perfectionMax);
         param.Add("state", (int)state);
         param.Add("assignedProjectId", assignedProjectId);
+        param.Add("salaryMin", salaryMin);
+        param.Add("salaryMax", salaryMax);
+        param.Add("salary", salary);
         return param;
     }
 

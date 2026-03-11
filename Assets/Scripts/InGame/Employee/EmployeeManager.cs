@@ -18,17 +18,17 @@ public class EmployeeManager : MonoBehaviour
 
         _defaultEmployees = new List<EmployeeData>
     {
-        //                                                                          dev      plan     art      perfection
-        new EmployeeData("emp_01", "김기획", EmployeeRole.Planner,    EmployeeGrade.A, 18,25, 80,90, 25,35, 15,25),
-        new EmployeeData("emp_02", "이코딩", EmployeeRole.Programmer, EmployeeGrade.S, 88,95, 20,30, 10,18, 20,30),
-        new EmployeeData("emp_03", "박아트", EmployeeRole.Artist,     EmployeeGrade.B,  8,15, 15,25, 82,92, 11,22),
-        new EmployeeData("emp_04", "최사운", EmployeeRole.Programmer, EmployeeGrade.C, 25,35, 35,45, 48,62, 10,20),
-        new EmployeeData("emp_05", "정기획", EmployeeRole.Planner,    EmployeeGrade.B, 12,20, 70,80, 20,30, 11,22),
-        new EmployeeData("emp_06", "한개발", EmployeeRole.Programmer, EmployeeGrade.A, 80,90, 30,40, 15,25, 15,25),
-        new EmployeeData("emp_07", "오아트", EmployeeRole.Artist,     EmployeeGrade.S,  8,15, 14,22, 90,99, 20,30),
-        new EmployeeData("emp_08", "윤기획", EmployeeRole.Planner,    EmployeeGrade.C,  8,14, 60,70, 15,25, 10,20),
-        new EmployeeData("emp_09", "장개발", EmployeeRole.Programmer, EmployeeGrade.B, 73,82, 25,35, 14,22, 11,22),
-        new EmployeeData("emp_10", "강아트", EmployeeRole.Artist,     EmployeeGrade.A, 12,20, 18,26, 78,88, 15,25),
+        //                                                                          dev      plan     art      perfection    salary
+            new EmployeeData("emp_01", "김기획", EmployeeRole.Planner,    EmployeeGrade.A, 18,25, 80,90, 25,35, 15,25, 1400,1600),
+            new EmployeeData("emp_02", "이코딩", EmployeeRole.Programmer, EmployeeGrade.S, 88,95, 20,30, 10,18, 20,30, 2300,2700),
+            new EmployeeData("emp_03", "박아트", EmployeeRole.Artist,     EmployeeGrade.B,  8,15, 15,25, 82,92, 11,22,  900,1100),
+            new EmployeeData("emp_04", "최사운", EmployeeRole.Programmer, EmployeeGrade.C, 25,35, 35,45, 48,62, 10,20,  650, 750),
+            new EmployeeData("emp_05", "정기획", EmployeeRole.Planner,    EmployeeGrade.B, 12,20, 70,80, 20,30, 11,22,  900,1000),
+            new EmployeeData("emp_06", "한개발", EmployeeRole.Programmer, EmployeeGrade.A, 80,90, 30,40, 15,25, 15,25, 1500,1700),
+            new EmployeeData("emp_07", "오아트", EmployeeRole.Artist,     EmployeeGrade.S,  8,15, 14,22, 90,99, 20,30, 2000,2400),
+            new EmployeeData("emp_08", "윤기획", EmployeeRole.Planner,    EmployeeGrade.C,  8,14, 60,70, 15,25, 10,20,  600, 700),
+            new EmployeeData("emp_09", "장개발", EmployeeRole.Programmer, EmployeeGrade.B, 73,82, 25,35, 14,22, 11,22, 1000,1100),
+            new EmployeeData("emp_10", "강아트", EmployeeRole.Artist,     EmployeeGrade.A, 12,20, 18,26, 78,88, 15,25, 1350,1550),
     };
     }
 
@@ -74,6 +74,14 @@ public class EmployeeManager : MonoBehaviour
                     employee.perfectionMin = 1;
                     employee.perfectionMax = 2;
                     employee.perfectionSkill = UnityEngine.Random.Range(1, 2);
+                    UpdateEmployeePool(employee);
+                }
+                if (employee.salaryMin == 0 && employee.salaryMax == 0)
+                {
+                    employee.salaryMin = 400;
+                    employee.salaryMax = 500;
+                    int steps = (employee.salaryMax - employee.salaryMin) / 50;
+                    employee.salary = employee.salaryMin + (UnityEngine.Random.Range(0, steps + 1) * 50);
                     UpdateEmployeePool(employee);
                 }
             }
@@ -124,7 +132,21 @@ public class EmployeeManager : MonoBehaviour
 
         var shuffled = ShuffleList(poolEmployees);
         int take = Mathf.Min(count, shuffled.Count);
-        onComplete?.Invoke(shuffled.GetRange(0, take));
+        var candidates = shuffled.GetRange(0, take);
+        foreach (var employee in candidates)
+        {
+            // 능력치 재랜덤
+            employee.developSkill = UnityEngine.Random.Range(employee.developMin, employee.developMax + 1);
+            employee.planningSkill = UnityEngine.Random.Range(employee.planningMin, employee.planningMax + 1);
+            employee.artSkill = UnityEngine.Random.Range(employee.artMin, employee.artMax + 1);
+            employee.perfectionSkill = UnityEngine.Random.Range(employee.perfectionMin, employee.perfectionMax + 1);
+
+            // salary 재랜덤
+            int steps = (employee.salaryMax - employee.salaryMin) / 50;
+            employee.salary = employee.salaryMin + (UnityEngine.Random.Range(0, steps + 1) * 50);
+        }
+
+        onComplete?.Invoke(candidates);
     }
 
     List<EmployeeData> ShuffleList(List<EmployeeData> list)
@@ -153,7 +175,9 @@ public class EmployeeManager : MonoBehaviour
             artMin: poolEmployee.artMin,
             artMax: poolEmployee.artMax,
             perfectionMin: poolEmployee.perfectionMin,
-            perfectionMax: poolEmployee.perfectionMax
+            perfectionMax: poolEmployee.perfectionMax,
+                salaryMin: poolEmployee.salaryMin,
+    salaryMax: poolEmployee.salaryMax
         );
 
         // 확정 수치는 poolEmployee 값 그대로 복사 (랜덤 재생성 방지)
@@ -161,15 +185,16 @@ public class EmployeeManager : MonoBehaviour
         inGameEmployee.planningSkill = poolEmployee.planningSkill;
         inGameEmployee.artSkill = poolEmployee.artSkill;
         inGameEmployee.perfectionSkill = poolEmployee.perfectionSkill;
+        inGameEmployee.salary = poolEmployee.salary;
         inGameEmployee.assignedProjectId = "";
-
-        ownedEmployees.Add(inGameEmployee);
 
         Backend.GameData.Insert("Employee", inGameEmployee.ToParam(), bro =>
         {
             if (bro.IsSuccess())
             {
-                inGameEmployee.rowInDate = bro.GetInDate();
+                inGameEmployee.rowInDate = bro.GetInDate(); // rowInDate 확정 후
+                ownedEmployees.Add(inGameEmployee);          // ← 이후에 추가
+                HUDUI.Instance.RefreshAll();
                 Debug.Log($"채용 완료: {inGameEmployee.employeeName}");
             }
             else
@@ -177,6 +202,8 @@ public class EmployeeManager : MonoBehaviour
                 Debug.LogError($"채용 저장 실패: {bro}");
             }
         });
+
+        HUDUI.Instance.RefreshAll();
     }
 
     // ── 보유 직원 불러오기 ────────────────────
@@ -198,6 +225,7 @@ public class EmployeeManager : MonoBehaviour
 
             Debug.Log($"보유 직원 {ownedEmployees.Count}명 로드 완료");
             onComplete?.Invoke();
+            HUDUI.Instance.RefreshAll();
         });
     }
 
@@ -230,11 +258,17 @@ public class EmployeeManager : MonoBehaviour
     {
         ownedEmployees.Remove(employee);
 
-        if (string.IsNullOrEmpty(employee.rowInDate)) return;
+        if (string.IsNullOrEmpty(employee.rowInDate))
+        {
+            Debug.LogWarning($"rowInDate 없음, 서버 삭제 스킵: {employee.employeeName}");
+            return;
+        }
 
         Backend.GameData.DeleteV2("Employee", employee.rowInDate, Backend.UserInDate, bro =>
         {
-            if (!bro.IsSuccess())
+            if (bro.IsSuccess())
+                Debug.Log($"해고 완료: {employee.employeeName}");
+            else
                 Debug.LogError($"해고 저장 실패: {bro}");
         });
     }

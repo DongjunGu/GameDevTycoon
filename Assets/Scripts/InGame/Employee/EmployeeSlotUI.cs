@@ -12,6 +12,7 @@ public class EmployeeSlotUI : MonoBehaviour
     public TextMeshProUGUI planningSkillText;
     public TextMeshProUGUI artSkillText;
     public TextMeshProUGUI perfectionSkillText;
+    public TextMeshProUGUI salaryText;
     public Button selectButton;
 
     public void Setup(EmployeeData data, HiringUI hiringUI)
@@ -23,6 +24,7 @@ public class EmployeeSlotUI : MonoBehaviour
         planningSkillText.text  = data.PlanningRangeText();
         artSkillText.text       = data.ArtRangeText();
         perfectionSkillText.text= data.PerfectionRangeText();
+        salaryText.text = data.SalaryRangeText();
 
         selectButton.onClick.RemoveAllListeners();
         selectButton.onClick.AddListener(() => hiringUI.OnSelectEmployee(data));
