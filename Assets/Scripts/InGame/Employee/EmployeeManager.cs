@@ -19,16 +19,16 @@ public class EmployeeManager : MonoBehaviour
         _defaultEmployees = new List<EmployeeData>
     {
         //                                                                          dev      plan     art      perfection    salary
-            new EmployeeData("emp_01", "김기획", EmployeeRole.Planner,    EmployeeGrade.A, 18,25, 80,90, 25,35, 15,25, 1400,1600),
-            new EmployeeData("emp_02", "이코딩", EmployeeRole.Programmer, EmployeeGrade.S, 88,95, 20,30, 10,18, 20,30, 2300,2700),
-            new EmployeeData("emp_03", "박아트", EmployeeRole.Artist,     EmployeeGrade.B,  8,15, 15,25, 82,92, 11,22,  900,1100),
-            new EmployeeData("emp_04", "최사운", EmployeeRole.Programmer, EmployeeGrade.C, 25,35, 35,45, 48,62, 10,20,  650, 750),
-            new EmployeeData("emp_05", "정기획", EmployeeRole.Planner,    EmployeeGrade.B, 12,20, 70,80, 20,30, 11,22,  900,1000),
-            new EmployeeData("emp_06", "한개발", EmployeeRole.Programmer, EmployeeGrade.A, 80,90, 30,40, 15,25, 15,25, 1500,1700),
-            new EmployeeData("emp_07", "오아트", EmployeeRole.Artist,     EmployeeGrade.S,  8,15, 14,22, 90,99, 20,30, 2000,2400),
-            new EmployeeData("emp_08", "윤기획", EmployeeRole.Planner,    EmployeeGrade.C,  8,14, 60,70, 15,25, 10,20,  600, 700),
-            new EmployeeData("emp_09", "장개발", EmployeeRole.Programmer, EmployeeGrade.B, 73,82, 25,35, 14,22, 11,22, 1000,1100),
-            new EmployeeData("emp_10", "강아트", EmployeeRole.Artist,     EmployeeGrade.A, 12,20, 18,26, 78,88, 15,25, 1350,1550),
+                new EmployeeData("emp_01", "김기획", EmployeeRole.Planner,    EmployeeGrade.A, 40,50, 80,90, 25,35, 15,25, 1400,1600),
+                new EmployeeData("emp_02", "이코딩", EmployeeRole.Programmer, EmployeeGrade.S, 88,95, 20,30, 50,60, 20,30, 2300,2700),
+                new EmployeeData("emp_03", "박아트", EmployeeRole.Artist,     EmployeeGrade.B,  8,15, 45,55, 82,92, 11,22,  900,1100),
+                new EmployeeData("emp_04", "최사운", EmployeeRole.Programmer, EmployeeGrade.C, 25,35, 35,45, 48,62, 10,20,  650, 750),
+                new EmployeeData("emp_05", "정기획", EmployeeRole.Planner,    EmployeeGrade.B, 12,20, 70,80, 20,30, 11,22,  900,1000),
+                new EmployeeData("emp_06", "한개발", EmployeeRole.Programmer, EmployeeGrade.A, 80,90, 30,40, 42,50, 15,25, 1500,1700),
+                new EmployeeData("emp_07", "오아트", EmployeeRole.Artist,     EmployeeGrade.S,  8,15, 48,58, 90,99, 20,30, 2000,2400),
+                new EmployeeData("emp_08", "윤기획", EmployeeRole.Planner,    EmployeeGrade.C,  8,14, 60,70, 15,25, 10,20,  600, 700),
+                new EmployeeData("emp_09", "장개발", EmployeeRole.Programmer, EmployeeGrade.B, 73,82, 25,35, 38,48, 11,22, 1000,1100),
+                new EmployeeData("emp_10", "강아트", EmployeeRole.Artist,     EmployeeGrade.A, 12,20, 40,50, 78,88, 15,25, 1350,1550),
     };
     }
 
@@ -40,6 +40,8 @@ public class EmployeeManager : MonoBehaviour
             LoadEmployees(onComplete);
         });
     }
+
+    
 
     // ── EmployeePool 불러오기 ─────────────────
     public void LoadEmployeePool(System.Action onComplete = null)
@@ -196,6 +198,7 @@ public class EmployeeManager : MonoBehaviour
                 ownedEmployees.Add(inGameEmployee);          // ← 이후에 추가
                 HUDUI.Instance.RefreshAll();
                 Debug.Log($"채용 완료: {inGameEmployee.employeeName}");
+                QuestManager.Instance.UpdateProgress(QuestType.HireEmployee, 1);
             }
             else
             {
@@ -204,6 +207,7 @@ public class EmployeeManager : MonoBehaviour
         });
 
         HUDUI.Instance.RefreshAll();
+        
     }
 
     // ── 보유 직원 불러오기 ────────────────────

@@ -24,6 +24,10 @@ public class DevelopmentResultUI : MonoBehaviour
     public TextMeshProUGUI projectNameText;
     public TMP_InputField projectNameInput;
 
+    private float _lastMarketFit;
+    private float _lastMarketingBonus;
+    public float LastMarketFit => _lastMarketFit;
+    public float LastMarketingBonus => _lastMarketingBonus;
     string GetScaleString(ProjectScale scale) => scale switch
     {
         ProjectScale.Small => "소규모(1인개발)",
@@ -110,22 +114,30 @@ public class DevelopmentResultUI : MonoBehaviour
     }
     public void OnClickRelease()
     {
-        MarketingUI.Instance.Show(() =>
+        resultPanel.SetActive(false);
+        AlertUI.Instance.Show("마케팅을 시작합니다.", () =>
         {
-            // 마케팅 완료 후 점수 계산
-            float p = DevelopmentPanelUI.Instance.GetPlanning();
-            float d = DevelopmentPanelUI.Instance.GetDevelop();
-            float a = DevelopmentPanelUI.Instance.GetArt();
-            float c = DevelopmentPanelUI.Instance.GetCreativity();
-            float bRem = DevelopmentPanelUI.Instance.GetBug();
+            MarketingUI.Instance.Show(() =>
+            {
+                float p = DevelopmentPanelUI.Instance.GetPlanning();
+                float d = DevelopmentPanelUI.Instance.GetDevelop();
+                float a = DevelopmentPanelUI.Instance.GetArt();
+                float c = DevelopmentPanelUI.Instance.GetCreativity();
+                float bRem = DevelopmentPanelUI.Instance.GetBug();
 
-            float rawScore = CalcRawScore(p, d, a, c, ProjectSetupUI.SelectedPlatform);
-            float lBug = CalcLBug(bRem);
-            float sAdj = rawScore * (1f - lBug);
-            float finalScore = CalcFinalScore(sAdj);
-            float quality = CalcQualityScore(finalScore);
+                float rawScore = CalcRawScore(p, d, a, c, ProjectSetupUI.SelectedPlatform);
+                float lBug = CalcLBug(bRem);
+                float sAdj = rawScore * (1f - lBug);
+                float finalScore = CalcFinalScore(sAdj);
+                float quality = CalcQualityScore(finalScore);
 
-            Debug.Log($"원천: {rawScore:F1} / S_adj: {sAdj:F1} / 최종: {finalScore:F1} / 품질: {quality:F1}");
+                Debug.Log($"원천: {rawScore:F1} / S_adj: {sAdj:F1} / 최종: {finalScore:F1} / 품질: {quality:F1}");
+
+                AlertUI.Instance.Show("판매 시작!", () =>
+                {
+                    SalesUI.Instance.Show(quality, ProjectSetupUI.SelectedScale);
+                });
+            });
         });
     }
     float CalcRawScore(float p, float d, float a, float c, ProjectPlatform platform)
@@ -185,13 +197,15 @@ public class DevelopmentResultUI : MonoBehaviour
     {
         float quality = finalScore;
 
-        // 장르 인기 (Market Fit)
-        float marketFit = CalcMarketFit();
-        quality += marketFit;
+        _lastMarketFit = CalcMarketFit();
+        _lastMarketingBonus = CalcMarketingBonus();
+
+        quality += _lastMarketFit;
+        quality += _lastMarketingBonus;
+
+        Debug.Log($"MarketFit: {_lastMarketFit:F1} / MarketingBonus: {_lastMarketingBonus:F1}");
 
         // TODO: 테크트리 점수
-        // TODO: 마케팅 보정
-
         return Mathf.Clamp(quality, 0f, 100f);
     }
     float CalcMarketFit()
@@ -206,5 +220,43 @@ public class DevelopmentResultUI : MonoBehaviour
         }
 
         return 0f;
+    }
+
+    float CalcMarketingBonus()
+    {
+        // 총 연봉
+        int totalSalary = 0;
+        foreach (var employee in EmployeeManager.Instance.ownedEmployees)
+            totalSalary += employee.salary;
+
+        if (totalSalary <= 0) return 0f;
+
+        int totalCost = MarketingUI.Instance.GetTotalCost();
+        float ratio = (float)totalCost / totalSalary;
+
+        // ① 10% 미만 → -3점
+        if (ratio < 0.1f)
+        {
+            Debug.Log($"마케팅 부족 패널티 / ratio: {ratio:F2}");
+            return -3f;
+        }
+
+        // ② 10% ~ 20% → 비례 상승 (0 ~ +5점)
+        if (ratio < 0.2f)
+        {
+            float linearRatio = (ratio - 0.1f) / (0.2f - 0.1f);
+            float score = linearRatio * 5f;
+            Debug.Log($"마케팅 비례 상승 / ratio: {ratio:F2} / score: {score:F1}");
+            return score;
+        }
+
+        // ③ 20% 이상 → 로그적 상승 (+5 ~ +10점)
+        float logScore = 5f + 5f * (float)(
+            System.Math.Log(1 + (ratio - 0.2f) * 10) /
+            System.Math.Log(1 + 0.8f * 10)
+        );
+
+        Debug.Log($"마케팅 로그 상승 / ratio: {ratio:F2} / score: {logScore:F1}");
+        return Mathf.Min(logScore, 10f);
     }
 }
