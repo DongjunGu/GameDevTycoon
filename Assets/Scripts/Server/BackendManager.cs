@@ -32,10 +32,14 @@ public class BackendManager : MonoBehaviour
         if (bro.IsSuccess())
         {
             Debug.Log("테스트 로그인 성공");
-            
+
             EmployeeManager.Instance.LoadAllData(() =>
             {
-                //UnityEngine.SceneManagement.SceneManager.LoadScene("GameScene");
+                QuestManager.Instance.LoadQuests(() =>
+                {
+                    Debug.Log("퀘스트 로드 완료");
+                    // UnityEngine.SceneManagement.SceneManager.LoadScene("GameScene");
+                });
             });
         }
         else
@@ -43,10 +47,12 @@ public class BackendManager : MonoBehaviour
             var signUp = Backend.BMember.CustomSignUp("testuser2", "3456");
             if (signUp.IsSuccess())
             {
-                // 신규 유저도 LoadAllData (기본 직원 생성 후 이동)
                 EmployeeManager.Instance.LoadAllData(() =>
                 {
-                    UnityEngine.SceneManagement.SceneManager.LoadScene("GameScene");
+                    QuestManager.Instance.LoadQuests(() =>
+                    {
+                        UnityEngine.SceneManagement.SceneManager.LoadScene("GameScene");
+                    });
                 });
             }
         }

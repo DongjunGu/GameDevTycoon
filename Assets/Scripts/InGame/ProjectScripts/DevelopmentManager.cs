@@ -35,7 +35,7 @@ public class DevelopmentManager : MonoBehaviour
     private float _genreInterval;
     private float _nextGenreTick;
     private List<ProjectGenre> _genrePool = new();
-    
+
 
     void Awake()
     {
@@ -92,7 +92,7 @@ public class DevelopmentManager : MonoBehaviour
             var order = BuildTickOrder(tickCount, 0.6f, 0.2f, 0.2f);
             _tickOrderMap[employee.id] = order;
 
-            Debug.Log($"{employee.employeeName} / tickCount: {tickCount} / interval: {interval:F1}초");
+            Debug.Log($"[{employee.employeeName}] tickCount: {tickCount} / interval: {interval:F1}s / order: [{string.Join(",", order)}]");
         }
     }
     int[] BuildTickOrder(int total, float ratioA, float ratioB, float ratioC)
@@ -141,21 +141,22 @@ public class DevelopmentManager : MonoBehaviour
                         _tickIndexMap[employee.id]++;
                     }
 
-                    int tickCount = UnityEngine.Random.Range(8, 11);
-                    float interval = developmentDuration / tickCount;
+                    // 고정 interval 사용
+                    float interval = developmentDuration / _tickCountMap[employee.id];
                     _nextTickMap[employee.id] += interval;
                 }
             }
 
-            // 장르 인기 변경
             if (_elapsed >= _nextGenreTick)
             {
-                _currentGenreIndex = (_currentGenreIndex + 1) % _genrePool.Count;
+                // 랜덤으로 장르 선택 (중복 허용)
+                System.Array genres = System.Enum.GetValues(typeof(ProjectGenre));
+                _currentGenreIndex = UnityEngine.Random.Range(0, genres.Length);
                 _nextGenreTick += _genreInterval;
+
                 Debug.Log($"인기 장르 변경: {GetCurrentPopularGenre()}");
                 DevelopmentPanelUI.Instance.UpdateMarketFit(GetCurrentPopularGenre());
             }
-
             // 25% 팀장 선택
             if (!_triggered25 && progress >= 0.25f)
             {
@@ -367,8 +368,8 @@ public class DevelopmentManager : MonoBehaviour
 
     public ProjectGenre GetCurrentPopularGenre()
     {
-        if (_genrePool.Count == 0) return ProjectSetupUI.SelectedGenre;
-        return _genrePool[_currentGenreIndex % _genrePool.Count];
+        System.Array genres = System.Enum.GetValues(typeof(ProjectGenre));
+        return (ProjectGenre)genres.GetValue(_currentGenreIndex % genres.Length);
     }
 
     // 테크트리에서 호출

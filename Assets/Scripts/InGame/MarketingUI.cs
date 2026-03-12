@@ -20,10 +20,10 @@ public class MarketingUI : MonoBehaviour
 
     private readonly (string name, int cost)[] _marketingData =
     {
-        ("SNS 바이럴",          5000),
-        ("전문 잡지/웹진 광고",  20000),
-        ("유명 인플루언서 협찬", 30000),
-        ("TV 및 옥외 광고",      50000),
+        ("SNS 바이럴",          500),
+        ("전문 잡지/웹진 광고",  2000),
+        ("유명 인플루언서 협찬", 3000),
+        ("TV 및 옥외 광고",      5000),
     };
 
     private Dictionary<string, int> _countMap = new();
@@ -59,7 +59,7 @@ public class MarketingUI : MonoBehaviour
         _countMap[name]  = 0;
 
         slotPlatformTexts[i].text   = name;
-        slotCostTexts[i].text       = $"{cost:N0}원";
+        slotCostTexts[i].text       = $"{cost:N0}G";
         slotButtons[i].interactable = true;
 
         int capturedIndex = i;
@@ -88,7 +88,7 @@ public class MarketingUI : MonoBehaviour
 
     void UpdateUI()
     {
-        totalCostText.text = $"총 비용: {_totalCost:N0}원";
+        totalCostText.text = $"총 비용: {_totalCost:N0}G";
     }
 
     public Dictionary<string, int> GetCountMap() => _countMap;
