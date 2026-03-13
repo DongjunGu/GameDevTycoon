@@ -32,6 +32,8 @@ public class QuestUI : MonoBehaviour
 
     public void Refresh()
     {
+
+
         foreach (Transform child in questListContent)
             Destroy(child.gameObject);
 
@@ -39,6 +41,7 @@ public class QuestUI : MonoBehaviour
 
         foreach (var quest in quests)
         {
+            if (!quest.isVisible) continue;
             var item = Instantiate(questItemPrefab, questListContent);
 
             // TopRow

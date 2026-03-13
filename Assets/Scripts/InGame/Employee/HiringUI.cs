@@ -17,8 +17,10 @@ public class HiringUI : MonoBehaviour
 
     [Header("Confirm")]
     public TextMeshProUGUI confirmNameText;
+    public TextMeshProUGUI enhancementText;
     public TextMeshProUGUI confirmRoleText;
     public TextMeshProUGUI confirmGradeText;
+    public TextMeshProUGUI confirmPotentialText;
     public TextMeshProUGUI confirmDevelopText;
     public TextMeshProUGUI confirmPlanningText;
     public TextMeshProUGUI confirmArtText;
@@ -30,7 +32,7 @@ public class HiringUI : MonoBehaviour
     public int candidateCount = 4;
 
     private EmployeeData _selectedEmployee;
-    private List<EmployeeData> _currentCandidates = new(); 
+    private List<EmployeeData> _currentCandidates = new();
 
     void Awake()
     {
@@ -40,14 +42,29 @@ public class HiringUI : MonoBehaviour
 
     public void OpenHiring()
     {
-        gameObject.SetActive(true);
-        hiringPanel.SetActive(false);
-        confirmPanel.SetActive(false);
+        int hiringCost = 500;
 
-        if (loadingPanel != null) loadingPanel.SetActive(true);
-    
-        _currentCandidates.Clear();
-        EmployeeManager.Instance.LoadRandomCandidates(candidateCount, ShowCandidates);
+        ConfirmUI.Instance.Show(
+            $"직원을 채용하시겠습니까?\n비용: {hiringCost:N0}G",
+            onConfirm: () =>
+            {
+                if (!MoneyManager.Instance.CanAfford(hiringCost))
+                {
+                    AlertUI.Instance.Show("재화가 부족합니다!");
+                    return;
+                }
+
+                MoneyManager.Instance.SpendGold(hiringCost);
+
+                hiringPanel.SetActive(false);
+                confirmPanel.SetActive(false);
+                if (loadingPanel != null) loadingPanel.SetActive(true);
+
+                _currentCandidates.Clear();
+                EmployeeManager.Instance.LoadRandomCandidates(candidateCount, ShowCandidates);
+            },
+            onCancel: () => { }
+        );
     }
 
     void ShowCandidates(List<EmployeeData> candidates)
@@ -69,23 +86,25 @@ public class HiringUI : MonoBehaviour
         hiringPanel.SetActive(true);
     }
 
-public void OnSelectEmployee(EmployeeData employee)
-{
-    _selectedEmployee = employee;
+    public void OnSelectEmployee(EmployeeData employee)
+    {
+        _selectedEmployee = employee;
 
-    confirmNameText.text       = employee.employeeName;
-    confirmRoleText.text       = employee.RoleToString();
-    confirmGradeText.text      = employee.GradeToString();
-    confirmDevelopText.text    = employee.DevelopRangeText();
-    confirmPlanningText.text   = employee.PlanningRangeText();
-    confirmArtText.text        = employee.ArtRangeText();
-    confirmPerfectionText.text = employee.PerfectionRangeText();
-    confirmSalaryText.text     = employee.SalaryRangeText();
-    //confirmStateText.text      = employee.StateToString();
+        confirmNameText.text = employee.employeeName;
+        confirmRoleText.text = employee.RoleToString();
+        confirmGradeText.text = employee.GradeToString();
+        confirmPotentialText.text = employee.PotentialToString();
+        confirmDevelopText.text = employee.DevelopRangeText();
+        confirmPlanningText.text = employee.PlanningRangeText();
+        confirmArtText.text = employee.ArtRangeText();
+        confirmPerfectionText.text = employee.PerfectionRangeText();
+        confirmSalaryText.text = employee.SalaryRangeText();
+        enhancementText.text     = $"+{employee.enhancementLevel}";
+        //confirmStateText.text      = employee.StateToString();
 
-    hiringPanel.SetActive(false);
-    confirmPanel.SetActive(true);
-}
+        hiringPanel.SetActive(false);
+        confirmPanel.SetActive(true);
+    }
 
     public void OnClickConfirmHire()
     {
@@ -101,6 +120,16 @@ public void OnSelectEmployee(EmployeeData employee)
 
     public void OnClickClose()
     {
-        hiringPanel.SetActive(false);
+        ConfirmUI.Instance.Show(
+            "채용을 취소하시겠습니까?",
+            onConfirm: () =>
+            {
+                hiringPanel.SetActive(false);
+            },
+            onCancel: () =>
+            {
+                ConfirmUI.Instance.confirmPanel.SetActive(false);
+            }
+        );
     }
 }

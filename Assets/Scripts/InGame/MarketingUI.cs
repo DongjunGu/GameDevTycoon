@@ -38,41 +38,50 @@ public class MarketingUI : MonoBehaviour
     }
 
     public void Show(System.Action onComplete)
-{
-    _onComplete = onComplete;
-    _totalCost  = 0;
-    _countMap.Clear();
-
-    // 전체 슬롯 텍스트 초기화 (비활성화 없이 공백)
-    for (int i = 0; i < slotButtons.Length; i++)
     {
-        slotPlatformTexts[i].text = "";
-        slotCostTexts[i].text     = "";
-        slotButtons[i].onClick.RemoveAllListeners();
-        slotButtons[i].interactable = false;
+        _onComplete = onComplete;
+        _totalCost = 0;
+        _countMap.Clear();
+
+        // 전체 슬롯 텍스트 초기화 (비활성화 없이 공백)
+        for (int i = 0; i < slotButtons.Length; i++)
+        {
+            slotPlatformTexts[i].text = "";
+            slotCostTexts[i].text = "";
+            slotButtons[i].onClick.RemoveAllListeners();
+            slotButtons[i].interactable = false;
+        }
+
+        // 데이터 있는 슬롯만 텍스트 + 클릭 설정
+        for (int i = 0; i < _marketingData.Length; i++)
+        {
+            var (name, cost) = _marketingData[i];
+            _countMap[name] = 0;
+
+            slotPlatformTexts[i].text = name;
+            slotCostTexts[i].text = $"{cost:N0}G";
+            slotButtons[i].interactable = true;
+
+            int capturedIndex = i;
+            slotButtons[i].onClick.AddListener(() =>
+                OnClickMarketing(_marketingData[capturedIndex].name,
+                                 _marketingData[capturedIndex].cost));
+        }
+
+        UpdateUI();
+        marketingPanel.SetActive(true);
     }
-
-    // 데이터 있는 슬롯만 텍스트 + 클릭 설정
-    for (int i = 0; i < _marketingData.Length; i++)
-    {
-        var (name, cost) = _marketingData[i];
-        _countMap[name]  = 0;
-
-        slotPlatformTexts[i].text   = name;
-        slotCostTexts[i].text       = $"{cost:N0}G";
-        slotButtons[i].interactable = true;
-
-        int capturedIndex = i;
-        slotButtons[i].onClick.AddListener(() =>
-            OnClickMarketing(_marketingData[capturedIndex].name,
-                             _marketingData[capturedIndex].cost));
-    }
-
-    UpdateUI();
-    marketingPanel.SetActive(true);
-}
     void OnClickMarketing(string name, int cost)
     {
+        // 재화 확인
+        if (!MoneyManager.Instance.CanAfford(cost))
+        {
+            AlertUI.Instance.Show("재화가 부족합니다!");
+            return;
+        }
+        
+        MoneyManager.Instance.SpendGold(cost);
+        
         _countMap[name]++;
         _totalCost += cost;
         UpdateUI();
@@ -94,10 +103,10 @@ public class MarketingUI : MonoBehaviour
     public Dictionary<string, int> GetCountMap() => _countMap;
     public int GetTotalCost() => _totalCost;
     public void TestMarketing()
-{
-    MarketingUI.Instance.Show(() =>
     {
-        Debug.Log("마케팅 완료");
-    });
-}
+        MarketingUI.Instance.Show(() =>
+        {
+            Debug.Log("마케팅 완료");
+        });
+    }
 }

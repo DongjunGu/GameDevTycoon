@@ -267,16 +267,15 @@ public class DevelopmentManager : MonoBehaviour
             _ => 0
         };
 
-        int n = employee.grade switch
-        {
-            EmployeeGrade.F => UnityEngine.Random.Range(1, 3),
-            EmployeeGrade.D => UnityEngine.Random.Range(2, 4),
-            EmployeeGrade.C => UnityEngine.Random.Range(2, 5),
-            EmployeeGrade.B => UnityEngine.Random.Range(3, 5),
-            EmployeeGrade.A => UnityEngine.Random.Range(3, 6),
-            EmployeeGrade.S => UnityEngine.Random.Range(4, 6),
-            _ => 1
-        };
+int n = employee.potential switch
+{
+    EmployeePotential.F => UnityEngine.Random.Range(1, 3),
+    EmployeePotential.D => UnityEngine.Random.Range(2, 4),
+    EmployeePotential.C => UnityEngine.Random.Range(2, 5),
+    EmployeePotential.B => UnityEngine.Random.Range(3, 5),
+    EmployeePotential.A => UnityEngine.Random.Range(3, 6),
+    _ => 1
+};
 
         float r = CalcConstantDev(skill);
 
