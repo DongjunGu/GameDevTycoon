@@ -17,30 +17,24 @@ public class QuestManager : MonoBehaviour
 
     public void LoadQuests(System.Action onComplete = null)
     {
-        // 1단계: 차트 테이블 목록 조회
-Backend.CDN.Content.Table.Get(tableBro =>
-{
-    if (!tableBro.IsSuccess())
-    {
-        Debug.LogError($"차트 테이블 조회 실패: {tableBro}");
-        onComplete?.Invoke();
-        return;
-    }
+        Backend.CDN.Content.Table.Get(tableBro =>
+        {
+            if (!tableBro.IsSuccess())
+            {
+                Debug.LogError($"차트 테이블 조회 실패: {tableBro}");
+                onComplete?.Invoke();
+                return;
+            }
 
-    var tableList = tableBro.GetContentTableItemList();
-    Debug.Log($"차트 테이블 수: {tableList.Count}");
-    foreach (var t in tableList)
-        Debug.Log($"차트명: {t.chartName} / ID: {t.chartId} / FileID: {t.selectedChartFileId}");
+            var tableList = tableBro.GetContentTableItemList();
+            if (tableList.Count == 0)
+            {
+                Debug.LogError("차트 테이블 비어있음");
+                onComplete?.Invoke();
+                return;
+            }
 
-    if (tableList.Count == 0)
-    {
-        Debug.LogError("차트 테이블이 비어있음 - 콘솔에서 CSV 업로드 및 배포 확인");
-        onComplete?.Invoke();
-        return;
-    }
-
-            // 2단계: 차트 내용 조회
-            Backend.CDN.Content.Get(tableBro.GetContentTableItemList(), null, contentBro =>
+            Backend.CDN.Content.Get(tableList, null, contentBro =>
             {
                 if (!contentBro.IsSuccess())
                 {
@@ -56,16 +50,9 @@ Backend.CDN.Content.Table.Get(tableBro =>
                 {
                     var item = dic[key];
                     if (item.chartName != "Quest") continue;
-
-                    // contentJson 대신 contentString 직접 파싱
-                    if (string.IsNullOrEmpty(item.contentString))
-                    {
-                        Debug.LogError("Quest 차트 contentString 비어있음");
-                        continue;
-                    }
+                    if (string.IsNullOrEmpty(item.contentString)) continue;
 
                     JsonData rows = LitJson.JsonMapper.ToObject(item.contentString);
-
                     foreach (JsonData row in rows)
                     {
                         string typeStr = row["type"]?.ToString();
@@ -73,12 +60,13 @@ Backend.CDN.Content.Table.Get(tableBro =>
 
                         _quests.Add(new QuestData
                         {
-                            questId = row["questId"]?.ToString(),
-                            title = row["title"]?.ToString(),
+                            questId     = row["questId"]?.ToString(),
+                            title       = row["title"]?.ToString(),
                             description = row["description"]?.ToString(),
-                            type = questType,
+                            type        = questType,
                             targetValue = SafeInt(row, "targetValue", 0),
-                            rewardGold = SafeInt(row, "rewardGold", 0),
+                            rewardGold  = SafeInt(row, "rewardGold", 0),
+                            isVisible   = false, // 기본 숨김
                         });
                     }
                 }
@@ -103,15 +91,35 @@ Backend.CDN.Content.Table.Get(tableBro =>
                     if (quest == null) continue;
 
                     quest.currentValue = SafeInt(row, "currentValue", 0);
-                    quest.isCompleted = row["isCompleted"]?.ToString() == "True";
-                    quest.isRewarded = row["isRewarded"]?.ToString() == "True";
-                    quest.rowInDate = row["inDate"]?.ToString();
+                    quest.isCompleted  = row["isCompleted"]?.ToString() == "True";
+                    quest.isRewarded   = row["isRewarded"]?.ToString() == "True";
+                    quest.isVisible    = row["isVisible"]?.ToString() == "True";
+                    quest.rowInDate    = row["inDate"]?.ToString();
                 }
             }
 
             Debug.Log("UserQuest 진행상황 로드 완료");
             onComplete?.Invoke();
         });
+    }
+
+    // 퀘스트 공개 (특정 액션 발생 시 호출)
+    public void UnlockQuest(string questId)
+    {
+        var quest = _quests.Find(q => q.questId == questId);
+        if (quest == null)
+        {
+            Debug.LogError($"퀘스트 없음: {questId}");
+            return;
+        }
+
+        if (quest.isVisible) return; // 이미 공개됨
+
+        quest.isVisible = true;
+        SaveQuest(quest);
+
+        Debug.Log($"퀘스트 공개: {quest.title}");
+        QuestUI.Instance?.Refresh();
     }
 
     public void UpdateProgress(QuestType type, int value)
@@ -121,6 +129,7 @@ Backend.CDN.Content.Table.Get(tableBro =>
         foreach (var quest in _quests)
         {
             if (quest.type != type) continue;
+            if (!quest.isVisible) continue;   // 공개된 퀘스트만 진행
             if (quest.isCompleted) continue;
 
             quest.currentValue += value;
@@ -128,7 +137,7 @@ Backend.CDN.Content.Table.Get(tableBro =>
             if (quest.currentValue >= quest.targetValue)
             {
                 quest.currentValue = quest.targetValue;
-                quest.isCompleted = true;
+                quest.isCompleted  = true;
                 Debug.Log($"퀘스트 완료: {quest.title}");
                 OnQuestCompleted(quest);
             }
@@ -154,7 +163,7 @@ Backend.CDN.Content.Table.Get(tableBro =>
         if (quest.isRewarded) return;
         quest.isRewarded = true;
 
-        // TODO: 재화 시스템 연동
+        MoneyManager.Instance.AddGold(quest.rewardGold);
         Debug.Log($"보상 지급: {quest.rewardGold}G");
 
         SaveQuest(quest);
@@ -164,20 +173,18 @@ Backend.CDN.Content.Table.Get(tableBro =>
     void SaveQuest(QuestData quest)
     {
         var param = new Param();
-        param.Add("questId", quest.questId);
+        param.Add("questId",      quest.questId);
         param.Add("currentValue", quest.currentValue);
-        param.Add("isCompleted", quest.isCompleted);
-        param.Add("isRewarded", quest.isRewarded);
+        param.Add("isCompleted",  quest.isCompleted);
+        param.Add("isRewarded",   quest.isRewarded);
+        param.Add("isVisible",    quest.isVisible);
 
         if (!string.IsNullOrEmpty(quest.rowInDate))
         {
-            // ownerInDate는 Backend.UserInDate 사용
             Backend.GameData.UpdateV2("UserQuest", quest.rowInDate, Backend.UserInDate, param, bro =>
             {
                 if (!bro.IsSuccess())
                     Debug.LogError($"퀘스트 업데이트 실패: {bro}");
-                else
-                    Debug.Log($"퀘스트 업데이트 완료: {quest.questId}");
             });
         }
         else

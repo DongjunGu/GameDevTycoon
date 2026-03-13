@@ -7,8 +7,8 @@ public class HUDUI : MonoBehaviour
 
     [Header("HUD Items")]
     public TextMeshProUGUI totalSalaryText;
-    // 추후 추가 예정
-    // public TextMeshProUGUI moneyText;
+    [Header("Money")]
+    public TextMeshProUGUI moneyText;
     // public TextMeshProUGUI reputationText;
     // public TextMeshProUGUI officeText;
 
@@ -21,6 +21,8 @@ public class HUDUI : MonoBehaviour
     public void RefreshAll()
     {
         RefreshSalary();
+            RefreshMoney();
+
         // 추후 추가
         // RefreshMoney();
         // RefreshReputation();
@@ -34,4 +36,9 @@ public class HUDUI : MonoBehaviour
 
         totalSalaryText.text = $"총 연봉: {total:N0}G";
     }
+    public void RefreshMoney()
+{
+    if (moneyText != null)
+        moneyText.text = $"{MoneyManager.Instance.Gold:N0}G";
+}
 }

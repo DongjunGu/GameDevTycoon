@@ -16,8 +16,10 @@ public class EmployeeListUI : MonoBehaviour
 
     [Header("Confirm")]
     public TextMeshProUGUI confirmNameText;
+    public TextMeshProUGUI enhancementText;
     public TextMeshProUGUI confirmRoleText;
     public TextMeshProUGUI confirmGradeText;
+    public TextMeshProUGUI confirmPotentialText;
     public TextMeshProUGUI confirmDevelopText;
     public TextMeshProUGUI confirmPlanningText;
     public TextMeshProUGUI confirmArtText;
@@ -61,11 +63,12 @@ public class EmployeeListUI : MonoBehaviour
         confirmNameText.text = employee.employeeName;
         confirmRoleText.text = employee.RoleToString();
         confirmGradeText.text = employee.GradeToString();
+        confirmPotentialText.text = employee.PotentialToString();
         confirmDevelopText.text = employee.DevelopText();
         confirmPlanningText.text = employee.PlanningText();
         confirmArtText.text = employee.ArtText();
         confirmPerfectionText.text = employee.PerfectionText();
-
+        enhancementText.text     = $"+{employee.enhancementLevel}";
         listPanel.SetActive(false);
         confirmPanel.SetActive(true);
     }

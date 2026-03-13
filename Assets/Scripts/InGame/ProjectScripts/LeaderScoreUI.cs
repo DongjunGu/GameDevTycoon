@@ -12,6 +12,7 @@ public class LeaderScoreUI : MonoBehaviour
     public TextMeshProUGUI leaderNameText;
     public TextMeshProUGUI leaderRoleText;
     public TextMeshProUGUI leaderGradeText;
+    public TextMeshProUGUI leaderPotentialText;
     public TextMeshProUGUI scoreText;
     public TextMeshProUGUI tickCountText;
     public Button confirmButton;
@@ -40,6 +41,7 @@ public class LeaderScoreUI : MonoBehaviour
         leaderNameText.text = employee.employeeName;
         leaderRoleText.text = employee.RoleToString();
         leaderGradeText.text = employee.GradeToString();
+        leaderPotentialText.text = employee.PotentialToString();
         tickCountText.text = "0회째";
 
         UpdateScoreText();

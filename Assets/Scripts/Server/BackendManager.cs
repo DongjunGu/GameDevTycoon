@@ -35,10 +35,12 @@ public class BackendManager : MonoBehaviour
 
             EmployeeManager.Instance.LoadAllData(() =>
             {
-                QuestManager.Instance.LoadQuests(() =>
+                MoneyManager.Instance.LoadMoney(() =>      // ← 추가
                 {
-                    Debug.Log("퀘스트 로드 완료");
-                    // UnityEngine.SceneManagement.SceneManager.LoadScene("GameScene");
+                    QuestManager.Instance.LoadQuests(() =>
+                    {
+                        //UnityEngine.SceneManagement.SceneManager.LoadScene("GameScene");
+                    });
                 });
             });
         }
@@ -49,9 +51,12 @@ public class BackendManager : MonoBehaviour
             {
                 EmployeeManager.Instance.LoadAllData(() =>
                 {
-                    QuestManager.Instance.LoadQuests(() =>
+                    MoneyManager.Instance.LoadMoney(() =>      // ← 추가
                     {
-                        UnityEngine.SceneManagement.SceneManager.LoadScene("GameScene");
+                        QuestManager.Instance.LoadQuests(() =>
+                        {
+                            //UnityEngine.SceneManagement.SceneManager.LoadScene("GameScene");
+                        });
                     });
                 });
             }
