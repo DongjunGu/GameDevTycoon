@@ -169,6 +169,7 @@ public class EmployeeManager : MonoBehaviour
         inGameEmployee.artSkill = poolEmployee.artSkill;
         inGameEmployee.perfectionSkill = poolEmployee.perfectionSkill;
         inGameEmployee.salary = poolEmployee.salary;
+        inGameEmployee.enhancementLevel = poolEmployee.enhancementLevel;
         inGameEmployee.assignedProjectId = "";
 
         Backend.GameData.Insert("Employee", inGameEmployee.ToParam(), bro =>
@@ -289,4 +290,77 @@ public class EmployeeManager : MonoBehaviour
                 Debug.LogError($"해고 저장 실패: {bro}");
         });
     }
+    // ── 강화 적용 ─────────────────────────────
+    public void ApplyEnhancement(EmployeeData employee)
+    {
+        var (mainMin, mainMax) = GetMainStatRange(employee.potential);
+        var (subMin, subMax) = GetSubStatRange(employee.potential);
+
+        string mainStat = GetMainStatKey(employee.role);
+        int mainGain = UnityEngine.Random.Range(mainMin, mainMax + 1);
+
+        var subStats = GetSubStatKeys(employee.role);
+        Shuffle(subStats);
+        int subGain0 = UnityEngine.Random.Range(subMin, subMax + 1);
+        int subGain1 = UnityEngine.Random.Range(subMin, subMax + 1);
+
+        ApplyStat(employee, mainStat, mainGain);
+        ApplyStat(employee, subStats[0], subGain0);
+        ApplyStat(employee, subStats[1], subGain1);
+    }
+
+    private string GetMainStatKey(EmployeeRole role) => role switch
+    {
+        EmployeeRole.Planner => "planning",
+        EmployeeRole.Programmer => "develop",
+        EmployeeRole.Artist => "art",
+        _ => "develop"
+    };
+
+    private List<string> GetSubStatKeys(EmployeeRole role)
+    {
+        var all = new List<string> { "develop", "planning", "art", "perfection" };
+        all.Remove(GetMainStatKey(role));
+        return all;
+    }
+
+    private void ApplyStat(EmployeeData e, string key, int gain)
+    {
+        switch (key)
+        {
+            case "develop": e.developSkill += gain; break;
+            case "planning": e.planningSkill += gain; break;
+            case "art": e.artSkill += gain; break;
+            case "perfection": e.perfectionSkill += gain; break;
+        }
+    }
+
+    private void Shuffle(List<string> list)
+    {
+        for (int i = list.Count - 1; i > 0; i--)
+        {
+            int j = UnityEngine.Random.Range(0, i + 1);
+            (list[i], list[j]) = (list[j], list[i]);
+        }
+    }
+
+    private (int min, int max) GetMainStatRange(EmployeePotential potential) => potential switch
+    {
+        EmployeePotential.F => (2, 4),
+        EmployeePotential.D => (4, 8),
+        EmployeePotential.C => (8, 12),
+        EmployeePotential.B => (12, 20),
+        EmployeePotential.A => (16, 26),
+        _ => (2, 4)
+    };
+
+    private (int min, int max) GetSubStatRange(EmployeePotential potential) => potential switch
+    {
+        EmployeePotential.F => (1, 2),
+        EmployeePotential.D => (2, 4),
+        EmployeePotential.C => (4, 6),
+        EmployeePotential.B => (6, 8),
+        EmployeePotential.A => (10, 12),
+        _ => (1, 2)
+    };
 }

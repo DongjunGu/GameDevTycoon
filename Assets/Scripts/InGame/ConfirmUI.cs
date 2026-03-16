@@ -11,9 +11,12 @@ public class ConfirmUI : MonoBehaviour
 
     [Header("UI")]
     public TextMeshProUGUI messageText;
+
     [Header("Buttons")]
     public Button confirmButton;
     public Button cancelButton;
+    public TextMeshProUGUI confirmButtonText;
+    public TextMeshProUGUI cancelButtonText;
 
     private System.Action _onConfirm;
     private System.Action _onCancel;
@@ -28,11 +31,14 @@ public class ConfirmUI : MonoBehaviour
         cancelButton.onClick.AddListener(OnClickCancel);
     }
 
-    public void Show(string message, System.Action onConfirm, System.Action onCancel = null)
+    public void Show(string message, System.Action onConfirm, System.Action onCancel = null,
+                     string confirmText = "확인", string cancelText = "취소")
     {
-        messageText.text = message;
-        _onConfirm = onConfirm;
-        _onCancel = onCancel;
+        messageText.text       = message;
+        _onConfirm             = onConfirm;
+        _onCancel              = onCancel;
+        if (confirmButtonText != null) confirmButtonText.text = confirmText;
+        if (cancelButtonText  != null) cancelButtonText.text  = cancelText;
         confirmPanel.SetActive(true);
     }
 

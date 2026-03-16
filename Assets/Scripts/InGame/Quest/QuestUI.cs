@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using System.Linq;
 using TMPro;
 
 public class QuestUI : MonoBehaviour
@@ -32,12 +33,14 @@ public class QuestUI : MonoBehaviour
 
     public void Refresh()
     {
-
-
         foreach (Transform child in questListContent)
             Destroy(child.gameObject);
 
-        var quests = QuestManager.Instance.GetAllQuests();
+
+        var quests = QuestManager.Instance.GetAllQuests()
+            .Where(q => q.isVisible)
+            .OrderBy(q => q.isRewarded ? 2 : q.isCompleted ? 1 : 0) // ← 진행중→완료→수령완료 순
+            .ToList();
 
         foreach (var quest in quests)
         {

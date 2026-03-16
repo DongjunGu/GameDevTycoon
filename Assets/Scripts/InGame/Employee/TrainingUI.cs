@@ -1,6 +1,7 @@
 using System.Collections;
 using UnityEngine;
 using TMPro;
+using System.Collections.Generic;
 
 public class TrainingUI : MonoBehaviour
 {
@@ -38,25 +39,30 @@ public class TrainingUI : MonoBehaviour
     public TextMeshProUGUI resultOutcomeText;      // 성공/유지/하락 텍스트
 
     private EmployeeData _selectedEmployee;
+    private struct EnhanceResult
+    {
+        public string statName;
+        public int gain;
+    }
 
     // 강화 확률 테이블 [level] = (성공%, 유지%, 하락%)
     private static readonly (int success, int maintain, int downgrade)[] EnhanceTable =
     {
-    (95, 0,  0),  // 0  - 하락 없음, 나머지 5%는 그냥 성공 안함(유지)
-    (90, 0,  10), // 1
-    (85, 0,  15), // 2
-    (80, 0,  20), // 3
-    (75, 0,  25), // 4
-    (70, 0,  30), // 5
-    (65, 0,  35), // 6
-    (60, 0,  40), // 7
-    (55, 0,  45), // 8
-    (50, 0,  50), // 9
-    (45, 0,  55), // 10
-    (40, 0,  60), // 11
-    (35, 0,  65), // 12
-    (30, 0,  70), // 13
-    (25, 0,  75), // 14
+    (99, 0,  0),  // 0  - 하락 없음, 나머지 5%는 그냥 성공 안함(유지)
+    (95, 0,  5), // 1
+    (89, 0,  11), // 2
+    (89, 0,  11), // 3
+    (84, 0,  16), // 4
+    (78, 0,  22), // 5
+    (73, 0,  27), // 6
+    (68, 0,  32), // 7
+    (63, 0,  37), // 8
+    (57, 0,  43), // 9
+    (52, 0,  48), // 10
+    (47, 0,  53), // 11
+    (42, 0,  58), // 12
+    (37, 0,  63), // 13
+    (31, 0,  69), // 14
     (30, 70, 0),  // 15 - 이후 하락 없음
     (28, 72, 0),  // 16
     (25, 75, 0),  // 17
@@ -124,51 +130,71 @@ public class TrainingUI : MonoBehaviour
             return;
         }
 
+        // 강화 전 수치 저장
+        int beforeDev = _selectedEmployee.developSkill;
+        int beforePlanning = _selectedEmployee.planningSkill;
+        int beforeArt = _selectedEmployee.artSkill;
+        int beforePerfection = _selectedEmployee.perfectionSkill;
+        int beforeLevel = _selectedEmployee.enhancementLevel;
+
         var (success, maintain, downgrade) = EnhanceTable[level];
         int roll = UnityEngine.Random.Range(0, 100);
 
         string outcome;
-        int gain = 0;
+        List<EnhanceResult> results = null;
 
         if (roll < success)
         {
-            // 성공
             _selectedEmployee.enhancementLevel++;
-            _selectedEmployee.developSkill += 1;
-            _selectedEmployee.planningSkill += 1;
-            _selectedEmployee.artSkill += 1;
-            _selectedEmployee.perfectionSkill += 1;
-            gain = 1;
-            outcome = "✨ 강화 성공!";
+            EmployeeManager.Instance.ApplyEnhancement(_selectedEmployee);
+            outcome = "O 강화 성공!";
         }
-        else if (roll < success + maintain)
+        else if (downgrade > 0 && roll >= success + maintain)
         {
-            // 유지
-            outcome = "🔒 강화 유지";
+            _selectedEmployee.enhancementLevel = Mathf.Max(0, level - 1);
+            outcome = "X 강화 하락";
         }
         else
         {
-            // 하락
-            _selectedEmployee.enhancementLevel = Mathf.Max(0, level - 1);
-            outcome = "💔 강화 하락";
+            outcome = "- 강화 유지";
         }
 
         EmployeeManager.Instance.UpdateEmployee(_selectedEmployee);
-        ShowResult(outcome, gain);
+        ShowResult(outcome, results, beforeDev, beforePlanning, beforeArt, beforePerfection, beforeLevel);
     }
-
-    void ShowResult(string outcome, int gain)
+    string StatDisplayName(string key) => key switch
+    {
+        "develop" => "개발",
+        "planning" => "기획",
+        "art" => "아트",
+        "perfection" => "완성도",
+        _ => key
+    };
+    void ShowResult(string outcome, List<EnhanceResult> results,
+                int beforeDev, int beforePlanning, int beforeArt, int beforePerfection, int beforeLevel)
     {
         resultNameText.text = _selectedEmployee.employeeName;
         resultRoleText.text = _selectedEmployee.RoleToString();
         resultPotentialText.text = _selectedEmployee.PotentialToString();
-        resultEnhancementText.text = $"강화 수치: +{_selectedEmployee.enhancementLevel}";
+        resultEnhancementText.text = $"강화 수치: +{beforeLevel} → +{_selectedEmployee.enhancementLevel}";
         resultOutcomeText.text = outcome;
 
-        resultDevelopText.text = gain > 0 ? $"개발: {_selectedEmployee.developSkill - gain} → {_selectedEmployee.developSkill}" : $"개발: {_selectedEmployee.developSkill}";
-        resultPlanningText.text = gain > 0 ? $"기획: {_selectedEmployee.planningSkill - gain} → {_selectedEmployee.planningSkill}" : $"기획: {_selectedEmployee.planningSkill}";
-        resultArtText.text = gain > 0 ? $"아트: {_selectedEmployee.artSkill - gain} → {_selectedEmployee.artSkill}" : $"아트: {_selectedEmployee.artSkill}";
-        resultPerfectionText.text = gain > 0 ? $"완성도: {_selectedEmployee.perfectionSkill - gain} → {_selectedEmployee.perfectionSkill}" : $"완성도: {_selectedEmployee.perfectionSkill}";
+        // 기본: 변화 없으면 before == after
+        resultDevelopText.text = beforeDev != _selectedEmployee.developSkill
+            ? $"개발: {beforeDev} → {_selectedEmployee.developSkill}"
+            : $"개발: {_selectedEmployee.developSkill}";
+
+        resultPlanningText.text = beforePlanning != _selectedEmployee.planningSkill
+            ? $"기획: {beforePlanning} → {_selectedEmployee.planningSkill}"
+            : $"기획: {_selectedEmployee.planningSkill}";
+
+        resultArtText.text = beforeArt != _selectedEmployee.artSkill
+            ? $"아트: {beforeArt} → {_selectedEmployee.artSkill}"
+            : $"아트: {_selectedEmployee.artSkill}";
+
+        resultPerfectionText.text = beforePerfection != _selectedEmployee.perfectionSkill
+            ? $"완성도: {beforePerfection} → {_selectedEmployee.perfectionSkill}"
+            : $"완성도: {_selectedEmployee.perfectionSkill}";
 
         trainingPanel.SetActive(false);
         resultPanel.SetActive(true);
@@ -190,6 +216,6 @@ public class TrainingUI : MonoBehaviour
     public void OnClickClose()
     {
         listPanel.SetActive(false);
-        gameObject.SetActive(false);
+        trainingPanel.SetActive(false);
     }
 }

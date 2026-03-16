@@ -46,13 +46,13 @@ public class EmployeeListUI : MonoBehaviour
         foreach (Transform child in slotParent)
             Destroy(child.gameObject);
 
+        listPanel.SetActive(true); // ← 슬롯 생성 전에 먼저 활성화
+
         foreach (var employee in EmployeeManager.Instance.ownedEmployees)
         {
             var slot = Instantiate(ownedEmployeeSlotPrefab, slotParent);
             slot.GetComponent<OwnedEmployeeSlotUI>().Setup(employee, this);
         }
-
-        listPanel.SetActive(true);
     }
 
     // 해고 버튼 클릭
@@ -68,7 +68,7 @@ public class EmployeeListUI : MonoBehaviour
         confirmPlanningText.text = employee.PlanningText();
         confirmArtText.text = employee.ArtText();
         confirmPerfectionText.text = employee.PerfectionText();
-        enhancementText.text     = $"+{employee.enhancementLevel}";
+        enhancementText.text = $"+{employee.enhancementLevel}";
         listPanel.SetActive(false);
         confirmPanel.SetActive(true);
     }
@@ -77,8 +77,8 @@ public class EmployeeListUI : MonoBehaviour
     {
         EmployeeManager.Instance.FireEmployee(_selectedEmployee);
         HUDUI.Instance.RefreshAll();
-        ShowList();
         confirmPanel.SetActive(false);
+        ShowList();
     }
 
     // 뒤로가기
