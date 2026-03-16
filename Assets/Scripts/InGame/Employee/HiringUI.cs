@@ -1,12 +1,14 @@
 using System.Collections.Generic;
 using UnityEngine;
 using TMPro;
+using UnityEngine.UI;
 
 public class HiringUI : MonoBehaviour
 {
     public static HiringUI Instance { get; private set; }
 
     [Header("Panels")]
+    public GameObject tierPanel;       // 티어 선택 패널 (새로 추가)
     public GameObject hiringPanel;
     public GameObject confirmPanel;
     public GameObject loadingPanel;
@@ -26,13 +28,21 @@ public class HiringUI : MonoBehaviour
     public TextMeshProUGUI confirmArtText;
     public TextMeshProUGUI confirmPerfectionText;
     public TextMeshProUGUI confirmSalaryText;
-    //public TextMeshProUGUI confirmStateText;
-
     [Header("Settings")]
     public int candidateCount = 4;
 
     private EmployeeData _selectedEmployee;
     private List<EmployeeData> _currentCandidates = new();
+
+    // 티어 데이터
+    private static readonly (string label, int cost, int[] range, int[] weights)[] Tiers =
+    {
+        ("기본 채용",      500,   new[] { 0 },                        new[] { 1 }),
+        ("일반 채용",     2000,   new[] { 0, 1, 2, 3 },              new[] { 4, 3, 2, 1 }),
+        ("고급 채용",     7000,   new[] { 3, 4, 5, 6, 7, 8 },        new[] { 6, 5, 4, 3, 2, 1 }),
+        ("프리미엄 채용", 20000,  new[] { 7, 8, 9, 10, 11, 12, 13, 14 }, new[] { 8, 7, 6, 5, 4, 3, 2, 1 }),
+        ("레전더리 채용", 50000,  new[] { 13,14,15, 16, 17, 18, 19, 20 }, new[] { 8, 7, 6, 5, 4, 3, 2, 1 }),
+    };
 
     void Awake()
     {
@@ -40,31 +50,76 @@ public class HiringUI : MonoBehaviour
         Instance = this;
     }
 
+    // ── 티어 선택 패널 열기 ───────────────────
     public void OpenHiring()
     {
-        int hiringCost = 500;
+        gameObject.SetActive(true);
+        tierPanel.SetActive(true);
+        hiringPanel.SetActive(false);
+        confirmPanel.SetActive(false);
+    }
+
+    // 티어 버튼 클릭 (0~4)
+    public void OnClickTier(int tierIndex)
+    {
+        var (label, cost, range, weights) = Tiers[tierIndex];
 
         ConfirmUI.Instance.Show(
-            $"직원을 채용하시겠습니까?\n비용: {hiringCost:N0}G",
+            $"{label}\n비용: {cost:N0}G",
             onConfirm: () =>
             {
-                if (!MoneyManager.Instance.CanAfford(hiringCost))
+                if (!MoneyManager.Instance.CanAfford(cost))
                 {
                     AlertUI.Instance.Show("재화가 부족합니다!");
                     return;
                 }
 
-                MoneyManager.Instance.SpendGold(hiringCost);
+                MoneyManager.Instance.SpendGold(cost);
 
-                hiringPanel.SetActive(false);
-                confirmPanel.SetActive(false);
+                tierPanel.SetActive(false);
                 if (loadingPanel != null) loadingPanel.SetActive(true);
 
                 _currentCandidates.Clear();
-                EmployeeManager.Instance.LoadRandomCandidates(candidateCount, ShowCandidates);
+                EmployeeManager.Instance.LoadRandomCandidates(candidateCount, candidates =>
+                {
+                    // 티어별 강화 수치 적용
+                    foreach (var employee in candidates)
+                    {
+                        int enhLevel = RollWeighted(range, weights);
+                        ApplyEnhancementLevel(employee, enhLevel);
+                    }
+                    ShowCandidates(candidates);
+                });
             },
-            onCancel: () => { }
+            onCancel: () => { },
+            confirmText: "채용하기",
+            cancelText: "취소"
         );
+    }
+
+    // 가중치 랜덤 롤
+    int RollWeighted(int[] range, int[] weights)
+    {
+        int total = 0;
+        foreach (int w in weights) total += w;
+
+        int roll = UnityEngine.Random.Range(0, total);
+        int cum = 0;
+        for (int i = 0; i < weights.Length; i++)
+        {
+            cum += weights[i];
+            if (roll < cum) return range[i];
+        }
+        return range[0];
+    }
+
+    // 강화 수치만큼 ApplyEnhancement 반복
+    void ApplyEnhancementLevel(EmployeeData employee, int targetLevel)
+    {
+        for (int i = 0; i < targetLevel; i++)
+            EmployeeManager.Instance.ApplyEnhancement(employee);
+
+        employee.enhancementLevel = targetLevel;
     }
 
     void ShowCandidates(List<EmployeeData> candidates)
@@ -99,8 +154,7 @@ public class HiringUI : MonoBehaviour
         confirmArtText.text = employee.ArtRangeText();
         confirmPerfectionText.text = employee.PerfectionRangeText();
         confirmSalaryText.text = employee.SalaryRangeText();
-        enhancementText.text     = $"+{employee.enhancementLevel}";
-        //confirmStateText.text      = employee.StateToString();
+        enhancementText.text = $"+{employee.enhancementLevel}";
 
         hiringPanel.SetActive(false);
         confirmPanel.SetActive(true);
@@ -124,12 +178,14 @@ public class HiringUI : MonoBehaviour
             "채용을 취소하시겠습니까?",
             onConfirm: () =>
             {
+                tierPanel.SetActive(false);
                 hiringPanel.SetActive(false);
+                confirmPanel.SetActive(false);
+                if (loadingPanel != null) loadingPanel.SetActive(false);
             },
-            onCancel: () =>
-            {
-                ConfirmUI.Instance.confirmPanel.SetActive(false);
-            }
+            onCancel: () => { },
+            confirmText: "채용취소",
+            cancelText: "채용진행"
         );
     }
 }

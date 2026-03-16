@@ -18,6 +18,7 @@ public class SalesUI : MonoBehaviour
     [Header("UI")]
     public TextMeshProUGUI totalRevenueText;
     public TextMeshProUGUI totalUnitsText;
+    public TextMeshProUGUI qualityScoreText;
     [Header("Animation")]
     public float barAnimDuration = 0.4f;   // 바 올라오는 속도
     public float barSpawnDelay = 0.1f;     // 다음 바 생성 대기 시간
@@ -34,6 +35,8 @@ public class SalesUI : MonoBehaviour
         // 기존 바 제거
         foreach (Transform child in chartArea)
             Destroy(child.gameObject);
+
+        qualityScoreText.text = $"품질: {qualityScore:F1}";    
 
         int totalUnits = Mathf.RoundToInt(qualityScore * UnityEngine.Random.Range(2500, 3301));
 
