@@ -11,6 +11,8 @@ public class HUDUI : MonoBehaviour
     public TextMeshProUGUI moneyText;
     // public TextMeshProUGUI reputationText;
     // public TextMeshProUGUI officeText;
+    [Header("Time")]
+    public TextMeshProUGUI timeText;
 
     void Awake()
     {
@@ -21,10 +23,10 @@ public class HUDUI : MonoBehaviour
     public void RefreshAll()
     {
         RefreshSalary();
-            RefreshMoney();
-
+        RefreshMoney();
+        RefreshTime();
         // 추후 추가
-        // RefreshMoney();
+        
         // RefreshReputation();
     }
 
@@ -37,8 +39,13 @@ public class HUDUI : MonoBehaviour
         totalSalaryText.text = $"총 연봉: {total:N0}G";
     }
     public void RefreshMoney()
-{
-    if (moneyText != null)
-        moneyText.text = $"{MoneyManager.Instance.Gold:N0}G";
-}
+    {
+        if (moneyText != null)
+            moneyText.text = $"{MoneyManager.Instance.Gold:N0}G";
+    }
+    public void RefreshTime()
+    {
+        if (timeText != null)
+            timeText.text = GameTimeManager.Instance.GetTimeString();
+    }
 }

@@ -28,6 +28,19 @@ public class DevelopmentResultUI : MonoBehaviour
     private float _lastMarketingBonus;
     public float LastMarketFit => _lastMarketFit;
     public float LastMarketingBonus => _lastMarketingBonus;
+    // 프로퍼티 추가
+    public string LastProjectName => projectNameText.text;
+    public float LastPlanning => _lastPlanning;
+    public float LastDevelop => _lastDevelop;
+    public float LastArt => _lastArt;
+    public float LastCreativity => _lastCreativity;
+    public float LastBug => _lastBug;
+
+    private float _lastPlanning;
+    private float _lastDevelop;
+    private float _lastArt;
+    private float _lastCreativity;
+    private float _lastBug;
     string GetScaleString(ProjectScale scale) => scale switch
     {
         ProjectScale.Small => "소규모(1인개발)",
@@ -64,6 +77,11 @@ public class DevelopmentResultUI : MonoBehaviour
 
     public void Show(float planning, float develop, float art, float bug, float creativity)
     {
+        _lastPlanning = planning;
+        _lastDevelop = develop;
+        _lastArt = art;
+        _lastBug = bug;
+        _lastCreativity = creativity;
         planningText.text = $"기획: {Mathf.RoundToInt(planning)}";
         developText.text = $"개발: {Mathf.RoundToInt(develop)}";
         artText.text = $"아트: {Mathf.RoundToInt(art)}";

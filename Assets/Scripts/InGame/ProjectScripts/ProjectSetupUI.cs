@@ -27,9 +27,9 @@ public class ProjectSetupUI : MonoBehaviour
     // ── 최종 확정 패널 ────────────────────────
     [Header("Confirm")]
     public TextMeshProUGUI confirmText;
-    public static ProjectScale SelectedScale { get; private set; }
-    public static ProjectGenre SelectedGenre { get; private set; }
-    public static ProjectPlatform SelectedPlatform { get; private set; }
+    public static ProjectScale    SelectedScale    { get; set; }
+    public static ProjectGenre    SelectedGenre    { get; set; }
+    public static ProjectPlatform SelectedPlatform { get; set; }
 
     // ── 내부 상태 ─────────────────────────────
     private ProjectData _projectData = new();
@@ -50,7 +50,7 @@ public class ProjectSetupUI : MonoBehaviour
     // ── 패널 전환 ─────────────────────────────
     void ShowPanel(GameObject target)
     {
-        startPanel.SetActive(false);
+        //startPanel.SetActive(false);
         scalePanel.SetActive(false);
         genrePanel.SetActive(false);
         platformPanel.SetActive(false);
@@ -164,7 +164,7 @@ public class ProjectSetupUI : MonoBehaviour
         SelectedPlatform = _projectData.platform;
 
         Debug.Log($"개발 시작! {_projectData.ScaleToString()} / {_projectData.GenreToString()} / {_projectData.PlatformToString()}");
-        gameObject.SetActive(false);
+        confirmPanel.SetActive(false);
         DevelopmentManager.Instance.StartDevelopment();
         // 나중에 ProjectManager에 데이터 넘기는 포인트
 
