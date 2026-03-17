@@ -28,8 +28,8 @@ public class MoneyManager : MonoBehaviour
                 if (rows.Count > 0)
                 {
                     JsonData row = rows[0];
-                    _gold       = SafeInt(row, "gold", 0);
-                    _rowInDate  = row["inDate"]?.ToString();
+                    _gold = SafeInt(row, "gold", 0);
+                    _rowInDate = row["inDate"]?.ToString();
                     Debug.Log($"재화 로드 완료: {_gold}G");
                 }
                 else
@@ -114,5 +114,40 @@ public class MoneyManager : MonoBehaviour
         if (row.ContainsKey(key) && int.TryParse(row[key]?.ToString(), out int val))
             return val;
         return fallback;
+    }
+
+
+
+
+
+
+    void Start()
+    {
+        DialogManager.Instance.OnChoiceResult += HandleDialogResult;
+    }
+
+    void HandleDialogResult(string resultType, int resultValue)
+    {
+        if (resultType == "GoldChange")
+        {
+            if (resultValue >= 0)
+                MoneyManager.Instance.AddGold(resultValue);   // 지급
+            else
+                MoneyManager.Instance.SpendGold(-resultValue); // 차감 (음수 → 양수로 변환)
+        }
+    }
+    public void OnTestDialogButton()
+    {
+        EventDialogTable.PlayManual("event_game_start");        // 단순 진행
+    }
+
+    public void OnTestHireDialogButton()
+    {
+        EventDialogTable.PlayManual("event_first_hire");        // 선택지 + 골드 차감
+    }
+
+    public void OnTestProjectDialogButton()
+    {
+        EventDialogTable.PlayManual("event_project_complete");  // 2단계 분기
     }
 }
