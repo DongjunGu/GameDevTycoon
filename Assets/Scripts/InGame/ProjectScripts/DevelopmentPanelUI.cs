@@ -29,6 +29,15 @@ public class DevelopmentPanelUI : MonoBehaviour
         if (Instance != null) { Destroy(gameObject); return; }
         Instance = this;
     }
+    public void SetValues(float planning, float develop, float art, float bug, float creativity)
+    {
+        _planning = planning;
+        _develop = develop;
+        _art = art;
+        _bug = bug;
+        _creativity = creativity;
+        UpdateUI();
+    }
 
     public void ResetValues()
     {
@@ -37,7 +46,16 @@ public class DevelopmentPanelUI : MonoBehaviour
         _art = 0f;
         _bug = 0f;
         _creativity = 0f;
-        UpdateUI();
+
+        planningText.text = "";
+        developText.text = "";
+        artText.text = "";
+        bugText.text = "";
+        creativityText.text = "";
+    }
+    public void ResetMarketFit()
+    {
+        marketFitText.text = "";
     }
 
     public void AddValues(float planning, float develop, float art, float bug, float creativity = 0f)
@@ -50,7 +68,7 @@ public class DevelopmentPanelUI : MonoBehaviour
         UpdateUI();
     }
 
-    void UpdateUI()
+    public void UpdateUI()
     {
         planningText.text = $"기획: {Mathf.RoundToInt(_planning)}";
         developText.text = $"개발: {Mathf.RoundToInt(_develop)}";
@@ -75,5 +93,12 @@ public class DevelopmentPanelUI : MonoBehaviour
         };
 
         marketFitText.text = $"인기 장르: {genreName}";
+    }
+    public void MultiplyValues(float multiplier)
+    {
+        _planning *= multiplier;
+        _develop *= multiplier;
+        _art *= multiplier;
+        UpdateUI();
     }
 }

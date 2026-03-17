@@ -38,6 +38,7 @@ public class FeedbackUI : MonoBehaviour
 
     public void OnClickClose()
     {
+        GameTimeManager.Instance.SaveGameTime();   
         feedbackPanel.SetActive(false);
     }
 }

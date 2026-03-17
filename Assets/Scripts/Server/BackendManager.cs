@@ -35,11 +35,20 @@ public class BackendManager : MonoBehaviour
 
             EmployeeManager.Instance.LoadAllData(() =>
             {
-                MoneyManager.Instance.LoadMoney(() =>      // ← 추가
+                MoneyManager.Instance.LoadMoney(() => 
                 {
-                    QuestManager.Instance.LoadQuests(() =>
+                    GameTimeManager.Instance.LoadGameTime(() => 
                     {
-                        //UnityEngine.SceneManagement.SceneManager.LoadScene("GameScene");
+                        QuestManager.Instance.LoadQuests(() =>
+                        {
+                            ProjectSaveManager.Instance.LoadProject(() =>
+                            {
+                                CompletedProjectManager.Instance.LoadCompletedProjects(() =>
+                                {
+                                    GameTimeManager.Instance.StartTime();
+                                });
+                            });
+                        });
                     });
                 });
             });
@@ -51,11 +60,20 @@ public class BackendManager : MonoBehaviour
             {
                 EmployeeManager.Instance.LoadAllData(() =>
                 {
-                    MoneyManager.Instance.LoadMoney(() =>      // ← 추가
+                    MoneyManager.Instance.LoadMoney(() =>
                     {
-                        QuestManager.Instance.LoadQuests(() =>
+                        GameTimeManager.Instance.LoadGameTime(()=>
                         {
-                            //UnityEngine.SceneManagement.SceneManager.LoadScene("GameScene");
+                            QuestManager.Instance.LoadQuests(() =>
+                            {
+                                ProjectSaveManager.Instance.LoadProject(() => // ← 추가
+                                {
+                                    CompletedProjectManager.Instance.LoadCompletedProjects(() => // ← 추가
+                                    {
+                                        GameTimeManager.Instance.StartTime();
+                                    });
+                                });
+                            });
                         });
                     });
                 });

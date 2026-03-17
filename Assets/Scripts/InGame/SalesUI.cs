@@ -22,7 +22,9 @@ public class SalesUI : MonoBehaviour
     [Header("Animation")]
     public float barAnimDuration = 0.4f;   // 바 올라오는 속도
     public float barSpawnDelay = 0.1f;     // 다음 바 생성 대기 시간
-
+    private ProjectScale _cachedScale;
+    private ProjectGenre _cachedGenre;
+    private ProjectPlatform _cachedPlatform;
     void Awake()
     {
         if (Instance != null) { Destroy(gameObject); return; }
@@ -32,13 +34,18 @@ public class SalesUI : MonoBehaviour
 
     public void Show(float qualityScore, ProjectScale scale)
     {
+        _cachedScale = ProjectSetupUI.SelectedScale;
+        _cachedGenre = ProjectSetupUI.SelectedGenre;
+        _cachedPlatform = ProjectSetupUI.SelectedPlatform;
+        GameTimeManager.Instance.StartTime();
+
         // 기존 바 제거
         foreach (Transform child in chartArea)
             Destroy(child.gameObject);
 
-        qualityScoreText.text = $"품질: {qualityScore:F1}";    
+        qualityScoreText.text = $"품질: {qualityScore:F1}점";
 
-        int totalUnits = Mathf.RoundToInt(qualityScore * UnityEngine.Random.Range(2500, 3301));
+        int totalUnits = Mathf.RoundToInt(qualityScore * UnityEngine.Random.Range(130, 161)); //추후 팬덤영향
 
         float[] distribution = CalcDistribution(scale);
         int[] unitPerPeriod = new int[8];
@@ -48,7 +55,7 @@ public class SalesUI : MonoBehaviour
         int maxUnits = 0;
         foreach (var u in unitPerPeriod) if (u > maxUnits) maxUnits = u;
 
-        int totalRevenue = totalUnits * 1000;
+        int totalRevenue = totalUnits * 9;
         totalUnitsText.text = $"총 판매량: {totalUnits:N0}개";
         totalRevenueText.text = $"총 매출: {totalRevenue:N0}G";
 
@@ -84,7 +91,7 @@ public class SalesUI : MonoBehaviour
                 barImage.sizeDelta = new Vector2(barImage.sizeDelta.x, t * targetHeight);
                 int currentUnits = Mathf.RoundToInt(Mathf.Lerp(startUnits, endUnits, t));
                 totalUnitsText.text = $"총 판매량: {currentUnits:N0}개";
-                totalRevenueText.text = $"총 매출: {currentUnits * 1000:N0}G";
+                totalRevenueText.text = $"총 매출: {currentUnits * 9:N0}G";
 
                 yield return null;
             }
@@ -92,7 +99,7 @@ public class SalesUI : MonoBehaviour
             barImage.sizeDelta = new Vector2(barImage.sizeDelta.x, targetHeight);
             valueLabel.text = $"{unitPerPeriod[i]:N0}";
             totalUnitsText.text = $"총 판매량: {endUnits:N0}개";
-            totalRevenueText.text = $"총 매출: {endUnits * 1000:N0}G";
+            totalRevenueText.text = $"총 매출: {endUnits * 9:N0}G";
 
             cumulativeUnits = endUnits;
 
@@ -100,10 +107,36 @@ public class SalesUI : MonoBehaviour
         }
         QuestManager.Instance.UpdateProgress(QuestType.TotalSales, cumulativeUnits);
         yield return new WaitForSeconds(0.5f);
-        salesPanel.SetActive(false);
 
         AlertUI.Instance.Show("피드백 시간!", () =>
         {
+            int totalRevenue = cumulativeUnits * 9;
+            MoneyManager.Instance.AddGold(totalRevenue);
+            DevelopmentManager.Instance.ResetProject();
+            ProjectSaveManager.Instance.SaveProject();
+            GameTimeManager.Instance.SaveGameTime();
+            salesPanel.SetActive(false);
+            var completedData = new CompletedProjectData
+            {
+                projectName = DevelopmentResultUI.Instance.LastProjectName,
+                scale = (int)_cachedScale,
+                genre = (int)_cachedGenre,
+                platform = (int)_cachedPlatform,
+                planning = DevelopmentResultUI.Instance.LastPlanning,
+                develop = DevelopmentResultUI.Instance.LastDevelop,
+                art = DevelopmentResultUI.Instance.LastArt,
+                creativity = DevelopmentResultUI.Instance.LastCreativity,
+                bug = DevelopmentResultUI.Instance.LastBug,
+                totalUnits = cumulativeUnits,
+                totalRevenue = cumulativeUnits * 9,
+                year = GameTimeManager.Instance.Year,
+                month = GameTimeManager.Instance.Month,
+                week = GameTimeManager.Instance.Week,
+            };
+
+            Debug.Log($"저장: scale={completedData.scale} genre={completedData.genre} platform={completedData.platform}");
+            CompletedProjectManager.Instance.SaveCompletedProject(completedData);
+
             FeedbackUI.Instance.Show(
                 DevelopmentResultUI.Instance.LastMarketFit,
                 DevelopmentResultUI.Instance.LastMarketingBonus
