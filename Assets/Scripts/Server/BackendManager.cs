@@ -45,7 +45,9 @@ public class BackendManager : MonoBehaviour
                             {
                                 CompletedProjectManager.Instance.LoadCompletedProjects(() =>
                                 {
+                                    DialogManager.Instance.Initialize();
                                     GameTimeManager.Instance.StartTime();
+
                                 });
                             });
                         });
@@ -70,6 +72,7 @@ public class BackendManager : MonoBehaviour
                                 {
                                     CompletedProjectManager.Instance.LoadCompletedProjects(() => // ← 추가
                                     {
+                                        DialogManager.Instance.Initialize();
                                         GameTimeManager.Instance.StartTime();
                                     });
                                 });
