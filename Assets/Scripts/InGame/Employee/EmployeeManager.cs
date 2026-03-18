@@ -19,16 +19,16 @@ public class EmployeeManager : MonoBehaviour
         _defaultEmployees = new List<EmployeeData>
         {
             //                                                             dev      plan     art      perfection   salary        maxGrade
-            new EmployeeData("emp_01", "김기획", EmployeeRole.Planner,    40,50, 80,90, 25,35, 15,25, 1400,1600, EmployeeGrade.Rare),
-            new EmployeeData("emp_02", "이코딩", EmployeeRole.Programmer, 88,95, 20,30, 50,60, 20,30, 2300,2700, EmployeeGrade.Unique),
-            new EmployeeData("emp_03", "박아트", EmployeeRole.Artist,      8,15, 45,55, 82,92, 11,22,  900,1100, EmployeeGrade.Normal),
-            new EmployeeData("emp_04", "최사운", EmployeeRole.Programmer, 25,35, 35,45, 48,62, 10,20,  650, 750, EmployeeGrade.Normal),
-            new EmployeeData("emp_05", "정기획", EmployeeRole.Planner,    12,20, 70,80, 20,30, 11,22,  900,1000, EmployeeGrade.Rare),
-            new EmployeeData("emp_06", "한개발", EmployeeRole.Programmer, 80,90, 30,40, 42,50, 15,25, 1500,1700, EmployeeGrade.Epic),
-            new EmployeeData("emp_07", "오아트", EmployeeRole.Artist,      8,15, 48,58, 90,99, 20,30, 2000,2400, EmployeeGrade.Unique),
-            new EmployeeData("emp_08", "윤기획", EmployeeRole.Planner,     8,14, 60,70, 15,25, 10,20,  600, 700, EmployeeGrade.Normal),
-            new EmployeeData("emp_09", "장개발", EmployeeRole.Programmer, 73,82, 25,35, 38,48, 11,22, 1000,1100, EmployeeGrade.Rare),
-            new EmployeeData("emp_10", "강아트", EmployeeRole.Artist,     12,20, 40,50, 78,88, 15,25, 1350,1550, EmployeeGrade.Epic),
+            new EmployeeData("emp_01", "김기획", EmployeeRole.Planner,    40,50, 80,90, 25,35, 15,25, 1400,1600, EmployeeGrade.Rare) { portraitId = "portrait_emp_01" },
+            new EmployeeData("emp_02", "이코딩", EmployeeRole.Programmer, 88,95, 20,30, 50,60, 20,30, 2300,2700, EmployeeGrade.Unique){ portraitId = "portrait_emp_01" },
+            new EmployeeData("emp_03", "박아트", EmployeeRole.Artist,      8,15, 45,55, 82,92, 11,22,  900,1100, EmployeeGrade.Normal){ portraitId = "portrait_emp_01" },
+            new EmployeeData("emp_04", "최사운", EmployeeRole.Programmer, 25,35, 35,45, 48,62, 10,20,  650, 750, EmployeeGrade.Normal){ portraitId = "portrait_emp_01" },
+            new EmployeeData("emp_05", "정기획", EmployeeRole.Planner,    12,20, 70,80, 20,30, 11,22,  900,1000, EmployeeGrade.Rare){ portraitId = "portrait_emp_01" },
+            new EmployeeData("emp_06", "한개발", EmployeeRole.Programmer, 80,90, 30,40, 42,50, 15,25, 1500,1700, EmployeeGrade.Epic){ portraitId = "portrait_emp_02" },
+            new EmployeeData("emp_07", "오아트", EmployeeRole.Artist,      8,15, 48,58, 90,99, 20,30, 2000,2400, EmployeeGrade.Unique){ portraitId = "portrait_emp_02" },
+            new EmployeeData("emp_08", "윤기획", EmployeeRole.Planner,     8,14, 60,70, 15,25, 10,20,  600, 700, EmployeeGrade.Normal){ portraitId = "portrait_emp_02" },
+            new EmployeeData("emp_09", "장개발", EmployeeRole.Programmer, 73,82, 25,35, 38,48, 11,22, 1000,1100, EmployeeGrade.Rare){ portraitId = "portrait_emp_02" },
+            new EmployeeData("emp_10", "강아트", EmployeeRole.Artist,     12,20, 40,50, 78,88, 15,25, 1350,1550, EmployeeGrade.Epic){ portraitId = "portrait_emp_02" },
         };
     }
 
@@ -170,6 +170,7 @@ public class EmployeeManager : MonoBehaviour
         inGameEmployee.perfectionSkill = poolEmployee.perfectionSkill;
         inGameEmployee.salary = poolEmployee.salary;
         inGameEmployee.enhancementLevel = poolEmployee.enhancementLevel;
+        inGameEmployee.portraitId      = poolEmployee.portraitId;
         inGameEmployee.assignedProjectId = "";
 
         Backend.GameData.Insert("Employee", inGameEmployee.ToParam(), bro =>

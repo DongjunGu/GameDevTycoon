@@ -36,6 +36,7 @@ public class EmployeeListUI : MonoBehaviour
 
     public void OpenList()
     {
+        GameTimeManager.Instance?.StopTime();
         gameObject.SetActive(true);
         confirmPanel.SetActive(false);
         ShowList();
@@ -91,6 +92,7 @@ public class EmployeeListUI : MonoBehaviour
     // 닫기
     public void OnClickClose()
     {
+        GameTimeManager.Instance?.StartTime();
         listPanel.SetActive(false);
     }
 }

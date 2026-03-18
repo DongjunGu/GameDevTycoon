@@ -23,8 +23,8 @@ public class RandomEventUI : MonoBehaviour
 
     public void Show(RandomEventData evt)
     {
-        _currentEvent       = evt;
-        titleText.text       = evt.title;
+        _currentEvent = evt;
+        titleText.text = evt.title;
         descriptionText.text = evt.description;
         eventPanel.SetActive(true);
     }
@@ -32,8 +32,10 @@ public class RandomEventUI : MonoBehaviour
     // 확인 버튼
     public void OnClickConfirm()
     {
-        _currentEvent?.onApply?.Invoke();
-        DevelopmentManager.Instance.ResumeFromEvent();
         eventPanel.SetActive(false);
+        _currentEvent?.onApply?.Invoke();
+        ProjectSaveManager.Instance.SaveProject();
+        GameTimeManager.Instance.SaveGameTime();
+        DevelopmentManager.Instance.ResumeFromEvent();
     }
 }

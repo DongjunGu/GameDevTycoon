@@ -39,6 +39,7 @@ public class CompletedProjectsUI : MonoBehaviour
 
     public void Open()
     {
+        GameTimeManager.Instance?.StopTime();
         gameObject.SetActive(true);
         detailPanel.SetActive(false);
         ShowList();
@@ -109,6 +110,7 @@ public class CompletedProjectsUI : MonoBehaviour
 
     public void OnClickClose()
     {
+        GameTimeManager.Instance?.StartTime();
         listPanel.SetActive(false);
     }
 

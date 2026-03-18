@@ -143,6 +143,7 @@ public static class DialogChartLoader
             conditionValue = N(row, "conditionValue"),
             resultType     = Enum<ResultType>(row, "resultType"),
             resultValue    = N(row, "resultValue"),
+            pauseAfterResult = B(row, "pauseAfterResult"),
         };
     }
 

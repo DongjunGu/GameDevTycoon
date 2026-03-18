@@ -46,26 +46,32 @@ public class DialogUI : MonoBehaviour
     private List<ChoiceData> _pendingChoices;
     private List<GameObject> _choiceButtons = new List<GameObject>();
 
+
     // ─── 공개 API ────────────────────────────────────────────────
     public void Show(DialogNodeData node, List<ChoiceData> choices)
     {
         _dialogPanel.SetActive(true);
         _hasChoiceOnDone = node.hasChoice;
         _pendingChoices = choices;
-        _currentFullText = node.dialogText;
+        string displayText = DialogManager.Instance.ReplacePlaceholders(node.dialogText);
+        string displayName = DialogManager.Instance.ReplacePlaceholders(node.speakerName ?? "");
+        string displayPortraitId = DialogManager.Instance.ReplacePlaceholders(node.speakerPortraitId ?? "");
+
+        _currentFullText = displayText;
 
         // 이름창
         bool hasName = !string.IsNullOrEmpty(node.speakerName);
         _speakerNamePanel.SetActive(hasName);
-        if (hasName) _speakerNameText.text = node.speakerName;
+        if (hasName) _speakerNameText.text = displayName;
         //초상화
-        if (string.IsNullOrEmpty(node.speakerPortraitId))
+        if (string.IsNullOrEmpty(displayPortraitId))
         {
             _portraitImage.gameObject.SetActive(false);
         }
         else
         {
-            Sprite portrait = Resources.Load<Sprite>($"Portraits/{node.speakerPortraitId}");
+            Sprite portrait = Resources.Load<Sprite>($"Portraits/{displayPortraitId}");
+            Debug.Log(displayPortraitId);
             if (portrait != null)
             {
                 _portraitImage.sprite = portrait;
@@ -74,7 +80,8 @@ public class DialogUI : MonoBehaviour
             else
             {
                 _portraitImage.gameObject.SetActive(false);
-                Debug.LogWarning($"[DialogUI] 초상화 없음: Portraits/{node.speakerPortraitId}");
+                Debug.Log($"없음 {displayPortraitId}");
+                Debug.LogWarning($"[DialogUI] 초상화 없음: Portraits/{displayPortraitId}");
             }
         }
 
@@ -91,7 +98,7 @@ public class DialogUI : MonoBehaviour
             _ => _speedNormal,
         };
         if (_typingCoroutine != null) StopCoroutine(_typingCoroutine);
-        _typingCoroutine = StartCoroutine(TypeText(node.dialogText, speed));
+        _typingCoroutine = StartCoroutine(TypeText(displayText, speed));
 
         // 연출
         if (node.shakeEffect) StartCoroutine(ShakePanel());
@@ -126,6 +133,7 @@ public class DialogUI : MonoBehaviour
     // ─── 타이핑 ──────────────────────────────────────────────────
     private IEnumerator TypeText(string text, float speed)
     {
+
         _isTypingDone = false;
         _dialogText.text = "";
 

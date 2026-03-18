@@ -27,8 +27,8 @@ public class ProjectSetupUI : MonoBehaviour
     // ── 최종 확정 패널 ────────────────────────
     [Header("Confirm")]
     public TextMeshProUGUI confirmText;
-    public static ProjectScale    SelectedScale    { get; set; }
-    public static ProjectGenre    SelectedGenre    { get; set; }
+    public static ProjectScale SelectedScale { get; set; }
+    public static ProjectGenre SelectedGenre { get; set; }
     public static ProjectPlatform SelectedPlatform { get; set; }
 
     // ── 내부 상태 ─────────────────────────────
@@ -156,6 +156,19 @@ public class ProjectSetupUI : MonoBehaviour
         ShowSummary();
     }
 
+    public void OnClickClose()
+    {
+        _projectData = new ProjectData();
+        _isEditing = false;
+
+        scalePanel.SetActive(false);
+        genrePanel.SetActive(false);
+        platformPanel.SetActive(false);
+        summaryPanel.SetActive(false);
+        confirmPanel.SetActive(false);
+        startPanel.SetActive(true);
+    }
+
     // ── 개발 시작 ─────────────────────────────
     public void OnClickStartDevelopment()
     {
@@ -164,8 +177,9 @@ public class ProjectSetupUI : MonoBehaviour
         SelectedPlatform = _projectData.platform;
 
         Debug.Log($"개발 시작! {_projectData.ScaleToString()} / {_projectData.GenreToString()} / {_projectData.PlatformToString()}");
-        confirmPanel.SetActive(false);
         DevelopmentManager.Instance.StartDevelopment();
+        confirmPanel.SetActive(false);
+
         // 나중에 ProjectManager에 데이터 넘기는 포인트
 
         // ProjectManager.Instance.StartProject(_projectData);

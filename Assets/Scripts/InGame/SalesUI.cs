@@ -139,7 +139,8 @@ public class SalesUI : MonoBehaviour
 
             FeedbackUI.Instance.Show(
                 DevelopmentResultUI.Instance.LastMarketFit,
-                DevelopmentResultUI.Instance.LastMarketingBonus
+                DevelopmentResultUI.Instance.LastMarketingBonus,
+                DevelopmentResultUI.Instance.LastBug
             );
         });
     }

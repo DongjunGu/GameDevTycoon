@@ -53,6 +53,7 @@ public class HiringUI : MonoBehaviour
     // ── 티어 선택 패널 열기 ───────────────────
     public void OpenHiring()
     {
+        GameTimeManager.Instance?.StopTime();
         gameObject.SetActive(true);
         tierPanel.SetActive(true);
         hiringPanel.SetActive(false);
@@ -70,7 +71,7 @@ public class HiringUI : MonoBehaviour
             {
                 if (!MoneyManager.Instance.CanAfford(cost))
                 {
-                    AlertUI.Instance.Show("재화가 부족합니다!");
+                    GameUIHelper.ShowLoanPrompt();
                     return;
                 }
 
@@ -162,9 +163,12 @@ public class HiringUI : MonoBehaviour
 
     public void OnClickConfirmHire()
     {
+        GameTimeManager.Instance?.StartTime();
         EmployeeManager.Instance.HireEmployee(_selectedEmployee);
         hiringPanel.SetActive(false);
         confirmPanel.SetActive(false);
+
+        DialogManager.Instance.Resume();//다이얼로그 다시재생
     }
 
     public void OnClickBack()
@@ -174,6 +178,7 @@ public class HiringUI : MonoBehaviour
 
     public void OnClickClose()
     {
+        GameTimeManager.Instance?.StartTime();
         ConfirmUI.Instance.Show(
             "채용을 취소하시겠습니까?",
             onConfirm: () =>
@@ -182,10 +187,16 @@ public class HiringUI : MonoBehaviour
                 hiringPanel.SetActive(false);
                 confirmPanel.SetActive(false);
                 if (loadingPanel != null) loadingPanel.SetActive(false);
+                DialogManager.Instance.EndDialog(); //다이얼로그 멈춤
             },
             onCancel: () => { },
             confirmText: "채용취소",
             cancelText: "채용진행"
         );
+    }
+    public void OnClickTierPanelClose()
+    {
+        tierPanel.SetActive(false);
+        GameTimeManager.Instance.StartTime();
     }
 }

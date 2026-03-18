@@ -66,12 +66,16 @@ public class DevelopmentManager : MonoBehaviour
         programmerLeader = null;
         artistLeader = null;
 
+
         InitTickMap();
         DevelopmentPanelUI.Instance.ResetValues();
+        DevelopmentPanelUI.Instance.UpdateUI();
         RandomEventManager.Instance.InitEvents();
+        GameTimeManager.Instance.StopTime();
         LeaderSelectUI.Instance.Open(LeaderType.Planner, () =>
         {
-            GameTimeManager.Instance.StartTime();
+            GameTimeManager.Instance.ForceStartTime();
+            _isRunning = true;
             StartCoroutine(DevelopmentCoroutine());
         });
     }
@@ -169,7 +173,7 @@ public class DevelopmentManager : MonoBehaviour
                 GameTimeManager.Instance.StopTime();
                 LeaderSelectUI.Instance.Open(LeaderType.Programmer, () =>
                 {
-                    GameTimeManager.Instance.StartTime();
+                    GameTimeManager.Instance.ForceStartTime();
                     _isRunning = true;
                     StartCoroutine(DevelopmentCoroutine());
                 });
@@ -184,7 +188,7 @@ public class DevelopmentManager : MonoBehaviour
                 LeaderSelectUI.Instance.Open(LeaderType.Artist, () =>
                 {
                     _isRunning = true;
-                    GameTimeManager.Instance.StartTime();
+                    GameTimeManager.Instance.ForceStartTime();
                     StartCoroutine(DevelopmentCoroutine());
                 });
                 yield break;
@@ -254,7 +258,13 @@ public class DevelopmentManager : MonoBehaviour
             StopCoroutine(_bugFixCoroutine);
             _bugFixCoroutine = null;
         }
-        AlertUI.Instance.Show("버그 작업을 중단합니다.\n출시 시작", () => ShowResult());
+
+        AlertUI.Instance.Show("버그 작업을 중단합니다.\n출시 시작", () =>
+        {
+            ProjectSaveManager.Instance.SaveProject();
+            GameTimeManager.Instance.SaveGameTime();
+            ShowResult();
+        });
     }
 
     public void SetLeader(LeaderType type, EmployeeData employee)
@@ -289,9 +299,11 @@ public class DevelopmentManager : MonoBehaviour
         LeaderScoreUI.Instance.Show(employee, type, n, r, leaderTickDelay, () =>
         {
             _isRunning = true;
-            ProjectSaveManager.Instance.SaveProject(); // ← 추가
+            CurrentStage = ProjectStage.Developing;
+            ProjectSaveManager.Instance.SaveProject();
             GameTimeManager.Instance.SaveGameTime();
-            GameTimeManager.Instance.StartTime();
+            GameTimeManager.Instance.ForceStartTime();
+            Debug.Log("팀장점수완료 저장");
             StartCoroutine(DevelopmentCoroutine());
         });
     }
@@ -329,25 +341,27 @@ public class DevelopmentManager : MonoBehaviour
             case ProjectStage.Developing:
                 InitTickMap();
 
-                // 디버그: 보정 전 확인
                 foreach (var key in new List<string>(_nextTickMap.Keys))
                 {
                     float interval = developmentDuration / _tickCountMap[key];
                     int skipped = 0;
-
                     while (_nextTickMap[key] <= _elapsed)
                     {
                         _nextTickMap[key] += interval;
                         _tickIndexMap[key]++;
                         skipped++;
-                        // ← AccumulateByType 절대 호출 안함
                     }
                     Debug.Log($"[보정] {key} skipped: {skipped} / nextTick: {_nextTickMap[key]:F1}");
                 }
 
+                _isRunning = true; // ← 추가
+                GameTimeManager.Instance.ForceStartTime(); // ← 추가
                 StartCoroutine(DevelopmentCoroutine());
                 break;
+
             case ProjectStage.BugFixing:
+                _isRunning = true; // ← 추가
+                GameTimeManager.Instance.ForceStartTime(); // ← 추가
                 _bugFixCoroutine = StartCoroutine(BugFixCoroutine());
                 break;
         }
@@ -483,7 +497,7 @@ public class DevelopmentManager : MonoBehaviour
         ProjectSetupUI.SelectedGenre = default;
         ProjectSetupUI.SelectedPlatform = default;
 
-        GameTimeManager.Instance.StartTime();
+        GameTimeManager.Instance.ForceStartTime();
         Debug.Log("프로젝트 초기화 완료");
     }
     public void PauseForEvent()
@@ -494,6 +508,6 @@ public class DevelopmentManager : MonoBehaviour
     public void ResumeFromEvent()
     {
         _isRunning = true;
-        GameTimeManager.Instance.StartTime();
+        GameTimeManager.Instance.ForceStartTime();
     }
 }

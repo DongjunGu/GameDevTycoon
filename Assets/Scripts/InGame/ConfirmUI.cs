@@ -34,6 +34,7 @@ public class ConfirmUI : MonoBehaviour
     public void Show(string message, System.Action onConfirm, System.Action onCancel = null,
                      string confirmText = "확인", string cancelText = "취소")
     {
+        GameTimeManager.Instance?.StopTime();
         messageText.text       = message;
         _onConfirm             = onConfirm;
         _onCancel              = onCancel;
@@ -45,12 +46,14 @@ public class ConfirmUI : MonoBehaviour
     public void OnClickConfirm()
     {
         confirmPanel.SetActive(false);
+        GameTimeManager.Instance?.StartTime();
         _onConfirm?.Invoke();
     }
 
     public void OnClickCancel()
     {
         confirmPanel.SetActive(false);
+        GameTimeManager.Instance?.StartTime();
         _onCancel?.Invoke();
     }
 }

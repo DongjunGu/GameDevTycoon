@@ -35,6 +35,7 @@ public class EmployeeData
 
     public EmployeeState state;
     public string assignedProjectId;
+    public string portraitId;
 
     // ── 생성자 (EmployeePool 마스터 데이터용) ──
     public EmployeeData(string id, string name, EmployeeRole role,
@@ -90,6 +91,7 @@ public class EmployeeData
         data.salary          = SafeInt(row, "salary",          0);
         data.state           = (EmployeeState)SafeInt(row, "state", 0);
         data.assignedProjectId = SafeString(row, "assignedProjectId", "");
+        data.portraitId = SafeString(row, "portraitId", "portrait_secretary");
 
         return data;
     }
@@ -121,6 +123,7 @@ public class EmployeeData
         param.Add("salaryMax",       salaryMax);
         param.Add("state",           (int)state);
         param.Add("assignedProjectId", assignedProjectId);
+        param.Add("portraitId", portraitId);
         return param;
     }
 
