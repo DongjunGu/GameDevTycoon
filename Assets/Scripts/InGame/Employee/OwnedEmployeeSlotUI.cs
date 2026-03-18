@@ -27,25 +27,27 @@ public class OwnedEmployeeSlotUI : MonoBehaviour
     private EmployeeGrade _pendingGrade;
     public void Setup(EmployeeData data, EmployeeListUI listUI)
     {
-        _data   = data;
+        _data = data;
         _listUI = listUI;
 
-        nameText.text            = data.employeeName;
-        roleText.text            = data.RoleToString();
-        gradeText.text           = data.GradeToString();
-        potentialText.text       = data.PotentialToString();
-        developSkillText.text    = data.DevelopText();
-        planningSkillText.text   = data.PlanningText();
-        artSkillText.text        = data.ArtText();
+        nameText.text = data.employeeName;
+        roleText.text = data.RoleToString();
+        gradeText.text = data.GradeToString();
+        potentialText.text = data.PotentialToString();
+        developSkillText.text = data.DevelopText();
+        planningSkillText.text = data.PlanningText();
+        artSkillText.text = data.ArtText();
         perfectionSkillText.text = data.PerfectionText();
         salaryText.text = data.SalaryText();
-        enhancementText.text     = $"+{data.enhancementLevel}";
+        enhancementText.text = $"+{data.enhancementLevel}";
         //stateText.text           = data.StateToString();
         _pendingGrade = data.grade;
         ApplyGradeColor(_pendingGrade);
 
         fireButton.onClick.RemoveAllListeners();
-        fireButton.onClick.AddListener(() => _listUI.OnClickFire(_data));
+        if (_listUI != null)
+            fireButton.onClick.AddListener(() => _listUI.OnClickFire(_data));
+
     }
 
     void OnEnable()

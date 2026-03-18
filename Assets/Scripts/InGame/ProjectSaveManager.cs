@@ -10,6 +10,26 @@ public class ProjectSaveManager : MonoBehaviour
 
     private string _rowInDate = null;
 
+    // ── 복원 대기 데이터 ──────────────────────
+    private bool            _hasPendingRestore;
+    private ProjectStage    _loadedStage;
+    private ProjectScale    _loadedScale;
+    private ProjectGenre    _loadedGenre;
+    private ProjectPlatform _loadedPlatform;
+    private float           _loadedElapsed;
+    private bool            _loadedTriggered25;
+    private bool            _loadedTriggered75;
+    private string          _loadedPlannerLeaderId;
+    private string          _loadedProgrammerLeaderId;
+    private string          _loadedArtistLeaderId;
+    private float           _loadedAccumPlanning;
+    private float           _loadedAccumDevelop;
+    private float           _loadedAccumArt;
+    private float           _loadedAccumBug;
+    private float           _loadedAccumCreativity;
+    private int             _loadedCurrentGenreIndex;
+    private float           _loadedNextGenreTick;
+
     void Awake()
     {
         if (Instance != null) { Destroy(gameObject); return; }
@@ -20,36 +40,33 @@ public class ProjectSaveManager : MonoBehaviour
     // ── 저장 ──────────────────────────────────
     public void SaveProject()
     {
-        var dm  = DevelopmentManager.Instance;
-        var dp  = DevelopmentPanelUI.Instance;
+        var dm = DevelopmentManager.Instance;
+        var dp = DevelopmentPanelUI.Instance;
+
+        if (dm.CurrentStage == ProjectStage.None)
+        {
+            Debug.Log("저장 스킵: 진행 중인 프로젝트 없음");
+            return;
+        }
 
         var param = new Param();
 
-        // 프로젝트 기본
         param.Add("isInProgress",      dm.IsStarted);
         param.Add("stage",             (int)GetCurrentStage());
         param.Add("scale",             (int)ProjectSetupUI.SelectedScale);
         param.Add("genre",             (int)ProjectSetupUI.SelectedGenre);
         param.Add("platform",          (int)ProjectSetupUI.SelectedPlatform);
-
-        // 진행도
         param.Add("elapsed",           dm.GetElapsed());
         param.Add("triggered25",       dm.IsTriggered25);
         param.Add("triggered75",       dm.IsTriggered75);
-
-        // 팀장
         param.Add("plannerLeaderId",    dm.plannerLeader    != null ? dm.plannerLeader.id    : "");
         param.Add("programmerLeaderId", dm.programmerLeader != null ? dm.programmerLeader.id : "");
         param.Add("artistLeaderId",     dm.artistLeader     != null ? dm.artistLeader.id     : "");
-
-        // 누적 수치
         param.Add("accumPlanning",     dp.GetPlanning());
         param.Add("accumDevelop",      dp.GetDevelop());
         param.Add("accumArt",          dp.GetArt());
         param.Add("accumBug",          dp.GetBug());
         param.Add("accumCreativity",   dp.GetCreativity());
-
-        // 장르 인기
         param.Add("currentGenreIndex", dm.CurrentGenreIndex);
         param.Add("nextGenreTick",     dm.NextGenreTick);
 
@@ -80,7 +97,7 @@ public class ProjectSaveManager : MonoBehaviour
         }
     }
 
-    // ── 로드 ──────────────────────────────────
+    // ── 로드 (씬 전, 데이터만 파싱) ──────────
     public void LoadProject(System.Action onComplete = null)
     {
         Backend.GameData.GetMyData("UserProject", new Where(), bro =>
@@ -111,56 +128,57 @@ public class ProjectSaveManager : MonoBehaviour
                 return;
             }
 
-            // 프로젝트 기본
-            var stage    = (ProjectStage)SafeInt(row, "stage",    0);
-            var scale    = (ProjectScale)SafeInt(row, "scale",    0);
-            var genre    = (ProjectGenre)SafeInt(row, "genre",    0);
-            var platform = (ProjectPlatform)SafeInt(row, "platform", 0);
+            // 데이터 파싱만 → 복원은 RestoreIfNeeded()에서
+            _loadedStage             = (ProjectStage)SafeInt(row, "stage",    0);
+            _loadedScale             = (ProjectScale)SafeInt(row, "scale",    0);
+            _loadedGenre             = (ProjectGenre)SafeInt(row, "genre",    0);
+            _loadedPlatform          = (ProjectPlatform)SafeInt(row, "platform", 0);
+            _loadedElapsed           = SafeFloat(row, "elapsed",     0f);
+            _loadedTriggered25       = SafeBool(row,  "triggered25", false);
+            _loadedTriggered75       = SafeBool(row,  "triggered75", false);
+            _loadedPlannerLeaderId   = SafeString(row, "plannerLeaderId",    "");
+            _loadedProgrammerLeaderId= SafeString(row, "programmerLeaderId", "");
+            _loadedArtistLeaderId    = SafeString(row, "artistLeaderId",     "");
+            _loadedAccumPlanning     = SafeFloat(row, "accumPlanning",   0f);
+            _loadedAccumDevelop      = SafeFloat(row, "accumDevelop",    0f);
+            _loadedAccumArt          = SafeFloat(row, "accumArt",        0f);
+            _loadedAccumBug          = SafeFloat(row, "accumBug",        0f);
+            _loadedAccumCreativity   = SafeFloat(row, "accumCreativity", 0f);
+            _loadedCurrentGenreIndex = SafeInt(row,   "currentGenreIndex", 0);
+            _loadedNextGenreTick     = SafeFloat(row,  "nextGenreTick",    0f);
+            _hasPendingRestore       = true;
 
-            ProjectSetupUI.SelectedScale    = scale;
-            ProjectSetupUI.SelectedGenre    = genre;
-            ProjectSetupUI.SelectedPlatform = platform;
-
-            // 진행도
-            float elapsed      = SafeFloat(row, "elapsed",     0f);
-            bool  triggered25  = SafeBool(row,  "triggered25", false);
-            bool  triggered75  = SafeBool(row,  "triggered75", false);
-
-            // 팀장 ID
-            string plannerLeaderId    = SafeString(row, "plannerLeaderId",    "");
-            string programmerLeaderId = SafeString(row, "programmerLeaderId", "");
-            string artistLeaderId     = SafeString(row, "artistLeaderId",     "");
-
-            // 누적 수치
-            float accumPlanning   = SafeFloat(row, "accumPlanning",   0f);
-            float accumDevelop    = SafeFloat(row, "accumDevelop",    0f);
-            float accumArt        = SafeFloat(row, "accumArt",        0f);
-            float accumBug        = SafeFloat(row, "accumBug",        0f);
-            float accumCreativity = SafeFloat(row, "accumCreativity", 0f);
-
-            // 장르
-            int   currentGenreIndex = SafeInt(row,   "currentGenreIndex", 0);
-            float nextGenreTick     = SafeFloat(row,  "nextGenreTick",    0f);
-
-            // DevelopmentManager에 복원
-            DevelopmentManager.Instance.RestoreState(
-                elapsed, triggered25, triggered75,
-                plannerLeaderId, programmerLeaderId, artistLeaderId,
-                accumPlanning, accumDevelop, accumArt, accumBug, accumCreativity,
-                currentGenreIndex, nextGenreTick,
-                stage
-            );
-
-            Debug.Log($"프로젝트 로드 완료: stage={stage} elapsed={elapsed:F1}");
+            Debug.Log($"프로젝트 로드 완료: stage={_loadedStage} elapsed={_loadedElapsed:F1}");
             onComplete?.Invoke();
         });
+    }
+
+    // ── 씬 로드 후 복원 ───────────────────────
+    public void RestoreIfNeeded()
+    {
+        if (!_hasPendingRestore) return;
+        _hasPendingRestore = false;
+
+        ProjectSetupUI.SelectedScale    = _loadedScale;
+        ProjectSetupUI.SelectedGenre    = _loadedGenre;
+        ProjectSetupUI.SelectedPlatform = _loadedPlatform;
+
+        DevelopmentManager.Instance.RestoreState(
+            _loadedElapsed, _loadedTriggered25, _loadedTriggered75,
+            _loadedPlannerLeaderId, _loadedProgrammerLeaderId, _loadedArtistLeaderId,
+            _loadedAccumPlanning, _loadedAccumDevelop, _loadedAccumArt,
+            _loadedAccumBug, _loadedAccumCreativity,
+            _loadedCurrentGenreIndex, _loadedNextGenreTick,
+            _loadedStage
+        );
+
+        Debug.Log($"프로젝트 복원 실행: stage={_loadedStage}");
     }
 
     // ── 스테이지 판별 ─────────────────────────
     ProjectStage GetCurrentStage()
     {
         if (!DevelopmentManager.Instance.IsStarted) return ProjectStage.None;
-        // DevelopmentManager에서 현재 단계 판별
         return DevelopmentManager.Instance.CurrentStage;
     }
 

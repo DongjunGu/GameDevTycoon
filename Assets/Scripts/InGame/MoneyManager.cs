@@ -115,6 +115,13 @@ public class MoneyManager : MonoBehaviour
             return val;
         return fallback;
     }
+    public void ForceSpendGold(int amount)
+    {
+        _gold -= amount;
+        SaveMoney();
+        HUDUI.Instance?.RefreshMoney();
+        Debug.Log($"강제 차감: -{amount:N0}G / 잔액: {_gold:N0}G");
+    }
 
 
 
@@ -134,6 +141,11 @@ public class MoneyManager : MonoBehaviour
                 MoneyManager.Instance.AddGold(resultValue);   // 지급
             else
                 MoneyManager.Instance.SpendGold(-resultValue); // 차감 (음수 → 양수로 변환)
+        }
+        if (resultType == "OpenHiring")
+        {
+            HiringUI.Instance.OpenHiring(); // 채용 UI 열기
+                                            // Resume()은 OnClickConfirmHire에서 호출됨
         }
     }
     public void OnTestDialogButton()

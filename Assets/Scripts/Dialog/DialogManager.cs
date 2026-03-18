@@ -30,6 +30,7 @@ public class DialogManager : MonoBehaviour
     // ─── 재생 상태 ───────────────────────────────────────────────
     public bool IsPlaying { get; private set; }
     private DialogNodeData _currentNode;
+    private string _pendingNextDialogId = null;
 
     // ─── 이력 (PlayerPrefs) ──────────────────────────────────────
     private const string PREFS_VIEWED = "dialog_viewed_groups";
@@ -37,6 +38,8 @@ public class DialogManager : MonoBehaviour
 
     [Header("Inspector 할당")]
     [SerializeField] private DialogUI _dialogUI;
+    private Dictionary<string, string> _placeholders = new();
+    
 
     // ─── 생명주기 ────────────────────────────────────────────────
     private void Awake()
@@ -127,28 +130,40 @@ public class DialogManager : MonoBehaviour
 
     /// <summary>선택지 버튼 클릭 시 DialogUI가 호출</summary>
     public void OnChoiceSelected(ChoiceData choice)
+{
+    if (!CheckCondition(choice))
     {
-        if (!CheckCondition(choice))
-        {
-            Debug.Log($"[DialogManager] 조건 불충족: {choice.choiceId}");
-            return;
-        }
-
-        // 결과 이벤트 발행 → MoneyManager 등이 구독해서 처리
-        if (choice.resultType != ResultType.None)
-            OnChoiceResult?.Invoke(choice.resultType.ToString(), choice.resultValue);
-
-        if (string.IsNullOrEmpty(choice.nextDialogId))
-        {
-            EndDialog();
-            return;
-        }
-
-        if (_nodeCache.TryGetValue(choice.nextDialogId, out var next))
-            ShowNode(next);
-        else
-            EndDialog();
+        Debug.Log($"[DialogManager] 조건 불충족: {choice.choiceId}");
+        return;
     }
+
+    // 결과 이벤트 발행
+    if (choice.resultType != ResultType.None)
+        OnChoiceResult?.Invoke(choice.resultType.ToString(), choice.resultValue);
+
+    // ─── 일시정지 모드 ───────────────────────────────────────
+    // pauseAfterResult = true 이면 nextDialogId를 저장만 하고 대기
+    // 외부에서 DialogManager.Instance.Resume() 호출 시 재개
+    if (choice.pauseAfterResult && !string.IsNullOrEmpty(choice.nextDialogId))
+    {
+        _pendingNextDialogId = choice.nextDialogId;
+        _dialogUI.Hide(); // 대화창 잠깐 숨김
+        Debug.Log($"[DialogManager] 일시정지 — 대기 중: {_pendingNextDialogId}");
+        return;
+    }
+    // ────────────────────────────────────────────────────────
+
+    if (string.IsNullOrEmpty(choice.nextDialogId))
+    {
+        EndDialog();
+        return;
+    }
+
+    if (_nodeCache.TryGetValue(choice.nextDialogId, out var next))
+        ShowNode(next);
+    else
+        EndDialog();
+}
 
     // ─── 내부 ────────────────────────────────────────────────────
     private void ShowNode(DialogNodeData node)
@@ -158,7 +173,7 @@ public class DialogManager : MonoBehaviour
         _dialogUI.Show(node, choices);
     }
 
-    private void EndDialog()
+    public void EndDialog()
     {
         IsPlaying = false;
         _currentNode = null;
@@ -197,4 +212,45 @@ public class DialogManager : MonoBehaviour
         foreach (var id in saved.Split(','))
             if (!string.IsNullOrEmpty(id)) _viewedGroups.Add(id);
     }
+    /// <summary>
+/// 외부 작업이 끝난 뒤 호출하면 pendingNextDialogId 로 이어서 재생
+/// </summary>
+public void Resume()
+{
+    if (string.IsNullOrEmpty(_pendingNextDialogId))
+    {
+        Debug.LogWarning("[DialogManager] Resume 호출됐지만 대기 중인 노드 없음");
+        return;
+    }
+
+    if (_nodeCache.TryGetValue(_pendingNextDialogId, out var next))
+    {
+        _pendingNextDialogId = null;
+        ShowNode(next);
+    }
+    else
+    {
+        _pendingNextDialogId = null;
+        EndDialog();
+    }
+}
+
+public void SetPlaceholder(string key, string value)
+{
+    _placeholders[key] = value;
+}
+
+public void ClearPlaceholders()
+{
+    _placeholders.Clear();
+}
+
+// 텍스트 치환 (DialogUI에서 텍스트 표시 전 호출)
+public string ReplacePlaceholders(string text)
+{
+    foreach (var kv in _placeholders)
+        text = text.Replace("{" + kv.Key + "}", kv.Value);
+    return text;
+}
+
 }

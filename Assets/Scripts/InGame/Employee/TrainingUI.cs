@@ -82,6 +82,7 @@ public class TrainingUI : MonoBehaviour
 
     public void OpenTraining()
     {
+        GameTimeManager.Instance?.StopTime();
         gameObject.SetActive(true);
         trainingPanel.SetActive(false);
         resultPanel.SetActive(false);
@@ -215,6 +216,7 @@ public class TrainingUI : MonoBehaviour
 
     public void OnClickClose()
     {
+        GameTimeManager.Instance?.StartTime();
         listPanel.SetActive(false);
         trainingPanel.SetActive(false);
     }

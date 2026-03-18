@@ -23,6 +23,7 @@ public class BackendManager : MonoBehaviour
         {
             Debug.LogError("초기화 실패 : " + bro);
         }
+        
     }
 
     void TestLogin()
@@ -35,9 +36,9 @@ public class BackendManager : MonoBehaviour
 
             EmployeeManager.Instance.LoadAllData(() =>
             {
-                MoneyManager.Instance.LoadMoney(() => 
+                MoneyManager.Instance.LoadMoney(() =>
                 {
-                    GameTimeManager.Instance.LoadGameTime(() => 
+                    GameTimeManager.Instance.LoadGameTime(() =>
                     {
                         QuestManager.Instance.LoadQuests(() =>
                         {
@@ -45,8 +46,12 @@ public class BackendManager : MonoBehaviour
                             {
                                 CompletedProjectManager.Instance.LoadCompletedProjects(() =>
                                 {
-                                    DialogManager.Instance.Initialize();
-                                    GameTimeManager.Instance.StartTime();
+                                    LoanManager.Instance.LoadLoans(() => // ← 추가
+                                    {
+                                        DialogManager.Instance.Initialize();
+                                        GameTimeManager.Instance.StartTime();
+                                        ProjectSaveManager.Instance.RestoreIfNeeded();
+                                    });
 
                                 });
                             });
@@ -64,7 +69,7 @@ public class BackendManager : MonoBehaviour
                 {
                     MoneyManager.Instance.LoadMoney(() =>
                     {
-                        GameTimeManager.Instance.LoadGameTime(()=>
+                        GameTimeManager.Instance.LoadGameTime(() =>
                         {
                             QuestManager.Instance.LoadQuests(() =>
                             {
@@ -72,8 +77,12 @@ public class BackendManager : MonoBehaviour
                                 {
                                     CompletedProjectManager.Instance.LoadCompletedProjects(() => // ← 추가
                                     {
-                                        DialogManager.Instance.Initialize();
-                                        GameTimeManager.Instance.StartTime();
+                                        LoanManager.Instance.LoadLoans(() => // ← 추가
+                                        {
+                                            DialogManager.Instance.Initialize();
+                                            GameTimeManager.Instance.StartTime();
+                                            ProjectSaveManager.Instance.RestoreIfNeeded();
+                                        });
                                     });
                                 });
                             });

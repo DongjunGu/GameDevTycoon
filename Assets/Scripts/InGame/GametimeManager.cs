@@ -1,6 +1,7 @@
 using UnityEngine;
 using BackEnd;
 using LitJson;
+using System.Collections;
 
 public class GameTimeManager : MonoBehaviour
 {
@@ -12,6 +13,7 @@ public class GameTimeManager : MonoBehaviour
 
     private string _rowInDate = null;
     private float _elapsed = 0f;
+    private int _stopCount = 0;
     private bool _isRunning = false;
 
     public float secondsPerWeek = 10f; // 인스펙터에서 조정 가능
@@ -94,20 +96,35 @@ public class GameTimeManager : MonoBehaviour
                 Month = 1;
                 Year++;
                 Debug.Log($"[연봉협상] {Year}년 시작 - 연봉협상 발생 예정");
+                PayAnnualSalary();
+
             }
         }
 
         OnTimeChanged?.Invoke();
         HUDUI.Instance?.RefreshTime();
+        LoanManager.Instance.CheckDueLoans();
         //SaveGameTime();
 
         Debug.Log($"시간 경과: {Year}년 {Month}월 {Week}주");
     }
 
     // ── 타이머 제어 ───────────────────────────
-    public void StartTime() => _isRunning = true;
-    public void StopTime() => _isRunning = false;
-    public void ResumeTime() => _isRunning = true;
+    public void StartTime()
+    {
+        _stopCount = Mathf.Max(0, _stopCount - 1);
+        if (_stopCount == 0) _isRunning = true;
+    }
+    public void StopTime()
+    {
+        _stopCount++;
+        _isRunning = false;
+    }
+    public void ForceStartTime() // 개발 시스템에서 강제 재개 시
+    {
+        _stopCount = 0;
+        _isRunning = true;
+    }
 
     // ── 저장 ──────────────────────────────────
     public void SaveGameTime()
@@ -165,5 +182,42 @@ public class GameTimeManager : MonoBehaviour
         SaveGameTime();
         ProjectSaveManager.Instance.SaveProject();
     }
+    void PayAnnualSalary()
+    {
+        int totalSalary = 0;
+        foreach (var employee in EmployeeManager.Instance.ownedEmployees)
+            totalSalary += employee.salary;
+        if (!MoneyManager.Instance.CanAfford(totalSalary))
+        {
+            GameUIHelper.ShowLoanPrompt();
+            return;
+        }
 
+        AlertUI.Instance.Show($"새해가 밝았습니다!\n직원들에게 임금을 지급합니다.\n지급액: {totalSalary:N0}G", () =>
+        {
+            int goldAfter = MoneyManager.Instance.Gold - totalSalary;
+
+            MoneyManager.Instance.ForceSpendGold(totalSalary);
+            SaveGameTime();
+
+            if (goldAfter < 0)
+            {
+                AlertUI.Instance.Show($"파산하셨습니다!\n현재 재화: {goldAfter:N0}G", () =>
+                {
+                    SaveGameTime();
+                    Debug.Log("파산 처리 예정");
+                });
+            }
+            else
+            {
+                StartCoroutine(StartNegotiationDelay());
+            }
+        });
+    }
+    IEnumerator StartNegotiationDelay()
+    {
+        yield return new WaitForSeconds(2f);
+        ForceStartTime();
+        SalaryNegotiationManager.Instance.StartNegotiation();
+    }
 }

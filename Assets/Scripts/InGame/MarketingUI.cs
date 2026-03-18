@@ -39,6 +39,7 @@ public class MarketingUI : MonoBehaviour
 
     public void Show(System.Action onComplete)
     {
+        GameTimeManager.Instance?.StopTime();
         _onComplete = onComplete;
         _totalCost = 0;
         _countMap.Clear();
@@ -76,12 +77,12 @@ public class MarketingUI : MonoBehaviour
         // 재화 확인
         if (!MoneyManager.Instance.CanAfford(cost))
         {
-            AlertUI.Instance.Show("재화가 부족합니다!");
+            GameUIHelper.ShowLoanPrompt();
             return;
         }
-        
+
         MoneyManager.Instance.SpendGold(cost);
-        
+
         _countMap[name]++;
         _totalCost += cost;
         UpdateUI();
@@ -91,6 +92,7 @@ public class MarketingUI : MonoBehaviour
 
     public void OnClickComplete()
     {
+        GameTimeManager.Instance?.StartTime();
         marketingPanel.SetActive(false);
         _onComplete?.Invoke();
     }

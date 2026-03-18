@@ -18,6 +18,7 @@ public class AlertUI : MonoBehaviour
 
     public void Show(string message, System.Action onConfirm = null)
     {
+        GameTimeManager.Instance?.StopTime();
         messageText.text = message;
         _onConfirm = onConfirm;
         alertPanel.SetActive(true);
@@ -28,6 +29,7 @@ public class AlertUI : MonoBehaviour
     public void OnClickConfirm()
     {
         alertPanel.SetActive(false);
+        GameTimeManager.Instance?.StartTime();
         _onConfirm?.Invoke();
     }
 }
