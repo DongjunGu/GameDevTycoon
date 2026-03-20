@@ -37,6 +37,7 @@ public class DialogManager : MonoBehaviour
     private HashSet<string> _viewedGroups = new HashSet<string>();
 
     [Header("Inspector 할당")]
+    //[SerializeField] private DialogUI _dialogUI;
     [SerializeField] private DialogUI _dialogUI;
     private Dictionary<string, string> _placeholders = new();
 
@@ -252,5 +253,8 @@ public class DialogManager : MonoBehaviour
             text = text.Replace("{" + kv.Key + "}", kv.Value);
         return text;
     }
-
+    public void SetDialogUI(DialogUI ui)
+    {
+        _dialogUI = ui;
+    }
 }
