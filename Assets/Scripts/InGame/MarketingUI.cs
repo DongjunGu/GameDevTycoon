@@ -20,10 +20,11 @@ public class MarketingUI : MonoBehaviour
 
     private readonly (string name, int cost)[] _marketingData =
     {
-        ("SNS 바이럴",          500),
-        ("전문 잡지/웹진 광고",  2000),
-        ("유명 인플루언서 협찬", 3000),
-        ("TV 및 옥외 광고",      5000),
+        ("전단지 및 커뮤니티 홍보",          500),
+        ("SNS 광고 및 포털 배너",           2000),
+        ("유명 인플루언서 협찬",            3000),
+        ("대도시 전광판 및 TV 광고",        5000),
+        ("글로벌 게임 페스티벌 참가",       10000),
     };
 
     private Dictionary<string, int> _countMap = new();
@@ -74,26 +75,24 @@ public class MarketingUI : MonoBehaviour
     }
     void OnClickMarketing(string name, int cost)
     {
-        // 재화 확인
         if (!MoneyManager.Instance.CanAfford(cost))
         {
             GameUIHelper.ShowLoanPrompt();
             return;
         }
 
-        MoneyManager.Instance.SpendGold(cost);
-
+        MoneyManager.Instance.SpendGold(cost, saveImmediately: false); // ← 저장 안 함
         _countMap[name]++;
         _totalCost += cost;
         UpdateUI();
-
         MarketingNoticeUI.Instance.Show(name);
     }
 
     public void OnClickComplete()
     {
-        GameTimeManager.Instance?.StartTime();
+        MoneyManager.Instance.SaveMoney(); // ← 완료 시 한 번만 저장
         marketingPanel.SetActive(false);
+        GameTimeManager.Instance.StartTime();
         _onComplete?.Invoke();
     }
 

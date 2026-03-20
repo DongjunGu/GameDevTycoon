@@ -15,6 +15,7 @@ public class MoneyManager : MonoBehaviour
     {
         if (Instance != null) { Destroy(gameObject); return; }
         Instance = this;
+        DontDestroyOnLoad(gameObject);
     }
 
     // 앱 시작 시 호출
@@ -61,7 +62,7 @@ public class MoneyManager : MonoBehaviour
     }
 
     // 재화 차감
-    public bool SpendGold(int amount)
+    public bool SpendGold(int amount, bool saveImmediately = true)
     {
         if (amount <= 0) return false;
         if (_gold < amount)
@@ -70,7 +71,7 @@ public class MoneyManager : MonoBehaviour
             return false;
         }
         _gold -= amount;
-        SaveMoney();
+        if (saveImmediately) SaveMoney();
         HUDUI.Instance?.RefreshMoney();
         Debug.Log($"재화 차감: -{amount}G / 잔액: {_gold}G");
         return true;
@@ -79,7 +80,7 @@ public class MoneyManager : MonoBehaviour
     // 잔액 확인
     public bool CanAfford(int amount) => _gold >= amount;
 
-    void SaveMoney()
+    public void SaveMoney()
     {
         var param = new Param();
         param.Add("gold", _gold);

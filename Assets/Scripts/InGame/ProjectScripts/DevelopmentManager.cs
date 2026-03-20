@@ -24,7 +24,7 @@ public class DevelopmentManager : MonoBehaviour
     public bool IsTriggered75 => _triggered75;
     public int CurrentGenreIndex => _currentGenreIndex;
     public float NextGenreTick => _nextGenreTick;
-    public ProjectStage CurrentStage { get; private set; } = ProjectStage.None;
+    public ProjectStage CurrentStage { get; set; } = ProjectStage.None;
 
     private float _elapsed;
     private bool _isRunning;
@@ -205,7 +205,7 @@ public class DevelopmentManager : MonoBehaviour
         _isRunning = false;
         GameTimeManager.Instance.StopTime();
         AlertUI.Instance.Show(
-            "개발 완료!\n버그 제거 작업을 시작합니다.",
+            "개발 완료!\n디버깅 작업을 시작합니다.",
             () =>
             {
                 ProjectSaveManager.Instance.SaveProject();

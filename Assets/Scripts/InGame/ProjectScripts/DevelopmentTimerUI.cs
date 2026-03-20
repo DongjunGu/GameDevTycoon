@@ -12,7 +12,9 @@ public class DevelopmentTimerUI : MonoBehaviour
     {
         if (Instance != null) { Destroy(gameObject); return; }
         Instance = this;
+        ResetTimer();
     }
+    
     void Update()
     {
         if (!DevelopmentManager.Instance.IsStarted) return;

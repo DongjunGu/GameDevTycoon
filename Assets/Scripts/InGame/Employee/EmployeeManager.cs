@@ -247,7 +247,7 @@ public class EmployeeManager : MonoBehaviour
 
             Debug.Log($"보유 직원 {ownedEmployees.Count}명 로드 완료");
             onComplete?.Invoke();
-            HUDUI.Instance.RefreshAll();
+            HUDUI.Instance?.RefreshAll();
         });
     }
 
