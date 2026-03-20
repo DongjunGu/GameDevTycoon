@@ -11,10 +11,15 @@ public class LoanData
     public int month;       // 만기 월
     public int week;        // 만기 주
     public string rowInDate;
+    public int repayAmount;
 }
 
 public class LoanManager : MonoBehaviour
 {
+    [Header("Settings")]
+    [Range(0f, 0.5f)]
+    public float interestRate = 0.04f;
+
     public static LoanManager Instance { get; private set; }
 
     public List<LoanData> activeLoans = new();
@@ -42,6 +47,7 @@ public class LoanManager : MonoBehaviour
         var loan = new LoanData
         {
             amount = amount,
+            repayAmount = CalcRepayAmount(amount),
             year = dueYear,
             month = dueMonth,
             week = dueWeek,
@@ -89,16 +95,16 @@ public class LoanManager : MonoBehaviour
         var loan = dueLoans[index];
 
         AlertUI.Instance.Show(
-            $"대출 만기일입니다.\n{loan.amount:N0}G를 징수하겠습니다.",
+            $"대출 만기일입니다.\n원금: {loan.amount:N0}G\n이자율: {LoanManager.Instance.interestRate * 100:F0}%\n상환금액: {loan.repayAmount:N0}G",
             () =>
             {
-                int goldAfter = MoneyManager.Instance.Gold - loan.amount;
-                MoneyManager.Instance.ForceSpendGold(loan.amount);
+                int goldAfter = MoneyManager.Instance.Gold - loan.repayAmount;
+                MoneyManager.Instance.ForceSpendGold(loan.repayAmount);
 
                 activeLoans.Remove(loan);
                 DeleteLoan(loan);
                 GameTimeManager.Instance.SaveGameTime();
-                
+
                 if (goldAfter < 0)
                 {
                     AlertUI.Instance.Show(
@@ -124,6 +130,7 @@ public class LoanManager : MonoBehaviour
         param.Add("year", loan.year);
         param.Add("month", loan.month);
         param.Add("week", loan.week);
+        param.Add("repayAmount", loan.repayAmount);
 
         Backend.GameData.Insert("UserLoans", param, bro =>
         {
@@ -180,6 +187,7 @@ public class LoanManager : MonoBehaviour
                     month = SafeInt(jsonRow, "month", 1),
                     week = SafeInt(jsonRow, "week", 1),
                     rowInDate = SafeString(jsonRow, "inDate", ""),
+                    repayAmount = SafeInt(jsonRow, "repayAmount", 0),
                 };
                 activeLoans.Add(loan);
             }
@@ -187,6 +195,11 @@ public class LoanManager : MonoBehaviour
             Debug.Log($"대출 {activeLoans.Count}건 로드");
             onComplete?.Invoke();
         });
+    }
+
+    public int CalcRepayAmount(int principal)
+    {
+        return Mathf.RoundToInt(principal * (1 + interestRate));
     }
 
     static int SafeInt(JsonData row, string key, int fallback)

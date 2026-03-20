@@ -13,6 +13,7 @@ public class QuestManager : MonoBehaviour
     {
         if (Instance != null) { Destroy(gameObject); return; }
         Instance = this;
+        DontDestroyOnLoad(gameObject);
     }
 
     public void LoadQuests(System.Action onComplete = null)

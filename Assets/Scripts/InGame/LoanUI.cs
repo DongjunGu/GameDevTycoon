@@ -35,12 +35,14 @@ public class LoanUI : MonoBehaviour
             return;
         }
 
-        int tierIndex = loanLevel - 1; // ← loanLevel 기준
+        int tierIndex = loanLevel - 1;
         int amount = LoanManager.LoanAmounts[tierIndex];
+        int repayAmount = LoanManager.Instance.CalcRepayAmount(amount);
+        float rate = LoanManager.Instance.interestRate * 100f;
         int dueYear = GameTimeManager.Instance.Year + 1;
 
         ConfirmUI.Instance.Show(
-            $"{amount:N0}G 대출\n만기: {dueYear}년 {GameTimeManager.Instance.Month}월 {GameTimeManager.Instance.Week}주\n1년 후 전액 상환",
+            $"{amount:N0}G 대출\n이자율: {rate:F0}% → 상환금액: {repayAmount:N0}G\n만기: {dueYear}년 {GameTimeManager.Instance.Month}월 {GameTimeManager.Instance.Week}주",
             onConfirm: () =>
             {
                 LoanManager.Instance.TakeLoan(tierIndex);
@@ -60,13 +62,15 @@ public class LoanUI : MonoBehaviour
         if (loans.Count == 0)
         {
             int availableAmount = LoanManager.LoanAmounts[loanLevel - 1];
-            activeLoanText.text = $"현재 대출 없음\n현재 {availableAmount:N0}G 대출 가능합니다.";
+            int repayAmount = LoanManager.Instance.CalcRepayAmount(availableAmount);
+            float rate = LoanManager.Instance.interestRate * 100f;
+            activeLoanText.text = $"현재 대출 없음\n현재 {availableAmount:N0}G 대출 가능합니다.\n(이자율 {rate:F0}% / 상환 {repayAmount:N0}G)";
             return;
         }
 
         string text = "현재 대출 현황\n";
         foreach (var loan in loans)
-            text += $"{loan.amount:N0}G (만기: {loan.year}년 {loan.month}월 {loan.week}주)\n";
+            text += $"{loan.amount:N0}G → 상환 {loan.repayAmount:N0}G\n(만기: {loan.year}년 {loan.month}월 {loan.week}주)\n";
 
         activeLoanText.text = text;
     }

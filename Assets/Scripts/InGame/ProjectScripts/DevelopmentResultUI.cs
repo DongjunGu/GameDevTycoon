@@ -28,19 +28,21 @@ public class DevelopmentResultUI : MonoBehaviour
     private float _lastMarketingBonus;
     public float LastMarketFit => _lastMarketFit;
     public float LastMarketingBonus => _lastMarketingBonus;
-    // 프로퍼티 추가
-    public string LastProjectName => projectNameText.text;
     public float LastPlanning => _lastPlanning;
     public float LastDevelop => _lastDevelop;
     public float LastArt => _lastArt;
     public float LastCreativity => _lastCreativity;
     public float LastBug => _lastBug;
+    private float _lastReleaseEventBonus;
+    public float LastReleaseEventBonus => _lastReleaseEventBonus;
 
     private float _lastPlanning;
     private float _lastDevelop;
     private float _lastArt;
     private float _lastCreativity;
     private float _lastBug;
+    private string _lastProjectName = "프로젝트명";
+    public string LastProjectName => _lastProjectName;
     string GetScaleString(ProjectScale scale) => scale switch
     {
         ProjectScale.Small => "소규모(1인개발)",
@@ -77,6 +79,8 @@ public class DevelopmentResultUI : MonoBehaviour
 
     public void Show(float planning, float develop, float art, float bug, float creativity)
     {
+        _lastProjectName = "프로젝트명"; // ← 초기화
+        projectNameText.text = _lastProjectName;
         _lastPlanning = planning;
         _lastDevelop = develop;
         _lastArt = art;
@@ -115,11 +119,12 @@ public class DevelopmentResultUI : MonoBehaviour
     {
         string value = projectNameInput.text.Trim();
         if (!string.IsNullOrEmpty(value))
+        {
             projectNameText.text = value;
-
+            _lastProjectName = value;
+        }
         editNamePanel.SetActive(false);
     }
-
     // 취소 버튼
     public void OnClickCancelName()
     {
@@ -132,28 +137,47 @@ public class DevelopmentResultUI : MonoBehaviour
     }
     public void OnClickRelease()
     {
+        ProjectSaveManager.Instance.SetProjectName(_lastProjectName);
         resultPanel.SetActive(false);
-        AlertUI.Instance.Show("마케팅을 시작합니다.", () =>
+
+        // ── 1. 출시 랜덤 이벤트 먼저 ──
+        RandomEventManager.Instance.TryTriggerReleaseEvent(bonus =>
         {
-            MarketingUI.Instance.Show(() =>
+            // ── 2. 마케팅 ──
+            AlertUI.Instance.Show("마케팅을 시작합니다.", () =>
             {
-                float p = DevelopmentPanelUI.Instance.GetPlanning();
-                float d = DevelopmentPanelUI.Instance.GetDevelop();
-                float a = DevelopmentPanelUI.Instance.GetArt();
-                float c = DevelopmentPanelUI.Instance.GetCreativity();
-                float bRem = DevelopmentPanelUI.Instance.GetBug();
-
-                float rawScore = CalcRawScore(p, d, a, c, ProjectSetupUI.SelectedPlatform);
-                float lBug = CalcLBug(bRem);
-                float sAdj = rawScore * (1f - lBug);
-                float finalScore = CalcFinalScore(sAdj);
-                float quality = CalcQualityScore(finalScore);
-
-                Debug.Log($"원천: {rawScore:F1} / S_adj: {sAdj:F1} / 최종: {finalScore:F1} / 품질: {quality:F1}");
-
-                AlertUI.Instance.Show("판매 시작!", () =>
+                MarketingUI.Instance.Show(() =>
                 {
-                    SalesUI.Instance.Show(quality, ProjectSetupUI.SelectedScale);
+                    float p = DevelopmentPanelUI.Instance.GetPlanning();
+                    float d = DevelopmentPanelUI.Instance.GetDevelop();
+                    float a = DevelopmentPanelUI.Instance.GetArt();
+                    float c = DevelopmentPanelUI.Instance.GetCreativity();
+                    float bRem = DevelopmentPanelUI.Instance.GetBug();
+
+                    float rawScore = CalcRawScore(p, d, a, c, ProjectSetupUI.SelectedPlatform);
+                    float lBug = CalcLBug(bRem);
+                    float sAdj = rawScore * (1f - lBug);
+
+                    // ── 3. 이벤트 보정값 적용 후 CalcFinalScore ──
+                    _lastReleaseEventBonus = bonus;
+                    sAdj += bonus;
+                    sAdj = Mathf.Max(0f, sAdj);
+
+                    float finalScore = CalcFinalScore(sAdj);
+                    float quality = CalcQualityScore(finalScore);
+
+                    Debug.Log($"원천: {rawScore:F1} / 이벤트보정: {bonus} / S_adj: {sAdj:F1} / 최종: {finalScore:F1} / 품질: {quality:F1}");
+
+                    ProjectSaveManager.Instance.SetQualityScore(quality, ProjectSetupUI.SelectedScale);
+                    DevelopmentManager.Instance.CurrentStage = ProjectStage.Marketing;
+                    MoneyManager.Instance.SaveMoney();
+                    ProjectSaveManager.Instance.SaveProject();
+                    GameTimeManager.Instance.SaveGameTime();
+
+                    AlertUI.Instance.Show("판매 시작!", () =>
+                    {
+                        SalesUI.Instance.Show(quality, ProjectSetupUI.SelectedScale);
+                    });
                 });
             });
         });

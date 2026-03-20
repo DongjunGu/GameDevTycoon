@@ -1,5 +1,6 @@
 using UnityEngine;
 using BackEnd;
+using UnityEngine.SceneManagement;
 
 public class BackendManager : MonoBehaviour
 {
@@ -10,12 +11,11 @@ public class BackendManager : MonoBehaviour
         if (bro.IsSuccess())
         {
             Debug.Log("초기화 성공 : " + bro);
+            FindAnyObjectByType<Progress>().Play();
 
 #if UNITY_EDITOR
-            // 에디터에서는 커스텀 로그인으로 테스트
             TestLogin();
 #else
-            // 실제 빌드에서는 GPGS 로그인
             FindAnyObjectByType<GPGSLogin>().StartLogin();
 #endif
         }
@@ -23,7 +23,37 @@ public class BackendManager : MonoBehaviour
         {
             Debug.LogError("초기화 실패 : " + bro);
         }
-        
+    }
+
+    void LoadAllAndEnterGame()
+    {
+        EmployeeManager.Instance.LoadAllData(() =>
+        {
+            MoneyManager.Instance.LoadMoney(() =>
+            {
+                GameTimeManager.Instance.LoadGameTime(() =>
+                {
+                    QuestManager.Instance.LoadQuests(() =>
+                    {
+                        ProjectSaveManager.Instance.LoadProject(() =>
+                        {
+                            CompletedProjectManager.Instance.LoadCompletedProjects(() =>
+                            {
+                                LoanManager.Instance.LoadLoans(() =>
+                                {
+                                    TechTreeManager.Instance.LoadTechTree(() =>
+                                    {
+                                        DialogManager.Instance.Initialize();
+                                        GameTimeManager.Instance.StartTime();
+                                        SceneManager.LoadScene("GameScene"); // ← 씬 전환
+                                    });
+                                });
+                            });
+                        });
+                    });
+                });
+            });
+        });
     }
 
     void TestLogin()
@@ -33,63 +63,26 @@ public class BackendManager : MonoBehaviour
         if (bro.IsSuccess())
         {
             Debug.Log("테스트 로그인 성공");
-
-            EmployeeManager.Instance.LoadAllData(() =>
-            {
-                MoneyManager.Instance.LoadMoney(() =>
-                {
-                    GameTimeManager.Instance.LoadGameTime(() =>
-                    {
-                        QuestManager.Instance.LoadQuests(() =>
-                        {
-                            ProjectSaveManager.Instance.LoadProject(() =>
-                            {
-                                CompletedProjectManager.Instance.LoadCompletedProjects(() =>
-                                {
-                                    LoanManager.Instance.LoadLoans(() => // ← 추가
-                                    {
-                                        DialogManager.Instance.Initialize();
-                                        GameTimeManager.Instance.StartTime();
-                                        ProjectSaveManager.Instance.RestoreIfNeeded();
-                                    });
-
-                                });
-                            });
-                        });
-                    });
-                });
-            });
+            LoadAllAndEnterGame();
         }
         else
         {
             var signUp = Backend.BMember.CustomSignUp("testuser2", "3456");
             if (signUp.IsSuccess())
             {
-                EmployeeManager.Instance.LoadAllData(() =>
-                {
-                    MoneyManager.Instance.LoadMoney(() =>
-                    {
-                        GameTimeManager.Instance.LoadGameTime(() =>
-                        {
-                            QuestManager.Instance.LoadQuests(() =>
-                            {
-                                ProjectSaveManager.Instance.LoadProject(() => // ← 추가
-                                {
-                                    CompletedProjectManager.Instance.LoadCompletedProjects(() => // ← 추가
-                                    {
-                                        LoanManager.Instance.LoadLoans(() => // ← 추가
-                                        {
-                                            DialogManager.Instance.Initialize();
-                                            GameTimeManager.Instance.StartTime();
-                                            ProjectSaveManager.Instance.RestoreIfNeeded();
-                                        });
-                                    });
-                                });
-                            });
-                        });
-                    });
-                });
+                Debug.Log("회원가입 성공");
+                LoadAllAndEnterGame();
+            }
+            else
+            {
+                Debug.LogError($"회원가입 실패: {signUp}");
             }
         }
+    }
+
+    // GPGS 로그인 성공 후 호출 (GPGSLogin.cs에서 호출)
+    public void OnLoginSuccess()
+    {
+        LoadAllAndEnterGame();
     }
 }

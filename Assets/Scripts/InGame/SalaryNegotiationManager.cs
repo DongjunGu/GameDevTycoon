@@ -22,6 +22,7 @@ public class SalaryNegotiationManager : MonoBehaviour
     {
         if (Instance != null) { Destroy(gameObject); return; }
         Instance = this;
+        DontDestroyOnLoad(gameObject);
     }
 
     void Start()

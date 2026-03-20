@@ -13,18 +13,27 @@ public class SalesUI : MonoBehaviour
     [Header("Chart")]
     public RectTransform chartArea;   // HorizontalLayoutGroup 오브젝트
     public GameObject barPrefab;      // Bar 프리팹
-    public float maxBarHeight = 300f;
+    private float maxBarHeight;
 
     [Header("UI")]
     public TextMeshProUGUI totalRevenueText;
     public TextMeshProUGUI totalUnitsText;
     public TextMeshProUGUI qualityScoreText;
+    [Header("Chart Settings")]
+    public int barCount = 8;
+
     [Header("Animation")]
     public float barAnimDuration = 0.4f;   // 바 올라오는 속도
     public float barSpawnDelay = 0.1f;     // 다음 바 생성 대기 시간
     private ProjectScale _cachedScale;
     private ProjectGenre _cachedGenre;
     private ProjectPlatform _cachedPlatform;
+    private string _cachedProjectName = "프로젝트명";
+    private float _cachedPlanning;
+    private float _cachedDevelop;
+    private float _cachedArt;
+    private float _cachedCreativity;
+    private float _cachedBug;
     void Awake()
     {
         if (Instance != null) { Destroy(gameObject); return; }
@@ -37,9 +46,34 @@ public class SalesUI : MonoBehaviour
         _cachedScale = ProjectSetupUI.SelectedScale;
         _cachedGenre = ProjectSetupUI.SelectedGenre;
         _cachedPlatform = ProjectSetupUI.SelectedPlatform;
+        _cachedProjectName = DevelopmentResultUI.Instance.LastProjectName;
+        _cachedPlanning = DevelopmentResultUI.Instance.LastPlanning;
+        _cachedDevelop = DevelopmentResultUI.Instance.LastDevelop;
+        _cachedArt = DevelopmentResultUI.Instance.LastArt;
+        _cachedCreativity = DevelopmentResultUI.Instance.LastCreativity;
+        _cachedBug = DevelopmentResultUI.Instance.LastBug;
         GameTimeManager.Instance.StartTime();
-
-        // 기존 바 제거
+        ShowInternal(qualityScore, scale);
+    }
+    public void ShowWithProjectName(
+        float qualityScore, ProjectScale scale, string projectName,
+        ProjectScale cachedScale, ProjectGenre cachedGenre, ProjectPlatform cachedPlatform,
+        float planning, float develop, float art, float creativity, float bug)
+    {
+        _cachedScale = cachedScale;
+        _cachedGenre = cachedGenre;
+        _cachedPlatform = cachedPlatform;
+        _cachedProjectName = projectName;
+        _cachedPlanning = planning;
+        _cachedDevelop = develop;
+        _cachedArt = art;
+        _cachedCreativity = creativity;
+        _cachedBug = bug;
+        GameTimeManager.Instance.StartTime();
+        ShowInternal(qualityScore, scale);
+    }
+    void ShowInternal(float qualityScore, ProjectScale scale)
+    {
         foreach (Transform child in chartArea)
             Destroy(child.gameObject);
 
@@ -48,8 +82,8 @@ public class SalesUI : MonoBehaviour
         int totalUnits = Mathf.RoundToInt(qualityScore * UnityEngine.Random.Range(130, 161)); //추후 팬덤영향
 
         float[] distribution = CalcDistribution(scale);
-        int[] unitPerPeriod = new int[8];
-        for (int i = 0; i < 8; i++)
+        int[] unitPerPeriod = new int[barCount];
+        for (int i = 0; i < barCount; i++)
             unitPerPeriod[i] = Mathf.RoundToInt(totalUnits * distribution[i]);
 
         int maxUnits = 0;
@@ -62,12 +96,14 @@ public class SalesUI : MonoBehaviour
         salesPanel.SetActive(true);
         StartCoroutine(ShowBarsSequentially(unitPerPeriod, maxUnits));
     }
-
     IEnumerator ShowBarsSequentially(int[] unitPerPeriod, int maxUnits)
     {
+        yield return null; // ← 한 프레임 대기 후 높이 계산
+        maxBarHeight = chartArea.rect.height * 0.9f;
+
         int cumulativeUnits = 0;
 
-        for (int i = 0; i < 8; i++)
+        for (int i = 0; i < barCount; i++)
         {
             var barObj = Instantiate(barPrefab, chartArea);
             var barImage = barObj.transform.Find("BarImage").GetComponent<RectTransform>();
@@ -110,38 +146,47 @@ public class SalesUI : MonoBehaviour
 
         AlertUI.Instance.Show("피드백 시간!", () =>
         {
-            int totalRevenue = cumulativeUnits * 9;
-            MoneyManager.Instance.AddGold(totalRevenue);
-            DevelopmentManager.Instance.ResetProject();
-            ProjectSaveManager.Instance.SaveProject();
-            GameTimeManager.Instance.SaveGameTime();
+            float cachedMarketFit = DevelopmentResultUI.Instance.LastMarketFit;
+            float cachedMarketingBonus = DevelopmentResultUI.Instance.LastMarketingBonus;
+            float cachedBug = DevelopmentResultUI.Instance.LastBug;
+            float cachedReleaseBonus   = DevelopmentResultUI.Instance.LastReleaseEventBonus;
             salesPanel.SetActive(false);
+
+            // ── 1. 완료 프로젝트 저장 (초기화 전에 먼저) ──
             var completedData = new CompletedProjectData
             {
-                projectName = DevelopmentResultUI.Instance.LastProjectName,
+                projectName = _cachedProjectName,
                 scale = (int)_cachedScale,
                 genre = (int)_cachedGenre,
                 platform = (int)_cachedPlatform,
-                planning = DevelopmentResultUI.Instance.LastPlanning,
-                develop = DevelopmentResultUI.Instance.LastDevelop,
-                art = DevelopmentResultUI.Instance.LastArt,
-                creativity = DevelopmentResultUI.Instance.LastCreativity,
-                bug = DevelopmentResultUI.Instance.LastBug,
+                planning = _cachedPlanning,    // ← DevelopmentResultUI 대신
+                develop = _cachedDevelop,
+                art = _cachedArt,
+                creativity = _cachedCreativity,
+                bug = _cachedBug,
                 totalUnits = cumulativeUnits,
                 totalRevenue = cumulativeUnits * 9,
                 year = GameTimeManager.Instance.Year,
                 month = GameTimeManager.Instance.Month,
                 week = GameTimeManager.Instance.Week,
             };
-
             Debug.Log($"저장: scale={completedData.scale} genre={completedData.genre} platform={completedData.platform}");
             CompletedProjectManager.Instance.SaveCompletedProject(completedData);
 
-            FeedbackUI.Instance.Show(
-                DevelopmentResultUI.Instance.LastMarketFit,
-                DevelopmentResultUI.Instance.LastMarketingBonus,
-                DevelopmentResultUI.Instance.LastBug
-            );
+            // ── 2. 매출 지급 ──
+            int totalRevenue = cumulativeUnits * 9;
+            MoneyManager.Instance.AddGold(totalRevenue);
+
+            // ── 3. 프로젝트 Complete 저장 후 초기화 ──
+            DevelopmentManager.Instance.CurrentStage = ProjectStage.Complete;
+            ProjectSaveManager.Instance.SaveProject();
+            GameTimeManager.Instance.SaveGameTime();
+            DevelopmentManager.Instance.ResetProject();
+
+            // ── 4. 퀘스트 (이미 위에서 처리됐으므로 여기선 생략 가능)
+
+            // ── 5. 피드백 ──
+            FeedbackUI.Instance.Show(cachedMarketFit, cachedMarketingBonus, cachedBug, cachedReleaseBonus);
         });
     }
 
@@ -156,15 +201,15 @@ public class SalesUI : MonoBehaviour
             _ => 0.65f
         };
 
-        float[] weights = new float[8];
+        float[] weights = new float[barCount];
         weights[0] = 1f;
-        for (int i = 1; i < 8; i++)
+        for (int i = 1; i < barCount; i++)
             weights[i] = weights[i - 1] * decayRate;
 
         // 합계로 정규화
         float sum = 0f;
         foreach (var w in weights) sum += w;
-        for (int i = 0; i < 8; i++) weights[i] /= sum;
+        for (int i = 0; i < barCount; i++) weights[i] /= sum;
 
         return weights;
     }

@@ -59,9 +59,8 @@ public class GPGSLogin : MonoBehaviour
                     if (bro.IsSuccess())
                     {
                         Debug.Log("Backend Login Success! inDate: " + bro.GetInDate());
-                        FindAnyObjectByType<Progress>().SetLoginComplete();
-                        // 게임 씬으로 이동
-                        // SceneManager.LoadScene("GameScene");
+                        FindAnyObjectByType<Progress>().SetLoginComplete(); // 로딩 UI
+                        FindAnyObjectByType<BackendManager>().OnLoginSuccess();
                     }
                     else
                     {
