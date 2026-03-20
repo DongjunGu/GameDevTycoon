@@ -4,8 +4,11 @@ using UnityEngine;
 public class SalaryNegotiationManager : MonoBehaviour
 {
     [Header("UI")]
-    public GameObject employeeSlotArea; // 슬롯 표시할 부모 오브젝트
+    //public GameObject employeeSlotArea; // 슬롯 표시할 부모 오브젝트
+    public string employeeSlotAreaName = "EmployeeSlotArea";
     public GameObject ownedEmployeeSlotPrefab;
+    private GameObject _employeeSlotArea;
+
     [Header("Settings")]
     [Range(0f, 1f)]
     public float resignChance = 0.5f; // 퇴사 확률
@@ -30,6 +33,11 @@ public class SalaryNegotiationManager : MonoBehaviour
         DialogManager.Instance.OnChoiceResult += HandleDialogResult;
         DialogManager.Instance.OnDialogEnd += OnDialogEnd;
     }
+    public void InitializeUI()
+{
+    _employeeSlotArea = GameObject.Find(employeeSlotAreaName);
+    Debug.Log($"EmployeeSlotArea 연결: {_employeeSlotArea != null}");
+}
 
     void OnDestroy()
     {
@@ -124,30 +132,32 @@ public class SalaryNegotiationManager : MonoBehaviour
         HideEmployeeSlot();
         ProcessNext();
     }
-    void ShowEmployeeSlot(EmployeeData employee)
+void ShowEmployeeSlot(EmployeeData employee)
+{
+    if (_currentSlot != null)
+        Destroy(_currentSlot);
+
+    if (_employeeSlotArea == null || ownedEmployeeSlotPrefab == null) return;
+
+    _employeeSlotArea.SetActive(true);
+    _currentSlot = Instantiate(ownedEmployeeSlotPrefab, _employeeSlotArea.transform);
+
+    var slotUI = _currentSlot.GetComponent<OwnedEmployeeSlotUI>();
+    if (slotUI.fireButton != null)
+        slotUI.fireButton.gameObject.SetActive(false);
+
+    slotUI.Setup(employee, null);
+}
+
+void HideEmployeeSlot()
+{
+    if (_currentSlot != null)
     {
-        // 기존 슬롯 제거
-        if (_currentSlot != null)
-            Destroy(_currentSlot);
-
-        if (employeeSlotArea == null || ownedEmployeeSlotPrefab == null) return;
-
-        _currentSlot = Instantiate(ownedEmployeeSlotPrefab, employeeSlotArea.transform);
-
-        // 해고 버튼 숨기기
-        var slotUI = _currentSlot.GetComponent<OwnedEmployeeSlotUI>();
-        if (slotUI.fireButton != null)
-            slotUI.fireButton.gameObject.SetActive(false);
-
-        slotUI.Setup(employee, null); // listUI null로 전달
+        Destroy(_currentSlot);
+        _currentSlot = null;
     }
 
-    void HideEmployeeSlot()
-    {
-        if (_currentSlot != null)
-        {
-            Destroy(_currentSlot);
-            _currentSlot = null;
-        }
-    }
+    if (_employeeSlotArea != null)
+        _employeeSlotArea.SetActive(false);
+}
 }

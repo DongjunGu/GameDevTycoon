@@ -1168,7 +1168,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 50, y: -225}
+  m_AnchoredPosition: {x: 300, y: -390}
   m_SizeDelta: {x: 200, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &64460144
@@ -3179,7 +3179,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 300, y: -617.5}
+  m_AnchoredPosition: {x: 300, y: -630}
   m_SizeDelta: {x: 250, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &132113584
@@ -3376,7 +3376,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 50, y: -375}
+  m_AnchoredPosition: {x: 300, y: -602.72723}
   m_SizeDelta: {x: 200, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &144330324
@@ -7065,8 +7065,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 1, y: 0.5}
   m_AnchorMax: {x: 1, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 200, y: 100}
+  m_AnchoredPosition: {x: 0, y: 98.6}
+  m_SizeDelta: {x: 150, y: 70}
   m_Pivot: {x: 1, y: 0.5}
 --- !u!114 &304164525
 MonoBehaviour:
@@ -7112,9 +7112,9 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 942966817}
-        m_TargetAssemblyTypeName: MoneyManager, Assembly-CSharp
-        m_MethodName: OnTestHireDialogButton
+      - m_Target: {fileID: 2000048222}
+        m_TargetAssemblyTypeName: GameSceneInitializer, Assembly-CSharp
+        m_MethodName: TestFirstHireDialog
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -8337,7 +8337,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 50, y: -25}
+  m_AnchoredPosition: {x: 300, y: -35.454544}
   m_SizeDelta: {x: 200, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &356885539
@@ -8810,7 +8810,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 300, y: -552.5}
+  m_AnchoredPosition: {x: 300, y: -570}
   m_SizeDelta: {x: 250, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &369958274
@@ -9309,7 +9309,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 300, y: -762.5}
+  m_AnchoredPosition: {x: 300, y: -765}
   m_SizeDelta: {x: 200, y: 60}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &377341403
@@ -10267,7 +10267,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5fa7dbb37c7496a45b9a93f27b77a7f6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SalaryNegotiationManager
-  employeeSlotArea: {fileID: 1554379531}
+  employeeSlotAreaName: EmployeeSlotArea
   ownedEmployeeSlotPrefab: {fileID: 1983924396680351385, guid: 23524c125c52de440a5a21ca65b5e7b9, type: 3}
   resignChance: 1
 --- !u!1 &422620367
@@ -10410,8 +10410,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 1, y: 0.5}
   m_AnchorMax: {x: 1, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: -97.9}
-  m_SizeDelta: {x: 200, y: 100}
+  m_AnchoredPosition: {x: 0, y: 32}
+  m_SizeDelta: {x: 150, y: 70}
   m_Pivot: {x: 1, y: 0.5}
 --- !u!114 &436824864
 MonoBehaviour:
@@ -10457,9 +10457,9 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 942966817}
-        m_TargetAssemblyTypeName: MoneyManager, Assembly-CSharp
-        m_MethodName: OnTestProjectDialogButton
+      - m_Target: {fileID: 2000048222}
+        m_TargetAssemblyTypeName: GameSceneInitializer, Assembly-CSharp
+        m_MethodName: TestProjectResult
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -12432,7 +12432,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 50, y: -25}
+  m_AnchoredPosition: {x: 300, y: -106.36363}
   m_SizeDelta: {x: 200, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &494402210
@@ -14598,7 +14598,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 50, y: -175}
+  m_AnchoredPosition: {x: 300, y: -319.09088}
   m_SizeDelta: {x: 200, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &624163613
@@ -17001,7 +17001,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 300, y: -422.5}
+  m_AnchoredPosition: {x: 300, y: -450}
   m_SizeDelta: {x: 200, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &754748893
@@ -18199,7 +18199,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 300, y: -357.5}
+  m_AnchoredPosition: {x: 300, y: -390}
   m_SizeDelta: {x: 200, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &813718885
@@ -21111,7 +21111,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 300, y: -32.5}
+  m_AnchoredPosition: {x: 300, y: -30}
   m_SizeDelta: {x: 200, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &911517287
@@ -21426,7 +21426,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &942966813
 Transform:
   m_ObjectHideFlags: 0
@@ -22817,7 +22817,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 50, y: -125}
+  m_AnchoredPosition: {x: 300, y: -248.18181}
   m_SizeDelta: {x: 200, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &993167144
@@ -25354,7 +25354,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 50, y: -430}
+  m_AnchoredPosition: {x: 300, y: -678.6363}
   m_SizeDelta: {x: 200, y: 60}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1071854629
@@ -26355,7 +26355,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 50, y: -275}
+  m_AnchoredPosition: {x: 300, y: -460.90906}
   m_SizeDelta: {x: 200, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1094513058
@@ -28179,7 +28179,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 300, y: -487.5}
+  m_AnchoredPosition: {x: 300, y: -510}
   m_SizeDelta: {x: 200, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1148930635
@@ -29152,7 +29152,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!61 &1191346334
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -30962,7 +30962,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 50, y: -75}
+  m_AnchoredPosition: {x: 300, y: -177.27272}
   m_SizeDelta: {x: 200, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1265310058
@@ -31176,8 +31176,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 1, y: 0.5}
   m_AnchorMax: {x: 1, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: -219}
-  m_SizeDelta: {x: 200, y: 100}
+  m_AnchoredPosition: {x: 0, y: -36}
+  m_SizeDelta: {x: 150, y: 70}
   m_Pivot: {x: 1, y: 0.5}
 --- !u!114 &1269581754
 MonoBehaviour:
@@ -31223,9 +31223,9 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 415797209}
-        m_TargetAssemblyTypeName: SalaryNegotiationManager, Assembly-CSharp
-        m_MethodName: StartNegotiation
+      - m_Target: {fileID: 2000048222}
+        m_TargetAssemblyTypeName: GameSceneInitializer, Assembly-CSharp
+        m_MethodName: TestStartNegotiation
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -32574,7 +32574,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 300, y: -162.5}
+  m_AnchoredPosition: {x: 300, y: -210}
   m_SizeDelta: {x: 200, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &1327928003
@@ -32990,7 +32990,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 300, y: -292.5}
+  m_AnchoredPosition: {x: 300, y: -330}
   m_SizeDelta: {x: 200, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1341515595
@@ -34500,7 +34500,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 300, y: -687.5}
+  m_AnchoredPosition: {x: 300, y: -695}
   m_SizeDelta: {x: 200, y: 60}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1385173546
@@ -35337,7 +35337,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 300, y: -32.5}
+  m_AnchoredPosition: {x: 300, y: -90}
   m_SizeDelta: {x: 200, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &1406578083
@@ -35834,7 +35834,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 50, y: -490}
+  m_AnchoredPosition: {x: 300, y: -759.54535}
   m_SizeDelta: {x: 200, y: 60}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1449274670
@@ -36427,7 +36427,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5fa7dbb37c7496a45b9a93f27b77a7f6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SalaryNegotiationManager
-  employeeSlotArea: {fileID: 1554379531}
+  employeeSlotAreaName: EmployeeSlotArea
   ownedEmployeeSlotPrefab: {fileID: 1983924396680351385, guid: 23524c125c52de440a5a21ca65b5e7b9, type: 3}
   resignChance: 1
 --- !u!114 &1472754649
@@ -38975,7 +38975,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 50, y: -325}
+  m_AnchoredPosition: {x: 300, y: -531.8182}
   m_SizeDelta: {x: 200, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1568040983
@@ -40745,8 +40745,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 1, y: 0.5}
   m_AnchorMax: {x: 1, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: 97.9}
-  m_SizeDelta: {x: 200, y: 100}
+  m_AnchoredPosition: {x: 0, y: 167}
+  m_SizeDelta: {x: 150, y: 70}
   m_Pivot: {x: 1, y: 0.5}
 --- !u!114 &1629599784
 MonoBehaviour:
@@ -40792,9 +40792,9 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 942966817}
-        m_TargetAssemblyTypeName: MoneyManager, Assembly-CSharp
-        m_MethodName: OnTestDialogButton
+      - m_Target: {fileID: 2000048222}
+        m_TargetAssemblyTypeName: GameSceneInitializer, Assembly-CSharp
+        m_MethodName: TestGameStartDialog
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -45776,7 +45776,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 300, y: -227.5}
+  m_AnchoredPosition: {x: 300, y: -270}
   m_SizeDelta: {x: 200, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1844598357
@@ -45926,7 +45926,7 @@ RectTransform:
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 100, y: 100}
+  m_SizeDelta: {x: 600, y: 800}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1845248086
 MonoBehaviour:
@@ -45961,13 +45961,13 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1845248084}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 1, b: 1, a: 0.392}
+  m_Color: {r: 1, g: 1, b: 1, a: 0.6313726}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -46898,7 +46898,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 300, y: -97.5}
+  m_AnchoredPosition: {x: 300, y: -150}
   m_SizeDelta: {x: 200, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1871762406
@@ -52774,6 +52774,7 @@ GameObject:
   m_Component:
   - component: {fileID: 2000048223}
   - component: {fileID: 2000048222}
+  - component: {fileID: 2000048224}
   m_Layer: 0
   m_Name: GameSceneInitializer
   m_TagString: Untagged
@@ -52808,6 +52809,102 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &2000048224
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2000048221}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ccb38c322aa98ae4d8478bc70e3f7fa9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DevelopmentManager
+  developmentDuration: 10
+  bugDurationRate: 0.2
+  plannerLeader:
+    id: 
+    rowInDate: 
+    employeeName: 
+    role: 0
+    maxGrade: 0
+    grade: 0
+    potential: 0
+    developSkill: 0
+    planningSkill: 0
+    artSkill: 0
+    perfectionSkill: 0
+    salary: 0
+    enhancementLevel: 0
+    developMin: 0
+    developMax: 0
+    planningMin: 0
+    planningMax: 0
+    artMin: 0
+    artMax: 0
+    perfectionMin: 0
+    perfectionMax: 0
+    salaryMin: 0
+    salaryMax: 0
+    state: 0
+    assignedProjectId: 
+    portraitId: 
+  programmerLeader:
+    id: 
+    rowInDate: 
+    employeeName: 
+    role: 0
+    maxGrade: 0
+    grade: 0
+    potential: 0
+    developSkill: 0
+    planningSkill: 0
+    artSkill: 0
+    perfectionSkill: 0
+    salary: 0
+    enhancementLevel: 0
+    developMin: 0
+    developMax: 0
+    planningMin: 0
+    planningMax: 0
+    artMin: 0
+    artMax: 0
+    perfectionMin: 0
+    perfectionMax: 0
+    salaryMin: 0
+    salaryMax: 0
+    state: 0
+    assignedProjectId: 
+    portraitId: 
+  artistLeader:
+    id: 
+    rowInDate: 
+    employeeName: 
+    role: 0
+    maxGrade: 0
+    grade: 0
+    potential: 0
+    developSkill: 0
+    planningSkill: 0
+    artSkill: 0
+    perfectionSkill: 0
+    salary: 0
+    enhancementLevel: 0
+    developMin: 0
+    developMax: 0
+    planningMin: 0
+    planningMax: 0
+    artMin: 0
+    artMax: 0
+    perfectionMin: 0
+    perfectionMax: 0
+    salaryMin: 0
+    salaryMax: 0
+    state: 0
+    assignedProjectId: 
+    portraitId: 
+  leaderTickDelay: 0.5
 --- !u!1 &2000865730
 GameObject:
   m_ObjectHideFlags: 0

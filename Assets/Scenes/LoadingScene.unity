@@ -1331,7 +1331,7 @@ MonoBehaviour:
   teamDinnerChance: 1
   eventDetailTriggerChance: 1
   competitorChance: 1
-  perfectTimingChance: 0
+  perfectTimingChance: 1
 --- !u!114 &2062941527
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1344,7 +1344,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5fa7dbb37c7496a45b9a93f27b77a7f6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SalaryNegotiationManager
-  employeeSlotArea: {fileID: 0}
+  employeeSlotAreaName: EmployeeSlotArea
   ownedEmployeeSlotPrefab: {fileID: 1983924396680351385, guid: 23524c125c52de440a5a21ca65b5e7b9, type: 3}
   resignChance: 1
 --- !u!114 &2062941528

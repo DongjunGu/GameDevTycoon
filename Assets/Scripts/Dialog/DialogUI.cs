@@ -46,7 +46,10 @@ public class DialogUI : MonoBehaviour
     private List<ChoiceData> _pendingChoices;
     private List<GameObject> _choiceButtons = new List<GameObject>();
 
-
+    void Awake()
+    {
+        DialogManager.Instance.SetDialogUI(this); // ← 추가
+    }
     // ─── 공개 API ────────────────────────────────────────────────
     public void Show(DialogNodeData node, List<ChoiceData> choices)
     {
