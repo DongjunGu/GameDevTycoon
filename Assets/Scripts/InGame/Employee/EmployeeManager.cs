@@ -172,7 +172,8 @@ public class EmployeeManager : MonoBehaviour
         inGameEmployee.enhancementLevel = poolEmployee.enhancementLevel;
         inGameEmployee.portraitId      = poolEmployee.portraitId;
         inGameEmployee.assignedProjectId = "";
-
+        inGameEmployee.satisfaction = 90;
+        
         Backend.GameData.Insert("Employee", inGameEmployee.ToParam(), bro =>
         {
             if (bro.IsSuccess())

@@ -28,6 +28,7 @@ public class HiringUI : MonoBehaviour
     public TextMeshProUGUI confirmArtText;
     public TextMeshProUGUI confirmPerfectionText;
     public TextMeshProUGUI confirmSalaryText;
+    public TextMeshProUGUI confirmSatisfactionText;
     [Header("Settings")]
     public int candidateCount = 4;
 
@@ -156,6 +157,12 @@ public class HiringUI : MonoBehaviour
         confirmPerfectionText.text = employee.PerfectionRangeText();
         confirmSalaryText.text = employee.SalaryRangeText();
         enhancementText.text = $"+{employee.enhancementLevel}";
+        
+        if (confirmSatisfactionText != null)
+        confirmSatisfactionText.text = employee.SatisfactionText();
+    else
+        Debug.LogError("confirmSatisfactionText가 null입니다. 인스펙터 할당 확인");
+
 
         hiringPanel.SetActive(false);
         confirmPanel.SetActive(true);

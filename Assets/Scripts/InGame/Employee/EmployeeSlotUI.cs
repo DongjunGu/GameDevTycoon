@@ -16,6 +16,7 @@ public class EmployeeSlotUI : MonoBehaviour
     public TextMeshProUGUI artSkillText;
     public TextMeshProUGUI perfectionSkillText;
     public TextMeshProUGUI salaryText;
+    public TextMeshProUGUI satisfactionText;
     public Button selectButton;
     private static readonly Color ColorNormal = new Color(0.92f, 0.92f, 0.92f);
     private static readonly Color ColorRare = new Color(0.75f, 0.88f, 0.95f);
@@ -34,7 +35,7 @@ public class EmployeeSlotUI : MonoBehaviour
         perfectionSkillText.text = data.PerfectionRangeText();
         salaryText.text = data.SalaryRangeText();
         enhancementText.text     = $"+{data.enhancementLevel}";
-
+        satisfactionText.text = data.SatisfactionText();
         _pendingGrade = data.grade;
 
         selectButton.onClick.RemoveAllListeners();

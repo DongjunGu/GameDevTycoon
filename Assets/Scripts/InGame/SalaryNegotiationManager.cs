@@ -33,11 +33,6 @@ public class SalaryNegotiationManager : MonoBehaviour
         DialogManager.Instance.OnChoiceResult += HandleDialogResult;
         DialogManager.Instance.OnDialogEnd += OnDialogEnd;
     }
-    public void InitializeUI()
-{
-    _employeeSlotArea = GameObject.Find(employeeSlotAreaName);
-    Debug.Log($"EmployeeSlotArea 연결: {_employeeSlotArea != null}");
-}
 
     void OnDestroy()
     {
@@ -90,6 +85,7 @@ public class SalaryNegotiationManager : MonoBehaviour
         {
             if (_currentEmployee == null) return;
             _currentEmployee.salary = _proposedSalary;
+            _currentEmployee.ChangeSatisfaction(+10);
             EmployeeManager.Instance.UpdateEmployee(_currentEmployee);
             HUDUI.Instance?.RefreshAll();
             Debug.Log($"{_currentEmployee.employeeName} 연봉 업데이트: {_proposedSalary:N0}G");
@@ -97,6 +93,7 @@ public class SalaryNegotiationManager : MonoBehaviour
         else if (resultType == "SalaryReject")
         {
             // 두번째 거절 → 퇴사 확률 체크
+            _currentEmployee?.ChangeSatisfaction(-5); // 거절 시 만족도 하락
             if (UnityEngine.Random.value <= resignChance)
             {
                 _isResigning = true;
@@ -109,7 +106,7 @@ public class SalaryNegotiationManager : MonoBehaviour
     {
         // 협상 진행 중이 아니면 무시
         if (_currentEmployee == null && _negotiationQueue.Count == 0) return;
-        if (_currentEmployee == null) return; // ← 추가
+        if (_currentEmployee == null) return;
 
         if (_isResigning)
         {
@@ -122,42 +119,50 @@ public class SalaryNegotiationManager : MonoBehaviour
                 GameTimeManager.Instance.SaveGameTime();
                 HUDUI.Instance?.RefreshAll();
                 HideEmployeeSlot();
-                _currentEmployee = null; // ← 추가
+                _currentEmployee = null;
                 ProcessNext();
             });
             return;
         }
 
-        _currentEmployee = null; // ← 추가
+        _currentEmployee = null;
         HideEmployeeSlot();
         ProcessNext();
     }
-void ShowEmployeeSlot(EmployeeData employee)
-{
-    if (_currentSlot != null)
-        Destroy(_currentSlot);
-
-    if (_employeeSlotArea == null || ownedEmployeeSlotPrefab == null) return;
-
-    _employeeSlotArea.SetActive(true);
-    _currentSlot = Instantiate(ownedEmployeeSlotPrefab, _employeeSlotArea.transform);
-
-    var slotUI = _currentSlot.GetComponent<OwnedEmployeeSlotUI>();
-    if (slotUI.fireButton != null)
-        slotUI.fireButton.gameObject.SetActive(false);
-
-    slotUI.Setup(employee, null);
-}
-
-void HideEmployeeSlot()
-{
-    if (_currentSlot != null)
+    void ShowEmployeeSlot(EmployeeData employee)
     {
-        Destroy(_currentSlot);
-        _currentSlot = null;
+        if (_currentSlot != null)
+            Destroy(_currentSlot);
+
+        if (_employeeSlotArea == null || ownedEmployeeSlotPrefab == null) return;
+
+        _employeeSlotArea.SetActive(true);
+        _currentSlot = Instantiate(ownedEmployeeSlotPrefab, _employeeSlotArea.transform);
+        _currentSlot.SetActive(true);
+
+        var slotUI = _currentSlot.GetComponent<OwnedEmployeeSlotUI>();
+        if (slotUI.fireButton != null)
+            slotUI.fireButton.gameObject.SetActive(false);
+
+        slotUI.Setup(employee, null);
+    }
+    public void SetEmployeeSlotArea(GameObject area)
+    {
+        _employeeSlotArea = area;
+        if (_employeeSlotArea != null)
+            _employeeSlotArea.SetActive(false);
+        Debug.Log($"EmployeeSlotArea 연결: {_employeeSlotArea != null}");
     }
 
-    if (_employeeSlotArea != null)
-        _employeeSlotArea.SetActive(false);
-}
+    void HideEmployeeSlot()
+    {
+        if (_currentSlot != null)
+        {
+            Destroy(_currentSlot);
+            _currentSlot = null;
+        }
+
+        if (_employeeSlotArea != null)
+            _employeeSlotArea.SetActive(false);
+    }
 }

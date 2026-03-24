@@ -15,6 +15,7 @@ public class OwnedEmployeeSlotUI : MonoBehaviour
     public TextMeshProUGUI artSkillText;
     public TextMeshProUGUI perfectionSkillText;
     public TextMeshProUGUI salaryText;
+    public TextMeshProUGUI satisfactionText;
     //public TextMeshProUGUI stateText;
     public Button fireButton;
 
@@ -40,9 +41,11 @@ public class OwnedEmployeeSlotUI : MonoBehaviour
         perfectionSkillText.text = data.PerfectionText();
         salaryText.text = data.SalaryText();
         enhancementText.text = $"+{data.enhancementLevel}";
+        satisfactionText.text = data.SatisfactionText();
         //stateText.text           = data.StateToString();
         _pendingGrade = data.grade;
-        ApplyGradeColor(_pendingGrade);
+        if (data.grade != EmployeeGrade.Unique)
+            ApplyGradeColor(_pendingGrade);
 
         fireButton.onClick.RemoveAllListeners();
         if (_listUI != null)

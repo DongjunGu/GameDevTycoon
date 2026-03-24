@@ -394,15 +394,17 @@ public class DevelopmentManager : MonoBehaviour
 
     void AccumulateByType(EmployeeData employee, int tickType)
     {
+        float satisfactionMultiplier = GetSatisfactionMultiplier(employee);
+
         switch (tickType)
         {
             case 0:
                 float planning = 0f, develop = 0f, art = 0f;
                 switch (employee.role)
                 {
-                    case EmployeeRole.Planner: planning = CalcConstantDev(employee.planningSkill); break;
-                    case EmployeeRole.Programmer: develop = CalcConstantDev(employee.developSkill); break;
-                    case EmployeeRole.Artist: art = CalcConstantDev(employee.artSkill); break;
+                    case EmployeeRole.Planner: planning = CalcConstantDev(employee.planningSkill) * satisfactionMultiplier ; break;
+                    case EmployeeRole.Programmer: develop = CalcConstantDev(employee.developSkill) * satisfactionMultiplier ; break;
+                    case EmployeeRole.Artist: art = CalcConstantDev(employee.artSkill) * satisfactionMultiplier ; break;
                 }
                 DevelopmentPanelUI.Instance.AddValues(planning, develop, art, 0f, 0f);
                 break;
@@ -412,11 +414,11 @@ public class DevelopmentManager : MonoBehaviour
                 switch (employee.role)
                 {
                     case EmployeeRole.Planner:
-                        creativity = CalcCreativityScore(employee.planningSkill, employee.developSkill); break;
+                        creativity = CalcCreativityScore(employee.planningSkill, employee.developSkill) * satisfactionMultiplier ; break;
                     case EmployeeRole.Programmer:
-                        creativity = CalcCreativityScore(employee.developSkill, employee.artSkill); break;
+                        creativity = CalcCreativityScore(employee.developSkill, employee.artSkill) * satisfactionMultiplier ; break;
                     case EmployeeRole.Artist:
-                        creativity = CalcCreativityScore(employee.artSkill, employee.planningSkill); break;
+                        creativity = CalcCreativityScore(employee.artSkill, employee.planningSkill) * satisfactionMultiplier ; break;
                 }
                 DevelopmentPanelUI.Instance.AddValues(0f, 0f, 0f, 0f, creativity);
                 break;
@@ -509,5 +511,16 @@ public class DevelopmentManager : MonoBehaviour
     {
         _isRunning = true;
         GameTimeManager.Instance.ForceStartTime();
+    }
+    float GetSatisfactionMultiplier(EmployeeData employee)
+    {
+        var state = employee.GetSatisfactionState();
+        return state switch
+        {
+            SatisfactionState.VeryHappy => 1.2f,
+            SatisfactionState.Unhappy => 0.8f,
+            SatisfactionState.VeryUnhappy => 0.8f,
+            _ => 1.0f
+        };
     }
 }

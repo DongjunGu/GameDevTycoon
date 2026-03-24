@@ -140,31 +140,33 @@ public class DevelopmentResultUI : MonoBehaviour
         ProjectSaveManager.Instance.SetProjectName(_lastProjectName);
         resultPanel.SetActive(false);
 
-        // ── 1. 출시 랜덤 이벤트 먼저 ──
-        RandomEventManager.Instance.TryTriggerReleaseEvent(bonus =>
-        {
-            // ── 2. 마케팅 ──
-            AlertUI.Instance.Show("마케팅을 시작합니다.", () =>
-            {
-                MarketingUI.Instance.Show(() =>
-                {
-                    float p = DevelopmentPanelUI.Instance.GetPlanning();
+        float p = DevelopmentPanelUI.Instance.GetPlanning();
                     float d = DevelopmentPanelUI.Instance.GetDevelop();
                     float a = DevelopmentPanelUI.Instance.GetArt();
                     float c = DevelopmentPanelUI.Instance.GetCreativity();
                     float bRem = DevelopmentPanelUI.Instance.GetBug();
 
                     float rawScore = CalcRawScore(p, d, a, c, ProjectSetupUI.SelectedPlatform);
-                    float lBug = CalcLBug(bRem);
-                    float sAdj = rawScore * (1f - lBug);
 
-                    // ── 3. 이벤트 보정값 적용 후 CalcFinalScore ──
-                    _lastReleaseEventBonus = bonus;
+        // ── 1. 평론가 패널 ──
+    CriticReviewUI.Instance.Show(rawScore, () =>
+    {
+        // ── 2. 출시 랜덤 이벤트 ──
+        RandomEventManager.Instance.TryTriggerReleaseEvent(bonus =>
+        {
+            // ── 3. 마케팅 ──
+            AlertUI.Instance.Show("마케팅을 시작합니다.", () =>
+            {
+                MarketingUI.Instance.Show(() =>
+                {
+                    float lBug       = CalcLBug(bRem);
+                    float sAdj       = rawScore * (1f - lBug);
+
                     sAdj += bonus;
-                    sAdj = Mathf.Max(0f, sAdj);
+                    sAdj  = Mathf.Max(0f, sAdj);
 
                     float finalScore = CalcFinalScore(sAdj);
-                    float quality = CalcQualityScore(finalScore);
+                    float quality    = CalcQualityScore(finalScore);
 
                     Debug.Log($"원천: {rawScore:F1} / 이벤트보정: {bonus} / S_adj: {sAdj:F1} / 최종: {finalScore:F1} / 품질: {quality:F1}");
 
@@ -181,6 +183,7 @@ public class DevelopmentResultUI : MonoBehaviour
                 });
             });
         });
+    });
     }
     float CalcRawScore(float p, float d, float a, float c, ProjectPlatform platform)
     {
@@ -230,8 +233,8 @@ public class DevelopmentResultUI : MonoBehaviour
     }
     float CalcFinalScore(float sAdj)
     {
-        float n = 15f;
-        double final = n * (System.Math.Log(sAdj + n) / System.Math.Log(n)) + n;
+        double maxExpected = 5000.0;
+        double final = 100.0 * System.Math.Log(sAdj + 1) / System.Math.Log(maxExpected + 1);
         final = System.Math.Max(0, System.Math.Min(100, final));
         return (float)final;
     }
