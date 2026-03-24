@@ -25,8 +25,10 @@ public class EmployeeListUI : MonoBehaviour
     public TextMeshProUGUI confirmArtText;
     public TextMeshProUGUI confirmPerfectionText;
     public TextMeshProUGUI confirmDescText;
+    public TextMeshProUGUI confirmSatisfactionText;
 
     private EmployeeData _selectedEmployee;
+    
 
     void Awake()
     {
@@ -69,6 +71,7 @@ public class EmployeeListUI : MonoBehaviour
         confirmPlanningText.text = employee.PlanningText();
         confirmArtText.text = employee.ArtText();
         confirmPerfectionText.text = employee.PerfectionText();
+        confirmSatisfactionText.text = employee.SatisfactionText();
         enhancementText.text = $"+{employee.enhancementLevel}";
         listPanel.SetActive(false);
         confirmPanel.SetActive(true);

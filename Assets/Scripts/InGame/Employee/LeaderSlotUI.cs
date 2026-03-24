@@ -14,6 +14,7 @@ public class LeaderSlotUI : MonoBehaviour
     public TextMeshProUGUI planningSkillText;
     public TextMeshProUGUI artSkillText;
     public TextMeshProUGUI perfectionSkillText;
+    public TextMeshProUGUI satisfactionText;
     public Button selectButton;
     private static readonly Color ColorNormal = new Color(0.92f, 0.92f, 0.92f);
     private static readonly Color ColorRare = new Color(0.75f, 0.88f, 0.95f);
@@ -31,6 +32,7 @@ public class LeaderSlotUI : MonoBehaviour
         artSkillText.text = data.ArtText();
         perfectionSkillText.text = data.PerfectionText();
         enhancementText.text     = $"+{data.enhancementLevel}";
+        satisfactionText.text = data.SatisfactionText();
         _pendingGrade = data.grade;
 
         selectButton.onClick.RemoveAllListeners();

@@ -14,6 +14,7 @@ public class TrainingSlotUI : MonoBehaviour
     public TextMeshProUGUI planningSkillText;
     public TextMeshProUGUI artSkillText;
     public TextMeshProUGUI perfectionSkillText;
+    public TextMeshProUGUI satisfactionText;
     public Button selectButton;
     private static readonly Color ColorNormal = new Color(0.92f, 0.92f, 0.92f);
     private static readonly Color ColorRare = new Color(0.75f, 0.88f, 0.95f);
@@ -30,6 +31,7 @@ public class TrainingSlotUI : MonoBehaviour
         planningSkillText.text   = data.PlanningText();
         artSkillText.text        = data.ArtText();
         perfectionSkillText.text = data.PerfectionText();
+        satisfactionText.text = data.SatisfactionText();
         enhancementText.text     = $"+{data.enhancementLevel}";
 
         _pendingGrade = data.grade;

@@ -25,7 +25,8 @@ public class TrainingUI : MonoBehaviour
     public TextMeshProUGUI selectedPlanningText;
     public TextMeshProUGUI selectedArtText;
     public TextMeshProUGUI selectedPerfectionText;
-    public TextMeshProUGUI selectedEnhancementText; // 현재 강화 수치
+    public TextMeshProUGUI selectedEnhancementText;
+    public TextMeshProUGUI selectedSatisfactionText;
 
     [Header("Result Panel")]
     public TextMeshProUGUI resultNameText;
@@ -36,7 +37,8 @@ public class TrainingUI : MonoBehaviour
     public TextMeshProUGUI resultArtText;
     public TextMeshProUGUI resultPerfectionText;
     public TextMeshProUGUI resultEnhancementText; // 강화 결과 텍스트
-    public TextMeshProUGUI resultOutcomeText;      // 성공/유지/하락 텍스트
+    public TextMeshProUGUI resultOutcomeText;
+    public TextMeshProUGUI resultSatisfactionText;
 
     private EmployeeData _selectedEmployee;
     private struct EnhanceResult
@@ -116,7 +118,7 @@ public class TrainingUI : MonoBehaviour
         selectedArtText.text = employee.ArtText();
         selectedPerfectionText.text = employee.PerfectionText();
         selectedEnhancementText.text = $"강화 수치: +{employee.enhancementLevel}";
-
+        selectedSatisfactionText.text = employee.SatisfactionText();
         listPanel.SetActive(false);
         trainingPanel.SetActive(true);
     }
@@ -177,6 +179,7 @@ public class TrainingUI : MonoBehaviour
         resultNameText.text = _selectedEmployee.employeeName;
         resultRoleText.text = _selectedEmployee.RoleToString();
         resultPotentialText.text = _selectedEmployee.PotentialToString();
+        resultSatisfactionText.text = _selectedEmployee.SatisfactionText();
         resultEnhancementText.text = $"강화 수치: +{beforeLevel} → +{_selectedEmployee.enhancementLevel}";
         resultOutcomeText.text = outcome;
 

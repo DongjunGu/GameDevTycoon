@@ -28,6 +28,7 @@ public class DialogUI : MonoBehaviour
     [SerializeField] private TextMeshProUGUI _dialogText;
     [SerializeField] private Image _portraitImage;
     [SerializeField] private GameObject _nextIndicator;
+    public GameObject employeeSlotArea;
 
     [Header("선택지")]
     [SerializeField] private GameObject _choicePanel;
@@ -48,7 +49,8 @@ public class DialogUI : MonoBehaviour
 
     void Awake()
     {
-        DialogManager.Instance.SetDialogUI(this); // ← 추가
+        DialogManager.Instance.SetDialogUI(this);
+        SalaryNegotiationManager.Instance.SetEmployeeSlotArea(employeeSlotArea);
     }
     // ─── 공개 API ────────────────────────────────────────────────
     public void Show(DialogNodeData node, List<ChoiceData> choices)

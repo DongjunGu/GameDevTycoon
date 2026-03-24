@@ -50,7 +50,16 @@ public class RandomEventManager : MonoBehaviour
             title = "정전 발생!",
             description = "갑작스러운 정전으로\n작업 데이터가 손실되었습니다.\n기획, 개발, 아트 수치가 절반으로 감소합니다.",
             triggerChance = blackoutChance, // ← 인스펙터 값 사용
-            onApply = () => DevelopmentPanelUI.Instance.MultiplyValues(0.5f)
+            onApply       = () =>
+            {
+                DevelopmentPanelUI.Instance.MultiplyValues(0.5f);
+                //전체 직원 만족도 -10
+                foreach (var e in EmployeeManager.Instance.ownedEmployees)
+                {
+                    e.ChangeSatisfaction(-10);
+                    EmployeeManager.Instance.UpdateEmployee(e);
+                }
+            }
         });
 
         _eventPool.Add(new RandomEventData

@@ -4,7 +4,6 @@ public class GameSceneInitializer : MonoBehaviour
 {
     void Start()
     {
-        SalaryNegotiationManager.Instance.InitializeUI();
         var dialogUI = FindAnyObjectByType<DialogUI>();
         if (dialogUI != null)
             DialogManager.Instance.SetDialogUI(dialogUI);
