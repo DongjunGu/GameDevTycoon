@@ -44,6 +44,11 @@ public class ProjectSaveManager : MonoBehaviour
     private float _loadedNextGenreTick;
     private float _loadedQualityScore;
     private ProjectScale _loadedSalesScale;
+    private bool _loadedNetworkIssueActive;
+    private float _loadedNetworkIssueEndProgress;
+    private bool _loadedInvestmentAccepted;
+    private string _loadedInvestmentStat;
+    private string _loadedInvestmentStatName;
 
     private string _loadedProjectName = "프로젝트명";
     public string GetLoadedProjectName() => _loadedProjectName;
@@ -93,6 +98,11 @@ public class ProjectSaveManager : MonoBehaviour
         param.Add("savedArt", _savedArt);
         param.Add("savedCreativity", _savedCreativity);
         param.Add("savedBug", _savedBug);
+        param.Add("networkIssueActive", RandomEventManager.Instance.NetworkIssueActive);
+        param.Add("networkIssueEndProgress", RandomEventManager.Instance.NetworkIssueEndProgress);
+        param.Add("investmentAccepted", RandomEventManager.Instance.InvestmentAccepted);
+        param.Add("investmentStat", RandomEventManager.Instance.InvestmentStat);
+        param.Add("investmentStatName", RandomEventManager.Instance.InvestmentStatName);
 
         if (!string.IsNullOrEmpty(_rowInDate))
         {
@@ -179,6 +189,11 @@ public class ProjectSaveManager : MonoBehaviour
             _loadedCreativity = SafeFloat(row, "savedCreativity", 0f);
             _loadedBug = SafeFloat(row, "savedBug", 0f);
             _hasPendingRestore = true;
+            _loadedNetworkIssueActive = SafeBool(row, "networkIssueActive", false);
+            _loadedNetworkIssueEndProgress = SafeFloat(row, "networkIssueEndProgress", -1f);
+            _loadedInvestmentAccepted = SafeBool(row, "investmentAccepted", false);
+            _loadedInvestmentStat = SafeString(row, "investmentStat", "");
+            _loadedInvestmentStatName = SafeString(row, "investmentStatName", "");
 
             Debug.Log($"프로젝트 로드 완료: stage={_loadedStage} elapsed={_loadedElapsed:F1}");
             onComplete?.Invoke();
@@ -195,36 +210,57 @@ public class ProjectSaveManager : MonoBehaviour
         ProjectSetupUI.SelectedGenre = _loadedGenre;
         ProjectSetupUI.SelectedPlatform = _loadedPlatform;
 
+        // ── RestoreState 먼저 (SetValues 호출됨) ──
+        DevelopmentManager.Instance.RestoreState(
+            _loadedElapsed, _loadedTriggered25, _loadedTriggered75,
+            _loadedPlannerLeaderId, _loadedProgrammerLeaderId, _loadedArtistLeaderId,
+            _loadedAccumPlanning, _loadedAccumDevelop, _loadedAccumArt,
+            _loadedAccumBug, _loadedAccumCreativity,
+            _loadedCurrentGenreIndex, _loadedNextGenreTick,
+            _loadedStage
+        );
+
+
+
+
+        // ── RandomEvent 상태 복원 ──
+        RandomEventManager.Instance.NetworkIssueActive = _loadedNetworkIssueActive;
+        RandomEventManager.Instance.NetworkIssueEndProgress = _loadedNetworkIssueEndProgress;
+        RandomEventManager.Instance.InvestmentAccepted = _loadedInvestmentAccepted;
+        RandomEventManager.Instance.InvestmentStat = _loadedInvestmentStat;
+        RandomEventManager.Instance.InvestmentStatName = _loadedInvestmentStatName;
+Debug.Log($"[네트워크이슈 복원] Active: {RandomEventManager.Instance.NetworkIssueActive} / EndProgress: {RandomEventManager.Instance.NetworkIssueEndProgress:F2} / 현재배율: {RandomEventManager.Instance.NetworkSpeedMultiplier:F2}");
+        // ── SetValues 후 투자 UI 표시 ──
+        if (_loadedInvestmentAccepted && !string.IsNullOrEmpty(_loadedInvestmentStatName))
+        {
+            float currentValue = RandomEventManager.Instance.InvestmentStat switch
+            {
+                "planning" => DevelopmentPanelUI.Instance.GetPlanning(),
+                "develop" => DevelopmentPanelUI.Instance.GetDevelop(),
+                "art" => DevelopmentPanelUI.Instance.GetArt(),
+                "creativity" => DevelopmentPanelUI.Instance.GetCreativity(),
+                _ => 0f
+            };
+
+            InvestmentProgressUI.Instance?.Show(
+                _loadedInvestmentStatName,
+                RandomEventManager.Instance.investmentThreshold,
+                currentValue
+            );
+        }
+
         if (_loadedStage == ProjectStage.Marketing)
         {
             if (_loadedQualityScore > 0f)
             {
-                string restoredName = _loadedProjectName;
-                float restoredPlanning = _loadedPlanning;
-                float restoredDevelop = _loadedDevelop;
-                float restoredArt = _loadedArt;
-                float restoredCreativity = _loadedCreativity;
-                float restoredBug = _loadedBug;
-                var restoredScale = _loadedScale;
-                var restoredGenre = _loadedGenre;
-                var restoredPlatform = _loadedPlatform;
-
                 DevelopmentManager.Instance.ResetProject();
-
                 AlertUI.Instance.Show("판매 시작!", () =>
                 {
                     SalesUI.Instance.ShowWithProjectName(
-                        _loadedQualityScore,
-                        _loadedSalesScale,
-                        restoredName,
-                        restoredScale,
-                        restoredGenre,
-                        restoredPlatform,
-                        restoredPlanning,
-                        restoredDevelop,
-                        restoredArt,
-                        restoredCreativity,
-                        restoredBug
+                        _loadedQualityScore, _loadedSalesScale, _loadedProjectName,
+                        _loadedScale, _loadedGenre, _loadedPlatform,
+                        _loadedPlanning, _loadedDevelop, _loadedArt,
+                        _loadedCreativity, _loadedBug
                     );
                 });
             }
@@ -235,17 +271,13 @@ public class ProjectSaveManager : MonoBehaviour
             return;
         }
 
-        DevelopmentManager.Instance.RestoreState(
-            _loadedElapsed, _loadedTriggered25, _loadedTriggered75,
-            _loadedPlannerLeaderId, _loadedProgrammerLeaderId, _loadedArtistLeaderId,
-            _loadedAccumPlanning, _loadedAccumDevelop, _loadedAccumArt,
-            _loadedAccumBug, _loadedAccumCreativity,
-            _loadedCurrentGenreIndex, _loadedNextGenreTick,
-            _loadedStage
-        );
+
+
+
 
         Debug.Log($"프로젝트 복원 실행: stage={_loadedStage}");
     }
+
     public void SetQualityScore(float quality, ProjectScale scale)
     {
         _savedQualityScore = quality;

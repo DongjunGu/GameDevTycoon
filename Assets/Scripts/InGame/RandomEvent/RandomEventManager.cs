@@ -10,6 +10,7 @@ public class RandomEventManager : MonoBehaviour
     private List<RandomEventData> _releaseEventPool = new();
     private List<RandomEventData> _conditionEventPool = new();
 
+
     [Header("개발 이벤트")]
     [Range(0f, 1f)] public float eventTriggerChance = 0.5f;
     [Range(0f, 1f)] public float blackoutChance = 0.5f;
@@ -30,15 +31,24 @@ public class RandomEventManager : MonoBehaviour
     [Range(0f, 1f)] public float investmentTriggerChance = 0.5f;
     public float investmentThreshold = 80f;  // 달성 기준 수치
     public int investmentReward = 1000; // 성공/실패 금액
+    [Header("네트워크 이슈")]
+    [Range(0f, 1f)] public float networkIssueTriggerChance = 0.5f; // 발동 확률
+    [Range(0f, 1f)] public float networkSpeedMultiplier = 0.8f; // 기본 -20%
+    [Range(0f, 1f)] public float networkIssueDuration = 0.1f;
 
-    // 투자 상태
-    private bool _investmentAccepted = false;
-    private string _investmentStat = ""; // "planning"/"develop"/"art"/"creativity"
-
-    public bool InvestmentAccepted => _investmentAccepted;
-    public string InvestmentStat => _investmentStat;
-    private string _investmentStatName = "";
-    public string InvestmentStatName => _investmentStatName;
+    // ── 상태 프로퍼티 (RandomEvents_Dev에서 접근) ──
+    public bool InvestmentAccepted { get; set; } = false;
+    public string InvestmentStat { get; set; } = "";
+    public string InvestmentStatName { get; set; } = "";
+    public bool NetworkIssueActive { get; set; } = false;
+    private float _networkIssueEndProgress = -1f;
+    public float NetworkSpeedMultiplier => NetworkIssueActive ? networkSpeedMultiplier : 1f;
+    public void SetTriggered50(bool value) => _triggered50 = value;
+    public float NetworkIssueEndProgress
+    {
+        get => _networkIssueEndProgress;
+        set => _networkIssueEndProgress = value;
+    }
 
 
     void Awake()
@@ -51,6 +61,10 @@ public class RandomEventManager : MonoBehaviour
     public void InitEvents()
     {
         _triggered50 = false;
+        NetworkIssueActive = false;
+        InvestmentAccepted = false;
+        InvestmentStat = "";
+        InvestmentStatName = "";
         _eventPool.Clear();
         _releaseEventPool.Clear();
         _conditionEventPool.Clear();
@@ -60,9 +74,15 @@ public class RandomEventManager : MonoBehaviour
         RandomEvents_Condition.Register(_conditionEventPool, this);
     }
 
-    public void SetTriggered50(bool value) => _triggered50 = value;
-
-    public void Reset() => _triggered50 = false;
+    public void Reset()
+    {
+        _triggered50 = false;
+        NetworkIssueActive = false;
+        InvestmentAccepted = false;
+        InvestmentStat = "";
+        InvestmentStatName = "";
+        InvestmentProgressUI.Instance?.Hide();
+    }
 
     // ── 개발중 이벤트 트리거 (DevelopmentCoroutine에서 호출) ──
     public void CheckTrigger(float progress)
@@ -76,27 +96,16 @@ public class RandomEventManager : MonoBehaviour
 
     void TryTriggerEvent()
     {
-        if (UnityEngine.Random.value > eventTriggerChance)
-        {
-            Debug.Log("이벤트 미발동");
-            return;
-        }
-
+        if (UnityEngine.Random.value > eventTriggerChance) return;
         if (_eventPool.Count == 0) return;
+
         var evt = _eventPool[UnityEngine.Random.Range(0, _eventPool.Count)];
+        if (UnityEngine.Random.value > evt.triggerChance) return;
 
-        if (UnityEngine.Random.value > evt.triggerChance)
-        {
-            Debug.Log($"이벤트 확률 미달: {evt.type}");
-            return;
-        }
-
-        Debug.Log($"이벤트 발동: {evt.type}");
         DevelopmentManager.Instance.PauseForEvent();
         RandomEventUI.Instance.Show(evt);
     }
 
-    // ── 출시 이벤트 트리거 (DevelopmentResultUI에서 호출) ──
     public void TryTriggerReleaseEvent(System.Action<float> onComplete)
     {
         if (UnityEngine.Random.value > releaseEventTriggerChance)
@@ -106,49 +115,59 @@ public class RandomEventManager : MonoBehaviour
         }
 
         var evt = _releaseEventPool[UnityEngine.Random.Range(0, _releaseEventPool.Count)];
-
         if (UnityEngine.Random.value > evt.triggerChance)
         {
             onComplete?.Invoke(0f);
             return;
         }
 
-        float bonus = evt.scoreBonus;
         AlertUI.Instance.Show(
             $"{evt.title}\n{evt.description}",
-            () => onComplete?.Invoke(bonus)
+            () => onComplete?.Invoke(evt.scoreBonus)
         );
     }
 
-    // ── 조건 이벤트 체크 ──────────────────────
-    public void CheckConditionEvents()
+    public void TryTriggerNetworkIssue(float currentProgress, System.Action onComplete)
     {
-        foreach (var e in EmployeeManager.Instance.ownedEmployees)
+        if (UnityEngine.Random.value > networkIssueTriggerChance)
         {
-            if (e.satisfaction <= 50)
-                TryTriggerConditionEvent(RandomEventType.EmployeeRun);
+            Debug.Log("[네트워크이슈] 미발동");
+            onComplete?.Invoke();
+            return;
         }
-    }
 
-    void TryTriggerConditionEvent(RandomEventType type)
-    {
-        var evt = _conditionEventPool.Find(e => e.type == type);
-        if (evt == null) return;
-        if (UnityEngine.Random.value > evt.triggerChance) return;
-        evt.onApply?.Invoke();
+        AlertUI.Instance.Show(
+            "네트워크 장애!\n직원이 커피를 쏟아 네트워크가 박살났습니다!\n개발 효율이 20% 감소합니다.",
+            () =>
+            {
+                ApplyNetworkIssue(currentProgress);
+                onComplete?.Invoke();
+            }
+        );
     }
-    public void ResetInvestment()
+    public void ApplyNetworkIssue(float currentProgress)
     {
-        _investmentAccepted = false;
-        _investmentStat = "";
-        _investmentStatName = "";
-        InvestmentProgressUI.Instance?.Hide();
+        NetworkIssueActive = true;
+        _networkIssueEndProgress = currentProgress + networkIssueDuration;
+        Debug.Log($"[네트워크이슈] 발동 / 종료 진행도: {_networkIssueEndProgress:F2}");
+    }
+    public void ResetNetworkIssue()
+    {
+        NetworkIssueActive = false;
+        _networkIssueEndProgress = -1f;
+    }
+    public void CheckNetworkIssueExpiry(float currentProgress)
+    {
+        if (!NetworkIssueActive) return;
+        if (currentProgress >= _networkIssueEndProgress)
+        {
+            NetworkIssueActive = false;
+            Debug.Log($"[네트워크이슈] 종료 / 현재 진행도: {currentProgress:F2}");
+        }
     }
 
     public void TriggerInvestmentEvent(System.Action onComplete)
     {
-        ResetInvestment();
-
         if (UnityEngine.Random.value > investmentTriggerChance)
         {
             onComplete?.Invoke();
@@ -159,23 +178,20 @@ public class RandomEventManager : MonoBehaviour
         string[] statNames = { "기획", "개발", "아트", "창의성" };
         int idx = UnityEngine.Random.Range(0, stats.Length);
 
-        _investmentStat = stats[idx];
-        _investmentStatName = statNames[idx]; // ← 필드 추가
+        InvestmentStat = stats[idx];
+        InvestmentStatName = statNames[idx];
 
         ConfirmUI.Instance.Show(
-            $"투자자가 찾아왔습니다!\n{statNames[idx]} 수치가 {investmentThreshold}점 이상이면\n{investmentReward:N0}G를 드리겠습니다.\n달성 실패 시 {investmentReward:N0}G를 가져갑니다.\n수락하시겠습니까?",
+            $"투자자가 찾아왔습니다!\n{statNames[idx]} 수치가 {investmentThreshold}점 이상이면\n{investmentReward:N0}G 지급\n달성 실패 시 {investmentReward:N0}G 차감",
             onConfirm: () =>
             {
-                _investmentAccepted = true;
-                InvestmentProgressUI.Instance.Show(_investmentStatName, investmentThreshold);
-                Debug.Log($"투자 수락: 목표 스탯 {_investmentStat} / 기준 {investmentThreshold}");
-                onComplete?.Invoke();
+                InvestmentAccepted = true;
+                InvestmentProgressUI.Instance?.Show(InvestmentStatName, investmentThreshold);
+                onComplete?.Invoke(); // ← 수락 후 호출
             },
             onCancel: () =>
             {
-                _investmentAccepted = false;
-                Debug.Log("투자 거절");
-                onComplete?.Invoke();
+                onComplete?.Invoke(); // ← 거절 후 호출
             },
             confirmText: "수락",
             cancelText: "거절"
@@ -184,13 +200,13 @@ public class RandomEventManager : MonoBehaviour
 
     public void CheckInvestmentResult(float planning, float develop, float art, float creativity, System.Action onComplete = null)
     {
-        if (!_investmentAccepted || string.IsNullOrEmpty(_investmentStat))
+        if (!InvestmentAccepted || string.IsNullOrEmpty(InvestmentStat))
         {
             onComplete?.Invoke();
             return;
         }
 
-        float value = _investmentStat switch
+        float value = InvestmentStat switch
         {
             "planning" => planning,
             "develop" => develop,
@@ -199,22 +215,14 @@ public class RandomEventManager : MonoBehaviour
             _ => 0f
         };
 
-        string statName = _investmentStat switch
-        {
-            "planning" => "기획",
-            "develop" => "개발",
-            "art" => "아트",
-            "creativity" => "창의성",
-            _ => ""
-        };
-
-        ResetInvestment();
+        InvestmentAccepted = false;
+        InvestmentProgressUI.Instance?.Hide();
 
         if (value >= investmentThreshold)
         {
             MoneyManager.Instance.AddGold(investmentReward);
             AlertUI.Instance.Show(
-                $"투자 성공!\n{statName} 수치: {value:F0}점\n{investmentReward:N0}G를 받았습니다!",
+                $"투자 성공!\n{InvestmentStatName} 수치: {value:F0}점\n{investmentReward:N0}G를 받았습니다!",
                 () => onComplete?.Invoke()
             );
         }
@@ -222,14 +230,30 @@ public class RandomEventManager : MonoBehaviour
         {
             MoneyManager.Instance.ForceSpendGold(investmentReward);
             AlertUI.Instance.Show(
-                $"투자 실패...\n{statName} 수치: {value:F0}점\n{investmentReward:N0}G를 잃었습니다.",
+                $"투자 실패...\n{InvestmentStatName} 수치: {value:F0}점\n{investmentReward:N0}G를 잃었습니다.",
                 () => onComplete?.Invoke()
             );
         }
     }
 
+    public void CheckConditionEvents()
+    {
+        foreach (var e in EmployeeManager.Instance.ownedEmployees)
+            if (e.satisfaction <= 50)
+                TryTriggerConditionEvent(RandomEventType.EmployeeRun);
+    }
+
+    void TryTriggerConditionEvent(RandomEventType type)
+    {
+        var evt = _conditionEventPool.Find(e => e.type == type);
+        if (evt == null) return;
+        if (UnityEngine.Random.value > evt.triggerChance) return;
+        evt.onApply?.Invoke();
+    }
+
+
     // ── stub 메서드 (구현 예정) ───────────────
-    public void ApplyNetworkIssue() { }
+
     public void TriggerScoutEvent() { }
     public void TriggerBetaTestEvent() { }
     public void TriggerAlgorithmEvent() { }

@@ -18,10 +18,10 @@ public class InvestmentProgressUI : MonoBehaviour
         progressPanel.SetActive(false);
     }
 
-    public void Show(string statName, float threshold)
+    public void Show(string statName, float threshold, float currentValue = 0f)
     {
         progressPanel.SetActive(true);
-        UpdateProgress(0f, statName, threshold);
+        UpdateProgress(currentValue, statName, threshold);
     }
 
     public void UpdateProgress(float current, string statName, float threshold)

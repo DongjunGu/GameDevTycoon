@@ -140,6 +140,7 @@ public class DevelopmentManager : MonoBehaviour
             float progress = _elapsed / developmentDuration;
 
             RandomEventManager.Instance.CheckTrigger(progress);
+            RandomEventManager.Instance.CheckNetworkIssueExpiry(progress);
 
             foreach (var employee in EmployeeManager.Instance.ownedEmployees)
             {
@@ -307,11 +308,28 @@ public class DevelopmentManager : MonoBehaviour
         {
             _isRunning = true;
             CurrentStage = ProjectStage.Developing;
-            ProjectSaveManager.Instance.SaveProject();
-            GameTimeManager.Instance.SaveGameTime();
             GameTimeManager.Instance.ForceStartTime();
             Debug.Log("팀장점수완료 저장");
-            StartCoroutine(DevelopmentCoroutine());
+
+            // 25% 개발팀장이면 네트워크 이슈 체크
+            if (type == LeaderType.Programmer && _triggered25)
+            {
+                float currentProgress = _elapsed / developmentDuration;
+                RandomEventManager.Instance.TryTriggerNetworkIssue(currentProgress, () => //네트워크이슈 이벤트 발생
+                {
+                    ProjectSaveManager.Instance.SaveProject();
+                    GameTimeManager.Instance.SaveGameTime();
+                    GameTimeManager.Instance.ForceStartTime();
+                    StartCoroutine(DevelopmentCoroutine());
+                });
+            }
+            else
+            {
+                ProjectSaveManager.Instance.SaveProject();
+                GameTimeManager.Instance.SaveGameTime();
+                GameTimeManager.Instance.ForceStartTime();
+                StartCoroutine(DevelopmentCoroutine());
+            }
         });
     }
 
@@ -402,6 +420,11 @@ public class DevelopmentManager : MonoBehaviour
     void AccumulateByType(EmployeeData employee, int tickType)
     {
         float satisfactionMultiplier = GetSatisfactionMultiplier(employee);
+        float networkMultiplier = RandomEventManager.Instance.NetworkSpeedMultiplier;
+        float totalMultiplier = satisfactionMultiplier * networkMultiplier;
+
+        if (networkMultiplier < 1f)
+            Debug.Log($"[네트워크이슈] {employee.employeeName} 틱 적용 / 만족도배율: {satisfactionMultiplier:F2} / 네트워크배율: {networkMultiplier:F2} / 최종: {totalMultiplier:F2}");
 
         switch (tickType)
         {
@@ -409,9 +432,18 @@ public class DevelopmentManager : MonoBehaviour
                 float planning = 0f, develop = 0f, art = 0f;
                 switch (employee.role)
                 {
-                    case EmployeeRole.Planner: planning = CalcConstantDev(employee.planningSkill) * satisfactionMultiplier; break;
-                    case EmployeeRole.Programmer: develop = CalcConstantDev(employee.developSkill) * satisfactionMultiplier; break;
-                    case EmployeeRole.Artist: art = CalcConstantDev(employee.artSkill) * satisfactionMultiplier; break;
+                    case EmployeeRole.Planner:
+                        planning = CalcConstantDev(employee.planningSkill) * totalMultiplier;
+                        if (networkMultiplier < 1f) Debug.Log($"[네트워크이슈] 기획 수치: {CalcConstantDev(employee.planningSkill):F1} → {planning:F1}");
+                        break;
+                    case EmployeeRole.Programmer:
+                        develop = CalcConstantDev(employee.developSkill) * totalMultiplier;
+                        if (networkMultiplier < 1f) Debug.Log($"[네트워크이슈] 개발 수치: {CalcConstantDev(employee.developSkill):F1} → {develop:F1}");
+                        break;
+                    case EmployeeRole.Artist:
+                        art = CalcConstantDev(employee.artSkill) * totalMultiplier;
+                        if (networkMultiplier < 1f) Debug.Log($"[네트워크이슈] 아트 수치: {CalcConstantDev(employee.artSkill):F1} → {art:F1}");
+                        break;
                 }
                 DevelopmentPanelUI.Instance.AddValues(planning, develop, art, 0f, 0f);
                 break;
@@ -421,11 +453,17 @@ public class DevelopmentManager : MonoBehaviour
                 switch (employee.role)
                 {
                     case EmployeeRole.Planner:
-                        creativity = CalcCreativityScore(employee.planningSkill, employee.developSkill) * satisfactionMultiplier; break;
+                        creativity = CalcCreativityScore(employee.planningSkill, employee.developSkill) * totalMultiplier;
+                        if (networkMultiplier < 1f) Debug.Log($"[네트워크이슈] 창의성: {CalcCreativityScore(employee.planningSkill, employee.developSkill):F1} → {creativity:F1}");
+                        break;
                     case EmployeeRole.Programmer:
-                        creativity = CalcCreativityScore(employee.developSkill, employee.artSkill) * satisfactionMultiplier; break;
+                        creativity = CalcCreativityScore(employee.developSkill, employee.artSkill) * totalMultiplier;
+                        if (networkMultiplier < 1f) Debug.Log($"[네트워크이슈] 창의성: {CalcCreativityScore(employee.developSkill, employee.artSkill):F1} → {creativity:F1}");
+                        break;
                     case EmployeeRole.Artist:
-                        creativity = CalcCreativityScore(employee.artSkill, employee.planningSkill) * satisfactionMultiplier; break;
+                        creativity = CalcCreativityScore(employee.artSkill, employee.planningSkill) * totalMultiplier;
+                        if (networkMultiplier < 1f) Debug.Log($"[네트워크이슈] 창의성: {CalcCreativityScore(employee.artSkill, employee.planningSkill):F1} → {creativity:F1}");
+                        break;
                 }
                 DevelopmentPanelUI.Instance.AddValues(0f, 0f, 0f, 0f, creativity);
                 break;
@@ -435,10 +473,9 @@ public class DevelopmentManager : MonoBehaviour
                 DevelopmentPanelUI.Instance.AddValues(0f, 0f, 0f, bug, 0f);
                 break;
         }
-        // ← 투자 진행 현황 업데이트
+
         UpdateInvestmentProgress();
     }
-
     void InitGenrePool()
     {
         _genrePool.Clear();
