@@ -8,10 +8,18 @@ public enum RandomEventType
     PlanBoost,      // 기획         기획수치    +50
     ArtBoost,       // 아트         아트수치    +50
     CreativityBoost,// 창의성       창의성수치  +30
+    Investment,
+    NetworkIssue,
+    EmployeeScout,
+    BetaTestIssue,
     
     // 출시 이벤트
     CompetitorRelease,
     PerfectTiming,
+    AlgorithmChoice,
+    EmployeeRun,
+    EmployeeFight,
+    BadCompany,
 }
 
 [Serializable]

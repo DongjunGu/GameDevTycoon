@@ -36,6 +36,14 @@ public class RandomEventUI : MonoBehaviour
         _currentEvent?.onApply?.Invoke();
         ProjectSaveManager.Instance.SaveProject();
         GameTimeManager.Instance.SaveGameTime();
-        DevelopmentManager.Instance.ResumeFromEvent();
+
+        // 개발중 이벤트일 때만 재개
+        if (_currentEvent != null &&
+            _currentEvent.type != RandomEventType.EmployeeRun &&
+            _currentEvent.type != RandomEventType.EmployeeFight &&
+            _currentEvent.type != RandomEventType.BadCompany)
+        {
+            DevelopmentManager.Instance.ResumeFromEvent();
+        }
     }
 }

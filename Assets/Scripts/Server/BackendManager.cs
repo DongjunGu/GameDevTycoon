@@ -11,7 +11,7 @@ public class BackendManager : MonoBehaviour
         if (bro.IsSuccess())
         {
             Debug.Log("초기화 성공 : " + bro);
-            FindAnyObjectByType<Progress>().Play();
+            //FindAnyObjectByType<Progress>().Play();
 
 #if UNITY_EDITOR
             TestLogin();
@@ -45,7 +45,7 @@ public class BackendManager : MonoBehaviour
                                     {
                                         DialogManager.Instance.Initialize();
                                         GameTimeManager.Instance.StartTime();
-                                        SceneManager.LoadScene("GameScene"); // ← 씬 전환
+                                        //SceneManager.LoadScene("GameScene"); // ← 씬 전환
                                     });
                                 });
                             });
