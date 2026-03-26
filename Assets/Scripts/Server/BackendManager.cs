@@ -45,7 +45,7 @@ public class BackendManager : MonoBehaviour
                                     {
                                         DialogManager.Instance.Initialize();
                                         GameTimeManager.Instance.StartTime();
-                                        //SceneManager.LoadScene("GameScene"); // ← 씬 전환
+                                        SceneManager.LoadScene("GameScene"); // ← 씬 전환
                                     });
                                 });
                             });
