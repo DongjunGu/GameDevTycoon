@@ -1326,12 +1326,16 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::RandomEventManager
   eventTriggerChance: 1
-  releaseEventTriggerChance: 1
   blackoutChance: 1
   teamDinnerChance: 1
   eventDetailTriggerChance: 1
+  releaseEventTriggerChance: 1
   competitorChance: 1
   perfectTimingChance: 1
+  algorithmChance: 1
+  employeeRunChance: 1
+  employeeFightChance: 1
+  badCompanyChance: 1
 --- !u!114 &2062941527
 MonoBehaviour:
   m_ObjectHideFlags: 0

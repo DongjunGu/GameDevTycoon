@@ -72,12 +72,15 @@ public class DevelopmentManager : MonoBehaviour
         DevelopmentPanelUI.Instance.UpdateUI();
         RandomEventManager.Instance.InitEvents();
         GameTimeManager.Instance.StopTime();
-        LeaderSelectUI.Instance.Open(LeaderType.Planner, () =>
-        {
-            GameTimeManager.Instance.ForceStartTime();
-            _isRunning = true;
-            StartCoroutine(DevelopmentCoroutine());
-        });
+        RandomEventManager.Instance.TriggerInvestmentEvent(() => //투자 이벤트
+            {
+                LeaderSelectUI.Instance.Open(LeaderType.Planner, () =>
+                {
+                    GameTimeManager.Instance.ForceStartTime();
+                    _isRunning = true;
+                    StartCoroutine(DevelopmentCoroutine());
+                });
+            });
     }
 
     void InitTickMap()
@@ -240,15 +243,19 @@ public class DevelopmentManager : MonoBehaviour
 
     void ShowResult()
     {
-        CurrentStage = ProjectStage.Complete; // ← 완료 스테이지
+        CurrentStage = ProjectStage.Complete;
         GameTimeManager.Instance.StopTime();
-        DevelopmentResultUI.Instance.Show(
-            DevelopmentPanelUI.Instance.GetPlanning(),
-            DevelopmentPanelUI.Instance.GetDevelop(),
-            DevelopmentPanelUI.Instance.GetArt(),
-            DevelopmentPanelUI.Instance.GetBug(),
-            DevelopmentPanelUI.Instance.GetCreativity()
-        );
+
+        float planning = DevelopmentPanelUI.Instance.GetPlanning();
+        float develop = DevelopmentPanelUI.Instance.GetDevelop();
+        float art = DevelopmentPanelUI.Instance.GetArt();
+        float bug = DevelopmentPanelUI.Instance.GetBug();
+        float creativity = DevelopmentPanelUI.Instance.GetCreativity();
+
+        RandomEventManager.Instance.CheckInvestmentResult(planning, develop, art, creativity, () =>
+        {
+            DevelopmentResultUI.Instance.Show(planning, develop, art, bug, creativity);
+        });
     }
 
     public void OnClickRelease()
@@ -402,9 +409,9 @@ public class DevelopmentManager : MonoBehaviour
                 float planning = 0f, develop = 0f, art = 0f;
                 switch (employee.role)
                 {
-                    case EmployeeRole.Planner: planning = CalcConstantDev(employee.planningSkill) * satisfactionMultiplier ; break;
-                    case EmployeeRole.Programmer: develop = CalcConstantDev(employee.developSkill) * satisfactionMultiplier ; break;
-                    case EmployeeRole.Artist: art = CalcConstantDev(employee.artSkill) * satisfactionMultiplier ; break;
+                    case EmployeeRole.Planner: planning = CalcConstantDev(employee.planningSkill) * satisfactionMultiplier; break;
+                    case EmployeeRole.Programmer: develop = CalcConstantDev(employee.developSkill) * satisfactionMultiplier; break;
+                    case EmployeeRole.Artist: art = CalcConstantDev(employee.artSkill) * satisfactionMultiplier; break;
                 }
                 DevelopmentPanelUI.Instance.AddValues(planning, develop, art, 0f, 0f);
                 break;
@@ -414,11 +421,11 @@ public class DevelopmentManager : MonoBehaviour
                 switch (employee.role)
                 {
                     case EmployeeRole.Planner:
-                        creativity = CalcCreativityScore(employee.planningSkill, employee.developSkill) * satisfactionMultiplier ; break;
+                        creativity = CalcCreativityScore(employee.planningSkill, employee.developSkill) * satisfactionMultiplier; break;
                     case EmployeeRole.Programmer:
-                        creativity = CalcCreativityScore(employee.developSkill, employee.artSkill) * satisfactionMultiplier ; break;
+                        creativity = CalcCreativityScore(employee.developSkill, employee.artSkill) * satisfactionMultiplier; break;
                     case EmployeeRole.Artist:
-                        creativity = CalcCreativityScore(employee.artSkill, employee.planningSkill) * satisfactionMultiplier ; break;
+                        creativity = CalcCreativityScore(employee.artSkill, employee.planningSkill) * satisfactionMultiplier; break;
                 }
                 DevelopmentPanelUI.Instance.AddValues(0f, 0f, 0f, 0f, creativity);
                 break;
@@ -428,6 +435,8 @@ public class DevelopmentManager : MonoBehaviour
                 DevelopmentPanelUI.Instance.AddValues(0f, 0f, 0f, bug, 0f);
                 break;
         }
+        // ← 투자 진행 현황 업데이트
+        UpdateInvestmentProgress();
     }
 
     void InitGenrePool()
@@ -522,5 +531,24 @@ public class DevelopmentManager : MonoBehaviour
             SatisfactionState.VeryUnhappy => 0.8f,
             _ => 1.0f
         };
+    }
+    void UpdateInvestmentProgress()
+    {
+        if (!RandomEventManager.Instance.InvestmentAccepted) return;
+
+        float current = RandomEventManager.Instance.InvestmentStat switch
+        {
+            "planning" => DevelopmentPanelUI.Instance.GetPlanning(),
+            "develop" => DevelopmentPanelUI.Instance.GetDevelop(),
+            "art" => DevelopmentPanelUI.Instance.GetArt(),
+            "creativity" => DevelopmentPanelUI.Instance.GetCreativity(),
+            _ => 0f
+        };
+
+        InvestmentProgressUI.Instance?.UpdateProgress(
+            current,
+            RandomEventManager.Instance.InvestmentStatName,
+            RandomEventManager.Instance.investmentThreshold
+        );
     }
 }

@@ -144,21 +144,19 @@ public class CriticReviewUI : MonoBehaviour
         confirmButton.gameObject.SetActive(true);
     }
 
-    int CalcCriticScore(float rawScore)
-    {
-        if (rawScore >= 90) return 10;
-        if (rawScore >= 85) return 9;
-        if (rawScore >= 80) return 8;
-        if (rawScore >= 70) return 7;
-        if (rawScore >= 60) return 6;
-        if (rawScore >= 50) return 7;
-        if (rawScore >= 40) return 6;
-        if (rawScore >= 35) return 5;
-        if (rawScore >= 30) return 4;
-        if (rawScore >= 25) return 3;
-        if (rawScore >= 20) return 2;
-        return 1;
-    }
+int CalcCriticScore(float rawScore)
+{
+    if (rawScore >= 3000) return 10;
+    if (rawScore >= 2000) return 9;
+    if (rawScore >= 1200) return 8;
+    if (rawScore >= 800)  return 7;
+    if (rawScore >= 500)  return 6;
+    if (rawScore >= 300)  return 5;
+    if (rawScore >= 150)  return 4;
+    if (rawScore >= 80)   return 3;
+    if (rawScore >= 40)   return 2;
+    return 1;
+}
 
     string GetComment(int score, int criticIndex)
     {
