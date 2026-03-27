@@ -45,28 +45,28 @@ public class CharacterController : MonoBehaviour
         _isPatrolling = false;
     }
 
-void MoveToCurrentStation()
-{
-    if (patrolStations == null || patrolStations.Count == 0) return;
-    var station = patrolStations[_currentPatrolIndex];
-    MoveTo(station.GetWorkCell(), station.GetWorkWorldPos()); // 정확한 위치 전달
-}
+    void MoveToCurrentStation()
+    {
+        if (patrolStations == null || patrolStations.Count == 0) return;
+        var station = patrolStations[_currentPatrolIndex];
+        MoveTo(station.GetWorkCell(), station.GetWorkWorldPos()); // 정확한 위치 전달
+    }
 
-public void MoveTo(Vector3Int targetCell, Vector3? exactWorldPos = null)
-{
-    Vector3 flatPos = new Vector3(transform.position.x, transform.position.y, 0);
-    Vector3Int currentCell = GridManager.Instance.WorldToCell(flatPos);
+    public void MoveTo(Vector3Int targetCell, Vector3? exactWorldPos = null)
+    {
+        Vector3 flatPos = new Vector3(transform.position.x, transform.position.y, 0);
+        Vector3Int currentCell = GridManager.Instance.WorldToCell(flatPos);
 
-    var path = AStarPathfinder.Instance.FindPath(currentCell, targetCell);
-    if (path == null || path.Count == 0) { Debug.Log($"{name}: 경로 없음"); return; }
+        var path = AStarPathfinder.Instance.FindPath(currentCell, targetCell);
+        if (path == null || path.Count == 0) { Debug.Log($"{name}: 경로 없음"); return; }
 
-    SetState(CharacterState.Moving);
+        SetState(CharacterState.Moving);
 
-    if (exactWorldPos.HasValue)
-        _mover.StartMoveTo(path, exactWorldPos.Value); // 정확한 위치 사용
-    else
-        _mover.StartMove(path); // 셀 중심 사용
-}
+        if (exactWorldPos.HasValue)
+            _mover.StartMoveTo(path, exactWorldPos.Value); // 정확한 위치 사용
+        else
+            _mover.StartMove(path); // 셀 중심 사용
+    }
 
     public void SetState(CharacterState newState)
     {
@@ -79,9 +79,22 @@ public void MoveTo(Vector3Int targetCell, Vector3? exactWorldPos = null)
     {
         SetState(CharacterState.Working);
 
+        // 마지막 방향 저장
+        var oc = GetComponent<OfficeCharacter>();
+        if (oc != null)
+        {
+            var employee = EmployeeManager.Instance.ownedEmployees
+                .Find(e => e.id == oc.employeeId);
+
+            if (employee != null)
+            {
+                employee.lastIsFront = GetComponent<CharacterAnimator>()?.GetCurrentIsFront() ?? true;
+                EmployeeManager.Instance.UpdateEmployee(employee);
+            }
+        }
+
         if (_isPatrolling)
         {
-            // 다음 스테이션으로 인덱스 이동 (순환)
             _currentPatrolIndex = (_currentPatrolIndex + 1) % patrolStations.Count;
             Invoke(nameof(MoveToCurrentStation), waitTime);
         }

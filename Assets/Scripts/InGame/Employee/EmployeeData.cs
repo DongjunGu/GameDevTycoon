@@ -43,10 +43,12 @@ public class EmployeeData
     public int artMin, artMax;
     public int perfectionMin, perfectionMax;
     public int salaryMin, salaryMax;
+    public string assignedDeskId = "";
 
     public EmployeeState state;
     public string assignedProjectId;
     public string portraitId;
+    public bool lastIsFront = true; // 마지막 방향 저장
 
     // ── 생성자 (EmployeePool 마스터 데이터용) ──
     public EmployeeData(string id, string name, EmployeeRole role,
@@ -105,6 +107,8 @@ public class EmployeeData
         data.assignedProjectId = SafeString(row, "assignedProjectId", "");
         data.portraitId = SafeString(row, "portraitId", "portrait_secretary");
         data.satisfaction = SafeInt(row, "satisfaction", 90);
+        data.assignedDeskId = SafeString(row, "assignedDeskId", "");
+        data.lastIsFront = SafeBool(row, "lastIsFront", true);
         return data;
     }
 
@@ -137,6 +141,8 @@ public class EmployeeData
         param.Add("assignedProjectId", assignedProjectId);
         param.Add("portraitId", portraitId);
         param.Add("satisfaction", satisfaction);
+        param.Add("assignedDeskId", assignedDeskId);
+        param.Add("lastIsFront", lastIsFront);
         return param;
     }
 
@@ -215,6 +221,12 @@ public class EmployeeData
         try { return row[key].ToString(); }
         catch { return defaultValue; }
     }
+    static bool SafeBool(JsonData row, string key, bool defaultValue)
+    {
+        try { return bool.Parse(row[key].ToString()); }
+        catch { return defaultValue; }
+    }
+
     // 만족도 변경 (1~100 클램프)
     public void ChangeSatisfaction(int amount)
     {

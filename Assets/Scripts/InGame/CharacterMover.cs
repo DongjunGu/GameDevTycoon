@@ -14,6 +14,12 @@ public class CharacterMover : MonoBehaviour
 
     public bool IsMoving { get; private set; }
     private Vector3? _targetWorldPos = null;
+    private CharacterAnimator _anim;
+
+    void Awake()
+    {
+        _anim = GetComponent<CharacterAnimator>();
+    }
 
     public void StartMoveTo(List<Vector3Int> path, Vector3 targetWorldPos)
     {
@@ -37,15 +43,19 @@ public class CharacterMover : MonoBehaviour
     IEnumerator MoveAlongPath(List<Vector3Int> path)
     {
         IsMoving = true;
+        _anim?.SetMoving(true);
 
         for (int i = 0; i < path.Count; i++)
         {
-            // 마지막 셀이면 정확한 WorkPoint 월드좌표 사용
             Vector3 targetWorld = (i == path.Count - 1 && _targetWorldPos.HasValue)
                 ? _targetWorldPos.Value
                 : GridManager.Instance.CellToWorld(path[i]);
 
             Vector3 targetFlat = new Vector3(targetWorld.x, targetWorld.y, 0);
+            Vector3 currentFlat = new Vector3(transform.position.x, transform.position.y, 0);
+
+            // 이동 방향으로 애니메이션 업데이트
+            _anim?.UpdateDirection(currentFlat, targetFlat);
 
             while (Vector3.Distance(
                 new Vector3(transform.position.x, transform.position.y, 0),
@@ -55,6 +65,12 @@ public class CharacterMover : MonoBehaviour
                     new Vector3(transform.position.x, transform.position.y, 0),
                     targetFlat,
                     moveSpeed * Time.deltaTime);
+
+                // // 소팅 오더
+                // GetComponent<SpriteRenderer>().sortingOrder =
+                //     Mathf.RoundToInt(-transform.position.y * 10);
+// GetComponent<SpriteRenderer>().sortingOrder =
+//     Mathf.RoundToInt(-transform.position.y * 100f);
                 yield return null;
             }
 
@@ -64,6 +80,7 @@ public class CharacterMover : MonoBehaviour
 
         _targetWorldPos = null;
         IsMoving = false;
+        _anim?.SetMoving(false);
         OnMoveComplete?.Invoke();
     }
 }
