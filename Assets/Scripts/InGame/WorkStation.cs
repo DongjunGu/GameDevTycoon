@@ -2,15 +2,12 @@ using UnityEngine;
 
 public class WorkStation : MonoBehaviour
 {
-    public Transform workPoint; // 자식 빈 오브젝트로 설정
+    public string    deskId;    // 인스펙터에서 고유 ID 설정
+    public Transform workPoint;
 
-public Vector3Int GetWorkCell()
-{
-    return GridManager.Instance.WorldToCell(workPoint.position);
-}
+    public Vector3Int GetWorkCell()
+        => GridManager.Instance.WorldToCell(workPoint.position);
 
-public Vector3 GetWorkWorldPos()
-{
-    return workPoint.position; // 정확한 위치 반환
-}
+    public Vector3 GetWorkWorldPos()
+        => workPoint.position;
 }

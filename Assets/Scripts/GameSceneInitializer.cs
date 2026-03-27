@@ -11,6 +11,8 @@ public class GameSceneInitializer : MonoBehaviour
 
         HUDUI.Instance?.RefreshAll();
 
+        OfficeManager.Instance?.RestoreEmployees();
+
         //         // 게임 시작 다이얼로그 (첫 시작 시)
         // if (DialogManager.Instance.HasGroup("event_game_start"))
         //     EventDialogTable.PlayManual("event_game_start");

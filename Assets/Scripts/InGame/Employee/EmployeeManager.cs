@@ -183,6 +183,7 @@ public class EmployeeManager : MonoBehaviour
                 HUDUI.Instance.RefreshAll();
 
                 QuestManager.Instance.UpdateProgress(QuestType.HireEmployee, 1);
+                OfficeManager.Instance?.OnEmployeeHired(inGameEmployee);
 
                 if (ownedEmployees.Count >= 2)
                     QuestManager.Instance.UnlockQuest("quest_003");
@@ -277,6 +278,7 @@ public class EmployeeManager : MonoBehaviour
     public void FireEmployee(EmployeeData employee)
     {
         ownedEmployees.Remove(employee);
+        OfficeManager.Instance?.OnEmployeeFired(employee);
 
         if (string.IsNullOrEmpty(employee.rowInDate))
         {

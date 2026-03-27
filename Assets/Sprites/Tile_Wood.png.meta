@@ -1,19 +1,10 @@
 fileFormatVersion: 2
-guid: 1c63de7598850fa43ab5bdf982a301d8
+guid: 74e91383148c535478da97f9cfe72bf1
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: 163162148425911762
-    second: SpriteSheet_kimAMugae_Front_0
-  - first:
-      213: -7747540568220459718
-    second: SpriteSheet_kimAMugae_Front_1
-  - first:
-      213: 860834434022644655
-    second: SpriteSheet_kimAMugae_Front_2
-  - first:
-      213: 5232570915879790194
-    second: SpriteSheet_kimAMugae_Front_3
+      213: 4517290413333520428
+    second: Tile_Wood_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -55,7 +46,7 @@ TextureImporter:
   nPOTScale: 0
   lightmap: 0
   compressionQuality: 50
-  spriteMode: 2
+  spriteMode: 1
   spriteExtrude: 1
   spriteMeshType: 1
   alignment: 0
@@ -135,89 +126,23 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: SpriteSheet_kimAMugae_Front_0
+      name: Tile_Wood_0
       rect:
         serializedVersion: 2
-        x: 14
-        y: 2
-        width: 34
-        height: 41
-      alignment: 9
-      pivot: {x: 0.5, y: 0.1}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: -1
-      bones: []
-      spriteID: 2dd47b90c1ba34200800000000000000
-      internalID: 163162148425911762
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: SpriteSheet_kimAMugae_Front_1
-      rect:
-        serializedVersion: 2
-        x: 78
-        y: 3
+        x: 0
+        y: 1
         width: 32
-        height: 41
-      alignment: 9
-      pivot: {x: 0.5, y: 0.1}
+        height: 27
+      alignment: 0
+      pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: a3d9a44c6e43b7490800000000000000
-      internalID: -7747540568220459718
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: SpriteSheet_kimAMugae_Front_2
-      rect:
-        serializedVersion: 2
-        x: 142
-        y: 2
-        width: 32
-        height: 41
-      alignment: 9
-      pivot: {x: 0.5, y: 0.1}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: -1
-      bones: []
-      spriteID: fab185a5b5c42fb00800000000000000
-      internalID: 860834434022644655
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: SpriteSheet_kimAMugae_Front_3
-      rect:
-        serializedVersion: 2
-        x: 207
-        y: 2
-        width: 31
-        height: 42
-      alignment: 9
-      pivot: {x: 0.5, y: 0.1}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: -1
-      bones: []
-      spriteID: 2762e0f4683dd9840800000000000000
-      internalID: 5232570915879790194
+      spriteID: c20a50282b3a0be30800000000000000
+      internalID: 4517290413333520428
       vertices: []
       indices: 
       edges: []
@@ -226,7 +151,7 @@ TextureImporter:
     customData: 
     physicsShape: []
     bones: []
-    spriteID: c47151422e6c69a45af4f0a260d00c99
+    spriteID: 5e97eb03825dee720800000000000000
     internalID: 0
     vertices: []
     indices: 
@@ -236,10 +161,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      SpriteSheet_kimAMugae_Front_0: 163162148425911762
-      SpriteSheet_kimAMugae_Front_1: -7747540568220459718
-      SpriteSheet_kimAMugae_Front_2: 860834434022644655
-      SpriteSheet_kimAMugae_Front_3: 5232570915879790194
+      Tile_Wood_0: 4517290413333520428
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 
