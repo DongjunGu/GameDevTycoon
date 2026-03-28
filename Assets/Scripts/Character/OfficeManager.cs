@@ -6,7 +6,7 @@ public class OfficeManager : MonoBehaviour
     public static OfficeManager Instance { get; private set; }
 
     [Header("Spawn")]
-    public GameObject characterPrefab;  // 캐릭터 프리팹
+    public GameObject fallbackPrefab;   // portraitId 매핑 없을 때 기본 프리팹
     public Transform  spawnPoint;       // 스폰 위치 (문 앞 등)
 
     // employeeId → OfficeCharacter
@@ -16,6 +16,16 @@ public class OfficeManager : MonoBehaviour
     {
         if (Instance != null) { Destroy(gameObject); return; }
         Instance = this;
+    }
+
+    private GameObject GetPrefab(string portraitId)
+    {
+        if (!string.IsNullOrEmpty(portraitId))
+        {
+            var prefab = Resources.Load<GameObject>($"Characters/{portraitId}");
+            if (prefab != null) return prefab;
+        }
+        return fallbackPrefab;
     }
 
     // EmployeeManager.HireEmployee() 완료 후 호출
@@ -35,7 +45,7 @@ public class OfficeManager : MonoBehaviour
         EmployeeManager.Instance.UpdateEmployee(employee);
 
         // 캐릭터 스폰
-        var obj  = Instantiate(characterPrefab, spawnPoint.position, Quaternion.identity);
+        var obj  = Instantiate(GetPrefab(employee.portraitId), spawnPoint.position, Quaternion.identity);
         var oc   = obj.GetComponent<OfficeCharacter>();
         oc.Init(employee.id, desk);
 
@@ -45,6 +55,13 @@ public class OfficeManager : MonoBehaviour
         oc.GoToDesk();
 
         Debug.Log($"{employee.employeeName} 스폰 → {desk.deskId}로 이동");
+    }
+
+    // 머리 위 수치 팝업 표시
+    public void ShowStatPopup(string employeeId, string text, Color color)
+    {
+        if (_characters.TryGetValue(employeeId, out var oc))
+            oc.ShowStatPopup(text, color);
     }
 
     // 해고 시 캐릭터 제거
@@ -72,7 +89,7 @@ public class OfficeManager : MonoBehaviour
             DeskManager.Instance.AssignDesk(desk.deskId, employee.id);
             employee.assignedDeskId = desk.deskId;
 
-            var obj = Instantiate(characterPrefab, desk.GetWorkWorldPos(), Quaternion.identity);
+            var obj = Instantiate(GetPrefab(employee.portraitId), desk.GetWorkWorldPos(), Quaternion.identity);
             var oc  = obj.GetComponent<OfficeCharacter>();
             oc.Init(employee.id, desk);
 

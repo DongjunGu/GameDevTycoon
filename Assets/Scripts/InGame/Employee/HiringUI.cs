@@ -64,6 +64,12 @@ public class HiringUI : MonoBehaviour
     // 티어 버튼 클릭 (0~4)
     public void OnClickTier(int tierIndex)
     {
+        if (EmployeeManager.Instance.ownedEmployees.Count >= StageManager.Instance.MaxEmployeeCount)
+        {
+            AlertUI.Instance.Show("최대 직원수 입니다.");
+            return;
+        }
+
         var (label, cost, range, weights) = Tiers[tierIndex];
 
         ConfirmUI.Instance.Show(
