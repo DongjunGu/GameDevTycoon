@@ -31,8 +31,7 @@ public class DevelopmentManager : MonoBehaviour
     private bool _triggered25;
     private bool _triggered75;
 
-    private Dictionary<string, float> _nextTickMap = new();
-    private Dictionary<string, int> _tickCountMap = new();
+    private Dictionary<string, List<float>> _tickTimesMap = new();
     private Dictionary<string, int> _tickIndexMap = new();
     private Dictionary<string, int[]> _tickOrderMap = new();
     private Coroutine _bugFixCoroutine;
@@ -85,21 +84,22 @@ public class DevelopmentManager : MonoBehaviour
 
     void InitTickMap()
     {
-        _nextTickMap.Clear();
-        _tickCountMap.Clear();
+        _tickTimesMap.Clear();
         _tickIndexMap.Clear();
         _tickOrderMap.Clear();
 
         foreach (var employee in EmployeeManager.Instance.ownedEmployees)
         {
             int tickCount = UnityEngine.Random.Range(8, 11);
-            float interval = developmentDuration / tickCount;
-            _nextTickMap[employee.id] = interval;
-            _tickCountMap[employee.id] = tickCount;
-            _tickIndexMap[employee.id] = 0;
+            float segmentSize = developmentDuration / tickCount;
 
-            var order = BuildTickOrder(tickCount, 0.6f, 0.2f, 0.2f);
-            _tickOrderMap[employee.id] = order;
+            var times = new List<float>();
+            for (int i = 0; i < tickCount; i++)
+                times.Add(i * segmentSize + UnityEngine.Random.Range(0f, segmentSize));
+
+            _tickTimesMap[employee.id] = times;
+            _tickIndexMap[employee.id] = 0;
+            _tickOrderMap[employee.id] = BuildTickOrder(tickCount, 0.6f, 0.2f, 0.2f);
         }
     }
 
@@ -144,21 +144,16 @@ public class DevelopmentManager : MonoBehaviour
 
             foreach (var employee in EmployeeManager.Instance.ownedEmployees)
             {
-                if (!_nextTickMap.ContainsKey(employee.id)) continue;
+                if (!_tickTimesMap.ContainsKey(employee.id)) continue;
 
-                if (_elapsed >= _nextTickMap[employee.id])
+                int index = _tickIndexMap[employee.id];
+                var times = _tickTimesMap[employee.id];
+                int[] order = _tickOrderMap[employee.id];
+
+                if (index < times.Count && _elapsed >= times[index])
                 {
-                    int index = _tickIndexMap[employee.id];
-                    int[] order = _tickOrderMap[employee.id];
-
-                    if (index < order.Length)
-                    {
-                        AccumulateByType(employee, order[index]);
-                        _tickIndexMap[employee.id]++;
-                    }
-
-                    float interval = developmentDuration / _tickCountMap[employee.id];
-                    _nextTickMap[employee.id] += interval;
+                    AccumulateByType(employee, order[index]);
+                    _tickIndexMap[employee.id]++;
                 }
             }
 
@@ -366,17 +361,17 @@ public class DevelopmentManager : MonoBehaviour
             case ProjectStage.Developing:
                 InitTickMap();
 
-                foreach (var key in new List<string>(_nextTickMap.Keys))
+                foreach (var key in new List<string>(_tickTimesMap.Keys))
                 {
-                    float interval = developmentDuration / _tickCountMap[key];
+                    var times = _tickTimesMap[key];
                     int skipped = 0;
-                    while (_nextTickMap[key] <= _elapsed)
+                    while (_tickIndexMap[key] < times.Count && times[_tickIndexMap[key]] <= _elapsed)
                     {
-                        _nextTickMap[key] += interval;
                         _tickIndexMap[key]++;
                         skipped++;
                     }
-                    Debug.Log($"[보정] {key} skipped: {skipped} / nextTick: {_nextTickMap[key]:F1}");
+                    float nextTick = _tickIndexMap[key] < times.Count ? times[_tickIndexMap[key]] : -1f;
+                    Debug.Log($"[보정] {key} skipped: {skipped} / nextTick: {nextTick:F1}");
                 }
 
                 _isRunning = true; // ← 추가
@@ -435,14 +430,17 @@ public class DevelopmentManager : MonoBehaviour
                     case EmployeeRole.Planner:
                         planning = CalcConstantDev(employee.planningSkill) * totalMultiplier;
                         if (networkMultiplier < 1f) Debug.Log($"[네트워크이슈] 기획 수치: {CalcConstantDev(employee.planningSkill):F1} → {planning:F1}");
+                        OfficeManager.Instance?.ShowStatPopup(employee.id, $"+기획 {planning:F0}", new Color(0.4f, 0.6f, 1f));
                         break;
                     case EmployeeRole.Programmer:
                         develop = CalcConstantDev(employee.developSkill) * totalMultiplier;
                         if (networkMultiplier < 1f) Debug.Log($"[네트워크이슈] 개발 수치: {CalcConstantDev(employee.developSkill):F1} → {develop:F1}");
+                        OfficeManager.Instance?.ShowStatPopup(employee.id, $"+개발 {develop:F0}", new Color(0.4f, 1f, 0.5f));
                         break;
                     case EmployeeRole.Artist:
                         art = CalcConstantDev(employee.artSkill) * totalMultiplier;
                         if (networkMultiplier < 1f) Debug.Log($"[네트워크이슈] 아트 수치: {CalcConstantDev(employee.artSkill):F1} → {art:F1}");
+                        OfficeManager.Instance?.ShowStatPopup(employee.id, $"+아트 {art:F0}", new Color(1f, 0.7f, 0.3f));
                         break;
                 }
                 DevelopmentPanelUI.Instance.AddValues(planning, develop, art, 0f, 0f);
@@ -465,11 +463,14 @@ public class DevelopmentManager : MonoBehaviour
                         if (networkMultiplier < 1f) Debug.Log($"[네트워크이슈] 창의성: {CalcCreativityScore(employee.artSkill, employee.planningSkill):F1} → {creativity:F1}");
                         break;
                 }
+                if (creativity > 0f)
+                    OfficeManager.Instance?.ShowStatPopup(employee.id, $"+창의 {creativity:F1}", new Color(0.5f, 1f, 0.9f));
                 DevelopmentPanelUI.Instance.AddValues(0f, 0f, 0f, 0f, creativity);
                 break;
 
             case 2:
                 float bug = CalcBug(employee.perfectionSkill);
+                OfficeManager.Instance?.ShowStatPopup(employee.id, $"+버그 {bug:F0}", new Color(1f, 0.3f, 0.3f));
                 DevelopmentPanelUI.Instance.AddValues(0f, 0f, 0f, bug, 0f);
                 break;
         }
@@ -521,8 +522,7 @@ public class DevelopmentManager : MonoBehaviour
         programmerLeader = null;
         artistLeader = null;
 
-        _nextTickMap.Clear();
-        _tickCountMap.Clear();
+        _tickTimesMap.Clear();
         _tickIndexMap.Clear();
         _tickOrderMap.Clear();
 
