@@ -16,6 +16,8 @@ public class GameTimeManager : MonoBehaviour
     private int _stopCount = 0;
     private bool _isRunning = false;
 
+    public bool IsRunning => _isRunning;
+
     public float secondsPerWeek = 10f; // 인스펙터에서 조정 가능
 
     public System.Action OnTimeChanged; // 시간 변경 시 콜백

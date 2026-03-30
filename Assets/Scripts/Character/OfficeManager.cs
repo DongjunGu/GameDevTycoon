@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -9,8 +10,16 @@ public class OfficeManager : MonoBehaviour
     public GameObject fallbackPrefab;   // portraitId 매핑 없을 때 기본 프리팹
     public Transform  spawnPoint;       // 스폰 위치 (문 앞 등)
 
+    [Header("Patrol Settings")]
+    [SerializeField] private float patrolCheckInterval = 20f;  // 몇 초마다 patrol 발동 체크
+    [SerializeField] private int   patrolCountPerCycle = 1;    // 한 번에 patrol 보낼 최대 인원
+    [SerializeField] private float patrolStayDuration = 5f;    // 목적지 도착 후 대기 시간
+
     // employeeId → OfficeCharacter
     private Dictionary<string, OfficeCharacter> _characters = new();
+
+    private PatrolPoint[] _patrolPoints;
+    private Coroutine _patrolScheduler;
 
     void Awake()
     {
@@ -31,7 +40,6 @@ public class OfficeManager : MonoBehaviour
     // EmployeeManager.HireEmployee() 완료 후 호출
     public void OnEmployeeHired(EmployeeData employee)
     {
-        // 빈 Desk 찾기
         var desk = DeskManager.Instance.GetEmptyDesk();
         if (desk == null)
         {
@@ -39,19 +47,16 @@ public class OfficeManager : MonoBehaviour
             return;
         }
 
-        // Desk 배정
         DeskManager.Instance.AssignDesk(desk.deskId, employee.id);
         employee.assignedDeskId = desk.deskId;
         EmployeeManager.Instance.UpdateEmployee(employee);
 
-        // 캐릭터 스폰
         var obj  = Instantiate(GetPrefab(employee.portraitId), spawnPoint.position, Quaternion.identity);
         var oc   = obj.GetComponent<OfficeCharacter>();
         oc.Init(employee.id, desk);
 
         _characters[employee.id] = oc;
 
-        // Desk로 이동
         oc.GoToDesk();
 
         Debug.Log($"{employee.employeeName} 스폰 → {desk.deskId}로 이동");
@@ -93,13 +98,99 @@ public class OfficeManager : MonoBehaviour
             var oc  = obj.GetComponent<OfficeCharacter>();
             oc.Init(employee.id, desk);
 
-            // 마지막 방향 복원
             var anim = obj.GetComponent<CharacterAnimator>();
             anim?.SetIdle(employee.lastIsFront);
 
-
             _characters[employee.id] = oc;
-            // 복원 시엔 이동 없이 바로 Desk 위치에 배치
+        }
+    }
+
+    // 특정 직원의 patrol 여부 확인 (DevelopmentManager 틱 체크용)
+    public bool IsPatrolling(string employeeId)
+    {
+        return _characters.TryGetValue(employeeId, out var oc) && oc.IsPatrolling;
+    }
+
+    // 개발 시작 시 호출 — patrol 스케줄러 가동
+    public void StartDevelopmentPatrol()
+    {
+        _patrolPoints = FindObjectsByType<PatrolPoint>(FindObjectsSortMode.None);
+        if (_patrolPoints.Length == 0)
+        {
+            Debug.LogWarning("[PatrolPoint] 씬에 PatrolPoint가 없습니다.");
+            return;
+        }
+
+        if (_patrolScheduler != null) StopCoroutine(_patrolScheduler);
+        _patrolScheduler = StartCoroutine(PatrolScheduler());
+    }
+
+    // 개발 완료/중단 시 호출 — 모든 캐릭터 즉시 데스크로 복귀
+    public void StopDevelopmentPatrol()
+    {
+        if (_patrolScheduler != null)
+        {
+            StopCoroutine(_patrolScheduler);
+            _patrolScheduler = null;
+        }
+
+        foreach (var oc in _characters.Values)
+            oc.CancelPatrol();
+    }
+
+    // 랜덤 n명 patrol 발동 (스케줄러 자동 호출 or 외부에서 직접 호출)
+    public void TriggerPatrolRandom(int count)
+    {
+        if (_patrolPoints == null || _patrolPoints.Length == 0) return;
+
+        // patrol 가능한 캐릭터 목록 섞기
+        var candidates = new List<OfficeCharacter>(_characters.Values);
+        for (int i = candidates.Count - 1; i > 0; i--)
+        {
+            int j = Random.Range(0, i + 1);
+            (candidates[i], candidates[j]) = (candidates[j], candidates[i]);
+        }
+
+        int sent = 0;
+        foreach (var oc in candidates)
+        {
+            if (sent >= count) break;
+            if (oc.IsPatrolling) continue;
+            var point = _patrolPoints[Random.Range(0, _patrolPoints.Length)];
+            oc.StartPatrol(point.transform, patrolStayDuration);
+            sent++;
+        }
+    }
+
+    // 특정 직원 patrol 발동
+    public void TriggerPatrolForEmployee(string employeeId)
+    {
+        if (_patrolPoints == null || _patrolPoints.Length == 0) return;
+        if (!_characters.TryGetValue(employeeId, out var oc)) return;
+        if (oc.IsPatrolling) return;
+
+        var point = _patrolPoints[Random.Range(0, _patrolPoints.Length)];
+        oc.StartPatrol(point.transform, patrolStayDuration);
+    }
+
+    IEnumerator PatrolScheduler()
+    {
+        while (true)
+        {
+            // patrol 체크 간격도 게임 시간 기준으로 대기
+            float elapsed = 0f;
+            while (elapsed < patrolCheckInterval)
+            {
+                if (GameTimeManager.Instance != null && GameTimeManager.Instance.IsRunning)
+                    elapsed += Time.deltaTime;
+                yield return null;
+            }
+
+            if (DevelopmentManager.Instance == null ||
+                DevelopmentManager.Instance.CurrentStage != ProjectStage.Developing)
+                continue;
+
+            TriggerPatrolRandom(patrolCountPerCycle);
         }
     }
 }

@@ -30,6 +30,7 @@ public class DevelopmentManager : MonoBehaviour
     private bool _isRunning;
     private bool _triggered25;
     private bool _triggered75;
+    private bool _patrolStarted;
 
     private Dictionary<string, List<float>> _tickTimesMap = new();
     private Dictionary<string, int> _tickIndexMap = new();
@@ -49,13 +50,13 @@ public class DevelopmentManager : MonoBehaviour
     public void StartDevelopment()
     {
         IsStarted = true;
+        _patrolStarted = false;
         InitGenrePool();
         int genreCount = _genrePool.Count;
         _genreInterval = developmentDuration / genreCount;
         _nextGenreTick = _genreInterval;
         _currentGenreIndex = 0;
         DevelopmentPanelUI.Instance.UpdateMarketFit(GetCurrentPopularGenre());
-        DevelopmentPanelUI.Instance.UpdateUI();
         _elapsed = 0f;
         _isRunning = false;
         _triggered25 = false;
@@ -68,7 +69,6 @@ public class DevelopmentManager : MonoBehaviour
 
         InitTickMap();
         DevelopmentPanelUI.Instance.ResetValues();
-        DevelopmentPanelUI.Instance.UpdateUI();
         RandomEventManager.Instance.InitEvents();
         GameTimeManager.Instance.StopTime();
         RandomEventManager.Instance.TriggerInvestmentEvent(() => //투자 이벤트
@@ -126,6 +126,11 @@ public class DevelopmentManager : MonoBehaviour
     {
         CurrentStage = ProjectStage.Developing; // ← 스테이지 설정
         _isRunning = true;
+        if (!_patrolStarted)
+        {
+            _patrolStarted = true;
+            OfficeManager.Instance?.StartDevelopmentPatrol();
+        }
 
         while (_elapsed < developmentDuration)
         {
@@ -152,7 +157,9 @@ public class DevelopmentManager : MonoBehaviour
 
                 if (index < times.Count && _elapsed >= times[index])
                 {
-                    AccumulateByType(employee, order[index]);
+                    // patrol 중인 캐릭터는 틱 스킵
+                    if (!OfficeManager.Instance.IsPatrolling(employee.id))
+                        AccumulateByType(employee, order[index]);
                     _tickIndexMap[employee.id]++;
                 }
             }
@@ -202,6 +209,7 @@ public class DevelopmentManager : MonoBehaviour
     void OnDevelopmentComplete()
     {
         _isRunning = false;
+        OfficeManager.Instance?.StopDevelopmentPatrol();
         GameTimeManager.Instance.StopTime();
         AlertUI.Instance.Show(
             "개발 완료!\n디버깅 작업을 시작합니다.",
@@ -517,6 +525,8 @@ public class DevelopmentManager : MonoBehaviour
         _isRunning = false;
         _triggered25 = false;
         _triggered75 = false;
+        _patrolStarted = false;
+        OfficeManager.Instance?.StopDevelopmentPatrol();
 
         plannerLeader = null;
         programmerLeader = null;

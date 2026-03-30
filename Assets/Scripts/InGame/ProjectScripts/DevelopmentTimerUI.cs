@@ -19,6 +19,9 @@ public class DevelopmentTimerUI : MonoBehaviour
     {
         if (!DevelopmentManager.Instance.IsStarted) return;
 
+        var stage = DevelopmentManager.Instance.CurrentStage;
+        if (stage != ProjectStage.Developing && stage != ProjectStage.BugFixing) return;
+
         float remaining = DevelopmentManager.Instance.developmentDuration
                         - DevelopmentManager.Instance.GetElapsed();
         remaining = Mathf.Max(0f, remaining);

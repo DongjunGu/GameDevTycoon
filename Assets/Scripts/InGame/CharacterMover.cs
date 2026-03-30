@@ -61,6 +61,12 @@ public class CharacterMover : MonoBehaviour
                 new Vector3(transform.position.x, transform.position.y, 0),
                 targetFlat) > 0.01f)
             {
+                if (GameTimeManager.Instance != null && !GameTimeManager.Instance.IsRunning)
+                {
+                    yield return null;
+                    continue;
+                }
+
                 transform.position = Vector3.MoveTowards(
                     new Vector3(transform.position.x, transform.position.y, 0),
                     targetFlat,
