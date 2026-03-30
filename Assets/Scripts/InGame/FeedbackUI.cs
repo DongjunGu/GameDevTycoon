@@ -42,7 +42,7 @@ public void Show(float marketFit, float marketingBonus, float bug = 0f, float re
 
     public void OnClickClose()
     {
-        GameTimeManager.Instance.SaveGameTime();   
+        GameTimeManager.Instance.SaveGameTime();
         feedbackPanel.SetActive(false);
     }
 }

@@ -34,6 +34,9 @@ public class SalesUI : MonoBehaviour
     private float _cachedArt;
     private float _cachedCreativity;
     private float _cachedBug;
+    private bool _newProjectStartedDuringSales = false;
+
+    public void NotifyNewProjectStarted() => _newProjectStartedDuringSales = true;
     void Awake()
     {
         if (Instance != null) { Destroy(gameObject); return; }
@@ -74,6 +77,12 @@ public class SalesUI : MonoBehaviour
     }
     void ShowInternal(float qualityScore, ProjectScale scale)
     {
+        _newProjectStartedDuringSales = false;
+        DevelopmentManager.Instance.CurrentStage = ProjectStage.Sales;
+        DevelopmentPanelUI.Instance.ResetValues();
+        DevelopmentPanelUI.Instance.ResetMarketFit();
+        DevelopmentTimerUI.Instance.ResetTimer();
+
         foreach (Transform child in chartArea)
             Destroy(child.gameObject);
 
@@ -178,10 +187,14 @@ public class SalesUI : MonoBehaviour
             MoneyManager.Instance.AddGold(totalRevenue);
 
             // ── 3. 프로젝트 Complete 저장 후 초기화 ──
-            DevelopmentManager.Instance.CurrentStage = ProjectStage.Complete;
-            ProjectSaveManager.Instance.SaveProject();
-            GameTimeManager.Instance.SaveGameTime();
-            DevelopmentManager.Instance.ResetProject();
+            // Sales 중 새 프로젝트가 시작된 경우 ResetProject 스킵
+            if (!_newProjectStartedDuringSales)
+            {
+                DevelopmentManager.Instance.CurrentStage = ProjectStage.Complete;
+                ProjectSaveManager.Instance.SaveProject();
+                GameTimeManager.Instance.SaveGameTime();
+                DevelopmentManager.Instance.ResetProject();
+            }
 
             // ── 4. 퀘스트 (이미 위에서 처리됐으므로 여기선 생략 가능)
 

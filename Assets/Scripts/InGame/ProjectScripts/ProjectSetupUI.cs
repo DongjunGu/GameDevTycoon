@@ -67,6 +67,13 @@ public class ProjectSetupUI : MonoBehaviour
     // 프로젝트 시작
     public void OnClickProjectStart()
     {
+        var stage = DevelopmentManager.Instance.CurrentStage;
+        if (DevelopmentManager.Instance.IsStarted &&
+            (stage == ProjectStage.Developing || stage == ProjectStage.BugFixing || stage == ProjectStage.Marketing))
+        {
+            AlertUI.Instance.Show("진행중인 프로젝트가 있습니다.");
+            return;
+        }
         ShowPanel(scalePanel);
     }
 
@@ -176,12 +183,11 @@ public class ProjectSetupUI : MonoBehaviour
         SelectedGenre = _projectData.genre;
         SelectedPlatform = _projectData.platform;
 
+        if (DevelopmentManager.Instance.CurrentStage == ProjectStage.Sales)
+            SalesUI.Instance.NotifyNewProjectStarted();
+
         Debug.Log($"개발 시작! {_projectData.ScaleToString()} / {_projectData.GenreToString()} / {_projectData.PlatformToString()}");
         DevelopmentManager.Instance.StartDevelopment();
         confirmPanel.SetActive(false);
-
-        // 나중에 ProjectManager에 데이터 넘기는 포인트
-
-        // ProjectManager.Instance.StartProject(_projectData);
     }
 }

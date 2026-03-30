@@ -2,7 +2,7 @@ using UnityEngine;
 using BackEnd;
 using LitJson;
 
-public enum ProjectStage { None, Developing, BugFixing, Marketing, Complete }
+public enum ProjectStage { None, Developing, BugFixing, Marketing, Sales, Complete }
 
 public class ProjectSaveManager : MonoBehaviour
 {
@@ -249,7 +249,7 @@ Debug.Log($"[네트워크이슈 복원] Active: {RandomEventManager.Instance.Net
             );
         }
 
-        if (_loadedStage == ProjectStage.Marketing)
+        if (_loadedStage == ProjectStage.Marketing || _loadedStage == ProjectStage.Sales)
         {
             if (_loadedQualityScore > 0f)
             {
