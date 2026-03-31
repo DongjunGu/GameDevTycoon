@@ -23,10 +23,13 @@ public class StatFloatingText : MonoBehaviour
 
         while (elapsed < duration)
         {
-            elapsed += Time.deltaTime;
-            float t = elapsed / duration;
-            transform.position = startPos + Vector3.up * floatSpeed * t;
-            label.color = new Color(startColor.r, startColor.g, startColor.b, 1f - t);
+            if (GameTimeManager.Instance == null || GameTimeManager.Instance.IsRunning)
+            {
+                elapsed += Time.deltaTime;
+                float t = elapsed / duration;
+                transform.position = startPos + Vector3.up * floatSpeed * t;
+                label.color = new Color(startColor.r, startColor.g, startColor.b, 1f - t);
+            }
             yield return null;
         }
 

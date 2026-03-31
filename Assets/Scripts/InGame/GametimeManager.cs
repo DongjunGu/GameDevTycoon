@@ -29,6 +29,16 @@ public class GameTimeManager : MonoBehaviour
         DontDestroyOnLoad(gameObject);
     }
 
+    void OnApplicationPause(bool paused)
+    {
+        if (paused) SaveGameTime();
+    }
+
+    void OnApplicationQuit()
+    {
+        SaveGameTime();
+    }
+
     void Update()
     {
         if (!_isRunning) return;

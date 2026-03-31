@@ -15,10 +15,14 @@ public class PatrolTestUI : MonoBehaviour
     public Button btnPatrolEmployee;
     public string targetEmployeeId;
 
+    [Header("다이얼로그 Patrol (랜덤 직원)")]
+    public Button btnDialogPatrol;
+
     void Start()
     {
         btnPatrolRandom?.onClick.AddListener(OnClickRandom);
         btnPatrolEmployee?.onClick.AddListener(OnClickEmployee);
+        btnDialogPatrol?.onClick.AddListener(OnClickDialogPatrol);
     }
 
     void OnClickRandom()
@@ -34,5 +38,10 @@ public class PatrolTestUI : MonoBehaviour
             return;
         }
         OfficeManager.Instance?.TriggerPatrolForEmployee(targetEmployeeId);
+    }
+
+    void OnClickDialogPatrol()
+    {
+        OfficeManager.Instance?.TriggerDialogPatrolRandom();
     }
 }

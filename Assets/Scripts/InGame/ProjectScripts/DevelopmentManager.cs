@@ -134,7 +134,7 @@ public class DevelopmentManager : MonoBehaviour
 
         while (_elapsed < developmentDuration)
         {
-            if (!_isRunning)
+            if (!_isRunning || !GameTimeManager.Instance.IsRunning)
             {
                 yield return null;
                 continue;
@@ -232,6 +232,11 @@ public class DevelopmentManager : MonoBehaviour
 
         while (elapsed < bugFixDuration)
         {
+            if (!GameTimeManager.Instance.IsRunning)
+            {
+                yield return null;
+                continue;
+            }
             elapsed += Time.deltaTime;
             float progress = elapsed / bugFixDuration;
             float ratio = 1f - Mathf.Pow(1f - progress, 2f);

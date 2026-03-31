@@ -26,9 +26,12 @@
 
 ### `BackendManager.cs`
 뒤끝 SDK 전체 초기화 및 데이터 로드 오케스트레이터.
-- `Initialize()` — SDK 초기화 → 로그인 → 차트/게임데이터 순차 로드
-- `LoadAllCharts()` — EmployeePool, DialogNode, DialogChoice 등 마스터 차트 일괄 로드
-- `LoadAllGameData()` — 직원, 재화, 시간, 퀘스트, 프로젝트, 대출, 테크트리 로드
+- `Start()` — SDK 초기화 → 플랫폼별 로그인 분기
+  - `#if UNITY_EDITOR` → TestLogin()
+  - `#elif UNITY_ANDROID` → GPGSLogin.StartLogin()
+  - `#elif UNITY_IOS` → LoginButtonPanel 버튼으로 처리 (자동 로그인 없음)
+- `LoadAllAndEnterGame()` — 직원/재화/시간/퀘스트/프로젝트/대출/테크트리 순차 로드 후 GameScene 전환
+- `OnLoginSuccess()` — 로그인 완료 후 호출되는 공통 콜백
 - DontDestroyOnLoad
 
 ### `BackendLogin.cs`
@@ -39,8 +42,22 @@
 
 ### `GPGSLogin.cs`
 Google Play Games Services 인증 후 뒤끝 Federation 로그인 연결.
+- `#if UNITY_ANDROID` 전체 래핑 (iOS 빌드 시 컴파일 제외)
 - `Login()` — GPGS 인증 → 뒤끝 연동
 - DontDestroyOnLoad
+
+### `GameCenterLogin.cs`
+Sign in with Apple 구현 (파일명은 GameCenter이나 실제로는 Apple 로그인).
+- Awake: `DontDestroyOnLoad`, `gameObject.name = "AppleLogin"` (네이티브 콜백 수신 이름)
+- `StartLogin()` — `_RequestAppleSignIn()` 네이티브 호출 (`#if UNITY_IOS`)
+- `OnTokenReceived(identityToken)` — `Backend.BMember.AuthorizeFederation(token, FederationType.Apple)`
+- `OnTokenFailed(error)` — 에러 로그
+
+### `LoginButtonPanel.cs`
+iOS 전용 로그인 버튼 패널.
+- Awake: `#if UNITY_IOS`만 활성화 (Android는 `SetActive(false)`)
+- `appleLoginButton` — Apple 로그인 버튼, 클릭 시 `GameCenterLogin.StartLogin()`
+- 추후 Google 버튼 자리 확보 (주석으로 준비)
 
 ### `BackendGameData.cs`
 뒤끝 GameData 테이블 CRUD 래퍼.
@@ -58,7 +75,9 @@ Google Play Games Services 인증 후 뒤끝 Federation 로그인 연결.
 - `secondsPerWeek = 10f` — 실시간 10초 = 게임 1주
 - `StopTime()` / `StartTime()` — 참조 카운터(_stopCount) 방식 정지/재개
 - `ForceStartTime()` — 카운터 무시하고 강제 재개
+- `IsRunning` — 현재 시간 흐름 여부 (모든 코루틴에서 체크)
 - 연도 변경 시 `PayAnnualSalary()` → `SalaryNegotiationManager` 자동 발동
+- `OnApplicationPause(paused)` / `OnApplicationQuit()` — 앱 백그라운드/종료 시 자동 저장
 - 뒤끝 `UserGameTime` 테이블에 저장
 - DontDestroyOnLoad
 
@@ -67,6 +86,8 @@ Google Play Games Services 인증 후 뒤끝 Federation 로그인 연결.
 - `AddGold(amount)` — 수입 추가
 - `SpendGold(amount, saveImmediately)` — 지출 (잔액 부족 시 false 반환)
 - `ForceSpendGold(amount)` — 음수 허용 강제 차감 (파산 체크용)
+- `HandleDialogResult(result)` — GoldChange / SatisfactionChange 처리, 각각 SaveGameTime 호출
+- `ShowAfterDialog(message)` — OnDialogEnd 1회 구독 → 다이얼로그 종료 후 AlertUI 표시
 - 뒤끝 `UserMoney` 테이블에 저장
 - DontDestroyOnLoad
 
@@ -155,7 +176,10 @@ StartDevelopment()
 - `HireEmployee(poolData)` — 채용 확정, 뒤끝 저장 → `OfficeManager.OnEmployeeHired()`
 - `FireEmployee(id)` — 해고, 뒤끝 삭제 → `OfficeManager.OnEmployeeFired()`
 - `UpdateEmployee(data)` — 수치 변경 후 저장
+- `GetEmployee(id)` — id로 직원 데이터 반환
 - `ownedEmployees` — 보유 직원 리스트
+- `satisfactionDecayPerWeek` (기본값 1) — 인스펙터 설정, 매주 자동 감소
+- `OnWeekPassed()` — `GameTimeManager.OnTimeChanged` 구독, 매주 모든 직원 만족도 감소 후 저장
 - 뒤끝 `Employee` 테이블 (GameData)
 - DontDestroyOnLoad
 
@@ -223,8 +247,11 @@ StartDevelopment()
 
 ### `CriticReviewUI.cs`
 평론가 리뷰 화면.
-- finalScore 기준 1~10점 산정
-- 4명 평론가 순차 등장 (criticRevealDelay 간격)
+- finalScore 기준 1~10점 산정, 평론가별 ±1 랜덤 변동
+- 4명 평론가 슬롯 미리 생성 (GridLayoutGroup 유지 위해 SetActive 대신 텍스트 초기화)
+- `totalScoreObject` / `totalScoreText` — 4명 합산 총점 표시
+- `LastCriticTotal` 프로퍼티 — SalesUI에서 completedData에 저장용
+- Show 시 `StopTime()`, 확인 버튼 시 `StartTime()`
 - `OnClickRelease()` 흐름: 평론가 → 출시 랜덤이벤트 → 마케팅 → 점수계산 → 판매
 
 ### `SalesUI.cs`
@@ -340,7 +367,9 @@ networkIssueDuration      = 0.1f (진행도 %)
 - `Play(groupId, triggerOnce)` — 그룹 재생 시작
 - `Next()` — 다음 노드 진행
 - `Resume()` — 일시정지 후 재개
-- `EndDialog()` — 종료
+- `EndDialog()` — 종료, `ContextEmployeeId` 초기화
+- `ContextEmployeeId` 프로퍼티 — 현재 다이얼로그 대상 직원 ID (결과 처리용)
+- `SetContextEmployeeId(id)` — 다이얼로그 시작 전 직원 ID 세팅
 - 플레이스홀더 치환: `{employeeName}`, `{salary}`, `{newSalary}`, `{portraitId}`
 - DontDestroyOnLoad
 
@@ -352,6 +381,7 @@ networkIssueDuration      = 0.1f (진행도 %)
 
 ### `DialogData.cs`
 다이얼로그 데이터 모델 (노드, 선택지, 다음 노드 ID).
+- `ResultType` enum: `GoldChange`, `SatisfactionChange` 등
 
 ### `DialogChartLoader.cs`
 뒤끝 Chart API에서 `DialogNode.csv`, `DialogChoice.csv` 로드.
@@ -383,6 +413,8 @@ networkIssueDuration      = 0.1f (진행도 %)
 
 ### `CompletedProjectsUI.cs`
 완료된 프로젝트 기록 열람 UI.
+- `detailQualityScoreText` — 품질 점수 표시
+- `detailCriticTotalText` — 평론가 총점 표시
 
 ### `SafeAreaPanel.cs`
 Safe Area 대응 패널 (노치/홈바 영역 제외).
@@ -397,11 +429,15 @@ UI 공통 헬퍼 (등급 색상, 텍스트 포맷 등).
 
 ### `OfficeManager.cs`
 캐릭터 스폰/복원 총괄.
-- `OnEmployeeHired(employee)` — 빈 Desk 배정 → `GetPrefab(portraitId)` 스폰 → GoToDesk()
+- `OnEmployeeHired(employee)` — 빈 Desk 배정 → `GetPrefab(portraitId)` 스폰 → GoToDesk() → `EnsurePatrolScheduler()`
 - `OnEmployeeFired(employee)` — 캐릭터 제거, Desk 해제
-- `RestoreEmployees()` — GameScene 로드 시 보유 직원 전원 복원
+- `RestoreEmployees()` — GameScene 로드 시 보유 직원 전원 복원 → `EnsurePatrolScheduler()`
 - `GetPrefab(portraitId)` — `Resources/Characters/{portraitId}` 로드, 없으면 `fallbackPrefab`
 - `ShowStatPopup(employeeId, text, color)` — 해당 직원 캐릭터에 팝업 전달
+- `EnsurePatrolScheduler()` — 이미 실행 중이 아닐 때만 PatrolScheduler 코루틴 시작 (멱등)
+- `PatrolScheduler` — 주기적으로 일반 patrol + dialog patrol 트리거 (스테이지 체크 없음)
+- `TriggerDialogPatrolRandom()` — 보유 직원 랜덤 1명을 `DialogPatrolPoint`로 보냄
+- `_dialogPatrolPoints` — lazy-load (`TriggerDialogPatrolRandom` 호출 시 없으면 FindObjectsByType)
 
 > 프리팹 위치: `Assets/Resources/Characters/`
 > 파일명 = portraitId (예: `portrait_emp_01.prefab`)
@@ -412,11 +448,20 @@ UI 공통 헬퍼 (등급 색상, 텍스트 포맷 등).
 - `GoToDesk()` — 배정 책상으로 이동 명령
 - `ShowStatPopup(text, color)` — `StatFloatingTextPool`에서 팝업 꺼내 머리 위 표시
 - `statPopupAnchor` — 팝업 위치 기준점 (미설정 시 `+0.6f` 자동 적용)
+- `StartPatrolWithDialog(target, dialogGroupId, triggerOnce)` — 다이얼로그 patrol 시작
+- `PatrolWithDialogRoutine` — 목적지 이동 → employeeName/portraitId 플레이스홀더 세팅 → `ContextEmployeeId` 세팅 → `StopTime` → 다이얼로그 재생 → `OnDialogEnd` 대기 → `StartTime` → 책상 복귀
+
+### `DialogPatrolPoint.cs`
+다이얼로그 트리거 순찰 지점 마커 컴포넌트.
+- `employeeId` — 특정 직원 지정 (빈 값이면 랜덤)
+- `dialogGroupId` — 재생할 다이얼로그 그룹
+- `triggerOnce` — 1회만 발동 여부
 
 ### `StatFloatingText.cs`
 머리 위 부유 텍스트 컴포넌트.
 - `Show(text, color)` — 텍스트/색상 설정 후 애니메이션 시작
 - 위로 이동하며 페이드아웃, 종료 시 `StatFloatingTextPool`로 반환
+- `GameTimeManager.IsRunning` 체크 — 시간 멈춤 시 애니메이션도 정지
 - `floatSpeed`, `duration` 인스펙터 조정 가능
 - 프리팹: `Assets/Resources/StatFloatingText.prefab`
 
@@ -527,6 +572,8 @@ void Start()
 
 ### `CompletedProjectData.cs`
 완료된 프로젝트 기록 (이름, 점수, 판매량, 날짜 등).
+- `qualityScore` (float) — 품질 점수
+- `criticTotalScore` (int) — 평론가 총점
 
 ### `CharacterData.cs`
 캐릭터 위치/상태 직렬화 데이터.
@@ -556,7 +603,10 @@ void Start()
 - [ ] Scout, BetaTestIssue, AlgorithmEvent, EmployeeRunEvent, EmployeeFightEvent, BadCompanyEvent 구현
 - [ ] 테크트리 실제 효과 연동
 - [ ] 규모별 secondsPerWeek 차등 (Small:10, Medium:8, Large:6)
-- [ ] iOS 로그인
+- [ ] iOS TestFlight 배포 (GitHub Actions 워크플로우 작성, 인증서/PP/API Key 등록)
+  - 코드 완료 (GameCenterLogin, GameCenterPlugin.mm, LoginButtonPanel)
+  - 뒤끝 콘솔 Apple 소셜 로그인 설정 필요 (Team ID / Service ID / Key ID + .p8)
+  - Xcode에서 "Sign in with Apple" Capability 추가 필요
 - [ ] 닉네임 설정 UI
 - [ ] 파산 후처리
 - [ ] 프로젝트 개발 중 캐릭터 patrol 연동

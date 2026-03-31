@@ -15,8 +15,10 @@ public class BackendManager : MonoBehaviour
 
 #if UNITY_EDITOR
             TestLogin();
-#else
+#elif UNITY_ANDROID
             FindAnyObjectByType<GPGSLogin>().StartLogin();
+#elif UNITY_IOS
+            // iOS는 LoginButtonPanel의 버튼으로 시작
 #endif
         }
         else

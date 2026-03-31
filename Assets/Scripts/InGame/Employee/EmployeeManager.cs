@@ -10,6 +10,9 @@ public class EmployeeManager : MonoBehaviour
     public List<EmployeeData> poolEmployees = new();
     private List<EmployeeData> _defaultEmployees;
 
+    [Header("만족도 설정")]
+    public int satisfactionDecayPerWeek = 1;
+
     void Awake()
     {
         if (Instance != null) { Destroy(gameObject); return; }
@@ -263,6 +266,30 @@ public class EmployeeManager : MonoBehaviour
                 Debug.LogError($"직원 업그레이드 실패: {bro}");
         });
     }
+
+    void Start()
+    {
+        if (GameTimeManager.Instance != null)
+            GameTimeManager.Instance.OnTimeChanged += OnWeekPassed;
+    }
+
+    void OnDestroy()
+    {
+        if (GameTimeManager.Instance != null)
+            GameTimeManager.Instance.OnTimeChanged -= OnWeekPassed;
+    }
+
+    void OnWeekPassed()
+    {
+        foreach (var emp in ownedEmployees)
+        {
+            emp.satisfaction = Mathf.Clamp(emp.satisfaction - satisfactionDecayPerWeek, 0, 100);
+            UpdateEmployee(emp);
+        }
+    }
+
+    public EmployeeData GetEmployee(string id) =>
+        ownedEmployees.Find(e => e.id == id);
 
     public void UpdateEmployee(EmployeeData employee)
     {

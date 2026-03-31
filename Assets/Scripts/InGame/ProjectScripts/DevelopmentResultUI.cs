@@ -97,6 +97,7 @@ public class DevelopmentResultUI : MonoBehaviour
         platformResultText.text = GetPlatformString(ProjectSetupUI.SelectedPlatform);
 
         projectNameText.text = "프로젝트명";
+        GameTimeManager.Instance?.StopTime();
         resultPanel.SetActive(true);
     }
 
@@ -134,11 +135,13 @@ public class DevelopmentResultUI : MonoBehaviour
     public void OnClickClose()
     {
         resultPanel.SetActive(false);
+        GameTimeManager.Instance?.StartTime();
     }
     public void OnClickRelease()
     {
         ProjectSaveManager.Instance.SetProjectName(_lastProjectName);
         resultPanel.SetActive(false);
+        GameTimeManager.Instance?.StartTime();
 
         float p = DevelopmentPanelUI.Instance.GetPlanning();
                     float d = DevelopmentPanelUI.Instance.GetDevelop();

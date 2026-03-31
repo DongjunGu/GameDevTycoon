@@ -1,0 +1,16 @@
+﻿choiceId,parentDialogId,choiceText,nextDialogId,conditionType,conditionValue,resultType,resultValue,pauseAfterResult
+choice_hire_yes,dlg_hire_001,고용하기,dlg_hire_002,None,0,OpenHiring,0,true
+choice_hire_no,dlg_hire_001,다음에 할게요,dlg_hire_cancel_001,None,0,None,0,false
+choice_mkt_check,dlg_mkt_001,결과 확인하기,dlg_mkt_result_001,None,0,None,0,false
+choice_mkt_skip,dlg_mkt_001,나중에 볼게요,dlg_mkt_skip_001,None,0,None,0,false
+choice_proj_good,dlg_proj_001,만족스러워!,dlg_proj_good_001,None,0,None,0,false
+choice_proj_bad,dlg_proj_001,아쉬웠어...,dlg_proj_bad_001,None,0,None,0,false
+choice_proj_meh,dlg_proj_001,그냥 그랬어,dlg_proj_meh_001,None,0,None,0,false
+choice_proj_analyze,dlg_proj_bad_001,분석해줘,dlg_proj_analyze_001,None,0,None,0,false
+choice_proj_pass,dlg_proj_bad_001,괜찮아,dlg_proj_pass_001,None,0,None,0,false
+choice_salary_yes,dlg_salary_002,알겠어요 올려줄게요,dlg_salary_accept_001,None,0,SalaryUpdate,0,false
+choice_salary_no,dlg_salary_002,안돼요,dlg_salary_reject_001,None,0,None,0,false
+choice_salary_final_no,dlg_salary_reject_001,그래도 안됩니다,dlg_salary_reject_final_001,None,0,SalaryReject,0,false
+choice_salary_final_yes,dlg_salary_reject_001,알겠습니다,dlg_salary_accept_late_001,None,0,SalaryUpdate,0,false
+choice_patrol_bonus,dlg_patrol_002,열심히 하고 있는거 잘알고있어요!(보너스를 준다),dlg_patrol_bonus_001,None,0,GoldChange,-1000,false
+choice_patrol_sad,dlg_patrol_002,그래요? 잘 모르겠네요...,dlg_patrol_sad_001,None,0,SatisfactionChange,-10,false

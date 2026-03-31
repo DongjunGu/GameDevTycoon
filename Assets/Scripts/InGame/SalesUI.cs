@@ -35,6 +35,7 @@ public class SalesUI : MonoBehaviour
     private float _cachedCreativity;
     private float _cachedBug;
     private bool _newProjectStartedDuringSales = false;
+    private float _cachedQualityScore;
 
     public void NotifyNewProjectStarted() => _newProjectStartedDuringSales = true;
     void Awake()
@@ -77,6 +78,7 @@ public class SalesUI : MonoBehaviour
     }
     void ShowInternal(float qualityScore, ProjectScale scale)
     {
+        _cachedQualityScore = qualityScore;
         _newProjectStartedDuringSales = false;
         DevelopmentManager.Instance.CurrentStage = ProjectStage.Sales;
         DevelopmentPanelUI.Instance.ResetValues();
@@ -178,6 +180,8 @@ public class SalesUI : MonoBehaviour
                 year = GameTimeManager.Instance.Year,
                 month = GameTimeManager.Instance.Month,
                 week = GameTimeManager.Instance.Week,
+                qualityScore = _cachedQualityScore,
+                criticTotalScore = CriticReviewUI.Instance != null ? CriticReviewUI.Instance.LastCriticTotal : 0,
             };
             Debug.Log($"저장: scale={completedData.scale} genre={completedData.genre} platform={completedData.platform}");
             CompletedProjectManager.Instance.SaveCompletedProject(completedData);

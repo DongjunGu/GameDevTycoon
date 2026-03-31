@@ -28,6 +28,8 @@ public class CompletedProjectsUI : MonoBehaviour
     public TextMeshProUGUI detailUnitsText;
     public TextMeshProUGUI detailRevenueText;
     public TextMeshProUGUI detailDateText;
+    public TextMeshProUGUI detailQualityScoreText;
+    public TextMeshProUGUI detailCriticTotalText;
 
     void Awake()
     {
@@ -97,6 +99,10 @@ public class CompletedProjectsUI : MonoBehaviour
         detailUnitsText.text = $"판매량: {data.totalUnits:N0}개";
         detailRevenueText.text = $"매출: {data.totalRevenue:N0}G";
         detailDateText.text = $"출시일: {data.year}년 {data.month}월 {data.week}주";
+        if (detailQualityScoreText != null)
+            detailQualityScoreText.text = $"품질 점수: {data.qualityScore:F1}";
+        if (detailCriticTotalText != null)
+            detailCriticTotalText.text = $"평론가 총점: {data.criticTotalScore}";
 
         listPanel.SetActive(false);
         detailPanel.SetActive(true);

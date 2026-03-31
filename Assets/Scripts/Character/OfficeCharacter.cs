@@ -44,6 +44,14 @@ public class OfficeCharacter : MonoBehaviour
         _patrolCoroutine = StartCoroutine(PatrolRoutine(target, stayDuration));
     }
 
+    // 다이얼로그 patrol — 도착 시 다이얼로그 실행, 끝나면 복귀
+    public void StartPatrolWithDialog(Transform target, string dialogGroupId, bool triggerOnce)
+    {
+        if (IsPatrolling) return;
+        if (_patrolCoroutine != null) StopCoroutine(_patrolCoroutine);
+        _patrolCoroutine = StartCoroutine(PatrolWithDialogRoutine(target, dialogGroupId, triggerOnce));
+    }
+
     // 개발 완료 등 외부 이벤트로 즉시 복귀
     public void CancelPatrol()
     {
@@ -76,6 +84,58 @@ public class OfficeCharacter : MonoBehaviour
             if (GameTimeManager.Instance != null && GameTimeManager.Instance.IsRunning)
                 stayed += Time.deltaTime;
             yield return null;
+        }
+
+        // 3. 원래 데스크로 복귀
+        GoToDesk();
+
+        yield return null;
+        yield return new WaitUntil(() => !_mover.IsMoving);
+
+        IsPatrolling = false;
+        _patrolCoroutine = null;
+    }
+
+    IEnumerator PatrolWithDialogRoutine(Transform target, string dialogGroupId, bool triggerOnce)
+    {
+        IsPatrolling = true;
+
+        // 1. 목적지로 이동
+        Vector3 targetPos = new Vector3(target.position.x, target.position.y, 0);
+        Vector3Int targetCell = GridManager.Instance.WorldToCell(targetPos);
+        _controller.MoveTo(targetCell, target.position);
+
+        yield return null;
+        yield return new WaitUntil(() => !_mover.IsMoving);
+
+        // 2. 다이얼로그 실행
+        if (!string.IsNullOrEmpty(dialogGroupId)
+            && DialogManager.Instance != null
+            && DialogManager.Instance.HasGroup(dialogGroupId))
+        {
+            // 이 직원의 이름·초상화를 플레이스홀더로 세팅
+            var empData = EmployeeManager.Instance.GetEmployee(employeeId);
+            if (empData != null)
+            {
+                DialogManager.Instance.SetContextEmployeeId(employeeId);
+                DialogManager.Instance.SetPlaceholder("employeeName", empData.employeeName);
+                DialogManager.Instance.SetPlaceholder("portraitId", empData.portraitId);
+            }
+
+            bool dialogDone = false;
+
+            void OnEnd()
+            {
+                DialogManager.Instance.OnDialogEnd -= OnEnd;
+                dialogDone = true;
+                GameTimeManager.Instance?.StartTime();
+            }
+
+            GameTimeManager.Instance?.StopTime();
+            DialogManager.Instance.OnDialogEnd += OnEnd;
+            EventDialogTable.PlayManual(dialogGroupId, triggerOnce);
+
+            yield return new WaitUntil(() => dialogDone);
         }
 
         // 3. 원래 데스크로 복귀

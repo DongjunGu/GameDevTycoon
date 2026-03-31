@@ -19,6 +19,7 @@ public class OfficeManager : MonoBehaviour
     private Dictionary<string, OfficeCharacter> _characters = new();
 
     private PatrolPoint[] _patrolPoints;
+    private DialogPatrolPoint[] _dialogPatrolPoints;
     private Coroutine _patrolScheduler;
 
     void Awake()
@@ -58,6 +59,7 @@ public class OfficeManager : MonoBehaviour
         _characters[employee.id] = oc;
 
         oc.GoToDesk();
+        EnsurePatrolScheduler();
 
         Debug.Log($"{employee.employeeName} 스폰 → {desk.deskId}로 이동");
     }
@@ -103,6 +105,8 @@ public class OfficeManager : MonoBehaviour
 
             _characters[employee.id] = oc;
         }
+
+        EnsurePatrolScheduler();
     }
 
     // 특정 직원의 patrol 여부 확인 (DevelopmentManager 틱 체크용)
@@ -111,17 +115,20 @@ public class OfficeManager : MonoBehaviour
         return _characters.TryGetValue(employeeId, out var oc) && oc.IsPatrolling;
     }
 
-    // 개발 시작 시 호출 — patrol 스케줄러 가동
+    // 개발 시작 시 호출 — patrol 포인트 갱신
     public void StartDevelopmentPatrol()
     {
         _patrolPoints = FindObjectsByType<PatrolPoint>(FindObjectsSortMode.None);
-        if (_patrolPoints.Length == 0)
-        {
-            Debug.LogWarning("[PatrolPoint] 씬에 PatrolPoint가 없습니다.");
-            return;
-        }
+        _dialogPatrolPoints = FindObjectsByType<DialogPatrolPoint>(FindObjectsSortMode.None);
+        EnsurePatrolScheduler();
+    }
 
-        if (_patrolScheduler != null) StopCoroutine(_patrolScheduler);
+    // 스케줄러가 꺼져있을 때만 시작
+    void EnsurePatrolScheduler()
+    {
+        if (_patrolScheduler != null) return;
+        _patrolPoints ??= FindObjectsByType<PatrolPoint>(FindObjectsSortMode.None);
+        _dialogPatrolPoints ??= FindObjectsByType<DialogPatrolPoint>(FindObjectsSortMode.None);
         _patrolScheduler = StartCoroutine(PatrolScheduler());
     }
 
@@ -186,11 +193,60 @@ public class OfficeManager : MonoBehaviour
                 yield return null;
             }
 
-            if (DevelopmentManager.Instance == null ||
-                DevelopmentManager.Instance.CurrentStage != ProjectStage.Developing)
-                continue;
+            if (_patrolPoints != null && _patrolPoints.Length > 0)
+                TriggerPatrolRandom(patrolCountPerCycle);
+            CheckDialogPatrols();
+        }
+    }
 
-            TriggerPatrolRandom(patrolCountPerCycle);
+    // 보유 직원 중 랜덤 1명을 DialogPatrolPoint로 보냄 (테스트용)
+    public void TriggerDialogPatrolRandom()
+    {
+        if (_dialogPatrolPoints == null || _dialogPatrolPoints.Length == 0)
+            _dialogPatrolPoints = FindObjectsByType<DialogPatrolPoint>(FindObjectsSortMode.None);
+
+        if (_dialogPatrolPoints == null || _dialogPatrolPoints.Length == 0)
+        {
+            Debug.LogWarning("[DialogPatrol] 씬에 DialogPatrolPoint가 없습니다.");
+            return;
+        }
+
+        var owned = EmployeeManager.Instance.ownedEmployees;
+        if (owned.Count == 0)
+        {
+            Debug.LogWarning("[DialogPatrol] 보유 직원이 없습니다.");
+            return;
+        }
+
+        // 패트롤 중이 아닌 직원 중 랜덤 선택
+        var candidates = new System.Collections.Generic.List<string>();
+        foreach (var e in owned)
+        {
+            if (_characters.TryGetValue(e.id, out var oc) && !oc.IsPatrolling)
+                candidates.Add(e.id);
+        }
+
+        if (candidates.Count == 0)
+        {
+            Debug.LogWarning("[DialogPatrol] 패트롤 가능한 직원이 없습니다.");
+            return;
+        }
+
+        string empId = candidates[Random.Range(0, candidates.Count)];
+        var dpp = _dialogPatrolPoints[Random.Range(0, _dialogPatrolPoints.Length)];
+
+        _characters[empId].StartPatrolWithDialog(dpp.transform, dpp.dialogGroupId, dpp.triggerOnce);
+        Debug.Log($"[DialogPatrol] {empId} → {dpp.dialogGroupId}");
+    }
+
+    void CheckDialogPatrols()
+    {
+        if (_dialogPatrolPoints == null) return;
+        foreach (var dpp in _dialogPatrolPoints)
+        {
+            if (!_characters.TryGetValue(dpp.employeeId, out var oc)) continue;
+            if (oc.IsPatrolling) continue;
+            oc.StartPatrolWithDialog(dpp.transform, dpp.dialogGroupId, dpp.triggerOnce);
         }
     }
 }

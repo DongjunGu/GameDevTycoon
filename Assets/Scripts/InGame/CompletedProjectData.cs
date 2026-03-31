@@ -17,6 +17,8 @@ public class CompletedProjectData
     public int    year;
     public int    month;
     public int    week;
+    public float  qualityScore;
+    public int    criticTotalScore;
 
     public BackEnd.Param ToParam()
     {
@@ -30,11 +32,13 @@ public class CompletedProjectData
         param.Add("art",         art);
         param.Add("creativity",  creativity);
         param.Add("bug",         bug);
-        param.Add("totalUnits",  totalUnits);
-        param.Add("totalRevenue",totalRevenue);
-        param.Add("year",        year);
-        param.Add("month",       month);
-        param.Add("week",        week);
+        param.Add("totalUnits",       totalUnits);
+        param.Add("totalRevenue",     totalRevenue);
+        param.Add("year",             year);
+        param.Add("month",            month);
+        param.Add("week",             week);
+        param.Add("qualityScore",     qualityScore);
+        param.Add("criticTotalScore", criticTotalScore);
         return param;
     }
 
@@ -51,11 +55,13 @@ public class CompletedProjectData
         data.art          = SafeFloat(row,  "art",         0f);
         data.creativity   = SafeFloat(row,  "creativity",  0f);
         data.bug          = SafeFloat(row,  "bug",         0f);
-        data.totalUnits   = SafeInt(row,    "totalUnits",  0);
-        data.totalRevenue = SafeInt(row,    "totalRevenue",0);
-        data.year         = SafeInt(row,    "year",        2000);
-        data.month        = SafeInt(row,    "month",       1);
-        data.week         = SafeInt(row,    "week",        1);
+        data.totalUnits       = SafeInt(row,   "totalUnits",       0);
+        data.totalRevenue     = SafeInt(row,   "totalRevenue",     0);
+        data.year             = SafeInt(row,   "year",             2000);
+        data.month            = SafeInt(row,   "month",            1);
+        data.week             = SafeInt(row,   "week",             1);
+        data.qualityScore     = SafeFloat(row, "qualityScore",     0f);
+        data.criticTotalScore = SafeInt(row,   "criticTotalScore", 0);
         return data;
     }
 
