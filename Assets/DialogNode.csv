@@ -1,0 +1,31 @@
+﻿dialogId,dialogGroupId,order,speakerType,speakerId,speakerName,speakerPortraitId,dialogText,textSpeed,hasChoice,nextDialogId,portraitEmotion,shakeEffect,bgmChangeId,sfxId,autoAdvance,autoDelay,skippable
+dlg_gs_001,event_game_start,1,NPC,npc_secretary,비서,portrait_secretary,사장님! 드디어 우리 게임 회사가 문을 열었습니다!,Normal,false,dlg_gs_002,happy,false,,sfx_notify,false,0,true
+dlg_gs_002,event_game_start,2,NPC,npc_secretary,비서,portrait_secretary,먼저 직원을 고용해서 팀을 꾸려보세요. 좋은 인재가 회사의 미래를 결정합니다!,Normal,false,dlg_gs_003,default,false,,,false,0,true
+dlg_gs_003,event_game_start,3,System,,,,지금 바로 고용 버튼을 눌러보세요.,Normal,false,,default,false,,,true,2,true
+dlg_hire_001,event_first_hire,1,NPC,npc_secretary,비서,portrait_secretary,직원 고용에는 500G가 필요합니다. 고용하시겠습니까?,Normal,true,,default,false,,sfx_question,false,0,false
+dlg_hire_002,event_first_hire,2,NPC,npc_secretary,비서,portrait_secretary,환영합니다! 새 직원이 팀에 합류했어요. 함께 멋진 게임을 만들어봐요!,Normal,false,dlg_hire_003,happy,false,,sfx_hire,false,0,true
+dlg_hire_003,event_first_hire,3,NPC,npc_secretary,비서,portrait_secretary,고용을 완료했습니다. 직원 목록에서 확인해보세요.,Normal,false,,default,false,,,false,0,true
+dlg_hire_cancel_001,event_first_hire_cancel,1,NPC,npc_secretary,비서,portrait_secretary,알겠습니다. 언제든지 고용 버튼을 눌러 직원을 뽑을 수 있어요.,Normal,false,,default,false,,,false,0,true
+dlg_mkt_001,event_marketing_done,1,NPC,npc_secretary,비서,portrait_secretary,마케팅이 완료됐습니다! 결과를 확인하시겠어요?,Normal,true,,happy,false,,sfx_notify,false,0,false
+dlg_mkt_result_001,event_marketing_done,2,NPC,npc_secretary,비서,portrait_secretary,팬이 500명 증가했습니다! 우리 회사가 조금씩 알려지고 있어요.,Normal,false,dlg_mkt_result_002,happy,false,,,false,0,true
+dlg_mkt_result_002,event_marketing_done,3,NPC,npc_secretary,비서,portrait_secretary,마케팅을 꾸준히 이어가면 더 큰 효과를 볼 수 있을 거예요.,Normal,false,,default,false,,,false,0,true
+dlg_mkt_skip_001,event_marketing_skip,1,NPC,npc_secretary,비서,portrait_secretary,알겠습니다. 결과는 나중에 보고드릴게요.,Normal,false,,default,false,,,false,0,true
+dlg_proj_001,event_project_complete,1,NPC,npc_secretary,비서,portrait_secretary,"프로젝트가 드디어 완료됐습니다! 사장님, 어떠셨나요?",Normal,true,,happy,false,,sfx_complete,false,0,false
+dlg_proj_good_001,event_project_good,1,NPC,npc_secretary,비서,portrait_secretary,훌륭한 결과입니다! 팀원들의 사기도 크게 올랐어요.,Normal,false,dlg_proj_good_002,happy,false,,sfx_success,false,0,true
+dlg_proj_good_002,event_project_good,2,NPC,npc_secretary,비서,portrait_secretary,이 기세를 몰아 다음 프로젝트도 준비해봐요!,Normal,false,,happy,false,,,false,0,true
+dlg_proj_bad_001,event_project_bad,1,NPC,npc_secretary,비서,portrait_secretary,아쉬운 결과였군요. 그래도 포기하지 마세요! 분석해볼까요?,Normal,true,,default,false,,,false,0,false
+dlg_proj_analyze_001,event_project_analyze,1,NPC,npc_secretary,비서,portrait_secretary,일정 관리와 품질 검수에 조금 더 신경써보면 좋을 것 같아요.,Normal,false,dlg_proj_analyze_002,default,false,,,false,0,true
+dlg_proj_analyze_002,event_project_analyze,2,NPC,npc_secretary,비서,portrait_secretary,다음엔 반드시 더 좋은 결과가 있을 거예요. 힘내세요 사장님!,Normal,false,,happy,false,,,false,0,true
+dlg_proj_pass_001,event_project_pass,1,NPC,npc_secretary,비서,portrait_secretary,알겠습니다. 다음 프로젝트 준비를 도와드릴게요.,Normal,false,,default,false,,,false,0,true
+dlg_proj_meh_001,event_project_meh,1,NPC,npc_secretary,비서,portrait_secretary,다음 프로젝트에서 더 좋은 결과를 내봐요. 천천히 성장하면 됩니다.,Normal,false,,default,false,,,false,0,true
+dlg_salary_001,event_salary_negotiation,1,NPC,npc_secretary,{employeeName},{portraitId},연봉협상 하러 왔어요.,Normal,false,dlg_salary_002,default,false,,,false,0,true
+dlg_salary_002,event_salary_negotiation,2,NPC,npc_secretary,{employeeName},{portraitId},지금 제 연봉이 {salary}G인데 {newSalary}G으로 올려주세요.,Normal,true,,default,false,,,false,0,false
+dlg_salary_accept_001,event_salary_accept,1,NPC,npc_secretary,{employeeName},{portraitId},감사합니다! 열심히 하겠습니다!,Normal,false,,happy,false,,,false,0,true
+dlg_salary_reject_001,event_salary_reject,1,NPC,npc_secretary,{employeeName},{portraitId},그래도 다시 한번 생각해보세요.,Normal,true,,default,false,,,false,0,false
+dlg_salary_reject_final_001,event_salary_reject_final,1,NPC,npc_secretary,{employeeName},{portraitId},...알겠습니다.,Normal,false,,sad,false,,,false,0,true
+dlg_salary_accept_late_001,event_salary_accept_late,1,NPC,npc_secretary,{employeeName},{portraitId},감사합니다! 믿어주셔서 감사해요!,Normal,false,,happy,false,,,false,0,true
+dlg_salary_resign_001,event_salary_resign,1,NPC,npc_secretary,{employeeName},{portraitId},존중받지 못한 느낌이에요. 퇴사하겠습니다.,Normal,false,,sad,false,,,false,0,true
+dlg_patrol_001,event_patrol_talk,1,NPC,,{employeeName},{portraitId},사장님! 저 열심히 하고 있지 않나요!?,Normal,false,dlg_patrol_002,happy,false,,,false,0,true
+dlg_patrol_002,event_patrol_talk,2,NPC,,{employeeName},{portraitId},그렇다구요..,Normal,true,,default,false,,,false,0,false
+dlg_patrol_bonus_001,event_patrol_bonus,1,NPC,,{employeeName},{portraitId},감사합니다!,Normal,false,,happy,false,,,false,0,true
+dlg_patrol_sad_001,event_patrol_sad,1,NPC,,{employeeName},{portraitId},너무해욧!,Normal,false,,sad,false,,,false,0,true

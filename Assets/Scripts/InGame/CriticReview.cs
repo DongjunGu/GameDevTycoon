@@ -16,9 +16,15 @@ public class CriticReviewUI : MonoBehaviour
     public TextMeshProUGUI[] criticScoreTexts;// 점수
     public TextMeshProUGUI[] criticCommentTexts; // 한줄평
 
+    [Header("Total Score")]
+    public GameObject totalScoreObject;       // 총점 오브젝트 (확인 버튼 위에 배치)
+    public TextMeshProUGUI totalScoreText;    // "총점: XX / 40"
+
     [Header("Settings")]
     public float criticRevealDelay = 1.5f; // 평론가 등장 간격
     public Button confirmButton;           // 확인 버튼
+
+    public int LastCriticTotal { get; private set; }
 
     private System.Action _onComplete;
 
@@ -116,11 +122,18 @@ public class CriticReviewUI : MonoBehaviour
     {
         _onComplete = onComplete;
 
-        // 슬롯 초기화
-        foreach (var slot in criticSlots)
-            slot.SetActive(false);
+        // 슬롯은 모두 켜두고 내용만 비움
+        for (int i = 0; i < criticSlots.Length; i++)
+        {
+            criticSlots[i].SetActive(true);
+            criticNameTexts[i].text    = "";
+            criticScoreTexts[i].text   = "";
+            criticCommentTexts[i].text = "";
+        }
 
+        if (totalScoreObject != null) totalScoreObject.SetActive(false);
         confirmButton.gameObject.SetActive(false);
+        GameTimeManager.Instance?.StopTime();
         reviewPanel.SetActive(true);
 
         StartCoroutine(RevealCritics(rawScore));
@@ -128,19 +141,36 @@ public class CriticReviewUI : MonoBehaviour
 
     IEnumerator RevealCritics(float rawScore)
     {
-        int score = CalcCriticScore(rawScore);
+        int baseScore = CalcCriticScore(rawScore);
+        int[] scores  = new int[criticSlots.Length];
 
+        for (int i = 0; i < criticSlots.Length; i++)
+        {
+            int variation = UnityEngine.Random.Range(-1, 2); // -1, 0, +1
+            scores[i] = Mathf.Clamp(baseScore + variation, 1, 10);
+        }
+
+        int total = 0;
         for (int i = 0; i < criticSlots.Length; i++)
         {
             yield return new WaitForSeconds(criticRevealDelay);
 
-            criticSlots[i].SetActive(true);
             criticNameTexts[i].text    = CriticNames[i];
-            criticScoreTexts[i].text   = $"{score}점";
-            criticCommentTexts[i].text = GetComment(score, i);
+            criticScoreTexts[i].text   = $"{scores[i]}점";
+            criticCommentTexts[i].text = GetComment(scores[i], i);
+            total += scores[i];
         }
 
         yield return new WaitForSeconds(0.5f);
+
+        LastCriticTotal = total;
+        if (totalScoreObject != null && totalScoreText != null)
+        {
+            totalScoreText.text = $"총점: {total}";
+            totalScoreObject.SetActive(true);
+        }
+
+        yield return new WaitForSeconds(0.3f);
         confirmButton.gameObject.SetActive(true);
     }
 
@@ -168,6 +198,7 @@ int CalcCriticScore(float rawScore)
     public void OnClickConfirm()
     {
         reviewPanel.SetActive(false);
+        GameTimeManager.Instance?.StartTime();
         _onComplete?.Invoke();
     }
 }

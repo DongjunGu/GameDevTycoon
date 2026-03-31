@@ -139,15 +139,47 @@ public class MoneyManager : MonoBehaviour
         if (resultType == "GoldChange")
         {
             if (resultValue >= 0)
-                MoneyManager.Instance.AddGold(resultValue);   // 지급
+                MoneyManager.Instance.AddGold(resultValue);
             else
-                MoneyManager.Instance.SpendGold(-resultValue); // 차감 (음수 → 양수로 변환)
+                MoneyManager.Instance.SpendGold(-resultValue);
+
+            GameTimeManager.Instance?.SaveGameTime();
+            string msg = resultValue >= 0
+                ? $"+{resultValue:N0}G 지급됐습니다."
+                : $"{resultValue:N0}G 차감됐습니다.";
+            ShowAfterDialog(msg);
         }
         if (resultType == "OpenHiring")
         {
-            HiringUI.Instance.OpenHiring(); // 채용 UI 열기
-                                            // Resume()은 OnClickConfirmHire에서 호출됨
+            HiringUI.Instance.OpenHiring();
         }
+        if (resultType == "SatisfactionChange")
+        {
+            string empId = DialogManager.Instance.ContextEmployeeId;
+            if (!string.IsNullOrEmpty(empId))
+            {
+                var emp = EmployeeManager.Instance.GetEmployee(empId);
+                if (emp != null)
+                {
+                    emp.satisfaction = UnityEngine.Mathf.Clamp(emp.satisfaction + resultValue, 0, 100);
+                    EmployeeManager.Instance.UpdateEmployee(emp);
+
+                    GameTimeManager.Instance?.SaveGameTime();
+                    string sign = resultValue >= 0 ? "+" : "";
+                    ShowAfterDialog($"{emp.employeeName}의 만족도가 {sign}{resultValue} 변했습니다.\n현재 만족도: {emp.satisfaction}");
+                }
+            }
+        }
+    }
+
+    void ShowAfterDialog(string message)
+    {
+        void OnEnd()
+        {
+            DialogManager.Instance.OnDialogEnd -= OnEnd;
+            AlertUI.Instance.Show(message);
+        }
+        DialogManager.Instance.OnDialogEnd += OnEnd;
     }
     public void OnTestDialogButton()
     {

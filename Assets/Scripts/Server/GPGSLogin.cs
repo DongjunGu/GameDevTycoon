@@ -1,3 +1,4 @@
+#if UNITY_ANDROID
 using BackEnd;
 using GooglePlayGames;
 using GooglePlayGames.BasicApi;
@@ -10,7 +11,7 @@ public class GPGSLogin : MonoBehaviour
         DontDestroyOnLoad(this.gameObject);
     }
 
-    public void StartLogin()  // Start() 대신 이걸로 호출
+    public void StartLogin()
     {
         PlayGamesPlatform.Activate();
         PlayGamesPlatform.Instance.Authenticate(ProcessAuthentication);
@@ -43,7 +44,6 @@ public class GPGSLogin : MonoBehaviour
 
                     if (!googleCallback.IsSuccess())
                     {
-                        // ✅ 여기 교체
                         Debug.LogError("Token Exchange Failed: " + googleCallback);
                         Debug.LogError("StatusCode: " + googleCallback.GetStatusCode());
                         Debug.LogError("ErrorCode: " + googleCallback.GetErrorCode());
@@ -59,12 +59,11 @@ public class GPGSLogin : MonoBehaviour
                     if (bro.IsSuccess())
                     {
                         Debug.Log("Backend Login Success! inDate: " + bro.GetInDate());
-                        FindAnyObjectByType<Progress>().SetLoginComplete(); // 로딩 UI
+                        FindAnyObjectByType<Progress>().SetLoginComplete();
                         FindAnyObjectByType<BackendManager>().OnLoginSuccess();
                     }
                     else
                     {
-                        // ✅ 여기 교체
                         Debug.LogError("Backend Login Failed: " + bro);
                         Debug.LogError("StatusCode: " + bro.GetStatusCode());
                         Debug.LogError("ErrorCode: " + bro.GetErrorCode());
@@ -75,3 +74,4 @@ public class GPGSLogin : MonoBehaviour
         );
     }
 }
+#endif

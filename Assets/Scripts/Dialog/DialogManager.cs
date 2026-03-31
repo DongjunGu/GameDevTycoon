@@ -36,6 +36,10 @@ public class DialogManager : MonoBehaviour
     private const string PREFS_VIEWED = "dialog_viewed_groups";
     private HashSet<string> _viewedGroups = new HashSet<string>();
 
+    // 현재 대화 중인 직원 ID (patrol 다이얼로그 등에서 결과 처리용)
+    public string ContextEmployeeId { get; private set; }
+    public void SetContextEmployeeId(string id) => ContextEmployeeId = id;
+
     [Header("Inspector 할당")]
     //[SerializeField] private DialogUI _dialogUI;
     [SerializeField] private DialogUI _dialogUI;
@@ -178,6 +182,7 @@ public class DialogManager : MonoBehaviour
     {
         IsPlaying = false;
         _currentNode = null;
+        ContextEmployeeId = null;
         _dialogUI.Hide();
         OnDialogEnd?.Invoke();
     }
