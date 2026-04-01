@@ -91,6 +91,46 @@ jobs:
           </plist>
           EOF
 
+      - name: Patch Xcode project signing
+        env:
+          TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          PROFILE_NAME: ${{ secrets.IOS_PROFILE_NAME }}
+        run: |
+          python3 << 'EOF'
+          import os, re
+
+          pbxproj = 'build/iOS/GameDevTycoon/Unity-iPhone.xcodeproj/project.pbxproj'
+          team_id = os.environ['TEAM_ID']
+          profile_name = os.environ['PROFILE_NAME']
+
+          with open(pbxproj, 'r') as f:
+              content = f.read()
+
+          # Unity-iPhone 타겟만 Manual 서명, 나머지는 Automatic 유지
+          # CODE_SIGN_STYLE 을 모두 Automatic으로 초기화 후 Unity-iPhone만 Manual로
+          content = re.sub(r'CODE_SIGN_STYLE = \w+;', 'CODE_SIGN_STYLE = Automatic;', content)
+
+          # Unity-iPhone 빌드 설정 블록에만 Manual + Profile 추가
+          # PRODUCT_NAME = "Unity-iPhone" 블록 찾아서 수정
+          def patch_unity_iphone(m):
+              block = m.group(0)
+              if 'PRODUCT_NAME = "Unity-iPhone"' in block or 'PRODUCT_NAME = Unity-iPhone' in block:
+                  block = block.replace('CODE_SIGN_STYLE = Automatic;', 'CODE_SIGN_STYLE = Manual;')
+                  if 'PROVISIONING_PROFILE_SPECIFIER' not in block:
+                      block = block.replace(
+                          'CODE_SIGN_STYLE = Manual;',
+                          f'CODE_SIGN_STYLE = Manual;\n\t\t\t\tPROVISIONING_PROFILE_SPECIFIER = "{profile_name}";'
+                      )
+              return block
+
+          content = re.sub(r'\{[^{}]*PRODUCT_NAME[^{}]*\}', patch_unity_iphone, content, flags=re.DOTALL)
+
+          with open(pbxproj, 'w') as f:
+              f.write(content)
+
+          print("Patched pbxproj successfully")
+          EOF
+
       - name: Build .ipa
         run: |
           xcodebuild -project build/iOS/GameDevTycoon/Unity-iPhone.xcodeproj \
@@ -98,12 +138,8 @@ jobs:
             -configuration Release \
             -archivePath build/GameDevTycoon.xcarchive \
             archive \
-            DEVELOPMENT_TEAM=${{ secrets.APPLE_TEAM_ID }} \
-            CODE_SIGN_STYLE[sdk=iphoneos*]:Unity-iPhone=Manual \
-            CODE_SIGN_IDENTITY[sdk=iphoneos*]:Unity-iPhone="Apple Distribution" \
-            PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]:Unity-iPhone="${{ secrets.IOS_PROFILE_NAME }}" \
-            CODE_SIGN_STYLE[sdk=iphoneos*]:UnityFramework=Automatic \
-            CODE_SIGN_STYLE[sdk=iphoneos*]:GameAssembly=Automatic
+            CODE_SIGN_IDENTITY="Apple Distribution" \
+            DEVELOPMENT_TEAM=${{ secrets.APPLE_TEAM_ID }}
           xcodebuild -exportArchive \
             -archivePath build/GameDevTycoon.xcarchive \
             -exportOptionsPlist ExportOptions.plist \
