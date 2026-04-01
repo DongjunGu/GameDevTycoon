@@ -36,7 +36,12 @@ jobs:
           buildsPath: build
 
       - name: Find Xcode project
-        run: find build -name "*.xcodeproj" -o -name "*.xcworkspace" | head -20
+        run: |
+          echo "=== workspace root ==="
+          ls -la
+          echo "=== find xcodeproj ==="
+          find . -name "*.xcodeproj" 2>/dev/null | head -20
+          find . -name "Unity-iPhone*" 2>/dev/null | head -20
 
       - name: Install Distribution Certificate
         env:
@@ -86,7 +91,7 @@ jobs:
 
       - name: Build .ipa
         run: |
-          xcodebuild -project build/iOS/Unity-iPhone.xcodeproj \
+          xcodebuild -project build/iOS/GameDevTycoon/Unity-iPhone.xcodeproj \
             -scheme Unity-iPhone \
             -configuration Release \
             -archivePath build/GameDevTycoon.xcarchive \
