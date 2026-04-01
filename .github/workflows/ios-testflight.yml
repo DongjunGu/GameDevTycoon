@@ -129,6 +129,20 @@ jobs:
             end
           end
 
+          # AuthenticationServices 프레임워크 추가 (Sign in with Apple 필요)
+          project.targets.each do |target|
+            next unless target.name == 'UnityFramework'
+            already_linked = target.frameworks_build_phase.files.any? do |f|
+              f.file_ref.path.include?('AuthenticationServices')
+            end
+            unless already_linked
+              framework_ref = project.frameworks_group.new_reference('System/Library/Frameworks/AuthenticationServices.framework')
+              framework_ref.source_tree = 'SDKROOT'
+              target.frameworks_build_phase.add_file_reference(framework_ref)
+              puts "Added AuthenticationServices.framework to UnityFramework"
+            end
+          end
+
           project.save
           puts "Done"
           EOF
