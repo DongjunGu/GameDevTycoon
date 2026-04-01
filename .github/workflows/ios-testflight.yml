@@ -103,7 +103,16 @@ jobs:
           team_id = ENV['TEAM_ID']
           profile_name = ENV['PROFILE_NAME']
 
+          # 프로젝트 레벨 설정 패치
+          project.build_configurations.each do |config|
+            config.build_settings['CODE_SIGN_STYLE'] = 'Manual'
+            config.build_settings['CODE_SIGN_IDENTITY'] = 'Apple Distribution'
+            config.build_settings['DEVELOPMENT_TEAM'] = team_id
+          end
+
+          # 타겟 레벨 설정 패치
           project.targets.each do |target|
+            puts "Patching target: #{target.name}"
             target.build_configurations.each do |config|
               config.build_settings['DEVELOPMENT_TEAM'] = team_id
               config.build_settings['CODE_SIGN_IDENTITY'] = 'Apple Distribution'
@@ -111,15 +120,17 @@ jobs:
 
               if target.name == 'Unity-iPhone'
                 config.build_settings['PROVISIONING_PROFILE_SPECIFIER'] = profile_name
+                puts "  #{config.name}: Manual + profile=#{profile_name}"
               else
                 config.build_settings.delete('PROVISIONING_PROFILE_SPECIFIER')
                 config.build_settings.delete('PROVISIONING_PROFILE')
+                puts "  #{config.name}: Manual, no profile"
               end
             end
           end
 
           project.save
-          puts "Patched signing for all targets"
+          puts "Done"
           EOF
 
       - name: Build .ipa
