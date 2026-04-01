@@ -61,7 +61,9 @@ jobs:
         run: |
           echo "$PROFILE_BASE64" | base64 --decode > profile.mobileprovision
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
-          cp profile.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/
+          UUID=$(security cms -D -i profile.mobileprovision | plutil -extract UUID raw -)
+          cp profile.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/${UUID}.mobileprovision
+          echo "PROFILE_UUID=${UUID}" >> $GITHUB_ENV
 
       - name: Create ExportOptions.plist
         run: |
@@ -97,7 +99,10 @@ jobs:
             -archivePath build/GameDevTycoon.xcarchive \
             archive \
             CODE_SIGN_STYLE=Manual \
-            DEVELOPMENT_TEAM=${{ secrets.APPLE_TEAM_ID }}
+            CODE_SIGN_IDENTITY="Apple Distribution" \
+            DEVELOPMENT_TEAM=${{ secrets.APPLE_TEAM_ID }} \
+            PROVISIONING_PROFILE_SPECIFIER="${{ secrets.IOS_PROFILE_NAME }}" \
+            PROVISIONING_PROFILE="${PROFILE_UUID}"
           xcodebuild -exportArchive \
             -archivePath build/GameDevTycoon.xcarchive \
             -exportOptionsPlist ExportOptions.plist \
