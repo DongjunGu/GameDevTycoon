@@ -17,8 +17,8 @@ jobs:
       - name: Cache Unity Library
         uses: actions/cache@v4
         with:
-          path: GameDevTycoon/Library
-          key: Library-iOS-${{ hashFiles('GameDevTycoon/Assets/**', 'GameDevTycoon/Packages/**', 'GameDevTycoon/ProjectSettings/**') }}
+          path: Library
+          key: Library-iOS-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
           restore-keys: |
             Library-iOS-
             Library-
@@ -30,7 +30,7 @@ jobs:
           UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
           UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
         with:
-          projectPath: GameDevTycoon
+          projectPath: .
           targetPlatform: iOS
           buildName: GameDevTycoon
           buildsPath: build
