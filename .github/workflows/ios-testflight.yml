@@ -133,6 +133,22 @@ jobs:
           puts "Done"
           EOF
 
+      - name: Override xcconfig signing settings
+        env:
+          TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          PROFILE_NAME: ${{ secrets.IOS_PROFILE_NAME }}
+        run: |
+          find build/iOS/GameDevTycoon -name "*.xcconfig" | while read f; do
+            echo "=== $f ==="
+            cat "$f"
+            echo ""
+            # CODE_SIGN_IDENTITY 덮어쓰기
+            echo "" >> "$f"
+            echo "CODE_SIGN_IDENTITY = Apple Distribution" >> "$f"
+            echo "CODE_SIGN_STYLE = Manual" >> "$f"
+            echo "DEVELOPMENT_TEAM = ${TEAM_ID}" >> "$f"
+          done
+
       - name: Build .ipa
         run: |
           xcodebuild -project build/iOS/GameDevTycoon/Unity-iPhone.xcodeproj \
