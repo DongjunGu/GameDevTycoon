@@ -149,7 +149,12 @@ jobs:
             -scheme Unity-iPhone \
             -configuration Release \
             -archivePath build/GameDevTycoon.xcarchive \
-            archive
+            -destination 'generic/platform=iOS' \
+            archive \
+            CODE_SIGN_IDENTITY="Apple Distribution" \
+            CODE_SIGN_STYLE=Manual \
+            DEVELOPMENT_TEAM=${{ secrets.APPLE_TEAM_ID }} \
+            PROVISIONING_PROFILE_SPECIFIER="${{ secrets.IOS_PROFILE_NAME }}"
           xcodebuild -exportArchive \
             -archivePath build/GameDevTycoon.xcarchive \
             -exportOptionsPlist ExportOptions.plist \
