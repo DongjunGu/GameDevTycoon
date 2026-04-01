@@ -9,13 +9,11 @@ jobs:
     runs-on: macos-latest
 
     steps:
-      # 1. 소스 체크아웃
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           lfs: true
 
-      # 2. Unity 라이선스 캐시
       - name: Cache Unity Library
         uses: actions/cache@v4
         with:
@@ -25,7 +23,6 @@ jobs:
             Library-iOS-
             Library-
 
-      # 3. Unity로 iOS Xcode 프로젝트 빌드
       - name: Build iOS (Unity)
         uses: game-ci/unity-builder@v4
         env:
@@ -38,7 +35,6 @@ jobs:
           buildName: GameDevTycoon
           buildsPath: build
 
-      # 4. Distribution 인증서 설치
       - name: Install Distribution Certificate
         env:
           P12_BASE64: ${{ secrets.IOS_DIST_CERT_P12 }}
@@ -51,7 +47,6 @@ jobs:
           security import distribution.p12 -k build.keychain -P "$P12_PASSWORD" -T /usr/bin/codesign
           security set-key-partition-list -S apple-tool:,apple: -s -k "" build.keychain
 
-      # 5. Provisioning Profile 설치
       - name: Install Provisioning Profile
         env:
           PROFILE_BASE64: ${{ secrets.IOS_PROVISION_PROFILE }}
@@ -60,7 +55,6 @@ jobs:
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
           cp profile.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/
 
-      # 6. ExportOptions.plist 생성
       - name: Create ExportOptions.plist
         run: |
           cat > ExportOptions.plist << EOF
@@ -87,7 +81,6 @@ jobs:
           </plist>
           EOF
 
-      # 7. xcodebuild로 .ipa 빌드
       - name: Build .ipa
         run: |
           xcodebuild -project build/iOS/Unity-iPhone.xcodeproj \
@@ -97,13 +90,11 @@ jobs:
             archive \
             CODE_SIGN_STYLE=Manual \
             DEVELOPMENT_TEAM=${{ secrets.APPLE_TEAM_ID }}
-
           xcodebuild -exportArchive \
             -archivePath build/GameDevTycoon.xcarchive \
             -exportOptionsPlist ExportOptions.plist \
             -exportPath build/ipa
 
-      # 8. App Store Connect API Key 설정
       - name: Setup App Store Connect API Key
         env:
           API_KEY_P8: ${{ secrets.APPSTORE_API_KEY_P8 }}
@@ -112,7 +103,6 @@ jobs:
           mkdir -p ~/.appstoreconnect/private_keys
           echo "$API_KEY_P8" > ~/.appstoreconnect/private_keys/AuthKey_${KEY_ID}.p8
 
-      # 9. TestFlight 업로드
       - name: Upload to TestFlight
         env:
           KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
