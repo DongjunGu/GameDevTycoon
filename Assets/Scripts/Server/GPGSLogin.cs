@@ -1,7 +1,3 @@
-#if UNITY_ANDROID
-using BackEnd;
-using GooglePlayGames;
-using GooglePlayGames.BasicApi;
 using UnityEngine;
 
 public class GPGSLogin : MonoBehaviour
@@ -13,13 +9,16 @@ public class GPGSLogin : MonoBehaviour
 
     public void StartLogin()
     {
-        PlayGamesPlatform.Activate();
-        PlayGamesPlatform.Instance.Authenticate(ProcessAuthentication);
+#if UNITY_ANDROID
+        GooglePlayGames.PlayGamesPlatform.Activate();
+        GooglePlayGames.PlayGamesPlatform.Instance.Authenticate(ProcessAuthentication);
+#endif
     }
 
-    void ProcessAuthentication(SignInStatus status)
+#if UNITY_ANDROID
+    void ProcessAuthentication(GooglePlayGames.BasicApi.SignInStatus status)
     {
-        if (status == SignInStatus.Success)
+        if (status == GooglePlayGames.BasicApi.SignInStatus.Success)
         {
             Debug.Log("GPGS Auth Success");
             GetAccessCode();
@@ -32,13 +31,13 @@ public class GPGSLogin : MonoBehaviour
 
     public void GetAccessCode()
     {
-        PlayGamesPlatform.Instance.RequestServerSideAccess(
+        GooglePlayGames.PlayGamesPlatform.Instance.RequestServerSideAccess(
             false,
             code =>
             {
                 Debug.Log("Auth Code: " + code);
 
-                Backend.BMember.GetGPGS2AccessToken(code, googleCallback =>
+                BackEnd.Backend.BMember.GetGPGS2AccessToken(code, googleCallback =>
                 {
                     Debug.Log("GetGPGS2AccessToken Result: " + googleCallback);
 
@@ -54,8 +53,8 @@ public class GPGSLogin : MonoBehaviour
                     string accessToken = googleCallback
                         .GetReturnValuetoJSON()["access_token"].ToString();
 
-                    var bro = Backend.BMember.AuthorizeFederation(
-                        accessToken, FederationType.GPGS2);
+                    var bro = BackEnd.Backend.BMember.AuthorizeFederation(
+                        accessToken, BackEnd.FederationType.GPGS2);
                     if (bro.IsSuccess())
                     {
                         Debug.Log("Backend Login Success! inDate: " + bro.GetInDate());
@@ -73,5 +72,5 @@ public class GPGSLogin : MonoBehaviour
             }
         );
     }
-}
 #endif
+}
