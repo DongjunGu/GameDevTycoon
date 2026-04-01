@@ -35,6 +35,9 @@ jobs:
           buildName: GameDevTycoon
           buildsPath: build
 
+      - name: Find Xcode project
+        run: find build -name "*.xcodeproj" -o -name "*.xcworkspace" | head -20
+
       - name: Install Distribution Certificate
         env:
           P12_BASE64: ${{ secrets.IOS_DIST_CERT_P12 }}
