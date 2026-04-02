@@ -1,7 +1,7 @@
 workflows:
   unity-ios-testflight:
     name: Unity iOS → TestFlight
-    max_build_duration: 90
+    max_build_duration: 120
     instance_type: mac_mini_m2
 
     environment:
@@ -16,12 +16,21 @@ workflows:
         XCODE_SCHEME: Unity-iPhone
 
     scripts:
-      - name: Diagnose machine
+      - name: Install Unity via Unity Hub
         script: |
-          echo "=== /Applications/Unity ==="
-          ls /Applications/Unity/
-          echo "=== find Unity binary ==="
-          find /Applications/Unity -name "Unity" -type f 2>/dev/null | head -10
+          UNITY_HUB="/Applications/Unity Hub.app/Contents/MacOS/Unity Hub"
+          echo "Unity Hub version:"
+          "$UNITY_HUB" -- --headless version || true
+          echo "Installing Unity $UNITY_VERSION..."
+          "$UNITY_HUB" -- --headless install \
+            --version $UNITY_VERSION \
+            --module ios \
+            --childModules
+          echo "Installed editors:"
+          "$UNITY_HUB" -- --headless editors --installed || true
+          UNITY_BIN=$(find /Applications/Unity -name "Unity" -type f 2>/dev/null | head -1)
+          echo "Unity binary: $UNITY_BIN"
+          echo "UNITY_BIN=$UNITY_BIN" >> $CM_ENV
 
       - name: Activate Unity License
         script: |
