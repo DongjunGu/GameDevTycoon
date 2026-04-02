@@ -1,0 +1,141 @@
+workflows:
+  unity-ios-testflight:
+    name: Unity iOS → TestFlight
+    max_build_duration: 90
+    instance_type: mac_mini_m2
+
+    environment:
+      groups:
+        - unity_credentials
+        - ios_credentials
+        - appstore_credentials
+      vars:
+        UNITY_VERSION: 2022.3.56f1
+        BUNDLE_ID: com.es.get
+        XCODE_PROJECT: build/iOS/GameDevTycoon/Unity-iPhone.xcodeproj
+        XCODE_SCHEME: Unity-iPhone
+
+    scripts:
+      - name: Activate Unity License
+        script: |
+          /Applications/Unity/Hub/Editor/${UNITY_VERSION}/Unity.app/Contents/MacOS/Unity \
+            -batchmode \
+            -quit \
+            -serial "$UNITY_SERIAL" \
+            -username "$UNITY_EMAIL" \
+            -password "$UNITY_PASSWORD" \
+            -logFile /dev/stdout
+
+      - name: Build iOS with Unity
+        script: |
+          /Applications/Unity/Hub/Editor/${UNITY_VERSION}/Unity.app/Contents/MacOS/Unity \
+            -batchmode \
+            -quit \
+            -projectPath . \
+            -buildTarget iOS \
+            -executeMethod BuildScript.BuildIOS \
+            -logFile /dev/stdout
+        timeout: 3600
+
+      - name: Install Provisioning Profile
+        script: |
+          PROFILE_PATH="$HOME/Library/MobileDevice/Provisioning Profiles"
+          mkdir -p "$PROFILE_PATH"
+          echo "$CM_PROVISIONING_PROFILE" | base64 --decode > /tmp/profile.mobileprovision
+          UUID=$(security cms -D -i /tmp/profile.mobileprovision | plutil -extract UUID raw -)
+          cp /tmp/profile.mobileprovision "$PROFILE_PATH/${UUID}.mobileprovision"
+          echo "PROFILE_UUID=${UUID}" >> $CM_ENV
+
+      - name: Install Certificate
+        script: |
+          echo "$CM_CERTIFICATE" | base64 --decode > /tmp/cert.p12
+          security create-keychain -p "" build.keychain
+          security default-keychain -s build.keychain
+          security unlock-keychain -p "" build.keychain
+          security import /tmp/cert.p12 -k build.keychain -P "$CM_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: -s -k "" build.keychain
+
+      - name: Patch Xcode signing
+        script: |
+          gem install xcodeproj --quiet
+          ruby << 'RUBY'
+          require 'xcodeproj'
+          project = Xcodeproj::Project.open(ENV['XCODE_PROJECT'])
+          team_id = ENV['APPLE_TEAM_ID']
+          profile_name = ENV['IOS_PROFILE_NAME']
+          project.targets.each do |target|
+            target.build_configurations.each do |config|
+              config.build_settings['DEVELOPMENT_TEAM'] = team_id
+              config.build_settings['CODE_SIGN_IDENTITY'] = 'Apple Distribution'
+              config.build_settings['CODE_SIGN_STYLE'] = 'Manual'
+              if target.name == 'Unity-iPhone'
+                config.build_settings['PROVISIONING_PROFILE_SPECIFIER'] = profile_name
+              else
+                config.build_settings.delete('PROVISIONING_PROFILE_SPECIFIER')
+                config.build_settings.delete('PROVISIONING_PROFILE')
+              end
+            end
+          end
+          project.save
+          RUBY
+
+      - name: Archive & Export IPA
+        script: |
+          cat > ExportOptions.plist << EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key>
+            <string>app-store-connect</string>
+            <key>teamID</key>
+            <string>${APPLE_TEAM_ID}</string>
+            <key>uploadBitcode</key>
+            <false/>
+            <key>uploadSymbols</key>
+            <true/>
+            <key>signingStyle</key>
+            <string>manual</string>
+            <key>provisioningProfiles</key>
+            <dict>
+              <key>${BUNDLE_ID}</key>
+              <string>${IOS_PROFILE_NAME}</string>
+            </dict>
+          </dict>
+          </plist>
+          EOF
+
+          xcodebuild \
+            -project "$XCODE_PROJECT" \
+            -scheme "$XCODE_SCHEME" \
+            -configuration Release \
+            -archivePath build/GameDevTycoon.xcarchive \
+            -destination 'generic/platform=iOS' \
+            CODE_SIGN_IDENTITY="Apple Distribution" \
+            CODE_SIGN_STYLE=Manual \
+            DEVELOPMENT_TEAM="$APPLE_TEAM_ID" \
+            archive
+
+          xcodebuild -exportArchive \
+            -archivePath build/GameDevTycoon.xcarchive \
+            -exportOptionsPlist ExportOptions.plist \
+            -exportPath build/ipa
+
+      - name: Return Unity License
+        script: |
+          /Applications/Unity/Hub/Editor/${UNITY_VERSION}/Unity.app/Contents/MacOS/Unity \
+            -batchmode \
+            -quit \
+            -returnlicense \
+            -logFile /dev/stdout
+        ignore_failure: true
+
+    publishing:
+      app_store_connect:
+        api_key: $APP_STORE_CONNECT_PRIVATE_KEY
+        key_id: $APP_STORE_CONNECT_KEY_ID
+        issuer_id: $APP_STORE_CONNECT_ISSUER_ID
+        submit_to_testflight: true
+
+    artifacts:
+      - build/ipa/*.ipa
