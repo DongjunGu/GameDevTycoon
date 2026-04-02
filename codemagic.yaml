@@ -16,21 +16,15 @@ workflows:
         XCODE_SCHEME: Unity-iPhone
 
     scripts:
-      - name: Install Unity via Unity Hub
+      - name: Check available Unity versions
         script: |
           UNITY_HUB="/Applications/Unity Hub.app/Contents/MacOS/Unity Hub"
-          echo "Unity Hub version:"
-          "$UNITY_HUB" -- --headless version || true
-          echo "Installing Unity $UNITY_VERSION..."
-          "$UNITY_HUB" -- --headless install \
-            --version $UNITY_VERSION \
-            --module ios \
-            --childModules
-          echo "Installed editors:"
+          echo "=== Installed editors ==="
           "$UNITY_HUB" -- --headless editors --installed || true
-          UNITY_BIN=$(find /Applications/Unity -name "Unity" -type f 2>/dev/null | head -1)
-          echo "Unity binary: $UNITY_BIN"
-          echo "UNITY_BIN=$UNITY_BIN" >> $CM_ENV
+          echo "=== Available releases ==="
+          "$UNITY_HUB" -- --headless editors --releases || true
+          echo "=== /Applications/Unity contents ==="
+          find /Applications/Unity -maxdepth 4 2>/dev/null || echo "empty"
 
       - name: Activate Unity License
         script: |
