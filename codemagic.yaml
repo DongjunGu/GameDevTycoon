@@ -16,24 +16,16 @@ workflows:
         XCODE_SCHEME: Unity-iPhone
 
     scripts:
-      - name: Install Unity
+      - name: Diagnose machine
         script: |
-          /Applications/Unity\ Hub.app/Contents/MacOS/Unity\ Hub -- \
-            --headless install \
-            --version $UNITY_VERSION \
-            --module ios \
-            --childModules
-
-      - name: Find Unity path
-        script: |
-          UNITY_BIN=$(find /Applications /usr/local -name "Unity" -path "*/MacOS/Unity" 2>/dev/null | head -1)
-          if [ -z "$UNITY_BIN" ]; then
-            echo "Unity not found!"
-            find /Applications -name "Unity.app" 2>/dev/null
-            exit 1
-          fi
-          echo "Found Unity at: $UNITY_BIN"
-          echo "UNITY_BIN=$UNITY_BIN" >> $CM_ENV
+          echo "=== /Applications ==="
+          ls /Applications/
+          echo "=== Unity Hub ==="
+          find /Applications -name "Unity Hub*" 2>/dev/null
+          echo "=== Unity installs ==="
+          find / -name "Unity" -path "*/MacOS/Unity" 2>/dev/null | head -10
+          echo "=== which unity-hub ==="
+          which unity-hub || echo "unity-hub not in PATH"
 
       - name: Activate Unity License
         script: |
