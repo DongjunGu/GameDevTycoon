@@ -24,10 +24,21 @@ workflows:
             --module ios \
             --childModules
 
+      - name: Find Unity path
+        script: |
+          UNITY_BIN=$(find /Applications /usr/local -name "Unity" -path "*/MacOS/Unity" 2>/dev/null | head -1)
+          if [ -z "$UNITY_BIN" ]; then
+            echo "Unity not found!"
+            find /Applications -name "Unity.app" 2>/dev/null
+            exit 1
+          fi
+          echo "Found Unity at: $UNITY_BIN"
+          echo "UNITY_BIN=$UNITY_BIN" >> $CM_ENV
+
       - name: Activate Unity License
         script: |
           echo "$UNITY_LICENSE" > /tmp/Unity_lic.ulf
-          /Applications/Unity/Hub/Editor/${UNITY_VERSION}/Unity.app/Contents/MacOS/Unity \
+          "$UNITY_BIN" \
             -batchmode \
             -quit \
             -manualLicenseFile /tmp/Unity_lic.ulf \
@@ -35,7 +46,7 @@ workflows:
 
       - name: Build iOS with Unity
         script: |
-          /Applications/Unity/Hub/Editor/${UNITY_VERSION}/Unity.app/Contents/MacOS/Unity \
+          "$UNITY_BIN" \
             -batchmode \
             -quit \
             -projectPath . \
