@@ -35,7 +35,6 @@ workflows:
             -buildTarget iOS \
             -executeMethod BuildScript.BuildIOS \
             -logFile /dev/stdout
-        timeout: 3600
 
       - name: Install Provisioning Profile
         script: |
