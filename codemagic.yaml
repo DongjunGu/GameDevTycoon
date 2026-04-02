@@ -1,7 +1,7 @@
 workflows:
   unity-ios-testflight:
     name: Unity iOS → TestFlight
-    max_build_duration: 120
+    max_build_duration: 180
     instance_type: mac_mini_m2
 
     environment:
