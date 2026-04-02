@@ -7,6 +7,7 @@ jobs:
   build-ios:
     name: Build and Upload to TestFlight
     runs-on: macos-latest
+    timeout-minutes: 90
 
     steps:
       - name: Checkout repository
@@ -25,6 +26,7 @@ jobs:
 
       - name: Build iOS (Unity)
         uses: game-ci/unity-builder@v4
+        timeout-minutes: 60
         env:
           UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
           UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
