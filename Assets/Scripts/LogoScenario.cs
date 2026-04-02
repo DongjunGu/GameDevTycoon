@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class LogoScenario : MonoBehaviour
 {
@@ -25,6 +26,7 @@ public class LogoScenario : MonoBehaviour
 
 	private void OnAfterProgress()
 	{
+		SceneManager.LoadScene("GameScene");
 	}
 }
 

@@ -13,6 +13,12 @@ public class GameSceneInitializer : MonoBehaviour
 
         OfficeManager.Instance?.RestoreEmployees();
 
+        var stage = DevelopmentManager.Instance.CurrentStage;
+        if (stage == ProjectStage.Developing || stage == ProjectStage.BugFixing)
+            GameTimeManager.Instance.SetProjectSpeed(ProjectSetupUI.SelectedScale);
+
+        GameTimeManager.Instance.StartTime();
+
         //         // 게임 시작 다이얼로그 (첫 시작 시)
         // if (DialogManager.Instance.HasGroup("event_game_start"))
         //     EventDialogTable.PlayManual("event_game_start");

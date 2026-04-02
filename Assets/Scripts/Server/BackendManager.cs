@@ -46,8 +46,7 @@ public class BackendManager : MonoBehaviour
                                     TechTreeManager.Instance.LoadTechTree(() =>
                                     {
                                         DialogManager.Instance.Initialize();
-                                        GameTimeManager.Instance.StartTime();
-                                        SceneManager.LoadScene("GameScene"); // ← 씬 전환
+                                        FindAnyObjectByType<Progress>()?.SetAllDataLoaded();
                                     });
                                 });
                             });
@@ -65,6 +64,7 @@ public class BackendManager : MonoBehaviour
         if (bro.IsSuccess())
         {
             Debug.Log("테스트 로그인 성공");
+            FindAnyObjectByType<Progress>()?.SetLoginComplete();
             LoadAllAndEnterGame();
         }
         else
@@ -73,6 +73,7 @@ public class BackendManager : MonoBehaviour
             if (signUp.IsSuccess())
             {
                 Debug.Log("회원가입 성공");
+                FindAnyObjectByType<Progress>()?.SetLoginComplete();
                 LoadAllAndEnterGame();
             }
             else

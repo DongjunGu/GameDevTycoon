@@ -13329,6 +13329,9 @@ MonoBehaviour:
   summaryGenreButton: {fileID: 1486583840}
   summaryPlatformButton: {fileID: 1037270089}
   confirmText: {fileID: 1179286860}
+  scaleLabelSmall: {fileID: 1085785951}
+  scaleLabelMedium: {fileID: 557112073}
+  scaleLabelLarge: {fileID: 677449803}
 --- !u!1 &481589817
 GameObject:
   m_ObjectHideFlags: 0
@@ -60157,7 +60160,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!114 &2146223040
 MonoBehaviour:
   m_ObjectHideFlags: 0

@@ -49,6 +49,7 @@ public class DevelopmentManager : MonoBehaviour
 
     public void StartDevelopment()
     {
+        GameTimeManager.Instance.SetProjectSpeed(ProjectSetupUI.SelectedScale);
         IsStarted = true;
         _patrolStarted = false;
         InitGenrePool();
@@ -253,6 +254,7 @@ public class DevelopmentManager : MonoBehaviour
     void ShowResult()
     {
         CurrentStage = ProjectStage.Complete;
+        GameTimeManager.Instance.ResetSpeed();
         GameTimeManager.Instance.StopTime();
 
         float planning = DevelopmentPanelUI.Instance.GetPlanning();
