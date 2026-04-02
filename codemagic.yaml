@@ -15,6 +15,11 @@ workflows:
         XCODE_PROJECT: build/iOS/GameDevTycoon/Unity-iPhone.xcodeproj
         XCODE_SCHEME: Unity-iPhone
 
+    cache:
+      cache_paths:
+        - /Applications/Unity/Hub/Editor/$UNITY_VERSION
+        - Library
+
     scripts:
       - name: Install Unity
         script: |
