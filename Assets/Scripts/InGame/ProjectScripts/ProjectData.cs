@@ -9,11 +9,37 @@ public class ProjectData
     public ProjectGenre genre;
     public ProjectPlatform platform;
 
+    public static int GetCost(ProjectScale scale) => scale switch
+    {
+        ProjectScale.Small  => 3000,
+        ProjectScale.Medium => 15000,
+        ProjectScale.Large  => 100000,
+        _ => 0
+    };
+
+    public static int GetRecommendedStaff(ProjectScale scale) => scale switch
+    {
+        ProjectScale.Small  => 2,
+        ProjectScale.Medium => 4,
+        ProjectScale.Large  => 5,
+        _ => 0
+    };
+
+    public int Cost => GetCost(scale);
+
     public string ScaleToString() => scale switch
     {
-        ProjectScale.Small  => "소규모(1인개발)",
-        ProjectScale.Medium => "중형(팀)",
-        ProjectScale.Large  => "대규모(AAA)",
+        ProjectScale.Small  => "소규모(4개월)",
+        ProjectScale.Medium => "중형(6개월)",
+        ProjectScale.Large  => "대규모(8개월)",
+        _ => ""
+    };
+
+    public string ScaleInfoString() => scale switch
+    {
+        ProjectScale.Small  => "소규모(4개월)\n추천 인원: 2명  /  개발금: 3,000G",
+        ProjectScale.Medium => "중형(6개월)\n추천 인원: 4명  /  개발금: 15,000G",
+        ProjectScale.Large  => "대규모(8개월)\n추천 인원: 5명  /  개발금: 100,000G",
         _ => ""
     };
 

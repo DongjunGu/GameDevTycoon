@@ -11,12 +11,10 @@ public class Progress : MonoBehaviour
     [SerializeField] private float progressTime;
 
     private bool _loginComplete = false;
+    private bool _allDataLoaded = false;
 
-    // 로그인 완료 시 GPGSLogin에서 호출
-    public void SetLoginComplete()
-    {
-        _loginComplete = true;
-    }
+    public void SetLoginComplete() => _loginComplete = true;
+    public void SetAllDataLoaded() => _allDataLoaded = true;
 
     public void Play(UnityAction action = null)
     {
@@ -25,32 +23,43 @@ public class Progress : MonoBehaviour
 
     private IEnumerator OnProgress(UnityAction action)
     {
-        float current = 0;
-        float percent = 0;
-
-        // 로그인 완료 전까지 90%에서 멈춤
-        while (percent < 1)
+        // Phase 1: 0% → 90%
+        float elapsed = 0f;
+        while (elapsed < progressTime)
         {
-            current += Time.deltaTime;
-            percent = current / progressTime;
-
-            // 로그인 완료 전엔 90%까지만
-            float maxPercent = _loginComplete ? 1f : 0.9f;
-            float clampedPercent = Mathf.Min(percent, maxPercent);
-
-            // 90%에서 멈춘 상태로 로그인 완료 대기
-            if (!_loginComplete && percent >= 0.9f)
-            {
-                clampedPercent = 0.9f;
-                current = progressTime * 0.9f; // percent가 더 올라가지 않도록
-            }
-
-            sliderProgress.value = Mathf.Lerp(0, 1, clampedPercent);
-            textProgressData.text = $"Now Loading...{sliderProgress.value * 100:F0}%";
-
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / progressTime);
+            SetSlider(Mathf.Lerp(0f, 0.9f, t));
             yield return null;
         }
 
+        // Phase 2: 로그인 완료 대기
+        SetSlider(0.9f);
+        while (!_loginComplete)
+            yield return null;
+
+        // Phase 3: 모든 데이터 로드 완료 대기
+        while (!_allDataLoaded)
+            yield return null;
+
+        // Phase 4: 90% → 100% (0.3초)
+        elapsed = 0f;
+        while (elapsed < 0.3f)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / 0.3f);
+            SetSlider(Mathf.Lerp(0.9f, 1f, t));
+            yield return null;
+        }
+
+        SetSlider(1f);
+        yield return new WaitForSeconds(1f);
         action?.Invoke();
+    }
+
+    void SetSlider(float value)
+    {
+        sliderProgress.value = value;
+        textProgressData.text = $"Now Loading...{value * 100:F0}%";
     }
 }

@@ -15,10 +15,28 @@ public class GameTimeManager : MonoBehaviour
     private float _elapsed = 0f;
     private int _stopCount = 0;
     private bool _isRunning = false;
+    private bool _isLoaded = false;
 
     public bool IsRunning => _isRunning;
 
-    public float secondsPerWeek = 10f; // 인스펙터에서 조정 가능
+    public float secondsPerWeek = 6f;
+
+    public void SetProjectSpeed(ProjectScale scale)
+    {
+        secondsPerWeek = scale switch
+        {
+            ProjectScale.Small  => 5f,
+            ProjectScale.Medium => 4.2f,
+            ProjectScale.Large  => 3.9f,
+            _ => 6f
+        };
+        Debug.Log($"[GameTimeManager] SetProjectSpeed: {scale} → {secondsPerWeek}초/주");
+    }
+
+    public void ResetSpeed()
+    {
+        secondsPerWeek = 6f;
+    }
 
     public System.Action OnTimeChanged; // 시간 변경 시 콜백
 
@@ -73,6 +91,7 @@ public class GameTimeManager : MonoBehaviour
                     Month = SafeInt(row, "month", 1);
                     Week = SafeInt(row, "week", 1);
                     _rowInDate = SafeString(row, "inDate", "");
+                    _isLoaded = true;
 
                     Debug.Log($"로드 완료: {Year}년 {Month}월 {Week}주 / rowInDate: {_rowInDate}");
                 }
@@ -82,6 +101,7 @@ public class GameTimeManager : MonoBehaviour
                     Year = 2000;
                     Month = 1;
                     Week = 1;
+                    _isLoaded = true;
                     SaveGameTime();
                 }
             }
@@ -141,6 +161,7 @@ public class GameTimeManager : MonoBehaviour
     // ── 저장 ──────────────────────────────────
     public void SaveGameTime()
     {
+        if (!_isLoaded) return;
         Debug.Log($"저장 시도 - rowInDate: {_rowInDate} / {Year}년 {Month}월 {Week}주");
 
         var param = new Param();

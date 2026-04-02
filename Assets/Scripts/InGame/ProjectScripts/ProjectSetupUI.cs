@@ -74,7 +74,21 @@ public class ProjectSetupUI : MonoBehaviour
             AlertUI.Instance.Show("진행중인 프로젝트가 있습니다.");
             return;
         }
+        UpdateScaleButtonLabels();
         ShowPanel(scalePanel);
+    }
+
+    // ── 규모 버튼 텍스트 ──────────────────────
+    [Header("Scale Buttons")]
+    public TextMeshProUGUI scaleLabelSmall;
+    public TextMeshProUGUI scaleLabelMedium;
+    public TextMeshProUGUI scaleLabelLarge;
+
+    void UpdateScaleButtonLabels()
+    {
+        if (scaleLabelSmall  != null) scaleLabelSmall.text  = $"소규모 (4개월)\n추천 인원: 2명\n개발금: 3,000G";
+        if (scaleLabelMedium != null) scaleLabelMedium.text = $"중형 (6개월)\n추천 인원: 4명\n개발금: 15,000G";
+        if (scaleLabelLarge  != null) scaleLabelLarge.text  = $"대규모 (8개월)\n추천 인원: 5명\n개발금: 100,000G";
     }
 
     // ── 규모 선택 ─────────────────────────────
@@ -118,7 +132,7 @@ public class ProjectSetupUI : MonoBehaviour
     // ── 요약 표시 ─────────────────────────────
     void ShowSummary()
     {
-        summaryScaleText.text = _projectData.ScaleToString();
+        summaryScaleText.text = _projectData.ScaleInfoString();
         summaryGenreText.text = _projectData.GenreToString();
         summaryPlatformText.text = _projectData.PlatformToString();
 
@@ -179,6 +193,15 @@ public class ProjectSetupUI : MonoBehaviour
     // ── 개발 시작 ─────────────────────────────
     public void OnClickStartDevelopment()
     {
+        int cost = _projectData.Cost;
+        if (!MoneyManager.Instance.CanAfford(cost))
+        {
+            AlertUI.Instance.Show($"개발금이 부족합니다.\n필요: {cost:N0}G / 보유: {MoneyManager.Instance.Gold:N0}G");
+            return;
+        }
+
+        MoneyManager.Instance.SpendGold(cost);
+
         SelectedScale = _projectData.scale;
         SelectedGenre = _projectData.genre;
         SelectedPlatform = _projectData.platform;
@@ -186,7 +209,7 @@ public class ProjectSetupUI : MonoBehaviour
         if (DevelopmentManager.Instance.CurrentStage == ProjectStage.Sales)
             SalesUI.Instance.NotifyNewProjectStarted();
 
-        Debug.Log($"개발 시작! {_projectData.ScaleToString()} / {_projectData.GenreToString()} / {_projectData.PlatformToString()}");
+        Debug.Log($"개발 시작! {_projectData.ScaleToString()} / {_projectData.GenreToString()} / {_projectData.PlatformToString()} / 개발금: -{cost:N0}G");
         DevelopmentManager.Instance.StartDevelopment();
         confirmPanel.SetActive(false);
     }
