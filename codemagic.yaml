@@ -18,14 +18,10 @@ workflows:
     scripts:
       - name: Diagnose machine
         script: |
-          echo "=== /Applications ==="
-          ls /Applications/
-          echo "=== Unity Hub ==="
-          find /Applications -name "Unity Hub*" 2>/dev/null
-          echo "=== Unity installs ==="
-          find / -name "Unity" -path "*/MacOS/Unity" 2>/dev/null | head -10
-          echo "=== which unity-hub ==="
-          which unity-hub || echo "unity-hub not in PATH"
+          echo "=== /Applications/Unity ==="
+          ls /Applications/Unity/
+          echo "=== find Unity binary ==="
+          find /Applications/Unity -name "Unity" -type f 2>/dev/null | head -10
 
       - name: Activate Unity License
         script: |
