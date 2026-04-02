@@ -10,21 +10,22 @@ workflows:
         - ios_credentials
         - appstore_credentials
       vars:
-        UNITY_VERSION: 6000.3.8f1
+        UNITY_VERSION: 6000.3.12f1
         BUNDLE_ID: com.es.get
         XCODE_PROJECT: build/iOS/GameDevTycoon/Unity-iPhone.xcodeproj
         XCODE_SCHEME: Unity-iPhone
 
     scripts:
-      - name: Check available Unity versions
+      - name: Install Unity
         script: |
           UNITY_HUB="/Applications/Unity Hub.app/Contents/MacOS/Unity Hub"
-          echo "=== Installed editors ==="
-          "$UNITY_HUB" -- --headless editors --installed || true
-          echo "=== Available releases ==="
-          "$UNITY_HUB" -- --headless editors --releases || true
-          echo "=== /Applications/Unity contents ==="
-          find /Applications/Unity -maxdepth 4 2>/dev/null || echo "empty"
+          "$UNITY_HUB" -- --headless install \
+            --version $UNITY_VERSION \
+            --module ios \
+            --childModules
+          UNITY_BIN="/Applications/Unity/Hub/Editor/${UNITY_VERSION}/Unity.app/Contents/MacOS/Unity"
+          echo "Unity binary: $UNITY_BIN"
+          echo "UNITY_BIN=$UNITY_BIN" >> $CM_ENV
 
       - name: Activate Unity License
         script: |
