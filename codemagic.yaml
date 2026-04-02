@@ -9,7 +9,8 @@ workflows:
         - unity_credentials
         - ios_credentials
         - appstore_credentials
-        UNITY_VERSION: 2022.3.56f1
+      vars:
+        UNITY_VERSION: 6000.3.8f1
         BUNDLE_ID: com.es.get
         XCODE_PROJECT: build/iOS/GameDevTycoon/Unity-iPhone.xcodeproj
         XCODE_SCHEME: Unity-iPhone
