@@ -16,6 +16,14 @@ workflows:
         XCODE_SCHEME: Unity-iPhone
 
     scripts:
+      - name: Install Unity
+        script: |
+          /Applications/Unity\ Hub.app/Contents/MacOS/Unity\ Hub -- \
+            --headless install \
+            --version $UNITY_VERSION \
+            --module ios \
+            --childModules
+
       - name: Activate Unity License
         script: |
           echo "$UNITY_LICENSE" > /tmp/Unity_lic.ulf
