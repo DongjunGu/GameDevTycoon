@@ -75,6 +75,7 @@ public class ProjectSetupUI : MonoBehaviour
             return;
         }
         UpdateScaleButtonLabels();
+        UpdateGenreButtonLabels();
         ShowPanel(scalePanel);
     }
 
@@ -89,6 +90,80 @@ public class ProjectSetupUI : MonoBehaviour
         if (scaleLabelSmall  != null) scaleLabelSmall.text  = $"소규모 (4개월)\n추천 인원: 2명\n개발금: 3,000G";
         if (scaleLabelMedium != null) scaleLabelMedium.text = $"중형 (6개월)\n추천 인원: 4명\n개발금: 15,000G";
         if (scaleLabelLarge  != null) scaleLabelLarge.text  = $"대규모 (8개월)\n추천 인원: 5명\n개발금: 100,000G";
+    }
+
+    // ── 장르 아이콘 스프라이트 이름 ──────────────
+    [Header("Genre Icon Sprite Names")]
+    public string popularSpriteName = "popular";
+    public string fatigueSpriteName   = "skull";
+
+    // ── 장르 버튼 텍스트 ──────────────────────
+    [Header("Genre Buttons - Name")]
+    public TextMeshProUGUI genreLabelRPG;
+    public TextMeshProUGUI genreLabelFPS;
+    public TextMeshProUGUI genreLabelArcade;
+    public TextMeshProUGUI genreLabelHealingSimulation;
+    public TextMeshProUGUI genreLabelHorror;
+    public TextMeshProUGUI genreLabelIdle;
+    public TextMeshProUGUI genreLabelRTS;
+    public TextMeshProUGUI genreLabelVisualNovel;
+    public TextMeshProUGUI genreLabelSports;
+    public TextMeshProUGUI genreLabelPuzzle;
+
+    [Header("Genre Buttons - Popular")]
+    public TextMeshProUGUI genrePopularRPG;
+    public TextMeshProUGUI genrePopularFPS;
+    public TextMeshProUGUI genrePopularArcade;
+    public TextMeshProUGUI genrePopularHealingSimulation;
+    public TextMeshProUGUI genrePopularHorror;
+    public TextMeshProUGUI genrePopularIdle;
+    public TextMeshProUGUI genrePopularRTS;
+    public TextMeshProUGUI genrePopularVisualNovel;
+    public TextMeshProUGUI genrePopularSports;
+    public TextMeshProUGUI genrePopularPuzzle;
+
+    [Header("Genre Buttons - Fatigue")]
+    public TextMeshProUGUI genreFatigueRPG;
+    public TextMeshProUGUI genreFatigueFPS;
+    public TextMeshProUGUI genreFatigueArcade;
+    public TextMeshProUGUI genreFatigueHealingSimulation;
+    public TextMeshProUGUI genreFatigueHorror;
+    public TextMeshProUGUI genreFatigueIdle;
+    public TextMeshProUGUI genreFatigueRTS;
+    public TextMeshProUGUI genreFatigueVisualNovel;
+    public TextMeshProUGUI genreFatigueSports;
+    public TextMeshProUGUI genreFatiguePuzzle;
+
+    void UpdateGenreButtonLabels()
+    {
+        SetGenreLabel(genreLabelRPG,               genrePopularRPG,               genreFatigueRPG,               "RPG",           ProjectGenre.RPG);
+        SetGenreLabel(genreLabelFPS,               genrePopularFPS,               genreFatigueFPS,               "FPS",           ProjectGenre.FPS);
+        SetGenreLabel(genreLabelArcade,            genrePopularArcade,            genreFatigueArcade,            "아케이드",       ProjectGenre.Arcade);
+        SetGenreLabel(genreLabelHealingSimulation, genrePopularHealingSimulation, genreFatigueHealingSimulation, "힐링시뮬레이션", ProjectGenre.HealingSimulation);
+        SetGenreLabel(genreLabelHorror,            genrePopularHorror,            genreFatigueHorror,            "공포",           ProjectGenre.Horror);
+        SetGenreLabel(genreLabelIdle,              genrePopularIdle,              genreFatigueIdle,              "방치형",         ProjectGenre.Idle);
+        SetGenreLabel(genreLabelRTS,               genrePopularRTS,               genreFatigueRTS,               "실시간전략",     ProjectGenre.RTS);
+        SetGenreLabel(genreLabelVisualNovel,       genrePopularVisualNovel,       genreFatigueVisualNovel,       "미연시",         ProjectGenre.VisualNovel);
+        SetGenreLabel(genreLabelSports,            genrePopularSports,            genreFatigueSports,            "스포츠",         ProjectGenre.Sports);
+        SetGenreLabel(genreLabelPuzzle,            genrePopularPuzzle,            genreFatiguePuzzle,            "퍼즐",           ProjectGenre.Puzzle);
+    }
+
+    void SetGenreLabel(TextMeshProUGUI nameLabel, TextMeshProUGUI popularLabel, TextMeshProUGUI fatigueLabel, string genreName, ProjectGenre genre)
+    {
+        int fatigue   = GenreFatigueManager.Instance   != null ? GenreFatigueManager.Instance.GetFatigue(genre)     : 0;
+        int popular = GenrePopularityManager.Instance != null ? GenrePopularityManager.Instance.GetPopularity(genre) : 1;
+
+        if (nameLabel      != null) nameLabel.text      = genreName;
+        if (popularLabel != null) popularLabel.text = RepeatSprite(popularSpriteName, popular);
+        if (fatigueLabel   != null) fatigueLabel.text   = RepeatSprite(fatigueSpriteName,   fatigue);
+    }
+
+    string RepeatSprite(string spriteName, int count)
+    {
+        var sb = new System.Text.StringBuilder();
+        for (int i = 0; i < count; i++)
+            sb.Append($"<sprite name=\"{spriteName}\">");
+        return sb.ToString();
     }
 
     // ── 규모 선택 ─────────────────────────────
@@ -107,9 +182,9 @@ public class ProjectSetupUI : MonoBehaviour
     }
 
     // ── 장르 선택 ─────────────────────────────
-    public void OnClickGenre(int genre)
+    public void OnClickGenre(string genre)
     {
-        _projectData.genre = (ProjectGenre)genre;
+        _projectData.genre = System.Enum.Parse<ProjectGenre>(genre);
 
         if (_isEditing)
         {

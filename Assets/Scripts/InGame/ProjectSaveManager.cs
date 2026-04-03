@@ -40,8 +40,6 @@ public class ProjectSaveManager : MonoBehaviour
     private float _loadedAccumArt;
     private float _loadedAccumBug;
     private float _loadedAccumCreativity;
-    private int _loadedCurrentGenreIndex;
-    private float _loadedNextGenreTick;
     private float _loadedQualityScore;
     private ProjectScale _loadedSalesScale;
     private bool _loadedNetworkIssueActive;
@@ -90,8 +88,6 @@ public class ProjectSaveManager : MonoBehaviour
         param.Add("accumArt", dp.GetArt());
         param.Add("accumBug", dp.GetBug());
         param.Add("accumCreativity", dp.GetCreativity());
-        param.Add("currentGenreIndex", dm.CurrentGenreIndex);
-        param.Add("nextGenreTick", dm.NextGenreTick);
         param.Add("projectName", _savedProjectName);
         param.Add("savedPlanning", _savedPlanning);
         param.Add("savedDevelop", _savedDevelop);
@@ -178,8 +174,6 @@ public class ProjectSaveManager : MonoBehaviour
             _loadedAccumArt = SafeFloat(row, "accumArt", 0f);
             _loadedAccumBug = SafeFloat(row, "accumBug", 0f);
             _loadedAccumCreativity = SafeFloat(row, "accumCreativity", 0f);
-            _loadedCurrentGenreIndex = SafeInt(row, "currentGenreIndex", 0);
-            _loadedNextGenreTick = SafeFloat(row, "nextGenreTick", 0f);
             _loadedQualityScore = SafeFloat(row, "qualityScore", 0f);
             _loadedSalesScale = (ProjectScale)SafeInt(row, "salesScale", 0);
             _loadedProjectName = SafeString(row, "projectName", "프로젝트명");
@@ -216,7 +210,6 @@ public class ProjectSaveManager : MonoBehaviour
             _loadedPlannerLeaderId, _loadedProgrammerLeaderId, _loadedArtistLeaderId,
             _loadedAccumPlanning, _loadedAccumDevelop, _loadedAccumArt,
             _loadedAccumBug, _loadedAccumCreativity,
-            _loadedCurrentGenreIndex, _loadedNextGenreTick,
             _loadedStage
         );
 

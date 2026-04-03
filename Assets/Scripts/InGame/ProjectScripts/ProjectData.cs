@@ -1,5 +1,5 @@
 public enum ProjectScale { Small, Medium, Large }
-public enum ProjectGenre { RPG, FPS, Simulation, RhythmGame }
+public enum ProjectGenre { RPG, FPS, Arcade, HealingSimulation, Horror, Idle, RTS, VisualNovel, Sports, Puzzle }
 public enum ProjectPlatform { Mobile, PC, Nintendo, Console }
 
 [System.Serializable]
@@ -45,10 +45,15 @@ public class ProjectData
 
     public string GenreToString() => genre switch
     {
-        ProjectGenre.RPG        => "RPG",
-        ProjectGenre.FPS        => "FPS",
-        ProjectGenre.Simulation => "시뮬레이션",
-        ProjectGenre.RhythmGame => "리듬게임",
+        ProjectGenre.RPG              => "RPG",
+        ProjectGenre.FPS              => "FPS",
+        ProjectGenre.Arcade           => "아케이드",
+        ProjectGenre.HealingSimulation => "힐링시뮬레이션",
+        ProjectGenre.Horror           => "공포",
+        ProjectGenre.Idle             => "방치형",
+        ProjectGenre.RTS              => "실시간전략",
+        ProjectGenre.VisualNovel      => "미연시",
+        ProjectGenre.Sports           => "스포츠",
         _ => ""
     };
 

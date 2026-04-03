@@ -1504,7 +1504,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!114 &1817044394
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1587,7 +1587,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Progress
   sliderProgress: {fileID: 1341108270}
   textProgressData: {fileID: 948235046}
-  progressTime: 1
+  progressTime: 2
 --- !u!114 &1956933202
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1645,6 +1645,8 @@ GameObject:
   - component: {fileID: 2062941526}
   - component: {fileID: 2062941525}
   - component: {fileID: 2062941535}
+  - component: {fileID: 2062941536}
+  - component: {fileID: 2062941537}
   m_Layer: 0
   m_Name: GameSceneManager
   m_TagString: Untagged
@@ -1784,7 +1786,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 45c7f205d3a04d84a99622eeee406a2d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GameTimeManager
-  secondsPerWeek: 5
+  secondsPerWeek: 6
 --- !u!4 &2062941534
 Transform:
   m_ObjectHideFlags: 0
@@ -1814,6 +1816,30 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::StageManager
   currentStage: 1
   maxEmployeePerStage: 03000000
+--- !u!114 &2062941536
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2062941524}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d5961465a74fbba46bc2a168674be651, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::GenreFatigueManager
+--- !u!114 &2062941537
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2062941524}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 437debf3571fc5a4c8828e15c05a0f86, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::GenrePopularityManager
 --- !u!1 &2103001997
 GameObject:
   m_ObjectHideFlags: 0
