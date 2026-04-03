@@ -15,11 +15,7 @@ public class LogoScenario : MonoBehaviour
 	{
 		Application.runInBackground = true;
 
-		int width	= Screen.width;
-		int height	= (int)(Screen.width * 9f / 16);
-		Screen.SetResolution(width, height, true);
-
-		Screen.sleepTimeout = SleepTimeout.NeverSleep;
+		//Screen.sleepTimeout = SleepTimeout.NeverSleep;
 
 		progress.Play(OnAfterProgress);
 	}

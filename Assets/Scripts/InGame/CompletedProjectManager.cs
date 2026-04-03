@@ -25,6 +25,7 @@ public class CompletedProjectManager : MonoBehaviour
             {
                 data.rowInDate = bro.GetInDate();
                 completedProjects.Add(data);
+                GenreFatigueManager.Instance?.UpdateFatigue((ProjectGenre)data.genre);
                 Debug.Log($"완료 프로젝트 저장: {data.projectName}");
             }
             else
@@ -58,6 +59,16 @@ public void LoadCompletedProjects(System.Action onComplete = null)
         foreach (var row in rows)
             completedProjects.Add(CompletedProjectData.FromServerRow((LitJson.JsonData)row));
 
+        completedProjects.Sort((a, b) =>
+        {
+            if (a.year != b.year) return a.year.CompareTo(b.year);
+            if (a.month != b.month) return a.month.CompareTo(b.month);
+            return a.week.CompareTo(b.week);
+        });
+
+        foreach (var p in completedProjects)
+            Debug.Log($"[정렬확인] {p.year}년 {p.month}월 {p.week}주 / 장르:{p.genre} ({(ProjectGenre)p.genre})");
+        GenreFatigueManager.Instance?.RebuildFromHistory(completedProjects);
         Debug.Log($"완료 프로젝트 {completedProjects.Count}개 로드");
         onComplete?.Invoke();
     });

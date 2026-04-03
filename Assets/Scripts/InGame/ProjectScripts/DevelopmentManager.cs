@@ -22,8 +22,6 @@ public class DevelopmentManager : MonoBehaviour
     public bool IsStarted { get; private set; } = false;
     public bool IsTriggered25 => _triggered25;
     public bool IsTriggered75 => _triggered75;
-    public int CurrentGenreIndex => _currentGenreIndex;
-    public float NextGenreTick => _nextGenreTick;
     public ProjectStage CurrentStage { get; set; } = ProjectStage.None;
 
     private float _elapsed;
@@ -36,10 +34,6 @@ public class DevelopmentManager : MonoBehaviour
     private Dictionary<string, int> _tickIndexMap = new();
     private Dictionary<string, int[]> _tickOrderMap = new();
     private Coroutine _bugFixCoroutine;
-    private int _currentGenreIndex = 0;
-    private float _genreInterval;
-    private float _nextGenreTick;
-    private List<ProjectGenre> _genrePool = new();
 
     void Awake()
     {
@@ -50,14 +44,15 @@ public class DevelopmentManager : MonoBehaviour
     public void StartDevelopment()
     {
         GameTimeManager.Instance.SetProjectSpeed(ProjectSetupUI.SelectedScale);
+        developmentDuration = ProjectSetupUI.SelectedScale switch
+        {
+            ProjectScale.Small  => 80f,
+            ProjectScale.Medium => 100.8f,
+            ProjectScale.Large  => 124.8f,
+            _ => 80f
+        };
         IsStarted = true;
         _patrolStarted = false;
-        InitGenrePool();
-        int genreCount = _genrePool.Count;
-        _genreInterval = developmentDuration / genreCount;
-        _nextGenreTick = _genreInterval;
-        _currentGenreIndex = 0;
-        DevelopmentPanelUI.Instance.UpdateMarketFit(GetCurrentPopularGenre());
         _elapsed = 0f;
         _isRunning = false;
         _triggered25 = false;
@@ -142,7 +137,7 @@ public class DevelopmentManager : MonoBehaviour
             }
 
 
-            _elapsed += Time.deltaTime;
+            _elapsed += Time.deltaTime * GetElapsedMultiplier();
             float progress = _elapsed / developmentDuration;
 
             RandomEventManager.Instance.CheckTrigger(progress);
@@ -163,14 +158,6 @@ public class DevelopmentManager : MonoBehaviour
                         AccumulateByType(employee, order[index]);
                     _tickIndexMap[employee.id]++;
                 }
-            }
-
-            if (_elapsed >= _nextGenreTick)
-            {
-                System.Array genres = System.Enum.GetValues(typeof(ProjectGenre));
-                _currentGenreIndex = UnityEngine.Random.Range(0, genres.Length);
-                _nextGenreTick += _genreInterval;
-                DevelopmentPanelUI.Instance.UpdateMarketFit(GetCurrentPopularGenre());
             }
 
             if (!_triggered25 && progress >= 0.25f)
@@ -348,22 +335,23 @@ public class DevelopmentManager : MonoBehaviour
         string plannerLeaderId, string programmerLeaderId, string artistLeaderId,
         float accumPlanning, float accumDevelop, float accumArt,
         float accumBug, float accumCreativity,
-        int currentGenreIndex, float nextGenreTick,
         ProjectStage stage)
     {
+        developmentDuration = ProjectSetupUI.SelectedScale switch
+        {
+            ProjectScale.Small  => 80f,
+            ProjectScale.Medium => 100.8f,
+            ProjectScale.Large  => 124.8f,
+            _ => 80f
+        };
         _elapsed = elapsed;
         _triggered25 = triggered25;
         _triggered75 = triggered75;
-        _currentGenreIndex = currentGenreIndex;
-        _nextGenreTick = nextGenreTick;
         CurrentStage = stage;
         IsStarted = true;
         RandomEventManager.Instance.InitEvents();
         if (elapsed / developmentDuration >= 0.5f)
             RandomEventManager.Instance.SetTriggered50(true);
-        InitGenrePool();
-        _genreInterval = developmentDuration / _genrePool.Count;
-        DevelopmentPanelUI.Instance.UpdateMarketFit(GetCurrentPopularGenre()); // ← 추가
 
         plannerLeader = EmployeeManager.Instance.ownedEmployees.Find(e => e.id == plannerLeaderId);
         programmerLeader = EmployeeManager.Instance.ownedEmployees.Find(e => e.id == programmerLeaderId);
@@ -492,38 +480,6 @@ public class DevelopmentManager : MonoBehaviour
 
         UpdateInvestmentProgress();
     }
-    void InitGenrePool()
-    {
-        _genrePool.Clear();
-        foreach (ProjectGenre genre in System.Enum.GetValues(typeof(ProjectGenre)))
-            _genrePool.Add(genre);
-
-        _genrePool.Remove(ProjectSetupUI.SelectedGenre);
-        ShuffleGenrePool();
-        _genrePool.Insert(0, ProjectSetupUI.SelectedGenre);
-    }
-
-    void ShuffleGenrePool()
-    {
-        for (int i = _genrePool.Count - 1; i > 0; i--)
-        {
-            int rand = UnityEngine.Random.Range(0, i + 1);
-            (_genrePool[i], _genrePool[rand]) = (_genrePool[rand], _genrePool[i]);
-        }
-    }
-
-    public ProjectGenre GetCurrentPopularGenre()
-    {
-        System.Array genres = System.Enum.GetValues(typeof(ProjectGenre));
-        return (ProjectGenre)genres.GetValue(_currentGenreIndex % genres.Length);
-    }
-
-    public void RemoveGenreFromPool(ProjectGenre genre)
-    {
-        if (genre == ProjectSetupUI.SelectedGenre) return;
-        _genrePool.Remove(genre);
-        _genreInterval = developmentDuration / _genrePool.Count;
-    }
     public void ResetProject()
     {
         IsStarted = false;
@@ -543,10 +499,6 @@ public class DevelopmentManager : MonoBehaviour
         _tickIndexMap.Clear();
         _tickOrderMap.Clear();
 
-        _currentGenreIndex = 0;
-        _nextGenreTick = 0f;
-        _genrePool.Clear();
-
         if (_bugFixCoroutine != null)
         {
             StopCoroutine(_bugFixCoroutine);
@@ -554,7 +506,6 @@ public class DevelopmentManager : MonoBehaviour
         }
 
         DevelopmentPanelUI.Instance.ResetValues();
-        DevelopmentPanelUI.Instance.ResetMarketFit();
         DevelopmentTimerUI.Instance.ResetTimer();
         RandomEventManager.Instance.Reset();
 
@@ -575,6 +526,16 @@ public class DevelopmentManager : MonoBehaviour
         _isRunning = true;
         GameTimeManager.Instance.ForceStartTime();
     }
+    float GetElapsedMultiplier()
+    {
+        int recommended = ProjectData.GetRecommendedStaff(ProjectSetupUI.SelectedScale);
+        int actual = EmployeeManager.Instance.ownedEmployees.Count;
+        int diff = actual - recommended;
+        if (diff == 0) return 1f;
+        float factor = diff > 0 ? 1.1f : 0.9f;
+        return Mathf.Pow(factor, Mathf.Abs(diff));
+    }
+
     float GetSatisfactionMultiplier(EmployeeData employee)
     {
         var state = employee.GetSatisfactionState();

@@ -53,10 +53,15 @@ public class DevelopmentResultUI : MonoBehaviour
 
     string GetGenreString(ProjectGenre genre) => genre switch
     {
-        ProjectGenre.RPG => "RPG",
-        ProjectGenre.FPS => "FPS",
-        ProjectGenre.Simulation => "시뮬레이션",
-        ProjectGenre.RhythmGame => "리듬게임",
+        ProjectGenre.RPG              => "RPG",
+        ProjectGenre.FPS              => "FPS",
+        ProjectGenre.Arcade           => "아케이드",
+        ProjectGenre.HealingSimulation => "힐링시뮬레이션",
+        ProjectGenre.Horror           => "공포",
+        ProjectGenre.Idle             => "방치형",
+        ProjectGenre.RTS              => "실시간전략",
+        ProjectGenre.VisualNovel      => "미연시",
+        ProjectGenre.Sports           => "스포츠",
         _ => ""
     };
 
@@ -258,16 +263,12 @@ public class DevelopmentResultUI : MonoBehaviour
     }
     float CalcMarketFit()
     {
-        ProjectGenre popular = DevelopmentManager.Instance.GetCurrentPopularGenre();
-        ProjectGenre selected = ProjectSetupUI.SelectedGenre;
-
-        if (popular == selected)
-        {
-            Debug.Log($"장르 일치! +5점 ({selected})");
-            return 5f;
-        }
-
-        return 0f;
+        int popularity = GenrePopularityManager.Instance != null
+            ? GenrePopularityManager.Instance.GetPopularity(ProjectSetupUI.SelectedGenre)
+            : 1;
+        float bonus = popularity * 2f; // 인지도 1→+2, 2→+4, 3→+6
+        Debug.Log($"[인지도] {ProjectSetupUI.SelectedGenre} 인지도:{popularity} → +{bonus}점");
+        return bonus;
     }
 
     float CalcMarketingBonus()
