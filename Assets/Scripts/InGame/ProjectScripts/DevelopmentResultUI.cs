@@ -24,10 +24,10 @@ public class DevelopmentResultUI : MonoBehaviour
     public TextMeshProUGUI projectNameText;
     public TMP_InputField projectNameInput;
 
-    private float _lastMarketFit;
-    private float _lastMarketingBonus;
-    public float LastMarketFit => _lastMarketFit;
-    public float LastMarketingBonus => _lastMarketingBonus;
+    private float _lastPopularityMultiplier;
+    private float _lastMarketingMultiplier;
+    public float LastPopularityMultiplier => _lastPopularityMultiplier;
+    public float LastMarketingMultiplier => _lastMarketingMultiplier;
     public float LastPlanning => _lastPlanning;
     public float LastDevelop => _lastDevelop;
     public float LastArt => _lastArt;
@@ -155,9 +155,11 @@ public class DevelopmentResultUI : MonoBehaviour
                     float bRem = DevelopmentPanelUI.Instance.GetBug();
 
                     float rawScore = CalcRawScore(p, d, a, c, ProjectSetupUI.SelectedPlatform);
+                    float criticScore = rawScore * (1f - DevelopmentManager.Instance.BugPenalty)
+                                      + DevelopmentManager.Instance.BugEventBonus;
 
         // ── 1. 평론가 패널 ──
-    CriticReviewUI.Instance.Show(rawScore, () =>
+    CriticReviewUI.Instance.Show(criticScore, () =>
     {
         // ── 2. 출시 랜덤 이벤트 ──
         RandomEventManager.Instance.TryTriggerReleaseEvent(bonus =>
@@ -167,16 +169,17 @@ public class DevelopmentResultUI : MonoBehaviour
             {
                 MarketingUI.Instance.Show(() =>
                 {
-                    float lBug       = CalcLBug(bRem);
-                    float sAdj       = rawScore * (1f - lBug);
+                    float sAdj = rawScore * (1f - DevelopmentManager.Instance.BugPenalty)
+                               + DevelopmentManager.Instance.BugEventBonus;
 
                     sAdj += bonus;
                     sAdj  = Mathf.Max(0f, sAdj);
 
-                    float finalScore = CalcFinalScore(sAdj);
+                    // float finalScore = CalcFinalScore(sAdj); // 로그 압축 비활성화
+                    float finalScore = sAdj * CalcPopularityMultiplier() * CalcFatigueMultiplier();
                     float quality    = CalcQualityScore(finalScore);
 
-                    Debug.Log($"원천: {rawScore:F1} / 이벤트보정: {bonus} / S_adj: {sAdj:F1} / 최종: {finalScore:F1} / 품질: {quality:F1}");
+                    Debug.Log($"원천: {rawScore:F1} / 이벤트보정: {bonus} / S_adj: {sAdj:F1} / 인지도배율: {CalcPopularityMultiplier():F2} / 피로도배율: {CalcFatigueMultiplier():F2} / 최종: {finalScore:F1} / 품질: {quality:F1}");
 
                     ProjectSaveManager.Instance.SetQualityScore(quality, ProjectSetupUI.SelectedScale);
                     DevelopmentManager.Instance.CurrentStage = ProjectStage.Marketing;
@@ -201,44 +204,22 @@ public class DevelopmentResultUI : MonoBehaviour
         switch (platform)
         {
             case ProjectPlatform.Mobile:
-                return (1.5f * n * p) + (n * d) + (n * a) + (1.5f * n * c);
+                return (1.5f * n * p) + (n * d) + (n * a) + (n * c);
 
             case ProjectPlatform.PC:
-                return (n * p) + (1.5f * n * d) + (n * a) + (1.5f * n * c);
+                return (n * p) + (1.5f * n * d) + (n * a) + (n * c);
 
             case ProjectPlatform.Nintendo:
-                return (n * p) + (n * d) + (1.5f * n * a) + (1.5f * n * c);
+                return (n * p) + (n * d) + (1.5f * n * a) + (n * c);
 
             case ProjectPlatform.Console:
-                return (6f * Mathf.Min(p, Mathf.Min(d, Mathf.Min(a, c)))) + (1.5f * n * c);
+                return (5f * Mathf.Min(p, Mathf.Min(d, a))) + (n * c);
 
             default:
                 return 0f;
         }
     }
-    float CalcLBug(float bRem)
-    {
-        // 정규분포로 B_found 계산 (평균 = bRem/2, 표준편차 = bRem/4)
-        float mean = bRem / 2f;
-        float stdDev = bRem / 4f;
-        float bFound = Mathf.Clamp(NormalRandom(mean, stdDev), 0f, bRem);
 
-        // L_bug = 1 - 1.03^(-B_found)
-        float lBug = 1f - Mathf.Pow(1.03f, -bFound);
-
-        Debug.Log($"B_rem: {bRem:F1} / B_found: {bFound:F1} / L_bug: {lBug:F2}");
-
-        return Mathf.Clamp01(lBug);
-    }
-
-    // 정규분포 난수 생성 (Box-Muller)
-    float NormalRandom(float mean, float stdDev)
-    {
-        float u1 = 1f - UnityEngine.Random.value;
-        float u2 = 1f - UnityEngine.Random.value;
-        float z = Mathf.Sqrt(-2f * Mathf.Log(u1)) * Mathf.Cos(2f * Mathf.PI * u2);
-        return mean + stdDev * z;
-    }
     float CalcFinalScore(float sAdj)
     {
         double maxExpected = 5000.0;
@@ -248,64 +229,58 @@ public class DevelopmentResultUI : MonoBehaviour
     }
     float CalcQualityScore(float finalScore)
     {
-        float quality = finalScore;
+        _lastPopularityMultiplier = CalcPopularityMultiplier();
+        _lastMarketingMultiplier  = CalcMarketingMultiplier();
 
-        _lastMarketFit = CalcMarketFit();
-        _lastMarketingBonus = CalcMarketingBonus();
+        float quality = finalScore * _lastMarketingMultiplier;
 
-        quality += _lastMarketFit;
-        quality += _lastMarketingBonus;
-
-        Debug.Log($"MarketFit: {_lastMarketFit:F1} / MarketingBonus: {_lastMarketingBonus:F1}");
+        Debug.Log($"인지도배율: {_lastPopularityMultiplier:F2} / 마케팅배율: {_lastMarketingMultiplier:F2} / 최종품질: {quality:F1}");
 
         // TODO: 테크트리 점수
-        return Mathf.Clamp(quality, 0f, 100f);
-    }
-    float CalcMarketFit()
-    {
-        int popularity = GenrePopularityManager.Instance != null
-            ? GenrePopularityManager.Instance.GetPopularity(ProjectSetupUI.SelectedGenre)
-            : 1;
-        float bonus = popularity * 2f; // 인지도 1→+2, 2→+4, 3→+6
-        Debug.Log($"[인지도] {ProjectSetupUI.SelectedGenre} 인지도:{popularity} → +{bonus}점");
-        return bonus;
+        return quality;
     }
 
-    float CalcMarketingBonus()
+    float CalcPopularityMultiplier()
     {
-        // 총 연봉
-        int totalSalary = 0;
-        foreach (var employee in EmployeeManager.Instance.ownedEmployees)
-            totalSalary += employee.salary;
-
-        if (totalSalary <= 0) return 0f;
-
-        int totalCost = MarketingUI.Instance.GetTotalCost();
-        float ratio = (float)totalCost / totalSalary;
-
-        // ① 10% 미만 → -3점
-        if (ratio < 0.1f)
+        return ProjectSetupUI.SelectedGenrePopularity switch
         {
-            Debug.Log($"마케팅 부족 패널티 / ratio: {ratio:F2}");
-            return -3f;
-        }
+            1 => 0.8f,
+            2 => 1.0f,
+            3 => 1.3f,
+            _ => 1.0f
+        };
+    }
 
-        // ② 10% ~ 20% → 비례 상승 (0 ~ +5점)
-        if (ratio < 0.2f)
+    float CalcFatigueMultiplier()
+    {
+        int fatigue = ProjectSetupUI.SelectedGenreFatigue;
+        return fatigue switch
         {
-            float linearRatio = (ratio - 0.1f) / (0.2f - 0.1f);
-            float score = linearRatio * 5f;
-            Debug.Log($"마케팅 비례 상승 / ratio: {ratio:F2} / score: {score:F1}");
-            return score;
-        }
+            0 => 1.0f,
+            1 => 0.9f,
+            2 => 0.8f,
+            3 => 0.7f,
+            _ => 0.7f
+        };
+    }
 
-        // ③ 20% 이상 → 로그적 상승 (+5 ~ +10점)
-        float logScore = 5f + 5f * (float)(
-            System.Math.Log(1 + (ratio - 0.2f) * 10) /
-            System.Math.Log(1 + 0.8f * 10)
-        );
+    float CalcMarketingMultiplier()
+    {
+        int devCost = ProjectData.GetCost(ProjectSetupUI.SelectedScale);
+        if (devCost <= 0) return 1.0f;
 
-        Debug.Log($"마케팅 로그 상승 / ratio: {ratio:F2} / score: {logScore:F1}");
-        return Mathf.Min(logScore, 10f);
+        int marketingCost = MarketingUI.Instance.GetTotalCost();
+        float P = (float)marketingCost / devCost * 100f; // 퍼센트 단위
+
+        float M;
+        if (P < 30f)
+            M = 0.8f + 0.02f * (P - 20f);
+        else if (P < 40f)
+            M = 1.0f + 0.02f * (P - 30f);
+        else
+            M = Mathf.Min(1.3f, 1.2f + 0.1f * Mathf.Log(1f + (P - 40f) / 10f));
+
+        Debug.Log($"[마케팅] 개발금: {devCost} / 마케팅비: {marketingCost} / P: {P:F1}% / M: {M:F3}");
+        return M;
     }
 }

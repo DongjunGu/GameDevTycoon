@@ -29,7 +29,7 @@ public class LeaderScoreUI : MonoBehaviour
         Instance = this;
     }
 
-    public void Show(EmployeeData employee, LeaderType type, int n, float r,
+    public void Show(EmployeeData employee, LeaderType type, float[] scores,
                      float tickDelay, System.Action onComplete)
     {
         _onComplete = onComplete;
@@ -49,17 +49,17 @@ public class LeaderScoreUI : MonoBehaviour
         confirmButton.interactable = false;
         leaderscorePanel.SetActive(true);
 
-        StartCoroutine(ApplyScoreCoroutine(type, n, r, tickDelay));
+        StartCoroutine(ApplyScoreCoroutine(type, scores, tickDelay));
     }
 
-    IEnumerator ApplyScoreCoroutine(LeaderType type, int n, float r, float tickDelay)
+    IEnumerator ApplyScoreCoroutine(LeaderType type, float[] scores, float tickDelay)
     {
         yield return new WaitForSeconds(1.5f);
-        for (int i = 0; i < n; i++)
+        for (int i = 0; i < scores.Length; i++)
         {
             tickCountText.text = $"{i + 1}회째";
 
-            int target = Mathf.RoundToInt(r);
+            int target = Mathf.RoundToInt(scores[i]);
             int current = 0;
 
             // 0.1초마다 1씩 증가하면서 target까지
@@ -86,7 +86,7 @@ public class LeaderScoreUI : MonoBehaviour
             }
 
             // 마지막 tick이 아니면 1.5초 대기
-            if (i < n - 1)
+            if (i < scores.Length - 1)
                 yield return new WaitForSeconds(1.5f);
         }
 

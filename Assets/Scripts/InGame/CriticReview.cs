@@ -141,13 +141,12 @@ public class CriticReviewUI : MonoBehaviour
 
     IEnumerator RevealCritics(float rawScore)
     {
-        int baseScore = CalcCriticScore(rawScore);
-        int[] scores  = new int[criticSlots.Length];
+        int[] scores = new int[criticSlots.Length];
 
         for (int i = 0; i < criticSlots.Length; i++)
         {
-            int variation = UnityEngine.Random.Range(-1, 2); // -1, 0, +1
-            scores[i] = Mathf.Clamp(baseScore + variation, 1, 10);
+            int variation = UnityEngine.Random.Range(-3, 4); // -3 ~ +3
+            scores[i] = Mathf.Clamp(CalcCriticScore(rawScore) + variation, 0, 100);
         }
 
         int total = 0;
@@ -166,7 +165,7 @@ public class CriticReviewUI : MonoBehaviour
         LastCriticTotal = total;
         if (totalScoreObject != null && totalScoreText != null)
         {
-            totalScoreText.text = $"총점: {total}";
+            totalScoreText.text = $"총점: {total} / 400";
             totalScoreObject.SetActive(true);
         }
 
@@ -174,23 +173,16 @@ public class CriticReviewUI : MonoBehaviour
         confirmButton.gameObject.SetActive(true);
     }
 
-int CalcCriticScore(float rawScore)
+int CalcCriticScore(float x)
 {
-    if (rawScore >= 3000) return 10;
-    if (rawScore >= 2000) return 9;
-    if (rawScore >= 1200) return 8;
-    if (rawScore >= 800)  return 7;
-    if (rawScore >= 500)  return 6;
-    if (rawScore >= 300)  return 5;
-    if (rawScore >= 150)  return 4;
-    if (rawScore >= 80)   return 3;
-    if (rawScore >= 40)   return 2;
-    return 1;
+    if (x <= 25f) return 0;
+    float score = 26f * Mathf.Log(x - 25f) - 112f;
+    return Mathf.Clamp(Mathf.RoundToInt(score), 0, 100);
 }
 
     string GetComment(int score, int criticIndex)
     {
-        int idx = Mathf.Clamp(score - 1, 0, Comments.Length - 1);
+        int idx = Mathf.Clamp(score / 10, 0, Comments.Length - 1);
         var pool = Comments[idx];
         return pool[criticIndex % pool.Length];
     }

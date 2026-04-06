@@ -30,6 +30,8 @@ public class ProjectSetupUI : MonoBehaviour
     public static ProjectScale SelectedScale { get; set; }
     public static ProjectGenre SelectedGenre { get; set; }
     public static ProjectPlatform SelectedPlatform { get; set; }
+    public static int SelectedGenrePopularity { get; set; } = 1;
+    public static int SelectedGenreFatigue { get; set; } = 0;
 
     // ── 내부 상태 ─────────────────────────────
     private ProjectData _projectData = new();
@@ -45,6 +47,14 @@ public class ProjectSetupUI : MonoBehaviour
     void Start()
     {
         ShowPanel(startPanel);
+        if (GenrePopularityManager.Instance != null)
+            GenrePopularityManager.Instance.OnPopularityChanged += UpdateGenreButtonLabels;
+    }
+
+    void OnDestroy()
+    {
+        if (GenrePopularityManager.Instance != null)
+            GenrePopularityManager.Instance.OnPopularityChanged -= UpdateGenreButtonLabels;
     }
 
     // ── 패널 전환 ─────────────────────────────
@@ -185,6 +195,10 @@ public class ProjectSetupUI : MonoBehaviour
     public void OnClickGenre(string genre)
     {
         _projectData.genre = System.Enum.Parse<ProjectGenre>(genre);
+        SelectedGenrePopularity = GenrePopularityManager.Instance != null
+            ? GenrePopularityManager.Instance.GetPopularity(_projectData.genre) : 1;
+        SelectedGenreFatigue = GenreFatigueManager.Instance != null
+            ? GenreFatigueManager.Instance.GetFatigue(_projectData.genre) : 0;
 
         if (_isEditing)
         {

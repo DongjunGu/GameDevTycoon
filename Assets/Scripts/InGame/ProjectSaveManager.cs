@@ -42,6 +42,8 @@ public class ProjectSaveManager : MonoBehaviour
     private float _loadedAccumCreativity;
     private float _loadedQualityScore;
     private ProjectScale _loadedSalesScale;
+    private int _loadedGenrePopularity;
+    private int _loadedGenreFatigue;
     private bool _loadedNetworkIssueActive;
     private float _loadedNetworkIssueEndProgress;
     private bool _loadedInvestmentAccepted;
@@ -94,6 +96,8 @@ public class ProjectSaveManager : MonoBehaviour
         param.Add("savedArt", _savedArt);
         param.Add("savedCreativity", _savedCreativity);
         param.Add("savedBug", _savedBug);
+        param.Add("genrePopularity", ProjectSetupUI.SelectedGenrePopularity);
+        param.Add("genreFatigue", ProjectSetupUI.SelectedGenreFatigue);
         param.Add("networkIssueActive", RandomEventManager.Instance.NetworkIssueActive);
         param.Add("networkIssueEndProgress", RandomEventManager.Instance.NetworkIssueEndProgress);
         param.Add("investmentAccepted", RandomEventManager.Instance.InvestmentAccepted);
@@ -176,6 +180,8 @@ public class ProjectSaveManager : MonoBehaviour
             _loadedAccumCreativity = SafeFloat(row, "accumCreativity", 0f);
             _loadedQualityScore = SafeFloat(row, "qualityScore", 0f);
             _loadedSalesScale = (ProjectScale)SafeInt(row, "salesScale", 0);
+            _loadedGenrePopularity = SafeInt(row, "genrePopularity", 1);
+            _loadedGenreFatigue = SafeInt(row, "genreFatigue", 0);
             _loadedProjectName = SafeString(row, "projectName", "프로젝트명");
             _loadedPlanning = SafeFloat(row, "savedPlanning", 0f);
             _loadedDevelop = SafeFloat(row, "savedDevelop", 0f);
@@ -203,6 +209,8 @@ public class ProjectSaveManager : MonoBehaviour
         ProjectSetupUI.SelectedScale = _loadedScale;
         ProjectSetupUI.SelectedGenre = _loadedGenre;
         ProjectSetupUI.SelectedPlatform = _loadedPlatform;
+        ProjectSetupUI.SelectedGenrePopularity = _loadedGenrePopularity;
+        ProjectSetupUI.SelectedGenreFatigue = _loadedGenreFatigue;
 
         // ── RestoreState 먼저 (SetValues 호출됨) ──
         DevelopmentManager.Instance.RestoreState(

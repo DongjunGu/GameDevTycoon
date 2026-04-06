@@ -5,6 +5,8 @@ public class GenrePopularityManager : MonoBehaviour
 {
     public static GenrePopularityManager Instance { get; private set; }
 
+    public event System.Action OnPopularityChanged;
+
     private Dictionary<ProjectGenre, int> _popularity = new();
     private int _weekCounter = 0;
 
@@ -42,6 +44,7 @@ public class GenrePopularityManager : MonoBehaviour
         foreach (ProjectGenre g in System.Enum.GetValues(typeof(ProjectGenre)))
             _popularity[g] = UnityEngine.Random.Range(1, 4); // 1~3
         Debug.Log("[인기도] 갱신됨");
+        OnPopularityChanged?.Invoke();
     }
 
     public int GetPopularity(ProjectGenre genre)
