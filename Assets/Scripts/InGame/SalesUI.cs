@@ -19,12 +19,7 @@ public class SalesUI : MonoBehaviour
     public TextMeshProUGUI totalRevenueText;
     public TextMeshProUGUI totalUnitsText;
     public TextMeshProUGUI qualityScoreText;
-    [Header("Chart Settings")]
-    public int barCount = 8;
-
-    [Header("Animation")]
-    public float barAnimDuration = 0.4f;   // 바 올라오는 속도
-    public float barSpawnDelay = 0.1f;     // 다음 바 생성 대기 시간
+    private int barCount;
     private ProjectScale _cachedScale;
     private ProjectGenre _cachedGenre;
     private ProjectPlatform _cachedPlatform;
@@ -56,7 +51,7 @@ public class SalesUI : MonoBehaviour
         _cachedArt = DevelopmentResultUI.Instance.LastArt;
         _cachedCreativity = DevelopmentResultUI.Instance.LastCreativity;
         _cachedBug = DevelopmentResultUI.Instance.LastBug;
-        GameTimeManager.Instance.StartTime();
+        GameTimeManager.Instance.ForceStartTime();
         ShowInternal(qualityScore, scale);
     }
     public void ShowWithProjectName(
@@ -73,7 +68,7 @@ public class SalesUI : MonoBehaviour
         _cachedArt = art;
         _cachedCreativity = creativity;
         _cachedBug = bug;
-        GameTimeManager.Instance.StartTime();
+        GameTimeManager.Instance.ForceStartTime();
         ShowInternal(qualityScore, scale);
     }
     void ShowInternal(float qualityScore, ProjectScale scale)
@@ -90,9 +85,20 @@ public class SalesUI : MonoBehaviour
 
         qualityScoreText.text = $"품질: {qualityScore:F1}점";
 
-        int totalUnits = Mathf.RoundToInt(qualityScore * UnityEngine.Random.Range(130, 161)); //추후 팬덤영향
+        int scaleMultiplier = scale switch
+        {
+            ProjectScale.Small  => 1,
+            ProjectScale.Medium => 3,
+            ProjectScale.Large  => 5,
+            _ => 1
+        };
+        float rand = UnityEngine.Random.Range(0.9f, 1.1f);
+        int totalUnits = Mathf.RoundToInt(
+            (5000f + 200f * scaleMultiplier * Mathf.Pow(qualityScore / 100f, 2f)) * rand
+        );
 
         float[] distribution = CalcDistribution(scale);
+        barCount = distribution.Length;
         int[] unitPerPeriod = new int[barCount];
         for (int i = 0; i < barCount; i++)
             unitPerPeriod[i] = Mathf.RoundToInt(totalUnits * distribution[i]);
@@ -129,6 +135,14 @@ public class SalesUI : MonoBehaviour
             int startUnits = cumulativeUnits;
             int endUnits = cumulativeUnits + unitPerPeriod[i];
 
+            float weekDuration = _cachedScale switch
+            {
+                ProjectScale.Small  => 5f,
+                ProjectScale.Medium => 4.2f,
+                ProjectScale.Large  => 3.9f,
+                _ => 5f
+            };
+            float barAnimDuration = weekDuration * 0.7f;
             float elapsed = 0f;
             while (elapsed < barAnimDuration)
             {
@@ -150,15 +164,15 @@ public class SalesUI : MonoBehaviour
 
             cumulativeUnits = endUnits;
 
-            yield return new WaitForSeconds(barSpawnDelay);
+            yield return new WaitForSeconds(weekDuration * 0.3f);
         }
         QuestManager.Instance.UpdateProgress(QuestType.TotalSales, cumulativeUnits);
         yield return new WaitForSeconds(0.5f);
 
         AlertUI.Instance.Show("피드백 시간!", () =>
         {
-            float cachedMarketFit = DevelopmentResultUI.Instance.LastMarketFit;
-            float cachedMarketingBonus = DevelopmentResultUI.Instance.LastMarketingBonus;
+            float cachedMarketFit = DevelopmentResultUI.Instance.LastPopularityMultiplier;
+            float cachedMarketingBonus = DevelopmentResultUI.Instance.LastMarketingMultiplier;
             float cachedBug = DevelopmentResultUI.Instance.LastBug;
             float cachedReleaseBonus   = DevelopmentResultUI.Instance.LastReleaseEventBonus;
             salesPanel.SetActive(false);
@@ -207,28 +221,16 @@ public class SalesUI : MonoBehaviour
         });
     }
 
-    // 규모별 감소 곡선
+    // 규모별 주차 분배
     float[] CalcDistribution(ProjectScale scale)
     {
-        float decayRate = scale switch
+        return scale switch
         {
-            ProjectScale.Small => 0.55f, // 급격한 하락
-            ProjectScale.Medium => 0.70f, // 중간
-            ProjectScale.Large => 0.82f, // 완만한 하락
-            _ => 0.65f
+            ProjectScale.Small  => new float[] { 0.50f, 0.30f, 0.20f },
+            ProjectScale.Medium => new float[] { 0.35f, 0.25f, 0.15f, 0.12f, 0.08f, 0.05f },
+            ProjectScale.Large  => new float[] { 0.24f, 0.18f, 0.15f, 0.12f, 0.10f, 0.08f, 0.06f, 0.04f, 0.03f },
+            _ => new float[] { 0.50f, 0.30f, 0.20f }
         };
-
-        float[] weights = new float[barCount];
-        weights[0] = 1f;
-        for (int i = 1; i < barCount; i++)
-            weights[i] = weights[i - 1] * decayRate;
-
-        // 합계로 정규화
-        float sum = 0f;
-        foreach (var w in weights) sum += w;
-        for (int i = 0; i < barCount; i++) weights[i] /= sum;
-
-        return weights;
     }
 
     public void OnClickClose()

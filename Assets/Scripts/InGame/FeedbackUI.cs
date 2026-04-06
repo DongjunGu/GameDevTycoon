@@ -18,18 +18,19 @@ public class FeedbackUI : MonoBehaviour
         feedbackPanel.SetActive(false);
     }
 
-public void Show(float marketFit, float marketingBonus, float bug = 0f, float releaseEventBonus = 0f)
+public void Show(float popularityMultiplier, float marketingMultiplier, float bug = 0f, float releaseEventBonus = 0f)
 {
     var sb = new System.Text.StringBuilder();
 
-    if (marketFit <= 0f)
+    if (popularityMultiplier < 1.0f)
         sb.AppendLine("장르의 인기를 확인하셨나요?");
 
-    if (marketingBonus < 0f)
+    if (marketingMultiplier < 1.0f)
         sb.AppendLine("마케팅 정말 열심히 하셨나요?");
 
     if (bug > 0f)
         sb.AppendLine("디버깅은 제대로 하셨나요?");
+
     if (releaseEventBonus < 0f)
         sb.AppendLine("테크트리에서 문제가 발생할 확률을 낮춰보세요.");
 
