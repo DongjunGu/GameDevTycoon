@@ -17,7 +17,10 @@
       "Bash(git push:*)",
       "Bash(gh run:*)",
       "Bash(C:/Program Files/Unity/Hub/Editor/6000.3.8f1/Editor/Unity.exe:*)",
-      "Bash(ls /c/Users/PC/*.alf)"
+      "Bash(ls /c/Users/PC/*.alf)",
+      "Bash(sed -i '37s/m_LocalPosition: {x: 0, y: 0, z: 0}/m_LocalPosition: {x: 0, y: 0, z: -0.1}/' \"C:\\\\Users\\\\PC\\\\Documents\\\\GitHub\\\\GameDevTycoon\\\\GameDevTycoon\\\\Assets\\\\Resources\\\\Characters\\\\portrait_emp_01.prefab\")",
+      "Bash(sed -i '37s/m_LocalPosition: {x: 0, y: 0, z: 0}/m_LocalPosition: {x: 0, y: 0, z: -0.1}/' \"C:\\\\Users\\\\PC\\\\Documents\\\\GitHub\\\\GameDevTycoon\\\\GameDevTycoon\\\\Assets\\\\Resources\\\\Characters\\\\portrait_emp_02.prefab\")",
+      "Bash(sed -i '37s/m_LocalPosition: {x: 0, y: 0, z: 0}/m_LocalPosition: {x: 0, y: 0, z: -0.1}/' \"C:\\\\Users\\\\PC\\\\Documents\\\\GitHub\\\\GameDevTycoon\\\\GameDevTycoon\\\\Assets\\\\Resources\\\\Characters\\\\portrait_secretary.prefab\")"
     ]
   }
 }
