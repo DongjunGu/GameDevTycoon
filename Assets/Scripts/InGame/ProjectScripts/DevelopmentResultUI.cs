@@ -33,9 +33,6 @@ public class DevelopmentResultUI : MonoBehaviour
     public float LastArt => _lastArt;
     public float LastCreativity => _lastCreativity;
     public float LastBug => _lastBug;
-    private float _lastReleaseEventBonus;
-    public float LastReleaseEventBonus => _lastReleaseEventBonus;
-
     private float _lastPlanning;
     private float _lastDevelop;
     private float _lastArt;
@@ -155,42 +152,52 @@ public class DevelopmentResultUI : MonoBehaviour
                     float bRem = DevelopmentPanelUI.Instance.GetBug();
 
                     float rawScore = CalcRawScore(p, d, a, c, ProjectSetupUI.SelectedPlatform);
-                    float criticScore = rawScore * (1f - DevelopmentManager.Instance.BugPenalty)
-                                      + DevelopmentManager.Instance.BugEventBonus;
+
+                    // 케이스 감점 (중형, 대작) - criticScore/sAdj 공통 적용
+                    float casePenalty = 0f;
+                    if (ProjectSetupUI.SelectedScale == ProjectScale.Medium || ProjectSetupUI.SelectedScale == ProjectScale.Large)
+                    {
+                        float maxStat = Mathf.Max(p, Mathf.Max(d, a));
+                        float minStat = Mathf.Min(p, Mathf.Min(d, a));
+                        float statDiff = maxStat - minStat;
+
+                        if (statDiff > maxStat * 0.4f)
+                            casePenalty = UnityEngine.Random.Range(0.04f, 0.08f);
+                        else if (statDiff > maxStat * 0.2f)
+                            casePenalty = UnityEngine.Random.Range(0.02f, 0.04f);
+                    }
+
+                    float criticScore = (rawScore * (1f - DevelopmentManager.Instance.BugPenalty)
+                                      + DevelopmentManager.Instance.BugEventBonus) * (1f - casePenalty);
 
         // ── 1. 평론가 패널 ──
     CriticReviewUI.Instance.Show(criticScore, () =>
     {
-        // ── 2. 출시 랜덤 이벤트 ──
-        RandomEventManager.Instance.TryTriggerReleaseEvent(bonus =>
+        // ── 2. 마케팅 ──
+        AlertUI.Instance.Show("마케팅을 시작합니다.", () =>
         {
-            // ── 3. 마케팅 ──
-            AlertUI.Instance.Show("마케팅을 시작합니다.", () =>
+            MarketingUI.Instance.Show(() =>
             {
-                MarketingUI.Instance.Show(() =>
+                float sAdj = (rawScore * (1f - DevelopmentManager.Instance.BugPenalty)
+                           + DevelopmentManager.Instance.BugEventBonus) * (1f - casePenalty);
+
+                sAdj = Mathf.Max(0f, sAdj);
+
+                // float finalScore = CalcFinalScore(sAdj); // 로그 압축 비활성화
+                float finalScore = sAdj * CalcPopularityMultiplier() * CalcFatigueMultiplier();
+                float quality    = CalcQualityScore(finalScore);
+
+                Debug.Log($"원천: {rawScore:F1} / 케이스감점: {casePenalty * 100f:F1}% / S_adj: {sAdj:F1} / 인지도배율: {CalcPopularityMultiplier():F2} / 피로도배율: {CalcFatigueMultiplier():F2} / 최종: {finalScore:F1} / 품질: {quality:F1}");
+
+                ProjectSaveManager.Instance.SetQualityScore(quality, ProjectSetupUI.SelectedScale);
+                DevelopmentManager.Instance.CurrentStage = ProjectStage.Marketing;
+                MoneyManager.Instance.SaveMoney();
+                ProjectSaveManager.Instance.SaveProject();
+                GameTimeManager.Instance.SaveGameTime();
+
+                AlertUI.Instance.Show("판매 시작!", () =>
                 {
-                    float sAdj = rawScore * (1f - DevelopmentManager.Instance.BugPenalty)
-                               + DevelopmentManager.Instance.BugEventBonus;
-
-                    sAdj += bonus;
-                    sAdj  = Mathf.Max(0f, sAdj);
-
-                    // float finalScore = CalcFinalScore(sAdj); // 로그 압축 비활성화
-                    float finalScore = sAdj * CalcPopularityMultiplier() * CalcFatigueMultiplier();
-                    float quality    = CalcQualityScore(finalScore);
-
-                    Debug.Log($"원천: {rawScore:F1} / 이벤트보정: {bonus} / S_adj: {sAdj:F1} / 인지도배율: {CalcPopularityMultiplier():F2} / 피로도배율: {CalcFatigueMultiplier():F2} / 최종: {finalScore:F1} / 품질: {quality:F1}");
-
-                    ProjectSaveManager.Instance.SetQualityScore(quality, ProjectSetupUI.SelectedScale);
-                    DevelopmentManager.Instance.CurrentStage = ProjectStage.Marketing;
-                    MoneyManager.Instance.SaveMoney();
-                    ProjectSaveManager.Instance.SaveProject();
-                    GameTimeManager.Instance.SaveGameTime();
-
-                    AlertUI.Instance.Show("판매 시작!", () =>
-                    {
-                        SalesUI.Instance.Show(quality, ProjectSetupUI.SelectedScale);
-                    });
+                    SalesUI.Instance.Show(quality, ProjectSetupUI.SelectedScale);
                 });
             });
         });

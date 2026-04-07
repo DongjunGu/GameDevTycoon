@@ -9,7 +9,6 @@ public enum RandomEventType
     ArtBoost,       // 아트         아트수치    +50
     CreativityBoost,// 창의성       창의성수치  +30
     Investment,
-    NetworkIssue,
     EmployeeScout,
     BetaTestIssue,
     

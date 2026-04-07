@@ -18,7 +18,7 @@ public class FeedbackUI : MonoBehaviour
         feedbackPanel.SetActive(false);
     }
 
-public void Show(float popularityMultiplier, float marketingMultiplier, float bug = 0f, float releaseEventBonus = 0f)
+public void Show(float popularityMultiplier, float marketingMultiplier, float bug = 0f)
 {
     var sb = new System.Text.StringBuilder();
 
@@ -30,9 +30,6 @@ public void Show(float popularityMultiplier, float marketingMultiplier, float bu
 
     if (bug > 0f)
         sb.AppendLine("디버깅은 제대로 하셨나요?");
-
-    if (releaseEventBonus < 0f)
-        sb.AppendLine("테크트리에서 문제가 발생할 확률을 낮춰보세요.");
 
     if (sb.Length == 0)
         sb.AppendLine("완벽한 출시였습니다!");

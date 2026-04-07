@@ -7,7 +7,6 @@ public class RandomEventManager : MonoBehaviour
 
     private bool _triggered50 = false;
     private List<RandomEventData> _eventPool = new();
-    private List<RandomEventData> _releaseEventPool = new();
     private List<RandomEventData> _conditionEventPool = new();
 
 
@@ -17,12 +16,6 @@ public class RandomEventManager : MonoBehaviour
     [Range(0f, 1f)] public float teamDinnerChance = 0.5f;
     [Range(0f, 1f)] public float eventDetailTriggerChance = 0.5f;
 
-    [Header("출시 이벤트")]
-    [Range(0f, 1f)] public float releaseEventTriggerChance = 0.5f;
-    [Range(0f, 1f)] public float competitorChance = 0.5f;
-    [Range(0f, 1f)] public float perfectTimingChance = 0.5f;
-    [Range(0f, 1f)] public float algorithmChance = 0.3f;
-
     [Header("조건 이벤트")]
     [Range(0f, 1f)] public float employeeRunChance = 0.5f;
     [Range(0f, 1f)] public float employeeFightChance = 0.5f;
@@ -31,24 +24,12 @@ public class RandomEventManager : MonoBehaviour
     [Range(0f, 1f)] public float investmentTriggerChance = 0.5f;
     public float investmentThreshold = 80f;  // 달성 기준 수치
     public int investmentReward = 1000; // 성공/실패 금액
-    [Header("네트워크 이슈")]
-    [Range(0f, 1f)] public float networkIssueTriggerChance = 0.5f; // 발동 확률
-    [Range(0f, 1f)] public float networkSpeedMultiplier = 0.8f; // 기본 -20%
-    [Range(0f, 1f)] public float networkIssueDuration = 0.1f;
 
     // ── 상태 프로퍼티 (RandomEvents_Dev에서 접근) ──
     public bool InvestmentAccepted { get; set; } = false;
     public string InvestmentStat { get; set; } = "";
     public string InvestmentStatName { get; set; } = "";
-    public bool NetworkIssueActive { get; set; } = false;
-    private float _networkIssueEndProgress = -1f;
-    public float NetworkSpeedMultiplier => NetworkIssueActive ? networkSpeedMultiplier : 1f;
     public void SetTriggered50(bool value) => _triggered50 = value;
-    public float NetworkIssueEndProgress
-    {
-        get => _networkIssueEndProgress;
-        set => _networkIssueEndProgress = value;
-    }
 
 
     void Awake()
@@ -61,23 +42,19 @@ public class RandomEventManager : MonoBehaviour
     public void InitEvents()
     {
         _triggered50 = false;
-        NetworkIssueActive = false;
         InvestmentAccepted = false;
         InvestmentStat = "";
         InvestmentStatName = "";
         _eventPool.Clear();
-        _releaseEventPool.Clear();
         _conditionEventPool.Clear();
 
         RandomEvents_Dev.Register(_eventPool, this);
-        RandomEvents_Release.Register(_releaseEventPool, this);
         RandomEvents_Condition.Register(_conditionEventPool, this);
     }
 
     public void Reset()
     {
         _triggered50 = false;
-        NetworkIssueActive = false;
         InvestmentAccepted = false;
         InvestmentStat = "";
         InvestmentStatName = "";
@@ -104,66 +81,6 @@ public class RandomEventManager : MonoBehaviour
 
         DevelopmentManager.Instance.PauseForEvent();
         RandomEventUI.Instance.Show(evt);
-    }
-
-    public void TryTriggerReleaseEvent(System.Action<float> onComplete)
-    {
-        if (UnityEngine.Random.value > releaseEventTriggerChance)
-        {
-            onComplete?.Invoke(0f);
-            return;
-        }
-
-        var evt = _releaseEventPool[UnityEngine.Random.Range(0, _releaseEventPool.Count)];
-        if (UnityEngine.Random.value > evt.triggerChance)
-        {
-            onComplete?.Invoke(0f);
-            return;
-        }
-
-        AlertUI.Instance.Show(
-            $"{evt.title}\n{evt.description}",
-            () => onComplete?.Invoke(evt.scoreBonus)
-        );
-    }
-
-    public void TryTriggerNetworkIssue(float currentProgress, System.Action onComplete)
-    {
-        if (UnityEngine.Random.value > networkIssueTriggerChance)
-        {
-            Debug.Log("[네트워크이슈] 미발동");
-            onComplete?.Invoke();
-            return;
-        }
-
-        AlertUI.Instance.Show(
-            "네트워크 장애!\n직원이 커피를 쏟아 네트워크가 박살났습니다!\n개발 효율이 20% 감소합니다.",
-            () =>
-            {
-                ApplyNetworkIssue(currentProgress);
-                onComplete?.Invoke();
-            }
-        );
-    }
-    public void ApplyNetworkIssue(float currentProgress)
-    {
-        NetworkIssueActive = true;
-        _networkIssueEndProgress = currentProgress + networkIssueDuration;
-        Debug.Log($"[네트워크이슈] 발동 / 종료 진행도: {_networkIssueEndProgress:F2}");
-    }
-    public void ResetNetworkIssue()
-    {
-        NetworkIssueActive = false;
-        _networkIssueEndProgress = -1f;
-    }
-    public void CheckNetworkIssueExpiry(float currentProgress)
-    {
-        if (!NetworkIssueActive) return;
-        if (currentProgress >= _networkIssueEndProgress)
-        {
-            NetworkIssueActive = false;
-            Debug.Log($"[네트워크이슈] 종료 / 현재 진행도: {currentProgress:F2}");
-        }
     }
 
     public void TriggerInvestmentEvent(System.Action onComplete)

@@ -7,7 +7,8 @@ public class OfficeCharacter : MonoBehaviour
     public WorkStation assignedDesk;
     public Transform statPopupAnchor; // 머리 위 위치 (Inspector에서 설정)
 
-    public bool IsPatrolling { get; private set; }
+    public CharacterState State { get; private set; } = CharacterState.Working;
+    public bool IsPatrolling => State == CharacterState.Patrolling;
 
     private CharacterController _controller;
     private CharacterMover _mover;
@@ -55,19 +56,19 @@ public class OfficeCharacter : MonoBehaviour
     // 개발 완료 등 외부 이벤트로 즉시 복귀
     public void CancelPatrol()
     {
-        if (!IsPatrolling) return;
+        if (State != CharacterState.Patrolling) return;
         if (_patrolCoroutine != null)
         {
             StopCoroutine(_patrolCoroutine);
             _patrolCoroutine = null;
         }
-        IsPatrolling = false;
+        State = CharacterState.Working;
         GoToDesk();
     }
 
     IEnumerator PatrolRoutine(Transform target, float stayDuration)
     {
-        IsPatrolling = true;
+        State = CharacterState.Patrolling;
 
         // 1. patrol 지점으로 이동
         Vector3 targetPos = new Vector3(target.position.x, target.position.y, 0);
@@ -92,13 +93,13 @@ public class OfficeCharacter : MonoBehaviour
         yield return null;
         yield return new WaitUntil(() => !_mover.IsMoving);
 
-        IsPatrolling = false;
+        State = CharacterState.Working;
         _patrolCoroutine = null;
     }
 
     IEnumerator PatrolWithDialogRoutine(Transform target, string dialogGroupId, bool triggerOnce)
     {
-        IsPatrolling = true;
+        State = CharacterState.Patrolling;
 
         // 1. 목적지로 이동
         Vector3 targetPos = new Vector3(target.position.x, target.position.y, 0);
@@ -144,7 +145,7 @@ public class OfficeCharacter : MonoBehaviour
         yield return null;
         yield return new WaitUntil(() => !_mover.IsMoving);
 
-        IsPatrolling = false;
+        State = CharacterState.Working;
         _patrolCoroutine = null;
     }
 

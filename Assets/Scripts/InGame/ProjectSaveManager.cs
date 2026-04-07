@@ -44,8 +44,6 @@ public class ProjectSaveManager : MonoBehaviour
     private ProjectScale _loadedSalesScale;
     private int _loadedGenrePopularity;
     private int _loadedGenreFatigue;
-    private bool _loadedNetworkIssueActive;
-    private float _loadedNetworkIssueEndProgress;
     private bool _loadedInvestmentAccepted;
     private string _loadedInvestmentStat;
     private string _loadedInvestmentStatName;
@@ -98,8 +96,6 @@ public class ProjectSaveManager : MonoBehaviour
         param.Add("savedBug", _savedBug);
         param.Add("genrePopularity", ProjectSetupUI.SelectedGenrePopularity);
         param.Add("genreFatigue", ProjectSetupUI.SelectedGenreFatigue);
-        param.Add("networkIssueActive", RandomEventManager.Instance.NetworkIssueActive);
-        param.Add("networkIssueEndProgress", RandomEventManager.Instance.NetworkIssueEndProgress);
         param.Add("investmentAccepted", RandomEventManager.Instance.InvestmentAccepted);
         param.Add("investmentStat", RandomEventManager.Instance.InvestmentStat);
         param.Add("investmentStatName", RandomEventManager.Instance.InvestmentStatName);
@@ -189,8 +185,6 @@ public class ProjectSaveManager : MonoBehaviour
             _loadedCreativity = SafeFloat(row, "savedCreativity", 0f);
             _loadedBug = SafeFloat(row, "savedBug", 0f);
             _hasPendingRestore = true;
-            _loadedNetworkIssueActive = SafeBool(row, "networkIssueActive", false);
-            _loadedNetworkIssueEndProgress = SafeFloat(row, "networkIssueEndProgress", -1f);
             _loadedInvestmentAccepted = SafeBool(row, "investmentAccepted", false);
             _loadedInvestmentStat = SafeString(row, "investmentStat", "");
             _loadedInvestmentStatName = SafeString(row, "investmentStatName", "");
@@ -225,12 +219,9 @@ public class ProjectSaveManager : MonoBehaviour
 
 
         // ── RandomEvent 상태 복원 ──
-        RandomEventManager.Instance.NetworkIssueActive = _loadedNetworkIssueActive;
-        RandomEventManager.Instance.NetworkIssueEndProgress = _loadedNetworkIssueEndProgress;
         RandomEventManager.Instance.InvestmentAccepted = _loadedInvestmentAccepted;
         RandomEventManager.Instance.InvestmentStat = _loadedInvestmentStat;
         RandomEventManager.Instance.InvestmentStatName = _loadedInvestmentStatName;
-Debug.Log($"[네트워크이슈 복원] Active: {RandomEventManager.Instance.NetworkIssueActive} / EndProgress: {RandomEventManager.Instance.NetworkIssueEndProgress:F2} / 현재배율: {RandomEventManager.Instance.NetworkSpeedMultiplier:F2}");
         // ── SetValues 후 투자 UI 표시 ──
         if (_loadedInvestmentAccepted && !string.IsNullOrEmpty(_loadedInvestmentStatName))
         {

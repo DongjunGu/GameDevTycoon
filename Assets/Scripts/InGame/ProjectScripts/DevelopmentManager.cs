@@ -39,6 +39,7 @@ public class DevelopmentManager : MonoBehaviour
     private Dictionary<string, List<float>> _tickTimesMap = new();
     private Dictionary<string, int> _tickIndexMap = new();
     private Dictionary<string, int[]> _tickOrderMap = new();
+    private Dictionary<string, CharacterState> _prevStateMap = new();
     private Coroutine _bugFixCoroutine;
 
     void Awake()
@@ -158,11 +159,18 @@ public class DevelopmentManager : MonoBehaviour
             float progress = _elapsed / developmentDuration;
 
             RandomEventManager.Instance.CheckTrigger(progress);
-            RandomEventManager.Instance.CheckNetworkIssueExpiry(progress);
 
-            foreach (var employee in EmployeeManager.Instance.ownedEmployees)
+            foreach (var employee in EmployeeManager.Instance.ownedEmployees.ToList())
             {
                 if (!_tickTimesMap.ContainsKey(employee.id)) continue;
+
+                CharacterState curState = OfficeManager.Instance.GetState(employee.id);
+                _prevStateMap.TryGetValue(employee.id, out CharacterState prevState);
+
+                if (prevState == CharacterState.Patrolling && curState == CharacterState.Working)
+                    ReschedulePendingTicks(employee.id);
+
+                _prevStateMap[employee.id] = curState;
 
                 int index = _tickIndexMap[employee.id];
                 var times = _tickTimesMap[employee.id];
@@ -170,10 +178,11 @@ public class DevelopmentManager : MonoBehaviour
 
                 if (index < times.Count && _elapsed >= times[index])
                 {
-                    // patrol 중인 캐릭터는 틱 스킵
-                    if (!OfficeManager.Instance.IsPatrolling(employee.id))
+                    if (curState == CharacterState.Working)
+                    {
                         AccumulateByType(employee, order[index]);
-                    _tickIndexMap[employee.id]++;
+                        _tickIndexMap[employee.id]++;
+                    }
                 }
             }
 
@@ -230,6 +239,7 @@ public class DevelopmentManager : MonoBehaviour
     IEnumerator BugFixCoroutine()
     {
         CurrentStage = ProjectStage.BugFixing;
+        OfficeManager.Instance?.StopDevelopmentPatrol();
         GameTimeManager.Instance.StartTime();
 
         float initialBug = DevelopmentPanelUI.Instance.GetBug();
@@ -263,7 +273,7 @@ public class DevelopmentManager : MonoBehaviour
             {
                 float remainingBug = DevelopmentPanelUI.Instance.GetBug();
 
-                var employees = EmployeeManager.Instance.ownedEmployees;
+                var employees = EmployeeManager.Instance.ownedEmployees.ToList();
                 float perfSum = 0f;
                 foreach (var e in employees) perfSum += e.perfectionSkill;
                 float avgPerfection = employees.Count > 0 ? perfSum / employees.Count : 0f;
@@ -383,25 +393,10 @@ public class DevelopmentManager : MonoBehaviour
             GameTimeManager.Instance.ForceStartTime();
             Debug.Log("팀장점수완료 저장");
 
-            // 25% 개발팀장이면 네트워크 이슈 체크
-            if (type == LeaderType.Programmer && _triggered25)
-            {
-                float currentProgress = _elapsed / developmentDuration;
-                RandomEventManager.Instance.TryTriggerNetworkIssue(currentProgress, () => //네트워크이슈 이벤트 발생
-                {
-                    ProjectSaveManager.Instance.SaveProject();
-                    GameTimeManager.Instance.SaveGameTime();
-                    GameTimeManager.Instance.ForceStartTime();
-                    StartCoroutine(DevelopmentCoroutine());
-                });
-            }
-            else
-            {
-                ProjectSaveManager.Instance.SaveProject();
-                GameTimeManager.Instance.SaveGameTime();
-                GameTimeManager.Instance.ForceStartTime();
-                StartCoroutine(DevelopmentCoroutine());
-            }
+            ProjectSaveManager.Instance.SaveProject();
+            GameTimeManager.Instance.SaveGameTime();
+            GameTimeManager.Instance.ForceStartTime();
+            StartCoroutine(DevelopmentCoroutine());
         });
     }
 
@@ -499,6 +494,49 @@ public class DevelopmentManager : MonoBehaviour
         return (float)(score * rand);
     }
 
+    public void OnEmployeeFired(string id)
+    {
+        _tickTimesMap.Remove(id);
+        _tickIndexMap.Remove(id);
+        _tickOrderMap.Remove(id);
+        _prevStateMap.Remove(id);
+
+        if (plannerLeader?.id == id)    plannerLeader = null;
+        if (programmerLeader?.id == id) programmerLeader = null;
+        if (artistLeader?.id == id)     artistLeader = null;
+    }
+
+    public void OnEmployeeHired(EmployeeData employee)
+    {
+        float remaining = developmentDuration - _elapsed;
+        float ratio = remaining / developmentDuration;
+        int tickCount = Mathf.Max(1, Mathf.RoundToInt(12 * ratio));
+        float segmentSize = remaining / tickCount;
+
+        var times = new List<float>();
+        for (int i = 0; i < tickCount; i++)
+            times.Add(_elapsed + i * segmentSize + UnityEngine.Random.Range(0f, segmentSize));
+
+        _tickTimesMap[employee.id] = times;
+        _tickIndexMap[employee.id] = 0;
+        _tickOrderMap[employee.id] = BuildTickOrder(tickCount, IsOvertimeMode);
+    }
+
+    void ReschedulePendingTicks(string id)
+    {
+        var times = _tickTimesMap[id];
+        int index = _tickIndexMap[id];
+        const float gap = 1.5f;
+
+        for (int i = index; i < times.Count; i++)
+        {
+            if (times[i] <= _elapsed)
+                times[i] = _elapsed + gap * (i - index + 1);
+            else
+                break;
+        }
+    }
+
     float CalcConstantDev(int skill)
     {
         double val = System.Math.Pow(
@@ -523,11 +561,7 @@ public class DevelopmentManager : MonoBehaviour
     void AccumulateByType(EmployeeData employee, int tickType)
     {
         float satisfactionMultiplier = GetSatisfactionMultiplier(employee);
-        float networkMultiplier = RandomEventManager.Instance.NetworkSpeedMultiplier;
-        float totalMultiplier = satisfactionMultiplier * networkMultiplier;
-
-        if (networkMultiplier < 1f)
-            Debug.Log($"[네트워크이슈] {employee.employeeName} 틱 적용 / 만족도배율: {satisfactionMultiplier:F2} / 네트워크배율: {networkMultiplier:F2} / 최종: {totalMultiplier:F2}");
+        float totalMultiplier = satisfactionMultiplier;
 
         int skill = employee.role switch
         {
@@ -666,9 +700,7 @@ public class DevelopmentManager : MonoBehaviour
         int recommended = ProjectData.GetRecommendedStaff(ProjectSetupUI.SelectedScale);
         int actual = EmployeeManager.Instance.ownedEmployees.Count;
         int diff = actual - recommended;
-        if (diff == 0) return 1f;
-        float factor = diff > 0 ? 1.1f : 0.9f;
-        return Mathf.Pow(factor, Mathf.Abs(diff));
+        return 1f + diff * 0.1f;
     }
 
     float GetSatisfactionMultiplier(EmployeeData employee)
