@@ -173,6 +173,12 @@ public class OfficeManager : MonoBehaviour
             if (sent >= count) break;
             if (oc.IsPatrolling) continue;
             var point = _patrolPoints[Random.Range(0, _patrolPoints.Length)];
+            var pointCell = GridManager.Instance.WorldToCell(new Vector3(point.transform.position.x, point.transform.position.y, 0));
+            if (!GridManager.Instance.IsWalkable(pointCell))
+            {
+                Debug.LogWarning($"[Patrol] point {point.name} 셀={pointCell} walkable 아님, 스킵");
+                continue;
+            }
             oc.StartPatrol(point.transform, patrolStayDuration);
             sent++;
         }

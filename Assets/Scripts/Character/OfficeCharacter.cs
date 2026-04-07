@@ -106,6 +106,7 @@ public class OfficeCharacter : MonoBehaviour
     IEnumerator PatrolRoutine(Transform target, float stayDuration)
     {
         State = CharacterState.Patrolling;
+        Debug.Log($"[Patrol] {employeeId} → Patrolling 시작, target={target.name}");
         _animator?.SetWorking(false);
 
         // 1. patrol 지점으로 이동
@@ -114,7 +115,9 @@ public class OfficeCharacter : MonoBehaviour
         _controller.MoveTo(targetCell, target.position);
 
         yield return null; // 이동 시작 대기 (IsMoving이 다음 프레임에 설정됨)
+        Debug.Log($"[Patrol] {employeeId} → 이동 시작 후 IsMoving={_mover.IsMoving}");
         yield return new WaitUntil(() => !_mover.IsMoving);
+        Debug.Log($"[Patrol] {employeeId} → patrol 지점 도착, State={State}");
 
         // 2. 목적지에서 대기 (게임 시간 기준)
         float stayed = 0f;
@@ -124,17 +127,18 @@ public class OfficeCharacter : MonoBehaviour
                 stayed += Time.deltaTime;
             yield return null;
         }
+        Debug.Log($"[Patrol] {employeeId} → 대기 완료, GoToDesk 호출");
 
         // 3. 원래 데스크로 복귀
         GoToDesk();
 
         yield return null;
-        if (_mover.IsMoving)
-            yield return new WaitUntil(() => !_mover.IsMoving);
-        else if (assignedDesk != null) // 경로 없음 → 강제 복귀
-            transform.position = assignedDesk.GetWorkWorldPos();
+        Debug.Log($"[Patrol] {employeeId} → GoToDesk 후 IsMoving={_mover.IsMoving}");
+        yield return new WaitUntil(() => !_mover.IsMoving);
+        Debug.Log($"[Patrol] {employeeId} → 데스크 복귀 완료, State={State} → Working으로 전환");
 
-        ApplyDeskAnimation();
+        State = CharacterState.Working;
+        _animator?.SetWorking(true);
         _patrolCoroutine = null;
     }
 
@@ -185,12 +189,10 @@ public class OfficeCharacter : MonoBehaviour
         GoToDesk();
 
         yield return null;
-        if (_mover.IsMoving)
-            yield return new WaitUntil(() => !_mover.IsMoving);
-        else if (assignedDesk != null) // 경로 없음 → 강제 복귀
-            transform.position = assignedDesk.GetWorkWorldPos();
+        yield return new WaitUntil(() => !_mover.IsMoving);
 
-        ApplyDeskAnimation();
+        State = CharacterState.Working;
+        _animator?.SetWorking(true);
         _patrolCoroutine = null;
     }
 
