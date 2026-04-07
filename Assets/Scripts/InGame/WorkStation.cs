@@ -10,8 +10,14 @@ public class WorkStation : MonoBehaviour
     public Vector3         workPointOffset;
 
     public Vector3Int GetWorkCell()
-        => GridManager.Instance.WorldToCell(workPoint.position + workPointOffset);
+    {
+        if (workPoint == null) { Debug.LogWarning($"[WorkStation] {deskId} workPoint is null!"); return Vector3Int.zero; }
+        return GridManager.Instance.WorldToCell(workPoint.position + workPointOffset);
+    }
 
     public Vector3 GetWorkWorldPos()
-        => workPoint.position + workPointOffset;
+    {
+        if (workPoint == null) { Debug.LogWarning($"[WorkStation] {deskId} workPoint is null!"); return Vector3.zero; }
+        return workPoint.position + workPointOffset;
+    }
 }

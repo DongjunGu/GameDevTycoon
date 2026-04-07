@@ -80,7 +80,7 @@ public class CharacterMover : MonoBehaviour
                 yield return null;
             }
 
-            transform.position = new Vector3(targetWorld.x, targetWorld.y, targetWorld.y * 0.01f);
+            transform.position = targetWorld;
             OnCellChanged?.Invoke(path[i]);
         }
 

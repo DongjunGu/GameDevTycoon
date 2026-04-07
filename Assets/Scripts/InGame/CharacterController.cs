@@ -58,7 +58,13 @@ public class CharacterController : MonoBehaviour
         Vector3Int currentCell = GridManager.Instance.WorldToCell(flatPos);
 
         var path = AStarPathfinder.Instance.FindPath(currentCell, targetCell);
-        if (path == null || path.Count == 0) { Debug.Log($"{name}: 경로 없음"); return; }
+        if (path == null || path.Count == 0)
+        {
+            bool startWalkable = GridManager.Instance.IsWalkable(currentCell);
+            bool goalWalkable  = GridManager.Instance.IsWalkable(targetCell);
+            Debug.LogWarning($"{name}: 경로 없음 | 현재셀={currentCell}(walkable={startWalkable}) → 목표셀={targetCell}(walkable={goalWalkable})");
+            return;
+        }
 
         SetState(CharacterState.Moving);
 

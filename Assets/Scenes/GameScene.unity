@@ -1050,6 +1050,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WorkStation
   deskId: 
+  stationType: 0
   workPoint: {fileID: 59295214}
   workPointOffset: {x: 0, y: 0, z: 0}
 --- !u!1 &59794058
@@ -22295,8 +22296,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WorkStation
   deskId: desk_02
+  stationType: 0
   workPoint: {fileID: 1374258138}
-  workPointOffset: {x: -0.2, y: 0, z: -0.1}
+  workPointOffset: {x: -0.2, y: -0.001, z: 0}
 --- !u!1 &771106531
 GameObject:
   m_ObjectHideFlags: 0
@@ -31029,8 +31031,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WorkStation
   deskId: desk_01
+  stationType: 0
   workPoint: {fileID: 617603667}
-  workPointOffset: {x: -0.2, y: 0, z: -0.1}
+  workPointOffset: {x: -0.2, y: -0.001, z: 0}
 --- !u!1 &1029929631
 GameObject:
   m_ObjectHideFlags: 0
@@ -32040,7 +32043,7 @@ Tilemap:
     m_Data: {r: 1, g: 1, b: 1, a: 1}
   m_TileObjectToInstantiateArray: []
   m_AnimationFrameRate: 1
-  m_Color: {r: 1, g: 1, b: 1, a: 0}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_Origin: {x: -7, y: -9, z: 0}
   m_Size: {x: 9, y: 10, z: 1}
   m_TileAnchor: {x: 0.5, y: 0.5, z: 0}
@@ -41552,6 +41555,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WorkStation
   deskId: 
+  stationType: 0
   workPoint: {fileID: 1329550721}
   workPointOffset: {x: 0, y: 0, z: 0}
 --- !u!1 &1339781277
@@ -45087,8 +45091,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WorkStation
   deskId: desk_03
+  stationType: 0
   workPoint: {fileID: 1917571078}
-  workPointOffset: {x: -0.2, y: 0, z: -0.1}
+  workPointOffset: {x: -0.2, y: -0.001, z: 0}
 --- !u!1 &1432010099
 GameObject:
   m_ObjectHideFlags: 0
@@ -52016,6 +52021,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WorkStation
   deskId: 
+  stationType: 0
   workPoint: {fileID: 1628629775}
   workPointOffset: {x: 0, y: 0, z: 0}
 --- !u!1 &1628757261
@@ -54649,7 +54655,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1703318389}
-  - component: {fileID: 1703318388}
   - component: {fileID: 1703318390}
   m_Layer: 0
   m_Name: PatrolPoint_Test
@@ -54658,18 +54663,6 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &1703318388
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1703318387}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 91ba642c57f86c642aa6baee50b4e3e0, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::PatrolPoint
 --- !u!4 &1703318389
 Transform:
   m_ObjectHideFlags: 0
@@ -60284,8 +60277,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WorkStation
   deskId: desk_04
+  stationType: 0
   workPoint: {fileID: 1194957430}
-  workPointOffset: {x: -0.2, y: 0, z: -0.1}
+  workPointOffset: {x: -0.2, y: -0.001, z: 0}
 --- !u!1 &1898428605
 GameObject:
   m_ObjectHideFlags: 0
