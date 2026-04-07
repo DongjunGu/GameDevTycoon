@@ -100,8 +100,7 @@ public class OfficeManager : MonoBehaviour
             var oc  = obj.GetComponent<OfficeCharacter>();
             oc.Init(employee.id, desk);
 
-            var anim = obj.GetComponent<CharacterAnimator>();
-            anim?.SetIdle(employee.lastIsFront);
+            oc.ApplyDeskAnimation();
 
             _characters[employee.id] = oc;
         }

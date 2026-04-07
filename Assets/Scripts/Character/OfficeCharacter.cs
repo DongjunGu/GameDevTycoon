@@ -7,17 +7,54 @@ public class OfficeCharacter : MonoBehaviour
     public WorkStation assignedDesk;
     public Transform statPopupAnchor; // 머리 위 위치 (Inspector에서 설정)
 
-    public CharacterState State { get; private set; } = CharacterState.Working;
+    public CharacterState State { get; private set; } = CharacterState.Idle;
     public bool IsPatrolling => State == CharacterState.Patrolling;
+
+    public void SetState(CharacterState state) => State = state;
 
     private CharacterController _controller;
     private CharacterMover _mover;
+    private CharacterAnimator _animator;
     private Coroutine _patrolCoroutine;
 
     void Awake()
     {
         _controller = GetComponent<CharacterController>();
-        _mover = GetComponent<CharacterMover>();
+        _mover      = GetComponent<CharacterMover>();
+        _animator   = GetComponent<CharacterAnimator>();
+        _mover.OnMoveComplete += OnArrived;
+    }
+
+    // 이동 완료 시 — 데스크 타입 + 프로젝트 진행 여부로 애니메이션 결정
+    void OnArrived()
+    {
+        if (State == CharacterState.Patrolling) return;
+        ApplyDeskAnimation();
+    }
+
+    public void ApplyDeskAnimation()
+    {
+        if (assignedDesk == null) return;
+
+        if (assignedDesk.stationType == WorkStationType.Talking)
+        {
+            State = CharacterState.Idle;
+            _animator?.SetTalking();
+            return;
+        }
+
+        // WorkStationType.Working
+        bool isStarted = DevelopmentManager.Instance != null && DevelopmentManager.Instance.IsStarted;
+        if (isStarted)
+        {
+            State = CharacterState.Working;
+            _animator?.SetWorking(true);
+        }
+        else
+        {
+            State = CharacterState.Idle;
+            _animator?.SetIdle(_animator.GetCurrentIsFront());
+        }
     }
 
     // 채용 시 초기화
@@ -69,6 +106,7 @@ public class OfficeCharacter : MonoBehaviour
     IEnumerator PatrolRoutine(Transform target, float stayDuration)
     {
         State = CharacterState.Patrolling;
+        _animator?.SetWorking(false);
 
         // 1. patrol 지점으로 이동
         Vector3 targetPos = new Vector3(target.position.x, target.position.y, 0);
@@ -91,15 +129,19 @@ public class OfficeCharacter : MonoBehaviour
         GoToDesk();
 
         yield return null;
-        yield return new WaitUntil(() => !_mover.IsMoving);
+        if (_mover.IsMoving)
+            yield return new WaitUntil(() => !_mover.IsMoving);
+        else if (assignedDesk != null) // 경로 없음 → 강제 복귀
+            transform.position = assignedDesk.GetWorkWorldPos();
 
-        State = CharacterState.Working;
+        ApplyDeskAnimation();
         _patrolCoroutine = null;
     }
 
     IEnumerator PatrolWithDialogRoutine(Transform target, string dialogGroupId, bool triggerOnce)
     {
         State = CharacterState.Patrolling;
+        _animator?.SetWorking(false);
 
         // 1. 목적지로 이동
         Vector3 targetPos = new Vector3(target.position.x, target.position.y, 0);
@@ -143,9 +185,12 @@ public class OfficeCharacter : MonoBehaviour
         GoToDesk();
 
         yield return null;
-        yield return new WaitUntil(() => !_mover.IsMoving);
+        if (_mover.IsMoving)
+            yield return new WaitUntil(() => !_mover.IsMoving);
+        else if (assignedDesk != null) // 경로 없음 → 강제 복귀
+            transform.position = assignedDesk.GetWorkWorldPos();
 
-        State = CharacterState.Working;
+        ApplyDeskAnimation();
         _patrolCoroutine = null;
     }
 
