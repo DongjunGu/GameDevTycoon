@@ -187,6 +187,8 @@ public class EmployeeManager : MonoBehaviour
 
                 QuestManager.Instance.UpdateProgress(QuestType.HireEmployee, 1);
                 OfficeManager.Instance?.OnEmployeeHired(inGameEmployee);
+                if (DevelopmentManager.Instance.IsStarted)
+                    DevelopmentManager.Instance.OnEmployeeHired(inGameEmployee);
 
                 if (ownedEmployees.Count >= 2)
                     QuestManager.Instance.UnlockQuest("quest_003");
@@ -306,6 +308,8 @@ public class EmployeeManager : MonoBehaviour
     {
         ownedEmployees.Remove(employee);
         OfficeManager.Instance?.OnEmployeeFired(employee);
+        if (DevelopmentManager.Instance.IsStarted)
+            DevelopmentManager.Instance.OnEmployeeFired(employee.id);
 
         if (string.IsNullOrEmpty(employee.rowInDate))
         {

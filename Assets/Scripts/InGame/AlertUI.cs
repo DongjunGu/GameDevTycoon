@@ -1,5 +1,6 @@
 using UnityEngine;
 using TMPro;
+using System.Collections.Generic;
 
 public class AlertUI : MonoBehaviour
 {
@@ -8,6 +9,10 @@ public class AlertUI : MonoBehaviour
 
     [Header("UI")]
     public TextMeshProUGUI messageText;
+
+    private Queue<(string message, System.Action onConfirm)> _queue = new();
+    private bool _isShowing = false;
+    private System.Action _onConfirm;
 
     void Awake()
     {
@@ -18,18 +23,28 @@ public class AlertUI : MonoBehaviour
 
     public void Show(string message, System.Action onConfirm = null)
     {
-        GameTimeManager.Instance?.StopTime();
-        messageText.text = message;
-        _onConfirm = onConfirm;
-        alertPanel.SetActive(true);
+        _queue.Enqueue((message, onConfirm));
+        if (!_isShowing) ShowNext();
     }
 
-    private System.Action _onConfirm;
+    void ShowNext()
+    {
+        if (_queue.Count == 0) { _isShowing = false; return; }
+        _isShowing = true;
+        var (msg, cb) = _queue.Dequeue();
+        GameTimeManager.Instance?.StopTime();
+        messageText.text = msg;
+        _onConfirm = cb;
+        alertPanel.SetActive(true);
+    }
 
     public void OnClickConfirm()
     {
         alertPanel.SetActive(false);
         GameTimeManager.Instance?.StartTime();
-        _onConfirm?.Invoke();
+        var cb = _onConfirm;
+        _onConfirm = null;
+        cb?.Invoke();
+        ShowNext();
     }
 }

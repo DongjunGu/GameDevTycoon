@@ -30,10 +30,7 @@ public class CriticReviewUI : MonoBehaviour
 
     private static readonly string[] CriticNames =
     {
-        "김게임 (게임월드)",
-        "이리뷰 (픽셀매거진)",
-        "박크리틱 (게임타임즈)",
-        "최평론 (인디씬)"
+        "김게임 (게임월드)"
     };
 
     // 점수별 멘트 풀
@@ -122,14 +119,13 @@ public class CriticReviewUI : MonoBehaviour
     {
         _onComplete = onComplete;
 
-        // 슬롯은 모두 켜두고 내용만 비움
-        for (int i = 0; i < criticSlots.Length; i++)
-        {
-            criticSlots[i].SetActive(true);
-            criticNameTexts[i].text    = "";
-            criticScoreTexts[i].text   = "";
-            criticCommentTexts[i].text = "";
-        }
+        criticSlots[0].SetActive(true);
+        criticNameTexts[0].text    = "";
+        criticScoreTexts[0].text   = "";
+        criticCommentTexts[0].text = "";
+
+        for (int i = 1; i < criticSlots.Length; i++)
+            criticSlots[i].SetActive(false);
 
         if (totalScoreObject != null) totalScoreObject.SetActive(false);
         confirmButton.gameObject.SetActive(false);
@@ -141,31 +137,21 @@ public class CriticReviewUI : MonoBehaviour
 
     IEnumerator RevealCritics(float rawScore)
     {
-        int[] scores = new int[criticSlots.Length];
+        int variation = UnityEngine.Random.Range(-3, 4);
+        int score = Mathf.Clamp(CalcCriticScore(rawScore) + variation, 0, 100);
 
-        for (int i = 0; i < criticSlots.Length; i++)
-        {
-            int variation = UnityEngine.Random.Range(-3, 4); // -3 ~ +3
-            scores[i] = Mathf.Clamp(CalcCriticScore(rawScore) + variation, 0, 100);
-        }
+        yield return new WaitForSeconds(criticRevealDelay);
 
-        int total = 0;
-        for (int i = 0; i < criticSlots.Length; i++)
-        {
-            yield return new WaitForSeconds(criticRevealDelay);
-
-            criticNameTexts[i].text    = CriticNames[i];
-            criticScoreTexts[i].text   = $"{scores[i]}점";
-            criticCommentTexts[i].text = GetComment(scores[i], i);
-            total += scores[i];
-        }
+        criticNameTexts[0].text    = CriticNames[0];
+        criticScoreTexts[0].text   = $"{score}점";
+        criticCommentTexts[0].text = GetComment(score, 0);
 
         yield return new WaitForSeconds(0.5f);
 
-        LastCriticTotal = total;
+        LastCriticTotal = score;
         if (totalScoreObject != null && totalScoreText != null)
         {
-            totalScoreText.text = $"총점: {total} / 400";
+            totalScoreText.text = $"총점: {score} / 100";
             totalScoreObject.SetActive(true);
         }
 

@@ -115,6 +115,16 @@ public class OfficeManager : MonoBehaviour
         return _characters.TryGetValue(employeeId, out var oc) && oc.IsPatrolling;
     }
 
+    public bool IsWorking(string employeeId)
+    {
+        return _characters.TryGetValue(employeeId, out var oc) && oc.State == CharacterState.Working;
+    }
+
+    public CharacterState GetState(string employeeId)
+    {
+        return _characters.TryGetValue(employeeId, out var oc) ? oc.State : CharacterState.Working;
+    }
+
     // 개발 시작 시 호출 — patrol 포인트 갱신
     public void StartDevelopmentPatrol()
     {
@@ -193,7 +203,8 @@ public class OfficeManager : MonoBehaviour
                 yield return null;
             }
 
-            if (_patrolPoints != null && _patrolPoints.Length > 0)
+            if (_patrolPoints != null && _patrolPoints.Length > 0
+                && DevelopmentManager.Instance.CurrentStage != ProjectStage.BugFixing)
                 TriggerPatrolRandom(patrolCountPerCycle);
             CheckDialogPatrols();
         }

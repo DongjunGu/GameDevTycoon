@@ -19,6 +19,7 @@ public class SalesUI : MonoBehaviour
     public TextMeshProUGUI totalRevenueText;
     public TextMeshProUGUI totalUnitsText;
     public TextMeshProUGUI qualityScoreText;
+    public TextMeshProUGUI rankText;
     private int barCount;
     private ProjectScale _cachedScale;
     private ProjectGenre _cachedGenre;
@@ -146,6 +147,7 @@ public class SalesUI : MonoBehaviour
             float elapsed = 0f;
             while (elapsed < barAnimDuration)
             {
+                if (!GameTimeManager.Instance.IsRunning) { yield return null; continue; }
                 elapsed += Time.deltaTime;
                 float t = Mathf.SmoothStep(0f, 1f, elapsed / barAnimDuration);
 
@@ -158,23 +160,40 @@ public class SalesUI : MonoBehaviour
             }
 
             barImage.sizeDelta = new Vector2(barImage.sizeDelta.x, targetHeight);
+
+            int weeklyRevenue = unitPerPeriod[i] * 9;
+            int rank = CalcRank(weeklyRevenue);
             valueLabel.text = $"{unitPerPeriod[i]:N0}";
+            if (rankText != null)
+                rankText.text = rank > 0 ? $"{rank}위" : "순위권 밖";
             totalUnitsText.text = $"총 판매량: {endUnits:N0}개";
             totalRevenueText.text = $"총 매출: {endUnits * 9:N0}G";
 
+            MoneyManager.Instance.AddGold(weeklyRevenue);
+
             cumulativeUnits = endUnits;
 
-            yield return new WaitForSeconds(weekDuration * 0.3f);
+            float gap = weekDuration * 0.3f;
+            float gapElapsed = 0f;
+            while (gapElapsed < gap)
+            {
+                if (GameTimeManager.Instance.IsRunning) gapElapsed += Time.deltaTime;
+                yield return null;
+            }
         }
         QuestManager.Instance.UpdateProgress(QuestType.TotalSales, cumulativeUnits);
-        yield return new WaitForSeconds(0.5f);
+        float endWait = 0f;
+        while (endWait < 0.5f)
+        {
+            if (GameTimeManager.Instance.IsRunning) endWait += Time.deltaTime;
+            yield return null;
+        }
 
         AlertUI.Instance.Show("피드백 시간!", () =>
         {
             float cachedMarketFit = DevelopmentResultUI.Instance.LastPopularityMultiplier;
             float cachedMarketingBonus = DevelopmentResultUI.Instance.LastMarketingMultiplier;
             float cachedBug = DevelopmentResultUI.Instance.LastBug;
-            float cachedReleaseBonus   = DevelopmentResultUI.Instance.LastReleaseEventBonus;
             salesPanel.SetActive(false);
 
             // ── 1. 완료 프로젝트 저장 (초기화 전에 먼저) ──
@@ -200,11 +219,7 @@ public class SalesUI : MonoBehaviour
             Debug.Log($"저장: scale={completedData.scale} genre={completedData.genre} platform={completedData.platform}");
             CompletedProjectManager.Instance.SaveCompletedProject(completedData);
 
-            // ── 2. 매출 지급 ──
-            int totalRevenue = cumulativeUnits * 9;
-            MoneyManager.Instance.AddGold(totalRevenue);
-
-            // ── 3. 프로젝트 Complete 저장 후 초기화 ──
+            // ── 2. 프로젝트 Complete 저장 후 초기화 ──
             // Sales 중 새 프로젝트가 시작된 경우 ResetProject 스킵
             if (!_newProjectStartedDuringSales)
             {
@@ -217,8 +232,29 @@ public class SalesUI : MonoBehaviour
             // ── 4. 퀘스트 (이미 위에서 처리됐으므로 여기선 생략 가능)
 
             // ── 5. 피드백 ──
-            FeedbackUI.Instance.Show(cachedMarketFit, cachedMarketingBonus, cachedBug, cachedReleaseBonus);
+            FeedbackUI.Instance.Show(cachedMarketFit, cachedMarketingBonus, cachedBug);
         });
+    }
+
+    int CalcRank(int weeklyRevenue)
+    {
+        if (weeklyRevenue >= 120000) return 1;
+        if (weeklyRevenue >= 85000)  return 2;
+        if (weeklyRevenue >= 70000)  return 3;
+        if (weeklyRevenue >= 55000)  return 4;
+        if (weeklyRevenue >= 45000)  return 5;
+        if (weeklyRevenue >= 35000)  return 6;
+        if (weeklyRevenue >= 28000)  return 7;
+        if (weeklyRevenue >= 20000)  return 8;
+        if (weeklyRevenue >= 15000)  return 9;
+        if (weeklyRevenue >= 10000)  return 10;
+        if (weeklyRevenue >= 5000)
+            return Mathf.Clamp(Mathf.RoundToInt(30f - ((weeklyRevenue - 5000f) / 5000f * 19f)), 11, 30);
+        if (weeklyRevenue >= 2500)
+            return Mathf.Clamp(Mathf.RoundToInt(60f - ((weeklyRevenue - 2500f) / 2500f * 29f)), 31, 60);
+        if (weeklyRevenue >= 1500)
+            return Mathf.Clamp(Mathf.RoundToInt(100f - ((weeklyRevenue - 1500f) / 1000f * 39f)), 61, 100);
+        return 0; // 순위권 밖
     }
 
     // 규모별 주차 분배

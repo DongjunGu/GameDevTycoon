@@ -2,5 +2,6 @@ public enum CharacterState
 {
     Idle,
     Moving,
-    Working
+    Working,
+    Patrolling
 }
