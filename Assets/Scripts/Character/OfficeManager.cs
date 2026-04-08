@@ -71,15 +71,33 @@ public class OfficeManager : MonoBehaviour
             oc.ShowStatPopup(text, color);
     }
 
-    // 해고 시 캐릭터 제거
+    // 해고 시 — 데이터 즉시 제거, 캐릭터는 SpawnPoint까지 걸어간 뒤 소멸
     public void OnEmployeeFired(EmployeeData employee)
     {
-        if (_characters.TryGetValue(employee.id, out var oc))
+        DeskManager.Instance.UnassignDesk(employee.assignedDeskId);
+
+        if (!_characters.TryGetValue(employee.id, out var oc)) return;
+        _characters.Remove(employee.id);
+
+        oc.PrepareToLeave();
+        StartCoroutine(WalkOutAndDestroy(oc));
+    }
+
+    IEnumerator WalkOutAndDestroy(OfficeCharacter oc)
+    {
+        var controller = oc.GetComponent<CharacterController>();
+        var mover      = oc.GetComponent<CharacterMover>();
+
+        if (controller != null && mover != null)
         {
-            DeskManager.Instance.UnassignDesk(employee.assignedDeskId);
-            Destroy(oc.gameObject);
-            _characters.Remove(employee.id);
+            Vector3Int exitCell = GridManager.Instance.WorldToCell(spawnPoint.position);
+            controller.MoveTo(exitCell, spawnPoint.position);
+
+            yield return null; // 이동 시작 대기
+            yield return new WaitUntil(() => !mover.IsMoving);
         }
+
+        Destroy(oc.gameObject);
     }
 
     // 씬 로드 시 기존 직원 복원

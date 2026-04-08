@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Tilemaps;
 
@@ -6,14 +5,13 @@ public class GridManager : MonoBehaviour
 {
     public static GridManager Instance { get; private set; }
 
-    [Header("Tilemaps (인덱스 = 층)")]
-    public Tilemap[] groundTilemaps;  // [0]=0층, [1]=1층...
-    public Tilemap obstacleTilemap;
+    [Header("Tilemaps")]
+    public Tilemap groundTilemap;    // 바닥 타일맵
+    public Tilemap obstacleTilemap;  // 장애물 타일맵
+    public Tilemap stairTilemap;     // 계단 타일맵
 
-    [Header("층당 Y 오프셋")]
-    public float heightPerFloor = 0.5f;
-
-    private Dictionary<Vector3Int, Vector3Int> _stairLinks = new();
+    [Header("Stairs")]
+    public float stairYOffset = 0.3f; // 계단 셀의 Y 오프셋
 
     void Awake()
     {
@@ -21,59 +19,50 @@ public class GridManager : MonoBehaviour
         Instance = this;
     }
 
-    // ── 계단 등록 (양방향 자동) ──────────────────────
-    public void RegisterStair(Vector3Int from, Vector3Int to)
+    // 월드 좌표 → 셀 좌표
+    public Vector3Int WorldToCell(Vector3 worldPos)
     {
-        _stairLinks[from] = to;
-        _stairLinks[to] = from;
+        return groundTilemap.WorldToCell(worldPos);
     }
 
-    // ── 좌표 변환 ────────────────────────────────────
-    public Vector3Int WorldToCell(Vector3 worldPos, int floor = 0)
-    {
-        var cell = groundTilemaps[floor].WorldToCell(worldPos);
-        return new Vector3Int(cell.x, cell.y, floor);
-    }
-
+    // 셀 좌표 → 월드 좌표 (타일 중심)
     public Vector3 CellToWorld(Vector3Int cellPos)
     {
-        int floor = Mathf.Clamp(cellPos.z, 0, groundTilemaps.Length - 1);
-        var cell2D = new Vector3Int(cellPos.x, cellPos.y, 0);
-        Vector3 worldPos = groundTilemaps[floor].GetCellCenterWorld(cell2D);
-        worldPos.y += cellPos.z * heightPerFloor;
-        return worldPos;
+        return groundTilemap.GetCellCenterWorld(cellPos);
     }
 
-    // ── 이동 가능 여부 ───────────────────────────────
+    // 이동 가능 여부
     public bool IsWalkable(Vector3Int cellPos)
     {
-        int floor = cellPos.z;
-        if (floor < 0 || floor >= groundTilemaps.Length) return false;
+        bool hasGround = groundTilemap.HasTile(cellPos)
+                      || (stairTilemap != null && stairTilemap.HasTile(cellPos));
 
-        var cell2D = new Vector3Int(cellPos.x, cellPos.y, 0);
-
-        bool hasGround = groundTilemaps[floor].HasTile(cell2D);
+        // 오브젝트가 비활성화면 장애물 무시
         bool hasObstacle = obstacleTilemap != null
             && obstacleTilemap.gameObject.activeInHierarchy
-            && obstacleTilemap.HasTile(cell2D);
+            && obstacleTilemap.HasTile(cellPos);
+
 
         return hasGround && !hasObstacle;
     }
 
-    // ── 이웃 셀 (4방향 + 계단) ──────────────────────
+    // 해당 셀의 Y 오프셋 (계단이면 stairYOffset, 아니면 0)
+    public float GetCellElevation(Vector3Int cellPos)
+    {
+        if (stairTilemap != null && stairTilemap.HasTile(cellPos))
+            return stairYOffset;
+        return 0f;
+    }
+
+    // 4방향 이웃 셀 (isometric 4방향)
     public Vector3Int[] GetNeighbors(Vector3Int cell)
     {
-        var neighbors = new List<Vector3Int>
+        return new Vector3Int[]
         {
-            cell + new Vector3Int( 1,  0, 0),
-            cell + new Vector3Int(-1,  0, 0),
-            cell + new Vector3Int( 0,  1, 0),
-            cell + new Vector3Int( 0, -1, 0),
+            cell + new Vector3Int(1, 0, 0),
+            cell + new Vector3Int(-1, 0, 0),
+            cell + new Vector3Int(0, 1, 0),
+            cell + new Vector3Int(0, -1, 0),
         };
-
-        if (_stairLinks.TryGetValue(cell, out var stairTarget))
-            neighbors.Add(stairTarget);
-
-        return neighbors.ToArray();
     }
 }
