@@ -231,7 +231,7 @@ public class SalesUI : MonoBehaviour
             float cachedMarketingBonus = DevelopmentResultUI.Instance.LastMarketingMultiplier;
             float cachedBug = DevelopmentResultUI.Instance.LastBug;
             salesPanel.SetActive(false);
-
+ 
             // ── 1. 완료 프로젝트 저장 (초기화 전에 먼저) ──
             var completedData = new CompletedProjectData
             {
