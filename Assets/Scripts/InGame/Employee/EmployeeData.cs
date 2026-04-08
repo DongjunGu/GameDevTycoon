@@ -3,7 +3,7 @@ using LitJson;
 using UnityEngine;
 
 public enum EmployeeRole { Planner, Programmer, Artist }
-public enum EmployeePotential { F, D, C, B, A }
+public enum EmployeePotential { C, B, A, S }
 public enum EmployeeGrade { Normal, Rare, Epic, Unique }
 public enum EmployeeState { Idle, Working }
 // enum 추가
@@ -179,11 +179,10 @@ public class EmployeeData
 
     public string PotentialToString() => potential switch
     {
-        EmployeePotential.F => "F",
-        EmployeePotential.D => "D",
         EmployeePotential.C => "C",
         EmployeePotential.B => "B",
         EmployeePotential.A => "A",
+        EmployeePotential.S => "S",
         _ => ""
     };
 

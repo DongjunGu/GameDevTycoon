@@ -45,8 +45,11 @@ public class BackendManager : MonoBehaviour
                                 {
                                     TechTreeManager.Instance.LoadTechTree(() =>
                                     {
-                                        DialogManager.Instance.Initialize();
-                                        FindAnyObjectByType<Progress>()?.SetAllDataLoaded();
+                                        SalesSaveManager.Instance.LoadSales(() =>
+                                        {
+                                            DialogManager.Instance.Initialize();
+                                            FindAnyObjectByType<Progress>()?.SetAllDataLoaded();
+                                        });
                                     });
                                 });
                             });

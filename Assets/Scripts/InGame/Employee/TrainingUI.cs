@@ -1,6 +1,7 @@
 using System.Collections;
 using UnityEngine;
 using TMPro;
+using UnityEngine.UI;
 using System.Collections.Generic;
 
 public class TrainingUI : MonoBehaviour
@@ -26,7 +27,13 @@ public class TrainingUI : MonoBehaviour
     public TextMeshProUGUI selectedArtText;
     public TextMeshProUGUI selectedPerfectionText;
     public TextMeshProUGUI selectedEnhancementText;
+    public TextMeshProUGUI selectedCostText;
     public TextMeshProUGUI selectedSatisfactionText;
+    public TextMeshProUGUI selectedSuccessRateText;
+    public TextMeshProUGUI selectedMaintainRateText;
+    public TextMeshProUGUI selectedDowngradeRateText;
+    public Button enhanceButton;
+    public TextMeshProUGUI enhanceButtonText;
 
     [Header("Result Panel")]
     public TextMeshProUGUI resultNameText;
@@ -40,6 +47,15 @@ public class TrainingUI : MonoBehaviour
     public TextMeshProUGUI resultOutcomeText;
     public TextMeshProUGUI resultSatisfactionText;
 
+    private static int GetMaxEnhancement(EmployeeGrade grade) => grade switch
+    {
+        EmployeeGrade.Normal => 15,
+        EmployeeGrade.Rare   => 15,
+        EmployeeGrade.Epic   => 20,
+        EmployeeGrade.Unique => 25,
+        _ => 15
+    };
+
     private EmployeeData _selectedEmployee;
     private struct EnhanceResult
     {
@@ -47,35 +63,66 @@ public class TrainingUI : MonoBehaviour
         public int gain;
     }
 
+    // 강화 비용 테이블 [level]
+    private static readonly int[] EnhanceCostTable =
+    {
+            50,  // 0→1
+           100,  // 1→2
+           100,  // 2→3
+           100,  // 3→4
+           150,  // 4→5
+           150,  // 5→6
+           150,  // 6→7
+           200,  // 7→8
+           200,  // 8→9
+           200,  // 9→10
+           250,  // 10→11
+         2_000,  // 11→12
+         4_000,  // 12→13
+         6_000,  // 13→14
+         8_000,  // 14→15
+        10_000,  // 15→16
+        20_000,  // 16→17
+        30_000,  // 17→18
+        40_000,  // 18→19
+        50_000,  // 19→20
+        70_000,  // 20→21
+        90_000,  // 21→22
+       110_000,  // 22→23
+       150_000,  // 23→24
+       200_000,  // 24→25
+    };
+
     // 강화 확률 테이블 [level] = (성공%, 유지%, 하락%)
+    // 0~10: 실패 시 하락 가능, 11~24: 하락 없음
     private static readonly (int success, int maintain, int downgrade)[] EnhanceTable =
     {
-    (99, 0,  0),  // 0  - 하락 없음, 나머지 5%는 그냥 성공 안함(유지)
-    (95, 0,  5), // 1
-    (89, 0,  11), // 2
-    (89, 0,  11), // 3
-    (84, 0,  16), // 4
-    (78, 0,  22), // 5
-    (73, 0,  27), // 6
-    (68, 0,  32), // 7
-    (63, 0,  37), // 8
-    (57, 0,  43), // 9
-    (52, 0,  48), // 10
-    (47, 0,  53), // 11
-    (42, 0,  58), // 12
-    (37, 0,  63), // 13
-    (31, 0,  69), // 14
-    (30, 70, 0),  // 15 - 이후 하락 없음
-    (28, 72, 0),  // 16
-    (25, 75, 0),  // 17
-    (22, 78, 0),  // 18
-    (20, 80, 0),  // 19
-    (18, 82, 0),  // 20
-    (15, 85, 0),  // 21
-    (10, 90, 0),  // 22
-    (5,  95, 0),  // 23
-    (3,  97, 0),  // 24
-};
+        (99,  0,  0),  // 0
+        (95,  0,  5),  // 1
+        (90,  0, 10),  // 2
+        (85,  0, 15),  // 3
+        (80,  0, 20),  // 4
+        (75,  0, 25),  // 5
+        (70,  0, 30),  // 6
+        (65,  0, 35),  // 7
+        (60,  0, 40),  // 8
+        (55,  0, 45),  // 9
+        (50,  0, 50),  // 10
+        (30, 70,  0),  // 11
+        (30, 70,  0),  // 12
+        (30, 70,  0),  // 13
+        (30, 70,  0),  // 14
+        (20, 80,  0),  // 15
+        (20, 80,  0),  // 16
+        (20, 80,  0),  // 17
+        (20, 80,  0),  // 18
+        (15, 85,  0),  // 19
+        (15, 85,  0),  // 20
+        (15, 85,  0),  // 21
+        (15, 85,  0),  // 22
+        (10, 90,  0),  // 23
+        ( 5, 95,  0),  // 24
+    };
     void Awake()
     {
         if (Instance != null) { Destroy(gameObject); return; }
@@ -118,16 +165,54 @@ public class TrainingUI : MonoBehaviour
         selectedArtText.text = employee.ArtText();
         selectedPerfectionText.text = employee.PerfectionText();
         selectedEnhancementText.text = $"강화 수치: +{employee.enhancementLevel}";
+
+        int nextLevel = employee.enhancementLevel;
+        if (nextLevel < EnhanceCostTable.Length)
+            selectedCostText.text = $"강화 비용:\n{EnhanceCostTable[nextLevel]:N0}G";
+        else
+            selectedCostText.text = "강화 비용: -";
         selectedSatisfactionText.text = employee.SatisfactionText();
+        RefreshEnhanceButton(employee);
+        RefreshRateTexts(employee);
         listPanel.SetActive(false);
         trainingPanel.SetActive(true);
+    }
+
+    void RefreshRateTexts(EmployeeData employee)
+    {
+        int level = employee.enhancementLevel;
+        int maxLevel = GetMaxEnhancement(employee.grade);
+
+        if (level >= maxLevel)
+        {
+            selectedSuccessRateText.text   = "성공: -";
+            selectedMaintainRateText.text  = "유지: -";
+            selectedDowngradeRateText.text = "하락: -";
+            return;
+        }
+
+        var (success, maintain, downgrade) = EnhanceTable[level];
+        int implicitMaintain = 100 - success - downgrade;
+
+        selectedSuccessRateText.text   = $"성공: {success}%";
+        selectedMaintainRateText.text  = maintain > 0
+            ? $"유지: {maintain}%"
+            : $"유지: {implicitMaintain}%";
+        selectedDowngradeRateText.text = $"하락: {downgrade}%";
+    }
+
+    void RefreshEnhanceButton(EmployeeData employee)
+    {
+        bool isMax = employee.enhancementLevel >= GetMaxEnhancement(employee.grade);
+        enhanceButton.interactable = !isMax;
+        enhanceButtonText.text = isMax ? "최대치입니다" : "강화하기";
     }
 
     public void OnClickEnhance()
     {
         int level = _selectedEmployee.enhancementLevel;
 
-        if (level >= 25)
+        if (level >= GetMaxEnhancement(_selectedEmployee.grade))
         {
             resultOutcomeText.text = "이미 최대 강화 수치입니다!";
             return;
@@ -139,6 +224,9 @@ public class TrainingUI : MonoBehaviour
         int beforeArt = _selectedEmployee.artSkill;
         int beforePerfection = _selectedEmployee.perfectionSkill;
         int beforeLevel = _selectedEmployee.enhancementLevel;
+
+        int cost = EnhanceCostTable[level];
+        if (!MoneyManager.Instance.SpendGold(cost)) return;
 
         var (success, maintain, downgrade) = EnhanceTable[level];
         int roll = UnityEngine.Random.Range(0, 100);
@@ -163,6 +251,8 @@ public class TrainingUI : MonoBehaviour
         }
 
         EmployeeManager.Instance.UpdateEmployee(_selectedEmployee);
+        GameTimeManager.Instance?.SaveGameTime();
+        ProjectSaveManager.Instance?.SaveProject();
         ShowResult(outcome, results, beforeDev, beforePlanning, beforeArt, beforePerfection, beforeLevel);
     }
     string StatDisplayName(string key) => key switch

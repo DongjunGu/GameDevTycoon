@@ -68,6 +68,13 @@ public class MoneyManager : MonoBehaviour
         if (_gold < amount)
         {
             Debug.Log($"재화 부족: 필요 {amount}G / 보유 {_gold}G");
+            if (LoanManager.Instance != null && LoanManager.Instance.activeLoans.Count == 0)
+            {
+                ConfirmUI.Instance?.Show(
+                    "돈이 부족합니다.\n대출하시겠습니까?",
+                    onConfirm: () => LoanUI.Instance?.Open()
+                );
+            }
             return false;
         }
         _gold -= amount;

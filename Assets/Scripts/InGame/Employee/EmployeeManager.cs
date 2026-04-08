@@ -10,8 +10,7 @@ public class EmployeeManager : MonoBehaviour
     public List<EmployeeData> poolEmployees = new();
     private List<EmployeeData> _defaultEmployees;
 
-    [Header("만족도 설정")]
-    public int satisfactionDecayPerWeek = 1;
+    private bool _satisfactionDroppedThisCycle = false;
 
     void Awake()
     {
@@ -195,6 +194,8 @@ public class EmployeeManager : MonoBehaviour
                 if (ownedEmployees.Count >= 4)
                     QuestManager.Instance.UnlockQuest("quest_004");
 
+                GameTimeManager.Instance?.SaveGameTime();
+                ProjectSaveManager.Instance?.SaveProject();
                 Debug.Log($"채용 완료: {inGameEmployee.employeeName} ({inGameEmployee.grade} / {inGameEmployee.potential})");
             }
             else
@@ -213,13 +214,14 @@ public class EmployeeManager : MonoBehaviour
 
     private EmployeePotential RollPotential(EmployeeGrade grade)
     {
+        // 순서: C, B, A, S
         int[] weights = grade switch
         {
-            EmployeeGrade.Normal => new[] { 5, 2, 1, 1, 1 },
-            EmployeeGrade.Rare => new[] { 4, 3, 1, 1, 1 },
-            EmployeeGrade.Epic => new[] { 1, 2, 3, 3, 1 },
-            EmployeeGrade.Unique => new[] { 0, 1, 3, 3, 3 },
-            _ => new[] { 5, 2, 1, 1, 1 }
+            EmployeeGrade.Normal => new[] { 6, 3, 1, 0 },
+            EmployeeGrade.Rare   => new[] { 4, 4, 2, 0 },
+            EmployeeGrade.Epic   => new[] { 2, 4, 3, 1 },
+            EmployeeGrade.Unique => new[] { 0, 2, 4, 4 },
+            _                    => new[] { 6, 3, 1, 0 }
         };
 
         int total = 0;
@@ -232,7 +234,7 @@ public class EmployeeManager : MonoBehaviour
             cum += weights[i];
             if (roll < cum) return (EmployeePotential)i;
         }
-        return EmployeePotential.F;
+        return EmployeePotential.C;
     }
 
     // ── 보유 직원 불러오기 ────────────────────
@@ -283,9 +285,41 @@ public class EmployeeManager : MonoBehaviour
 
     void OnWeekPassed()
     {
+        int week = GameTimeManager.Instance.Week;
+
+        // 1주차: 사이클 리셋
+        if (week == 1) _satisfactionDroppedThisCycle = false;
+
+        // 2주차: 50% 확률로 하락
+        // 3주차: 2주차에 안 떨어졌으면 반드시 하락
+        bool shouldDrop = false;
+        if (week == 2 && !_satisfactionDroppedThisCycle)
+            shouldDrop = UnityEngine.Random.value < 0.5f;
+        else if (week == 3 && !_satisfactionDroppedThisCycle)
+            shouldDrop = true;
+
+        if (shouldDrop)
+        {
+            _satisfactionDroppedThisCycle = true;
+            bool isOvertime = DevelopmentManager.Instance != null && DevelopmentManager.Instance.IsOvertimeActive;
+            int dropAmount = isOvertime ? 10 : 5;
+
+            foreach (var emp in ownedEmployees)
+            {
+                emp.satisfaction = Mathf.Clamp(emp.satisfaction - dropAmount, 0, 100);
+                UpdateEmployee(emp);
+            }
+        }
+
+        RandomEventManager.Instance?.CheckConditionEvents();
+    }
+
+    // 프로젝트 완성 시 호출 — 전 직원 만족도 +40
+    public void OnProjectCompleted()
+    {
         foreach (var emp in ownedEmployees)
         {
-            emp.satisfaction = Mathf.Clamp(emp.satisfaction - satisfactionDecayPerWeek, 0, 100);
+            emp.satisfaction = Mathf.Clamp(emp.satisfaction + 40, 0, 100);
             UpdateEmployee(emp);
         }
     }
@@ -320,28 +354,107 @@ public class EmployeeManager : MonoBehaviour
         Backend.GameData.DeleteV2("Employee", employee.rowInDate, Backend.UserInDate, bro =>
         {
             if (bro.IsSuccess())
+            {
+                GameTimeManager.Instance?.SaveGameTime();
+                ProjectSaveManager.Instance?.SaveProject();
                 Debug.Log($"해고 완료: {employee.employeeName}");
+            }
             else
                 Debug.LogError($"해고 저장 실패: {bro}");
         });
     }
     // ── 강화 적용 ─────────────────────────────
+    // 강화 단계별 연봉 증가량 [강화 단계(0→1 ~ 24→25)]
+    private static readonly int[] EnhanceSalaryTable =
+    {
+              0,  // 0→1
+              0,  // 1→2
+              0,  // 2→3
+              0,  // 3→4
+              0,  // 4→5
+              0,  // 5→6
+              0,  // 6→7
+              0,  // 7→8
+              0,  // 8→9
+              0,  // 9→10
+              0,  // 10→11
+          5_000,  // 11→12
+          8_000,  // 12→13
+         11_000,  // 13→14
+         14_000,  // 14→15
+         20_000,  // 15→16
+         25_000,  // 16→17
+         30_000,  // 17→18
+         35_000,  // 18→19
+         50_000,  // 19→20
+         60_000,  // 20→21
+         70_000,  // 21→22
+         80_000,  // 22→23
+         90_000,  // 23→24
+        100_000,  // 24→25
+    };
+
+    // 주스탯 증가량 테이블 [강화 단계(0→1 ~ 24→25)] = (min, max)
+    private static readonly (int min, int max)[] MainStatGainTable =
+    {
+        ( 5,  5),  // 0→1
+        (10, 10),  // 1→2
+        (10, 10),  // 2→3
+        (10, 10),  // 3→4
+        (15, 15),  // 4→5
+        (15, 15),  // 5→6
+        (15, 15),  // 6→7
+        (20, 20),  // 7→8
+        (20, 20),  // 8→9
+        (20, 20),  // 9→10
+        (25, 25),  // 10→11
+        (25, 35),  // 11→12
+        (25, 35),  // 12→13
+        (25, 35),  // 13→14
+        (25, 35),  // 14→15
+        (35, 45),  // 15→16
+        (35, 45),  // 16→17
+        (35, 45),  // 17→18
+        (35, 45),  // 18→19
+        (35, 45),  // 19→20
+        (40, 60),  // 20→21
+        (40, 60),  // 21→22
+        (40, 60),  // 22→23
+        (40, 80),  // 23→24
+        (50,100),  // 24→25
+    };
+
     public void ApplyEnhancement(EmployeeData employee)
     {
-        var (mainMin, mainMax) = GetMainStatRange(employee.potential);
-        var (subMin, subMax) = GetSubStatRange(employee.potential);
+        // 주스탯: 강화 레벨 기반 테이블 (++후 호출되므로 -1로 인덱스)
+        int tableIndex = Mathf.Clamp(employee.enhancementLevel - 1, 0, MainStatGainTable.Length - 1);
+        var (mainMin, mainMax) = MainStatGainTable[tableIndex];
 
         string mainStat = GetMainStatKey(employee.role);
         int mainGain = UnityEngine.Random.Range(mainMin, mainMax + 1);
 
+        // Potential 보너스 적용 후 부스탯 계산 기준으로 사용
+        int potentialBonus = employee.potential switch
+        {
+            EmployeePotential.C => 0,
+            EmployeePotential.B => 1,
+            EmployeePotential.A => 3,
+            EmployeePotential.S => 5,
+            _ => 0
+        };
+        int totalMainGain = mainGain + potentialBonus;
+
         var subStats = GetSubStatKeys(employee.role);
         Shuffle(subStats);
-        int subGain0 = UnityEngine.Random.Range(subMin, subMax + 1);
-        int subGain1 = UnityEngine.Random.Range(subMin, subMax + 1);
+        int subGain0 = Mathf.RoundToInt(totalMainGain * UnityEngine.Random.Range(0.3f, 0.5f));
+        int subGain1 = Mathf.RoundToInt(totalMainGain * UnityEngine.Random.Range(0.3f, 0.5f));
 
-        ApplyStat(employee, mainStat, mainGain);
+        ApplyStat(employee, mainStat, totalMainGain);
         ApplyStat(employee, subStats[0], subGain0);
         ApplyStat(employee, subStats[1], subGain1);
+
+        // 연봉 증가 (강화 성공 시 — tableIndex = 새 레벨 - 1)
+        employee.salary += EnhanceSalaryTable[tableIndex];
     }
 
     private string GetMainStatKey(EmployeeRole role) => role switch
@@ -354,7 +467,7 @@ public class EmployeeManager : MonoBehaviour
 
     private List<string> GetSubStatKeys(EmployeeRole role)
     {
-        var all = new List<string> { "develop", "planning", "art", "perfection" };
+        var all = new List<string> { "develop", "planning", "art" };
         all.Remove(GetMainStatKey(role));
         return all;
     }
@@ -379,23 +492,5 @@ public class EmployeeManager : MonoBehaviour
         }
     }
 
-    private (int min, int max) GetMainStatRange(EmployeePotential potential) => potential switch
-    {
-        EmployeePotential.F => (2, 4),
-        EmployeePotential.D => (4, 8),
-        EmployeePotential.C => (8, 12),
-        EmployeePotential.B => (12, 20),
-        EmployeePotential.A => (16, 26),
-        _ => (2, 4)
-    };
 
-    private (int min, int max) GetSubStatRange(EmployeePotential potential) => potential switch
-    {
-        EmployeePotential.F => (1, 2),
-        EmployeePotential.D => (2, 4),
-        EmployeePotential.C => (4, 6),
-        EmployeePotential.B => (6, 8),
-        EmployeePotential.A => (10, 12),
-        _ => (1, 2)
-    };
 }

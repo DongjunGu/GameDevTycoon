@@ -77,6 +77,8 @@ public class TechTreeManager : MonoBehaviour
         MoneyManager.Instance.SpendGold(node.cost);
         node.isUnlocked = true;
         SaveTechTree();
+        GameTimeManager.Instance?.SaveGameTime();
+        ProjectSaveManager.Instance?.SaveProject();
 
         Debug.Log($"테크 해금: {node.name}");
     }
