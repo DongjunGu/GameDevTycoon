@@ -53,8 +53,20 @@ public class OfficeCharacter : MonoBehaviour
         else
         {
             State = CharacterState.Idle;
-            _animator?.SetIdle(true);      // isFront=true
+            _animator?.SetIdle(true);
         }
+    }
+
+    // 해고 시 호출 — 패트롤 중단, 데스크 해제, 상태 초기화
+    public void PrepareToLeave()
+    {
+        if (_patrolCoroutine != null)
+        {
+            StopCoroutine(_patrolCoroutine);
+            _patrolCoroutine = null;
+        }
+        assignedDesk = null;
+        State = CharacterState.Idle;
     }
 
     // 채용 시 초기화

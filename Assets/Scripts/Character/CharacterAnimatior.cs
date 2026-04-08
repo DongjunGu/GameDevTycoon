@@ -26,6 +26,7 @@ public class CharacterAnimator : MonoBehaviour
     public void SetMoving(bool isMoving)
     {
         _targetSpeed = isMoving ? 1f : 0f;
+        if (isMoving) animator.SetBool(IsWorking, false);
     }
 
     public void UpdateDirection(Vector3 from, Vector3 to)
