@@ -33,7 +33,9 @@ public class AStarPathfinder : MonoBehaviour
             {
                 if (!GridManager.Instance.IsWalkable(neighbor)) continue;
 
-                float tentativeG = gScore.GetValueOrDefault(current, float.MaxValue) + 1f;
+                // 계단(층 이동) 비용을 일반 이동보다 약간 높게 (선택적)
+                float moveCost = Mathf.Abs(neighbor.z - current.z) > 0 ? 1.5f : 1f;
+                float tentativeG = gScore.GetValueOrDefault(current, float.MaxValue) + moveCost;
 
                 if (tentativeG < gScore.GetValueOrDefault(neighbor, float.MaxValue))
                 {
@@ -45,12 +47,13 @@ public class AStarPathfinder : MonoBehaviour
             }
         }
 
-        return null; // 경로 없음
+        return null;
     }
 
     float Heuristic(Vector3Int a, Vector3Int b)
     {
-        return Mathf.Abs(a.x - b.x) + Mathf.Abs(a.y - b.y);
+        // z(층) 차이도 휴리스틱에 반영
+        return Mathf.Abs(a.x - b.x) + Mathf.Abs(a.y - b.y) + Mathf.Abs(a.z - b.z);
     }
 
     List<Vector3Int> ReconstructPath(Dictionary<Vector3Int, Vector3Int> cameFrom, Vector3Int current)
@@ -65,7 +68,7 @@ public class AStarPathfinder : MonoBehaviour
     }
 }
 
-// 간단한 우선순위 큐
+// ── 우선순위 큐 ──────────────────────────────────────
 public class PriorityQueue<T>
 {
     private List<(T item, float priority)> _elements = new();

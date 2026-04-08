@@ -41,10 +41,10 @@ public class CharacterAnimator : MonoBehaviour
         spriteRenderer.flipX = flipX;
     }
 
-    public void SetIdle(bool isFront)
+    public void SetIdle(bool isWorking)
     {
-        animator.SetBool(IsFront, isFront);
-        animator.SetBool(IsWorking, false);
+        animator.SetBool(IsWorking, isWorking);
+        animator.SetBool(IsFront, true);
         spriteRenderer.flipX = false;
         spriteRenderer.flipY = false;
         StartCoroutine(PlayOneFrameThenFreeze());
@@ -61,6 +61,7 @@ public class CharacterAnimator : MonoBehaviour
     {
         _targetSpeed = isWorking ? 1f : 0f;
         animator.SetBool(IsWorking, isWorking);
+        if (isWorking) animator.SetBool(IsFront, true);
         spriteRenderer.flipX = false;
         spriteRenderer.flipY = false;
     }

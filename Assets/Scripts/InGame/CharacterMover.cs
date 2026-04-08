@@ -10,15 +10,19 @@ public class CharacterMover : MonoBehaviour
     private Coroutine _moveCoroutine;
 
     public event System.Action OnMoveComplete;
-    public event System.Action<Vector3Int> OnCellChanged; // 서버 동기화 트리거용
+    public event System.Action<Vector3Int> OnCellChanged;
 
     public bool IsMoving { get; private set; }
+    public int CurrentFloor { get; private set; } = 0; // ★ 현재 층
+
     private Vector3? _targetWorldPos = null;
     private CharacterAnimator _anim;
+    private SpriteRenderer _sr;
 
     void Awake()
     {
         _anim = GetComponent<CharacterAnimator>();
+        _sr = GetComponent<SpriteRenderer>();
     }
 
     public void StartMoveTo(List<Vector3Int> path, Vector3 targetWorldPos)
@@ -47,14 +51,17 @@ public class CharacterMover : MonoBehaviour
 
         for (int i = 0; i < path.Count; i++)
         {
+            var cell = path[i];
+
+            // ★ 계단 진입 시 목표 Y에 층 오프셋 반영된 worldPos 사용
             Vector3 targetWorld = (i == path.Count - 1 && _targetWorldPos.HasValue)
                 ? _targetWorldPos.Value
-                : GridManager.Instance.CellToWorld(path[i]);
+                : GridManager.Instance.CellToWorld(cell); // heightPerFloor 이미 포함
 
-            Vector3 targetFlat = new Vector3(targetWorld.x, targetWorld.y, 0);
+            // ★ z는 항상 0 유지 (isometric 2D), Y에 높이가 녹아있음
+            Vector3 targetFlat  = new Vector3(targetWorld.x, targetWorld.y, 0);
             Vector3 currentFlat = new Vector3(transform.position.x, transform.position.y, 0);
 
-            // 이동 방향으로 애니메이션 업데이트
             _anim?.UpdateDirection(currentFlat, targetFlat);
 
             while (Vector3.Distance(
@@ -72,16 +79,20 @@ public class CharacterMover : MonoBehaviour
                     targetFlat,
                     moveSpeed * Time.deltaTime);
 
-                // // 소팅 오더
-                // GetComponent<SpriteRenderer>().sortingOrder =
-                //     Mathf.RoundToInt(-transform.position.y * 10);
-// GetComponent<SpriteRenderer>().sortingOrder =
-//     Mathf.RoundToInt(-transform.position.y * 100f);
+                // ★ 소팅 오더: 층이 높을수록 무조건 앞에
+                if (_sr != null)
+                    _sr.sortingOrder = Mathf.RoundToInt(-transform.position.y * 100f)
+                                       + CurrentFloor * 10000;
+
                 yield return null;
             }
 
             transform.position = targetWorld;
-            OnCellChanged?.Invoke(path[i]);
+
+            // ★ 층 갱신 (계단 통과 시 자동 반영)
+            CurrentFloor = cell.z;
+
+            OnCellChanged?.Invoke(cell);
         }
 
         _targetWorldPos = null;

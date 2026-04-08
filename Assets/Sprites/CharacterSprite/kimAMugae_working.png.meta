@@ -1,19 +1,13 @@
 fileFormatVersion: 2
-guid: 67986110b8898744291da0e0dfe1cc0f
+guid: 640ed3a4633ee654bbda1e24cf20e1cd
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: 3905931504939022779
-    second: SpriteSheet_kimAMugae_back_0
+      213: 8990026946333224793
+    second: kimAMugae_wroking_0
   - first:
-      213: 897130182730117246
-    second: SpriteSheet_kimAMugae_back_1
-  - first:
-      213: -3814688389536453509
-    second: SpriteSheet_kimAMugae_back_2
-  - first:
-      213: 7502836464977779818
-    second: SpriteSheet_kimAMugae_back_3
+      213: -8455029261982610379
+    second: kimAMugae_wroking_1
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -136,7 +130,7 @@ TextureImporter:
     maxTextureSize: 2048
     resizeAlgorithm: 0
     textureFormat: -1
-    textureCompression: 0
+    textureCompression: 1
     compressionQuality: 50
     crunchedCompression: 0
     allowsAlphaSplitting: 0
@@ -148,13 +142,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: SpriteSheet_kimAMugae_back_0
+      name: kimAMugae_wroking_0
       rect:
         serializedVersion: 2
         x: 16
         y: 2
-        width: 32
-        height: 41
+        width: 31
+        height: 39
       alignment: 9
       pivot: {x: 0.5, y: 0.1}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -163,20 +157,20 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: bb9b5ec5208a43630800000000000000
-      internalID: 3905931504939022779
+      spriteID: 95fa16160edf2cc70800000000000000
+      internalID: 8990026946333224793
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: SpriteSheet_kimAMugae_back_1
+      name: kimAMugae_wroking_1
       rect:
         serializedVersion: 2
         x: 80
         y: 2
         width: 31
-        height: 42
+        height: 39
       alignment: 9
       pivot: {x: 0.5, y: 0.1}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -185,52 +179,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: e70f8e2e52f337c00800000000000000
-      internalID: 897130182730117246
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: SpriteSheet_kimAMugae_back_2
-      rect:
-        serializedVersion: 2
-        x: 144
-        y: 3
-        width: 31
-        height: 40
-      alignment: 9
-      pivot: {x: 0.5, y: 0.1}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: -1
-      bones: []
-      spriteID: b7c6fdcee118f0bc0800000000000000
-      internalID: -3814688389536453509
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: SpriteSheet_kimAMugae_back_3
-      rect:
-        serializedVersion: 2
-        x: 208
-        y: 3
-        width: 32
-        height: 40
-      alignment: 9
-      pivot: {x: 0.5, y: 0.1}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: -1
-      bones: []
-      spriteID: a6c19de530e6f1860800000000000000
-      internalID: 7502836464977779818
+      spriteID: 53c4ef1dea3b9aa80800000000000000
+      internalID: -8455029261982610379
       vertices: []
       indices: 
       edges: []
@@ -239,7 +189,7 @@ TextureImporter:
     customData: 
     physicsShape: []
     bones: []
-    spriteID: 4c1ad52d225e0f5409d6d18f8689dd64
+    spriteID: 41773258aea89964681ddc289b6504ee
     internalID: 0
     vertices: []
     indices: 
@@ -249,10 +199,8 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      SpriteSheet_kimAMugae_back_0: 3905931504939022779
-      SpriteSheet_kimAMugae_back_1: 897130182730117246
-      SpriteSheet_kimAMugae_back_2: -3814688389536453509
-      SpriteSheet_kimAMugae_back_3: 7502836464977779818
+      kimAMugae_wroking_0: 8990026946333224793
+      kimAMugae_wroking_1: -8455029261982610379
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

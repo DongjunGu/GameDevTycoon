@@ -6,7 +6,7 @@ AnimationClip:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: kimWork
+  m_Name: ugiWork
   serializedVersion: 7
   m_Legacy: 0
   m_Compressed: 0
@@ -21,9 +21,9 @@ AnimationClip:
   - serializedVersion: 2
     curve:
     - time: 0
-      value: {fileID: 8990026946333224793, guid: 640ed3a4633ee654bbda1e24cf20e1cd, type: 3}
+      value: {fileID: -5008847579772700509, guid: 69067e35bfa8328428528a1a3cd1dc93, type: 3}
     - time: 0.083333336
-      value: {fileID: -8455029261982610379, guid: 640ed3a4633ee654bbda1e24cf20e1cd, type: 3}
+      value: {fileID: -2182224301498003618, guid: 69067e35bfa8328428528a1a3cd1dc93, type: 3}
     attribute: m_Sprite
     path: 
     classID: 212
@@ -46,8 +46,8 @@ AnimationClip:
       isIntCurve: 0
       isSerializeReferenceCurve: 0
     pptrCurveMapping:
-    - {fileID: 8990026946333224793, guid: 640ed3a4633ee654bbda1e24cf20e1cd, type: 3}
-    - {fileID: -8455029261982610379, guid: 640ed3a4633ee654bbda1e24cf20e1cd, type: 3}
+    - {fileID: -5008847579772700509, guid: 69067e35bfa8328428528a1a3cd1dc93, type: 3}
+    - {fileID: -2182224301498003618, guid: 69067e35bfa8328428528a1a3cd1dc93, type: 3}
   m_AnimationClipSettings:
     serializedVersion: 2
     m_AdditiveReferencePoseClip: {fileID: 0}

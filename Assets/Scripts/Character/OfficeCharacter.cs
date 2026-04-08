@@ -48,12 +48,12 @@ public class OfficeCharacter : MonoBehaviour
         if (isStarted)
         {
             State = CharacterState.Working;
-            _animator?.SetWorking(true);
+            _animator?.SetWorking(true);   // isWorking=true, isFront=true
         }
         else
         {
             State = CharacterState.Idle;
-            _animator?.SetIdle(_animator.GetCurrentIsFront());
+            _animator?.SetIdle(true);      // isFront=true
         }
     }
 

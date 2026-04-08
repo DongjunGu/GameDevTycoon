@@ -1,19 +1,19 @@
 fileFormatVersion: 2
-guid: 1c63de7598850fa43ab5bdf982a301d8
+guid: ad8d2df45dcbd8e489cfc34c0381ce7c
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: 163162148425911762
-    second: SpriteSheet_kimAMugae_Front_0
+      213: -4509128659014767432
+    second: UGi_walking_b_0
   - first:
-      213: -7747540568220459718
-    second: SpriteSheet_kimAMugae_Front_1
+      213: -6102733609559371877
+    second: UGi_walking_b_1
   - first:
-      213: 860834434022644655
-    second: SpriteSheet_kimAMugae_Front_2
+      213: 6557201305821966156
+    second: UGi_walking_b_2
   - first:
-      213: 5232570915879790194
-    second: SpriteSheet_kimAMugae_Front_3
+      213: 1337951495513737629
+    second: UGi_walking_b_3
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -136,7 +136,7 @@ TextureImporter:
     maxTextureSize: 2048
     resizeAlgorithm: 0
     textureFormat: -1
-    textureCompression: 0
+    textureCompression: 1
     compressionQuality: 50
     crunchedCompression: 0
     allowsAlphaSplitting: 0
@@ -148,35 +148,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: SpriteSheet_kimAMugae_Front_0
+      name: UGi_walking_b_0
       rect:
         serializedVersion: 2
-        x: 14
-        y: 2
-        width: 34
-        height: 41
-      alignment: 9
-      pivot: {x: 0.5, y: 0.1}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: -1
-      bones: []
-      spriteID: 2dd47b90c1ba34200800000000000000
-      internalID: 163162148425911762
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: SpriteSheet_kimAMugae_Front_1
-      rect:
-        serializedVersion: 2
-        x: 78
-        y: 3
+        x: 16
+        y: 0
         width: 32
-        height: 41
+        height: 46
       alignment: 9
       pivot: {x: 0.5, y: 0.1}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -185,20 +163,20 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: a3d9a44c6e43b7490800000000000000
-      internalID: -7747540568220459718
+      spriteID: 8bc24e0006b5c61c0800000000000000
+      internalID: -4509128659014767432
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: SpriteSheet_kimAMugae_Front_2
+      name: UGi_walking_b_1
       rect:
         serializedVersion: 2
-        x: 142
-        y: 2
+        x: 80
+        y: 0
         width: 32
-        height: 41
+        height: 48
       alignment: 9
       pivot: {x: 0.5, y: 0.1}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -207,20 +185,42 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: fab185a5b5c42fb00800000000000000
-      internalID: 860834434022644655
+      spriteID: b9f4063ad1cbe4ba0800000000000000
+      internalID: -6102733609559371877
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: SpriteSheet_kimAMugae_Front_3
+      name: UGi_walking_b_2
       rect:
         serializedVersion: 2
-        x: 207
-        y: 2
+        x: 145
+        y: 0
+        width: 29
+        height: 50
+      alignment: 9
+      pivot: {x: 0.5, y: 0.1}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: c4fee3a98dbdffa50800000000000000
+      internalID: 6557201305821966156
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: UGi_walking_b_3
+      rect:
+        serializedVersion: 2
+        x: 208
+        y: 0
         width: 31
-        height: 42
+        height: 48
       alignment: 9
       pivot: {x: 0.5, y: 0.1}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -229,8 +229,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 2762e0f4683dd9840800000000000000
-      internalID: 5232570915879790194
+      spriteID: d998cc0ebcb519210800000000000000
+      internalID: 1337951495513737629
       vertices: []
       indices: 
       edges: []
@@ -239,7 +239,7 @@ TextureImporter:
     customData: 
     physicsShape: []
     bones: []
-    spriteID: c47151422e6c69a45af4f0a260d00c99
+    spriteID: 1f91c7e74142d714ca92722f7e958fcc
     internalID: 0
     vertices: []
     indices: 
@@ -249,10 +249,10 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      SpriteSheet_kimAMugae_Front_0: 163162148425911762
-      SpriteSheet_kimAMugae_Front_1: -7747540568220459718
-      SpriteSheet_kimAMugae_Front_2: 860834434022644655
-      SpriteSheet_kimAMugae_Front_3: 5232570915879790194
+      UGi_walking_b_0: -4509128659014767432
+      UGi_walking_b_1: -6102733609559371877
+      UGi_walking_b_2: 6557201305821966156
+      UGi_walking_b_3: 1337951495513737629
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

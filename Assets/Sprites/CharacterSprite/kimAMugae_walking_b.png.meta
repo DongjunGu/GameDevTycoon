@@ -1,10 +1,19 @@
 fileFormatVersion: 2
-guid: 07ec5132933512e4696d2b52a4e6a910
+guid: a3ea3995796c8b442a3453179646dec0
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: 5843985864524226762
-    second: Chair_0
+      213: 4232161223304023221
+    second: kimAMugae_walking_b_0
+  - first:
+      213: 7175513838493765500
+    second: kimAMugae_walking_b_1
+  - first:
+      213: -1674472149130720939
+    second: kimAMugae_walking_b_2
+  - first:
+      213: -1086484384657530980
+    second: kimAMugae_walking_b_3
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -139,23 +148,89 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: Chair_0
+      name: kimAMugae_walking_b_0
       rect:
         serializedVersion: 2
-        x: 8
-        y: 20
-        width: 24
-        height: 35
+        x: 18
+        y: 0
+        width: 32
+        height: 43
       alignment: 9
-      pivot: {x: 0.5569193, y: 0.42410758}
+      pivot: {x: 0.5, y: 0.1}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: ac0ee575e220a1150800000000000000
-      internalID: 5843985864524226762
+      spriteID: 5bc083ba538abba30800000000000000
+      internalID: 4232161223304023221
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: kimAMugae_walking_b_1
+      rect:
+        serializedVersion: 2
+        x: 82
+        y: 0
+        width: 31
+        height: 44
+      alignment: 9
+      pivot: {x: 0.5, y: 0.1}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: c7f025091db849360800000000000000
+      internalID: 7175513838493765500
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: kimAMugae_walking_b_2
+      rect:
+        serializedVersion: 2
+        x: 146
+        y: 0
+        width: 31
+        height: 43
+      alignment: 9
+      pivot: {x: 0.5, y: 0.1}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 55947ccb37413c8e0800000000000000
+      internalID: -1674472149130720939
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: kimAMugae_walking_b_3
+      rect:
+        serializedVersion: 2
+        x: 210
+        y: 0
+        width: 32
+        height: 43
+      alignment: 9
+      pivot: {x: 0.5, y: 0.1}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: c9f9a7665380ce0f0800000000000000
+      internalID: -1086484384657530980
       vertices: []
       indices: 
       edges: []
@@ -164,7 +239,7 @@ TextureImporter:
     customData: 
     physicsShape: []
     bones: []
-    spriteID: 5e97eb03825dee720800000000000000
+    spriteID: ffa22a5bd6d17d34cbee5a4bfe961687
     internalID: 0
     vertices: []
     indices: 
@@ -174,7 +249,10 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      Chair_0: 5843985864524226762
+      kimAMugae_walking_b_0: 4232161223304023221
+      kimAMugae_walking_b_1: 7175513838493765500
+      kimAMugae_walking_b_2: -1674472149130720939
+      kimAMugae_walking_b_3: -1086484384657530980
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 
