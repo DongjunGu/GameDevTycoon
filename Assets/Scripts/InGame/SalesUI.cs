@@ -32,6 +32,8 @@ public class SalesUI : MonoBehaviour
     private float _cachedBug;
     private bool _newProjectStartedDuringSales = false;
     private float _cachedQualityScore;
+    private int _completedBarIndex = 0;
+    private int _cachedTotalUnits = 0;
 
     public void NotifyNewProjectStarted() => _newProjectStartedDuringSales = true;
     void Awake()
@@ -58,7 +60,8 @@ public class SalesUI : MonoBehaviour
     public void ShowWithProjectName(
         float qualityScore, ProjectScale scale, string projectName,
         ProjectScale cachedScale, ProjectGenre cachedGenre, ProjectPlatform cachedPlatform,
-        float planning, float develop, float art, float creativity, float bug)
+        float planning, float develop, float art, float creativity, float bug,
+        int completedWeeks = 0, int savedTotalUnits = 0)
     {
         _cachedScale = cachedScale;
         _cachedGenre = cachedGenre;
@@ -70,9 +73,9 @@ public class SalesUI : MonoBehaviour
         _cachedCreativity = creativity;
         _cachedBug = bug;
         GameTimeManager.Instance.ForceStartTime();
-        ShowInternal(qualityScore, scale);
+        ShowInternal(qualityScore, scale, completedWeeks, savedTotalUnits);
     }
-    void ShowInternal(float qualityScore, ProjectScale scale)
+    void ShowInternal(float qualityScore, ProjectScale scale, int completedWeeks = 0, int savedTotalUnits = 0)
     {
         _cachedQualityScore = qualityScore;
         _newProjectStartedDuringSales = false;
@@ -93,9 +96,22 @@ public class SalesUI : MonoBehaviour
             ProjectScale.Large  => 5,
             _ => 1
         };
-        float rand = UnityEngine.Random.Range(0.9f, 1.1f);
-        int totalUnits = Mathf.RoundToInt(
-            (5000f + 200f * scaleMultiplier * Mathf.Pow(qualityScore / 100f, 2f)) * rand
+        int totalUnits;
+        if (savedTotalUnits > 0)
+            totalUnits = savedTotalUnits;
+        else
+        {
+            float rand = UnityEngine.Random.Range(0.9f, 1.1f);
+            totalUnits = Mathf.RoundToInt(
+                (5000f + 200f * scaleMultiplier * Mathf.Pow(qualityScore / 100f, 2f)) * rand
+            );
+        }
+        _cachedTotalUnits = totalUnits;
+        _completedBarIndex = completedWeeks;
+        SalesSaveManager.Instance?.SaveSales(
+            completedWeeks, totalUnits, _cachedQualityScore, scale, _cachedProjectName,
+            _cachedScale, _cachedGenre, _cachedPlatform,
+            _cachedPlanning, _cachedDevelop, _cachedArt, _cachedCreativity, _cachedBug
         );
 
         float[] distribution = CalcDistribution(scale);
@@ -112,9 +128,9 @@ public class SalesUI : MonoBehaviour
         totalRevenueText.text = $"총 매출: {totalRevenue:N0}G";
 
         salesPanel.SetActive(true);
-        StartCoroutine(ShowBarsSequentially(unitPerPeriod, maxUnits));
+        StartCoroutine(ShowBarsSequentially(unitPerPeriod, maxUnits, completedWeeks));
     }
-    IEnumerator ShowBarsSequentially(int[] unitPerPeriod, int maxUnits)
+    IEnumerator ShowBarsSequentially(int[] unitPerPeriod, int maxUnits, int completedWeeks = 0)
     {
         yield return null; // ← 한 프레임 대기 후 높이 계산
         maxBarHeight = chartArea.rect.height * 0.9f;
@@ -123,18 +139,31 @@ public class SalesUI : MonoBehaviour
 
         for (int i = 0; i < barCount; i++)
         {
+            float targetHeight = maxUnits > 0 ? ((float)unitPerPeriod[i] / maxUnits) * maxBarHeight : 0f;
+            int endUnits = cumulativeUnits + unitPerPeriod[i];
+
             var barObj = Instantiate(barPrefab, chartArea);
             var barImage = barObj.transform.Find("BarImage").GetComponent<RectTransform>();
             var valueLabel = barObj.transform.Find("ValueLabel").GetComponent<TMPro.TextMeshProUGUI>();
             var periodLabel = barObj.transform.Find("PeriodLabel").GetComponent<TMPro.TextMeshProUGUI>();
-
             periodLabel.text = $"{i + 1}주";
+
+            // 이미 완료된 주차는 즉시 표시 (돈 지급 없음)
+            if (i < completedWeeks)
+            {
+                barImage.sizeDelta = new Vector2(barImage.sizeDelta.x, targetHeight);
+                valueLabel.text = $"{unitPerPeriod[i]:N0}";
+                cumulativeUnits = endUnits;
+                totalUnitsText.text = $"총 판매량: {cumulativeUnits:N0}개";
+                totalRevenueText.text = $"총 매출: {cumulativeUnits * 9:N0}G";
+                continue;
+            }
+
+            // 미완료 주차 - 애니메이션
             valueLabel.text = "";
             barImage.sizeDelta = new Vector2(barImage.sizeDelta.x, 0f);
 
-            float targetHeight = maxUnits > 0 ? ((float)unitPerPeriod[i] / maxUnits) * maxBarHeight : 0f;
             int startUnits = cumulativeUnits;
-            int endUnits = cumulativeUnits + unitPerPeriod[i];
 
             float weekDuration = _cachedScale switch
             {
@@ -170,6 +199,13 @@ public class SalesUI : MonoBehaviour
             totalRevenueText.text = $"총 매출: {endUnits * 9:N0}G";
 
             MoneyManager.Instance.AddGold(weeklyRevenue);
+
+            _completedBarIndex = i + 1;
+            SalesSaveManager.Instance?.SaveSales(
+                _completedBarIndex, _cachedTotalUnits, _cachedQualityScore, _cachedScale, _cachedProjectName,
+                _cachedScale, _cachedGenre, _cachedPlatform,
+                _cachedPlanning, _cachedDevelop, _cachedArt, _cachedCreativity, _cachedBug
+            );
 
             cumulativeUnits = endUnits;
 
@@ -221,6 +257,8 @@ public class SalesUI : MonoBehaviour
 
             // ── 2. 프로젝트 Complete 저장 후 초기화 ──
             // Sales 중 새 프로젝트가 시작된 경우 ResetProject 스킵
+            SalesSaveManager.Instance?.CompleteSales();
+
             if (!_newProjectStartedDuringSales)
             {
                 DevelopmentManager.Instance.CurrentStage = ProjectStage.Complete;

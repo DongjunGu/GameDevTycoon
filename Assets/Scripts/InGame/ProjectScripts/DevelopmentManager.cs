@@ -10,6 +10,9 @@ public class DevelopmentManager : MonoBehaviour
     public static DevelopmentManager Instance { get; private set; }
 
     [Header("Settings")]
+    public bool IsOvertimeActive { get; private set; } = false;
+    public void SetOvertime(bool active) => IsOvertimeActive = active;
+
     public float developmentDuration = 180f;
     public float bugDurationRate = 0.2f;
     public EmployeeData plannerLeader;
@@ -41,7 +44,10 @@ public class DevelopmentManager : MonoBehaviour
     private Dictionary<string, int> _tickIndexMap = new();
     private Dictionary<string, int[]> _tickOrderMap = new();
     private Dictionary<string, CharacterState> _prevStateMap = new();
+    private Dictionary<string, int> _midDevSeeds = new();
+    private Dictionary<string, float> _midDevElapsed = new();
     private Coroutine _bugFixCoroutine;
+    private int _tickSeed;
 
     void Awake()
     {
@@ -88,6 +94,13 @@ public class DevelopmentManager : MonoBehaviour
 
     void InitTickMap()
     {
+        _tickSeed = UnityEngine.Random.Range(int.MinValue, int.MaxValue);
+        InitTickMapWithSeed(_tickSeed);
+    }
+
+    void InitTickMapWithSeed(int seed)
+    {
+        var rng = new System.Random(seed);
         _tickTimesMap.Clear();
         _tickIndexMap.Clear();
         _tickOrderMap.Clear();
@@ -99,15 +112,41 @@ public class DevelopmentManager : MonoBehaviour
 
             var times = new List<float>();
             for (int i = 0; i < tickCount; i++)
-                times.Add(i * segmentSize + UnityEngine.Random.Range(0f, segmentSize));
+                times.Add(i * segmentSize + (float)(rng.NextDouble() * segmentSize));
 
             _tickTimesMap[employee.id] = times;
             _tickIndexMap[employee.id] = 0;
-            _tickOrderMap[employee.id] = BuildTickOrder(tickCount, IsOvertimeMode);
+            _tickOrderMap[employee.id] = BuildTickOrder(tickCount, IsOvertimeMode, rng);
         }
     }
 
-    int[] BuildTickOrder(int total, bool overtime)
+    public int GetTickSeed() => _tickSeed;
+
+    void RestoreTickIndices(string tickIndices)
+    {
+        if (string.IsNullOrEmpty(tickIndices)) return;
+        foreach (var entry in tickIndices.Split(','))
+        {
+            var parts = entry.Split(':');
+            if (parts.Length != 2) continue;
+            string empId = parts[0];
+            if (int.TryParse(parts[1], out int idx) && _tickIndexMap.ContainsKey(empId))
+                _tickIndexMap[empId] = idx;
+        }
+    }
+
+    public string GetTickIndices()
+    {
+        var parts = new System.Text.StringBuilder();
+        foreach (var kv in _tickIndexMap)
+        {
+            if (parts.Length > 0) parts.Append(',');
+            parts.Append($"{kv.Key}:{kv.Value}");
+        }
+        return parts.ToString();
+    }
+
+    int[] BuildTickOrder(int total, bool overtime, System.Random rng = null)
     {
         // 0:잭팟, 1:성공, 2:창의성, 3:버그, 4:꽝
         // 일반: 10%, 35%, 15%, 10%, 30%
@@ -131,7 +170,7 @@ public class DevelopmentManager : MonoBehaviour
 
         for (int i = list.Count - 1; i > 0; i--)
         {
-            int r = UnityEngine.Random.Range(0, i + 1);
+            int r = rng != null ? rng.Next(0, i + 1) : UnityEngine.Random.Range(0, i + 1);
             (list[i], list[r]) = (list[r], list[i]);
         }
         return list.ToArray();
@@ -406,7 +445,8 @@ public class DevelopmentManager : MonoBehaviour
         string plannerLeaderId, string programmerLeaderId, string artistLeaderId,
         float accumPlanning, float accumDevelop, float accumArt,
         float accumBug, float accumCreativity,
-        ProjectStage stage)
+        ProjectStage stage,
+        int tickSeed = 0, string tickIndices = "", string midDevData = "")
     {
         developmentDuration = ProjectSetupUI.SelectedScale switch
         {
@@ -433,23 +473,13 @@ public class DevelopmentManager : MonoBehaviour
         switch (stage)
         {
             case ProjectStage.Developing:
-                InitTickMap();
+                _tickSeed = tickSeed != 0 ? tickSeed : UnityEngine.Random.Range(int.MinValue, int.MaxValue);
+                InitTickMapWithSeed(_tickSeed);
+                RestoreMidDevData(midDevData);
+                RestoreTickIndices(tickIndices);
 
-                foreach (var key in new List<string>(_tickTimesMap.Keys))
-                {
-                    var times = _tickTimesMap[key];
-                    int skipped = 0;
-                    while (_tickIndexMap[key] < times.Count && times[_tickIndexMap[key]] <= _elapsed)
-                    {
-                        _tickIndexMap[key]++;
-                        skipped++;
-                    }
-                    float nextTick = _tickIndexMap[key] < times.Count ? times[_tickIndexMap[key]] : -1f;
-                    Debug.Log($"[보정] {key} skipped: {skipped} / nextTick: {nextTick:F1}");
-                }
-
-                _isRunning = true; // ← 추가
-                GameTimeManager.Instance.ForceStartTime(); // ← 추가
+                _isRunning = true;
+                GameTimeManager.Instance.ForceStartTime();
                 StartCoroutine(DevelopmentCoroutine());
                 break;
 
@@ -501,6 +531,8 @@ public class DevelopmentManager : MonoBehaviour
         _tickIndexMap.Remove(id);
         _tickOrderMap.Remove(id);
         _prevStateMap.Remove(id);
+        _midDevSeeds.Remove(id);
+        _midDevElapsed.Remove(id);
 
         if (plannerLeader?.id == id)    plannerLeader = null;
         if (programmerLeader?.id == id) programmerLeader = null;
@@ -509,18 +541,71 @@ public class DevelopmentManager : MonoBehaviour
 
     public void OnEmployeeHired(EmployeeData employee)
     {
+        if (!IsStarted || CurrentStage != ProjectStage.Developing) return;
+
         float remaining = developmentDuration - _elapsed;
         float ratio = remaining / developmentDuration;
         int tickCount = Mathf.Max(1, Mathf.RoundToInt(12 * ratio));
+
+        int seed = UnityEngine.Random.Range(int.MinValue, int.MaxValue);
+        _midDevSeeds[employee.id] = seed;
+        _midDevElapsed[employee.id] = _elapsed;
+
+        BuildMidDevTicks(employee.id, seed, _elapsed, tickCount);
+    }
+
+    void BuildMidDevTicks(string empId, int seed, float elapsedAtHire, int tickCount)
+    {
+        var rng = new System.Random(seed);
+        float remaining = developmentDuration - elapsedAtHire;
         float segmentSize = remaining / tickCount;
 
         var times = new List<float>();
         for (int i = 0; i < tickCount; i++)
-            times.Add(_elapsed + i * segmentSize + UnityEngine.Random.Range(0f, segmentSize));
+            times.Add(elapsedAtHire + i * segmentSize + (float)(rng.NextDouble() * segmentSize));
 
-        _tickTimesMap[employee.id] = times;
-        _tickIndexMap[employee.id] = 0;
-        _tickOrderMap[employee.id] = BuildTickOrder(tickCount, IsOvertimeMode);
+        _tickTimesMap[empId] = times;
+        _tickIndexMap[empId] = 0;
+        _tickOrderMap[empId] = BuildTickOrder(tickCount, IsOvertimeMode, rng);
+    }
+
+    public string GetMidDevData()
+    {
+        var sb = new System.Text.StringBuilder();
+        foreach (var kv in _midDevSeeds)
+        {
+            if (sb.Length > 0) sb.Append(',');
+            float elapsed = _midDevElapsed.TryGetValue(kv.Key, out float e) ? e : 0f;
+            sb.Append($"{kv.Key}:{kv.Value}:{elapsed.ToString("F3", System.Globalization.CultureInfo.InvariantCulture)}");
+        }
+        return sb.ToString();
+    }
+
+    void RestoreMidDevData(string midDevData)
+    {
+        if (string.IsNullOrEmpty(midDevData)) return;
+        _midDevSeeds.Clear();
+        _midDevElapsed.Clear();
+
+        foreach (var entry in midDevData.Split(','))
+        {
+            var parts = entry.Split(':');
+            if (parts.Length != 3) continue;
+            string empId = parts[0];
+            if (!int.TryParse(parts[1], out int seed)) continue;
+            if (!float.TryParse(parts[2], System.Globalization.NumberStyles.Any,
+                System.Globalization.CultureInfo.InvariantCulture, out float elapsed)) continue;
+
+            var employee = EmployeeManager.Instance.ownedEmployees.Find(e => e.id == empId);
+            if (employee == null) continue;
+
+            float ratio = (developmentDuration - elapsed) / developmentDuration;
+            int tickCount = Mathf.Max(1, Mathf.RoundToInt(12 * ratio));
+
+            _midDevSeeds[empId] = seed;
+            _midDevElapsed[empId] = elapsed;
+            BuildMidDevTicks(empId, seed, elapsed, tickCount);
+        }
     }
 
     void ReschedulePendingTicks(string id)
@@ -668,6 +753,8 @@ public class DevelopmentManager : MonoBehaviour
         _tickTimesMap.Clear();
         _tickIndexMap.Clear();
         _tickOrderMap.Clear();
+        _midDevSeeds.Clear();
+        _midDevElapsed.Clear();
 
         if (_bugFixCoroutine != null)
         {
@@ -683,6 +770,8 @@ public class DevelopmentManager : MonoBehaviour
         ProjectSetupUI.SelectedGenre = default;
         ProjectSetupUI.SelectedPlatform = default;
 
+        IsOvertimeActive = false;
+        EmployeeManager.Instance?.OnProjectCompleted();
         GameTimeManager.Instance.ForceStartTime();
         Debug.Log("프로젝트 초기화 완료");
     }
@@ -706,14 +795,10 @@ public class DevelopmentManager : MonoBehaviour
 
     float GetSatisfactionMultiplier(EmployeeData employee)
     {
-        var state = employee.GetSatisfactionState();
-        return state switch
-        {
-            SatisfactionState.VeryHappy => 1.2f,
-            SatisfactionState.Unhappy => 0.8f,
-            SatisfactionState.VeryUnhappy => 0.8f,
-            _ => 1.0f
-        };
+        int sat = employee.satisfaction;
+        if (sat >= 80) return 1.1f;
+        if (sat >= 60) return 1.0f;
+        return 0.9f; // 40~60, ~40 모두 -10%
     }
     void UpdateInvestmentProgress()
     {

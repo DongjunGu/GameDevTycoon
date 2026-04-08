@@ -58,6 +58,7 @@ public class LoanManager : MonoBehaviour
             activeLoans.Add(loan);
             MoneyManager.Instance.AddGold(amount);
             GameTimeManager.Instance.SaveGameTime();
+            ProjectSaveManager.Instance?.SaveProject();
             LoanUI.Instance.RefreshUI();
             Debug.Log($"대출 실행: {amount:N0}G / 만기: {dueYear}년 {dueMonth}월 {dueWeek}주");
         });
@@ -104,6 +105,7 @@ public class LoanManager : MonoBehaviour
                 activeLoans.Remove(loan);
                 DeleteLoan(loan);
                 GameTimeManager.Instance.SaveGameTime();
+                ProjectSaveManager.Instance?.SaveProject();
 
                 if (goldAfter < 0)
                 {

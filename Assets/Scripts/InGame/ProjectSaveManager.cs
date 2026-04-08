@@ -47,10 +47,15 @@ public class ProjectSaveManager : MonoBehaviour
     private bool _loadedInvestmentAccepted;
     private string _loadedInvestmentStat;
     private string _loadedInvestmentStatName;
+    private int _loadedTickSeed;
+    private string _loadedTickIndices;
+    private string _loadedMidDevData;
 
     private string _loadedProjectName = "프로젝트명";
     public string GetLoadedProjectName() => _loadedProjectName;
-    private ProjectScale _savedSalesScale; void Awake()
+    private ProjectScale _savedSalesScale;
+
+    void Awake()
     {
         if (Instance != null) { Destroy(gameObject); return; }
         Instance = this;
@@ -63,14 +68,14 @@ public class ProjectSaveManager : MonoBehaviour
         var dm = DevelopmentManager.Instance;
         var dp = DevelopmentPanelUI.Instance;
 
-        if (dm.CurrentStage == ProjectStage.None)
+        if (dm.CurrentStage == ProjectStage.None || dm.CurrentStage == ProjectStage.Sales)
         {
-            Debug.Log("저장 스킵: 진행 중인 프로젝트 없음");
+            Debug.Log("저장 스킵: 진행 중인 프로젝트 없음 또는 판매 중");
             return;
         }
 
         var param = new Param();
-        param.Add("isInProgress", dm.CurrentStage != ProjectStage.Complete && dm.IsStarted);
+        param.Add("isInProgress", dm.CurrentStage != ProjectStage.Complete && dm.CurrentStage != ProjectStage.None);
         param.Add("stage", (int)GetCurrentStage());
         param.Add("scale", (int)ProjectSetupUI.SelectedScale);
         param.Add("genre", (int)ProjectSetupUI.SelectedGenre);
@@ -99,6 +104,9 @@ public class ProjectSaveManager : MonoBehaviour
         param.Add("investmentAccepted", RandomEventManager.Instance.InvestmentAccepted);
         param.Add("investmentStat", RandomEventManager.Instance.InvestmentStat);
         param.Add("investmentStatName", RandomEventManager.Instance.InvestmentStatName);
+        param.Add("tickSeed", dm.GetTickSeed());
+        param.Add("tickIndices", dm.GetTickIndices());
+        param.Add("midDevData", dm.GetMidDevData());
 
         if (!string.IsNullOrEmpty(_rowInDate))
         {
@@ -188,6 +196,9 @@ public class ProjectSaveManager : MonoBehaviour
             _loadedInvestmentAccepted = SafeBool(row, "investmentAccepted", false);
             _loadedInvestmentStat = SafeString(row, "investmentStat", "");
             _loadedInvestmentStatName = SafeString(row, "investmentStatName", "");
+            _loadedTickSeed = SafeInt(row, "tickSeed", 0);
+            _loadedTickIndices = SafeString(row, "tickIndices", "");
+            _loadedMidDevData = SafeString(row, "midDevData", "");
 
             Debug.Log($"프로젝트 로드 완료: stage={_loadedStage} elapsed={_loadedElapsed:F1}");
             onComplete?.Invoke();
@@ -212,17 +223,14 @@ public class ProjectSaveManager : MonoBehaviour
             _loadedPlannerLeaderId, _loadedProgrammerLeaderId, _loadedArtistLeaderId,
             _loadedAccumPlanning, _loadedAccumDevelop, _loadedAccumArt,
             _loadedAccumBug, _loadedAccumCreativity,
-            _loadedStage
+            _loadedStage,
+            _loadedTickSeed, _loadedTickIndices, _loadedMidDevData
         );
-
-
-
 
         // ── RandomEvent 상태 복원 ──
         RandomEventManager.Instance.InvestmentAccepted = _loadedInvestmentAccepted;
         RandomEventManager.Instance.InvestmentStat = _loadedInvestmentStat;
         RandomEventManager.Instance.InvestmentStatName = _loadedInvestmentStatName;
-        // ── SetValues 후 투자 UI 표시 ──
         if (_loadedInvestmentAccepted && !string.IsNullOrEmpty(_loadedInvestmentStatName))
         {
             float currentValue = RandomEventManager.Instance.InvestmentStat switch
@@ -241,11 +249,14 @@ public class ProjectSaveManager : MonoBehaviour
             );
         }
 
+        // ── Marketing/Sales: 프로젝트 초기화 (Sales는 SalesSaveManager가 복원) ──
         if (_loadedStage == ProjectStage.Marketing || _loadedStage == ProjectStage.Sales)
         {
-            if (_loadedQualityScore > 0f)
+            DevelopmentManager.Instance.ResetProject();
+
+            // Marketing 단계에서 껐을 때 (SalesUI 열리기 전) → 직접 복원
+            if (_loadedStage == ProjectStage.Marketing && _loadedQualityScore > 0f)
             {
-                DevelopmentManager.Instance.ResetProject();
                 AlertUI.Instance.Show("판매 시작!", () =>
                 {
                     SalesUI.Instance.ShowWithProjectName(
@@ -256,16 +267,9 @@ public class ProjectSaveManager : MonoBehaviour
                     );
                 });
             }
-            else
-            {
-                DevelopmentManager.Instance.ResetProject();
-            }
+            // Sales 단계는 SalesSaveManager.RestoreIfNeeded()에서 처리
             return;
         }
-
-
-
-
 
         Debug.Log($"프로젝트 복원 실행: stage={_loadedStage}");
     }
@@ -284,6 +288,7 @@ public class ProjectSaveManager : MonoBehaviour
     {
         _savedProjectName = name;
     }
+
     // ── 스테이지 판별 ─────────────────────────
     ProjectStage GetCurrentStage()
     {

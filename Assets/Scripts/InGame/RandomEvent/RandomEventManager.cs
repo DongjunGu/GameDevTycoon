@@ -37,6 +37,9 @@ public class RandomEventManager : MonoBehaviour
         if (Instance != null) { Destroy(gameObject); return; }
         Instance = this;
         DontDestroyOnLoad(gameObject);
+
+        // 조건 이벤트 풀은 게임 내내 활성화
+        RandomEvents_Condition.Register(_conditionEventPool, this);
     }
 
     public void InitEvents()
@@ -46,10 +49,7 @@ public class RandomEventManager : MonoBehaviour
         InvestmentStat = "";
         InvestmentStatName = "";
         _eventPool.Clear();
-        _conditionEventPool.Clear();
-
         RandomEvents_Dev.Register(_eventPool, this);
-        RandomEvents_Condition.Register(_conditionEventPool, this);
     }
 
     public void Reset()
@@ -155,16 +155,22 @@ public class RandomEventManager : MonoBehaviour
 
     public void CheckConditionEvents()
     {
-        foreach (var e in EmployeeManager.Instance.ownedEmployees)
-            if (e.satisfaction <= 50)
-                TryTriggerConditionEvent(RandomEventType.EmployeeRun);
+        // 만족도 40 미만 직원 중 한 명만 퇴사 이벤트 체크
+        var candidates = EmployeeManager.Instance.ownedEmployees
+            .FindAll(e => e.satisfaction < 40);
+        if (candidates.Count == 0) return;
+
+        int idx = UnityEngine.Random.Range(0, candidates.Count);
+        TryTriggerConditionEvent(RandomEventType.EmployeeRun, candidates[idx]);
     }
 
-    void TryTriggerConditionEvent(RandomEventType type)
+    void TryTriggerConditionEvent(RandomEventType type, EmployeeData target = null)
     {
         var evt = _conditionEventPool.Find(e => e.type == type);
         if (evt == null) return;
         if (UnityEngine.Random.value > evt.triggerChance) return;
+
+        _pendingResignTarget = target;
         evt.onApply?.Invoke();
     }
 
@@ -174,7 +180,20 @@ public class RandomEventManager : MonoBehaviour
     public void TriggerScoutEvent() { }
     public void TriggerBetaTestEvent() { }
     public void TriggerAlgorithmEvent() { }
-    public void TriggerEmployeeRunEvent() { }
     public void TriggerEmployeeFightEvent() { }
     public void TriggerBadCompanyEvent() { }
+
+    private EmployeeData _pendingResignTarget;
+
+    public void TriggerEmployeeRunEvent()
+    {
+        var emp = _pendingResignTarget;
+        _pendingResignTarget = null;
+        if (emp == null) return;
+
+        AlertUI.Instance?.Show(
+            $"{emp.employeeName}이(가) 만족도 저하로 퇴사했습니다.",
+            () => EmployeeManager.Instance.FireEmployee(emp)
+        );
+    }
 }

@@ -8,6 +8,7 @@ public class GameSceneInitializer : MonoBehaviour
         if (dialogUI != null)
             DialogManager.Instance.SetDialogUI(dialogUI);
         ProjectSaveManager.Instance.RestoreIfNeeded();
+        SalesSaveManager.Instance.RestoreIfNeeded();
 
         HUDUI.Instance?.RefreshAll();
 

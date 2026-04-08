@@ -47,14 +47,6 @@ public class ProjectSetupUI : MonoBehaviour
     void Start()
     {
         ShowPanel(startPanel);
-        if (GenrePopularityManager.Instance != null)
-            GenrePopularityManager.Instance.OnPopularityChanged += UpdateGenreButtonLabels;
-    }
-
-    void OnDestroy()
-    {
-        if (GenrePopularityManager.Instance != null)
-            GenrePopularityManager.Instance.OnPopularityChanged -= UpdateGenreButtonLabels;
     }
 
     // ── 패널 전환 ─────────────────────────────
@@ -84,6 +76,7 @@ public class ProjectSetupUI : MonoBehaviour
             AlertUI.Instance.Show("진행중인 프로젝트가 있습니다.");
             return;
         }
+        GameTimeManager.Instance.StopTime();
         UpdateScaleButtonLabels();
         UpdateGenreButtonLabels();
         ShowPanel(scalePanel);
@@ -277,6 +270,7 @@ public class ProjectSetupUI : MonoBehaviour
         summaryPanel.SetActive(false);
         confirmPanel.SetActive(false);
         startPanel.SetActive(true);
+        GameTimeManager.Instance.StartTime();
     }
 
     // ── 개발 시작 ─────────────────────────────
