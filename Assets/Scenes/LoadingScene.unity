@@ -1682,19 +1682,12 @@ MonoBehaviour:
   blackoutChance: 1
   teamDinnerChance: 1
   eventDetailTriggerChance: 1
-  releaseEventTriggerChance: 1
-  competitorChance: 1
-  perfectTimingChance: 1
-  algorithmChance: 1
   employeeRunChance: 1
   employeeFightChance: 1
   badCompanyChance: 1
   investmentTriggerChance: 1
   investmentThreshold: 80
   investmentReward: 1000
-  networkIssueTriggerChance: 1
-  networkSpeedMultiplier: 0.8
-  networkIssueDuration: 0.5
 --- !u!114 &2062941527
 MonoBehaviour:
   m_ObjectHideFlags: 0
