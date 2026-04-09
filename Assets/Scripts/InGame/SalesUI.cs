@@ -34,8 +34,13 @@ public class SalesUI : MonoBehaviour
     private float _cachedQualityScore;
     private int _completedBarIndex = 0;
     private int _cachedTotalUnits = 0;
+    private CompletedProjectData _currentSalesProject = null;
 
-    public void NotifyNewProjectStarted() => _newProjectStartedDuringSales = true;
+    public void NotifyNewProjectStarted()
+    {
+        _newProjectStartedDuringSales = true;
+        SalesSaveManager.Instance?.SaveNewProjectStarted();
+    }
     void Awake()
     {
         if (Instance != null) { Destroy(gameObject); return; }
@@ -55,13 +60,13 @@ public class SalesUI : MonoBehaviour
         _cachedCreativity = DevelopmentResultUI.Instance.LastCreativity;
         _cachedBug = DevelopmentResultUI.Instance.LastBug;
         GameTimeManager.Instance.ForceStartTime();
-        ShowInternal(qualityScore, scale);
+        ShowInternal(qualityScore, scale, applyCompletion: true);
     }
     public void ShowWithProjectName(
         float qualityScore, ProjectScale scale, string projectName,
         ProjectScale cachedScale, ProjectGenre cachedGenre, ProjectPlatform cachedPlatform,
         float planning, float develop, float art, float creativity, float bug,
-        int completedWeeks = 0, int savedTotalUnits = 0)
+        int completedWeeks = 0, int savedTotalUnits = 0, bool applyCompletion = true)
     {
         _cachedScale = cachedScale;
         _cachedGenre = cachedGenre;
@@ -73,16 +78,61 @@ public class SalesUI : MonoBehaviour
         _cachedCreativity = creativity;
         _cachedBug = bug;
         GameTimeManager.Instance.ForceStartTime();
-        ShowInternal(qualityScore, scale, completedWeeks, savedTotalUnits);
+        ShowInternal(qualityScore, scale, completedWeeks, savedTotalUnits, applyCompletion);
     }
-    void ShowInternal(float qualityScore, ProjectScale scale, int completedWeeks = 0, int savedTotalUnits = 0)
+    void ShowInternal(float qualityScore, ProjectScale scale, int completedWeeks = 0, int savedTotalUnits = 0, bool applyCompletion = true)
     {
         _cachedQualityScore = qualityScore;
-        _newProjectStartedDuringSales = false;
-        DevelopmentManager.Instance.CurrentStage = ProjectStage.Sales;
-        DevelopmentPanelUI.Instance.ResetValues();
-        DevelopmentPanelUI.Instance.ResetMarketFit();
-        DevelopmentTimerUI.Instance.ResetTimer();
+        _newProjectStartedDuringSales = !applyCompletion && SalesSaveManager.Instance != null && SalesSaveManager.Instance.LoadedNewProjectStarted;
+        // 새 프로젝트가 진행 중이면 CurrentStage를 Sales로 바꾸지 않음 (Developing 유지 → 틱/애니메이션 정상 작동)
+        if (!_newProjectStartedDuringSales)
+            DevelopmentManager.Instance.CurrentStage = ProjectStage.Sales;
+        if (!applyCompletion)
+        {
+            // 복원 시: rowInDate로 정확히 찾아 연결
+            string targetRowInDate = SalesSaveManager.Instance?.LoadedCompletedProjectRowInDate ?? "";
+            if (!string.IsNullOrEmpty(targetRowInDate))
+                _currentSalesProject = CompletedProjectManager.Instance?.completedProjects
+                    .Find(p => p.rowInDate == targetRowInDate);
+            else
+                _currentSalesProject = CompletedProjectManager.Instance?.completedProjects
+                    .Find(p => p.totalUnits == 0); // fallback
+
+            if (_currentSalesProject == null)
+                Debug.LogWarning("[SalesUI] 복원 시 currentSalesProject를 찾지 못함");
+            else
+                Debug.Log($"[SalesUI] 복원 시 currentSalesProject 연결: rowInDate={_currentSalesProject.rowInDate}");
+        }
+        else
+        {
+            EmployeeManager.Instance?.OnProjectCompleted();
+            _currentSalesProject = new CompletedProjectData
+            {
+                projectName      = _cachedProjectName,
+                scale            = (int)_cachedScale,
+                genre            = (int)_cachedGenre,
+                platform         = (int)_cachedPlatform,
+                planning         = _cachedPlanning,
+                develop          = _cachedDevelop,
+                art              = _cachedArt,
+                creativity       = _cachedCreativity,
+                bug              = _cachedBug,
+                totalUnits       = 0,
+                totalRevenue     = 0,
+                year             = GameTimeManager.Instance.Year,
+                month            = GameTimeManager.Instance.Month,
+                week             = GameTimeManager.Instance.Week,
+                qualityScore     = qualityScore,
+                criticTotalScore = CriticReviewUI.Instance != null ? CriticReviewUI.Instance.LastCriticTotal : 0,
+            };
+            CompletedProjectManager.Instance.SaveCompletedProject(_currentSalesProject);
+        }
+        if (!_newProjectStartedDuringSales)
+        {
+            DevelopmentPanelUI.Instance.ResetValues();
+            DevelopmentPanelUI.Instance.ResetMarketFit();
+            DevelopmentTimerUI.Instance.ResetTimer();
+        }
 
         foreach (Transform child in chartArea)
             Destroy(child.gameObject);
@@ -176,6 +226,7 @@ public class SalesUI : MonoBehaviour
             float elapsed = 0f;
             while (elapsed < barAnimDuration)
             {
+                if (barObj == null) yield break;
                 if (!GameTimeManager.Instance.IsRunning) { yield return null; continue; }
                 elapsed += Time.deltaTime;
                 float t = Mathf.SmoothStep(0f, 1f, elapsed / barAnimDuration);
@@ -188,6 +239,7 @@ public class SalesUI : MonoBehaviour
                 yield return null;
             }
 
+            if (barObj == null) yield break;
             barImage.sizeDelta = new Vector2(barImage.sizeDelta.x, targetHeight);
 
             int weeklyRevenue = unitPerPeriod[i] * 9;
@@ -225,53 +277,35 @@ public class SalesUI : MonoBehaviour
             yield return null;
         }
 
-        AlertUI.Instance.Show("피드백 시간!", () =>
+        AlertUI.Instance.Show("판매 완료!", () => OnSalesComplete(cumulativeUnits));
+    }
+
+    void OnSalesComplete(int cumulativeUnits)
+    {
+        salesPanel.SetActive(false);
+
+        if (_currentSalesProject != null)
         {
-            float cachedMarketFit = DevelopmentResultUI.Instance.LastPopularityMultiplier;
-            float cachedMarketingBonus = DevelopmentResultUI.Instance.LastMarketingMultiplier;
-            float cachedBug = DevelopmentResultUI.Instance.LastBug;
-            salesPanel.SetActive(false);
- 
-            // ── 1. 완료 프로젝트 저장 (초기화 전에 먼저) ──
-            var completedData = new CompletedProjectData
-            {
-                projectName = _cachedProjectName,
-                scale = (int)_cachedScale,
-                genre = (int)_cachedGenre,
-                platform = (int)_cachedPlatform,
-                planning = _cachedPlanning,    // ← DevelopmentResultUI 대신
-                develop = _cachedDevelop,
-                art = _cachedArt,
-                creativity = _cachedCreativity,
-                bug = _cachedBug,
-                totalUnits = cumulativeUnits,
-                totalRevenue = cumulativeUnits * 9,
-                year = GameTimeManager.Instance.Year,
-                month = GameTimeManager.Instance.Month,
-                week = GameTimeManager.Instance.Week,
-                qualityScore = _cachedQualityScore,
-                criticTotalScore = CriticReviewUI.Instance != null ? CriticReviewUI.Instance.LastCriticTotal : 0,
-            };
-            Debug.Log($"저장: scale={completedData.scale} genre={completedData.genre} platform={completedData.platform}");
-            CompletedProjectManager.Instance.SaveCompletedProject(completedData);
+            Debug.Log($"업데이트: scale={_currentSalesProject.scale} genre={_currentSalesProject.genre} units={cumulativeUnits}");
+            CompletedProjectManager.Instance.UpdateSalesResult(_currentSalesProject, cumulativeUnits, cumulativeUnits * 9);
+            _currentSalesProject = null;
+        }
 
-            // ── 2. 프로젝트 Complete 저장 후 초기화 ──
-            // Sales 중 새 프로젝트가 시작된 경우 ResetProject 스킵
-            SalesSaveManager.Instance?.CompleteSales();
+        SalesSaveManager.Instance?.CompleteSales();
 
-            if (!_newProjectStartedDuringSales)
-            {
-                DevelopmentManager.Instance.CurrentStage = ProjectStage.Complete;
-                ProjectSaveManager.Instance.SaveProject();
-                GameTimeManager.Instance.SaveGameTime();
-                DevelopmentManager.Instance.ResetProject();
-            }
-
-            // ── 4. 퀘스트 (이미 위에서 처리됐으므로 여기선 생략 가능)
-
-            // ── 5. 피드백 ──
-            FeedbackUI.Instance.Show(cachedMarketFit, cachedMarketingBonus, cachedBug);
-        });
+        if (!_newProjectStartedDuringSales)
+        {
+            DevelopmentManager.Instance.CurrentStage = ProjectStage.Complete;
+            ProjectSaveManager.Instance.SaveProject();
+            GameTimeManager.Instance.SaveGameTime();
+            DevelopmentManager.Instance.ResetProject();
+        }
+        else
+        {
+            MoneyManager.Instance.SaveMoney();
+            ProjectSaveManager.Instance.SaveProject();
+            GameTimeManager.Instance.SaveGameTime();
+        }
     }
 
     int CalcRank(int weeklyRevenue)

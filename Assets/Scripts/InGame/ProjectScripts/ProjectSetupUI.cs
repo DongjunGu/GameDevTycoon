@@ -139,6 +139,10 @@ public class ProjectSetupUI : MonoBehaviour
 
     void UpdateGenreButtonLabels()
     {
+        // Sales 진행 중인 경우 해당 장르를 포함해 피로도 재계산
+        if (CompletedProjectManager.Instance != null && GenreFatigueManager.Instance != null)
+            GenreFatigueManager.Instance.RebuildFromHistory(CompletedProjectManager.Instance.completedProjects);
+
         SetGenreLabel(genreLabelRPG,               genrePopularRPG,               genreFatigueRPG,               "RPG",           ProjectGenre.RPG);
         SetGenreLabel(genreLabelFPS,               genrePopularFPS,               genreFatigueFPS,               "FPS",           ProjectGenre.FPS);
         SetGenreLabel(genreLabelArcade,            genrePopularArcade,            genreFatigueArcade,            "아케이드",       ProjectGenre.Arcade);
@@ -283,7 +287,7 @@ public class ProjectSetupUI : MonoBehaviour
             return;
         }
 
-        MoneyManager.Instance.SpendGold(cost);
+        MoneyManager.Instance.SpendGold(cost, saveImmediately: false);
 
         SelectedScale = _projectData.scale;
         SelectedGenre = _projectData.genre;

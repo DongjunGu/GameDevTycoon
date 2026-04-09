@@ -194,6 +194,7 @@ public class EmployeeManager : MonoBehaviour
                 if (ownedEmployees.Count >= 4)
                     QuestManager.Instance.UnlockQuest("quest_004");
 
+                MoneyManager.Instance?.SaveMoney();
                 GameTimeManager.Instance?.SaveGameTime();
                 ProjectSaveManager.Instance?.SaveProject();
                 Debug.Log($"채용 완료: {inGameEmployee.employeeName} ({inGameEmployee.grade} / {inGameEmployee.potential})");
@@ -355,6 +356,7 @@ public class EmployeeManager : MonoBehaviour
         {
             if (bro.IsSuccess())
             {
+                MoneyManager.Instance?.SaveMoney();
                 GameTimeManager.Instance?.SaveGameTime();
                 ProjectSaveManager.Instance?.SaveProject();
                 Debug.Log($"해고 완료: {employee.employeeName}");

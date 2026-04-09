@@ -54,6 +54,7 @@ public class ProjectData
         ProjectGenre.RTS              => "실시간전략",
         ProjectGenre.VisualNovel      => "미연시",
         ProjectGenre.Sports           => "스포츠",
+        ProjectGenre.Puzzle           => "퍼즐",
         _ => ""
     };
 

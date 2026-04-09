@@ -252,10 +252,14 @@ public class ProjectSaveManager : MonoBehaviour
         // ── Marketing/Sales: 프로젝트 초기화 (Sales는 SalesSaveManager가 복원) ──
         if (_loadedStage == ProjectStage.Marketing || _loadedStage == ProjectStage.Sales)
         {
+            Debug.Log($"[ProjectSaveManager] RestoreIfNeeded: stage={_loadedStage}");
             DevelopmentManager.Instance.ResetProject();
 
             // Marketing 단계에서 껐을 때 (SalesUI 열리기 전) → 직접 복원
-            if (_loadedStage == ProjectStage.Marketing && _loadedQualityScore > 0f)
+            // 단, SalesSaveManager에 이미 활성 세이브가 있으면 그쪽에서 처리
+            bool salesAlreadyHandled = SalesSaveManager.Instance != null &&
+                (SalesSaveManager.Instance.HasPendingRestore || SalesSaveManager.Instance.WasRestored);
+            if (_loadedStage == ProjectStage.Marketing && _loadedQualityScore > 0f && !salesAlreadyHandled)
             {
                 AlertUI.Instance.Show("판매 시작!", () =>
                 {

@@ -59,6 +59,7 @@ public class DevelopmentResultUI : MonoBehaviour
         ProjectGenre.RTS              => "실시간전략",
         ProjectGenre.VisualNovel      => "미연시",
         ProjectGenre.Sports           => "스포츠",
+        ProjectGenre.Puzzle           => "퍼즐",
         _ => ""
     };
 
@@ -187,13 +188,21 @@ public class DevelopmentResultUI : MonoBehaviour
                 float finalScore = sAdj * CalcPopularityMultiplier() * CalcFatigueMultiplier();
                 float quality    = CalcQualityScore(finalScore);
 
-                Debug.Log($"원천: {rawScore:F1} / 케이스감점: {casePenalty * 100f:F1}% / S_adj: {sAdj:F1} / 인지도배율: {CalcPopularityMultiplier():F2} / 피로도배율: {CalcFatigueMultiplier():F2} / 최종: {finalScore:F1} / 품질: {quality:F1}");
+                Debug.Log($"원천: {rawScore:F1} / 버그감점: {DevelopmentManager.Instance.BugPenalty * 100f:F1}% / 케이스감점: {casePenalty * 100f:F1}% / S_adj: {sAdj:F1} / 인지도배율: {CalcPopularityMultiplier():F2} / 피로도배율: {CalcFatigueMultiplier():F2} / 최종: {finalScore:F1} / 품질: {quality:F1}");
 
                 ProjectSaveManager.Instance.SetQualityScore(quality, ProjectSetupUI.SelectedScale);
                 DevelopmentManager.Instance.CurrentStage = ProjectStage.Marketing;
                 MoneyManager.Instance.SaveMoney();
                 ProjectSaveManager.Instance.SaveProject();
                 GameTimeManager.Instance.SaveGameTime();
+
+                // 조기 저장 — 앱 종료로 인한 Sales 유실 방지
+                SalesSaveManager.Instance.SaveSales(
+                    0, 0, quality, ProjectSetupUI.SelectedScale,
+                    _lastProjectName,
+                    ProjectSetupUI.SelectedScale, ProjectSetupUI.SelectedGenre, ProjectSetupUI.SelectedPlatform,
+                    _lastPlanning, _lastDevelop, _lastArt, _lastCreativity, _lastBug
+                );
 
                 AlertUI.Instance.Show("판매 시작!", () =>
                 {
