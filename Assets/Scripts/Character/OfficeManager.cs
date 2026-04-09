@@ -142,6 +142,12 @@ public class OfficeManager : MonoBehaviour
         return _characters.TryGetValue(employeeId, out var oc) ? oc.State : CharacterState.Working;
     }
 
+    public void RefreshAllDeskAnimations()
+    {
+        foreach (var oc in _characters.Values)
+            oc.ApplyDeskAnimation();
+    }
+
     // 개발 시작 시 호출 — patrol 포인트 갱신
     public void StartDevelopmentPatrol()
     {

@@ -1328,7 +1328,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::EmployeeManager
   ownedEmployees: []
   poolEmployees: []
-  satisfactionDecayPerWeek: 1
 --- !u!114 &1503508114
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1647,6 +1646,7 @@ GameObject:
   - component: {fileID: 2062941535}
   - component: {fileID: 2062941536}
   - component: {fileID: 2062941537}
+  - component: {fileID: 2062941538}
   m_Layer: 0
   m_Name: GameSceneManager
   m_TagString: Untagged
@@ -1833,6 +1833,18 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 437debf3571fc5a4c8828e15c05a0f86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GenrePopularityManager
+--- !u!114 &2062941538
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2062941524}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c4eec1d730ff8c1478d4f4b25d7590f7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SalesSaveManager
 --- !u!1 &2103001997
 GameObject:
   m_ObjectHideFlags: 0

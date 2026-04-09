@@ -47,6 +47,7 @@ public class DevelopmentManager : MonoBehaviour
     private Dictionary<string, int> _midDevSeeds = new();
     private Dictionary<string, float> _midDevElapsed = new();
     private Coroutine _bugFixCoroutine;
+    private bool _bugFixReleased = false;
     private int _tickSeed;
 
     void Awake()
@@ -105,6 +106,8 @@ public class DevelopmentManager : MonoBehaviour
         _tickIndexMap.Clear();
         _tickOrderMap.Clear();
 
+        string[] tickTypeNames = { "잭팟", "성공", "창의성", "버그", "꽝" };
+
         foreach (var employee in EmployeeManager.Instance.ownedEmployees)
         {
             const int tickCount = 12;
@@ -116,7 +119,17 @@ public class DevelopmentManager : MonoBehaviour
 
             _tickTimesMap[employee.id] = times;
             _tickIndexMap[employee.id] = 0;
-            _tickOrderMap[employee.id] = BuildTickOrder(tickCount, IsOvertimeMode, rng);
+            int[] order = BuildTickOrder(tickCount, IsOvertimeMode, rng);
+            _tickOrderMap[employee.id] = order;
+
+            var sb = new System.Text.StringBuilder();
+            sb.Append($"[틱 시드={seed}] {employee.employeeName}({employee.id[..8]}) : ");
+            for (int i = 0; i < tickCount; i++)
+            {
+                sb.Append($"[{i + 1}] {times[i]:F2}s/{tickTypeNames[order[i]]}");
+                if (i < tickCount - 1) sb.Append("  ");
+            }
+            Debug.Log(sb.ToString());
         }
     }
 
@@ -178,8 +191,9 @@ public class DevelopmentManager : MonoBehaviour
 
     IEnumerator DevelopmentCoroutine()
     {
-        CurrentStage = ProjectStage.Developing; // ← 스테이지 설정
+        CurrentStage = ProjectStage.Developing;
         _isRunning = true;
+        OfficeManager.Instance?.RefreshAllDeskAnimations();
         if (!_patrolStarted)
         {
             _patrolStarted = true;
@@ -260,8 +274,28 @@ public class DevelopmentManager : MonoBehaviour
         OnDevelopmentComplete();
     }
 
+    void FireRemainingTicks()
+    {
+        foreach (var employee in EmployeeManager.Instance.ownedEmployees.ToList())
+        {
+            if (!_tickTimesMap.ContainsKey(employee.id)) continue;
+
+            var times  = _tickTimesMap[employee.id];
+            int[] order = _tickOrderMap[employee.id];
+            int index  = _tickIndexMap[employee.id];
+
+            while (index < times.Count)
+            {
+                AccumulateByType(employee, order[index]);
+                index++;
+            }
+            _tickIndexMap[employee.id] = index;
+        }
+    }
+
     void OnDevelopmentComplete()
     {
+        FireRemainingTicks();
         _isRunning = false;
         OfficeManager.Instance?.StopDevelopmentPatrol();
         GameTimeManager.Instance.StopTime();
@@ -271,6 +305,7 @@ public class DevelopmentManager : MonoBehaviour
             {
                 ProjectSaveManager.Instance.SaveProject();
                 GameTimeManager.Instance.SaveGameTime();
+                _bugFixReleased = false;
                 _bugFixCoroutine = StartCoroutine(BugFixCoroutine());
             }
         );
@@ -285,6 +320,7 @@ public class DevelopmentManager : MonoBehaviour
         float initialBug = DevelopmentPanelUI.Instance.GetBug();
         if (initialBug <= 0f)
         {
+            if (_bugFixReleased || CurrentStage != ProjectStage.BugFixing) { _bugFixReleased = false; yield break; }
             GameTimeManager.Instance.StopTime();
             AlertUI.Instance.Show("버그 작업이 끝났습니다.", () => ShowResult());
             yield break;
@@ -311,31 +347,41 @@ public class DevelopmentManager : MonoBehaviour
 
             if (UnityEngine.Random.value < 0.5f)
             {
-                float remainingBug = DevelopmentPanelUI.Instance.GetBug();
+                var workers = EmployeeManager.Instance.ownedEmployees
+                    .Where(e => OfficeManager.Instance.GetState(e.id) == CharacterState.Working)
+                    .ToList();
 
-                var employees = EmployeeManager.Instance.ownedEmployees.ToList();
+                if (workers.Count == 0)
+                {
+                    yield return null;
+                    continue;
+                }
+
+                float remainingBug = DevelopmentPanelUI.Instance.GetBug();
                 float perfSum = 0f;
-                foreach (var e in employees) perfSum += e.perfectionSkill;
-                float avgPerfection = employees.Count > 0 ? perfSum / employees.Count : 0f;
+                foreach (var e in workers) perfSum += e.perfectionSkill;
+                float avgPerfection = perfSum / workers.Count;
 
                 float fixAmount = Mathf.Max(1f,
                     Mathf.Ceil((avgPerfection / 80f) * Mathf.Sqrt(remainingBug / initialBug)));
 
                 DevelopmentPanelUI.Instance.SetBug(Mathf.Max(0f, remainingBug - fixAmount));
 
-                if (employees.Count > 0)
-                {
-                    var target = employees[UnityEngine.Random.Range(0, employees.Count)];
-                    OfficeManager.Instance?.ShowStatPopup(target.id, $"[버그수정] -{fixAmount:F0}", new Color(0.4f, 1f, 0.6f));
-                }
+                var target = workers[UnityEngine.Random.Range(0, workers.Count)];
+                OfficeManager.Instance?.ShowStatPopup(target.id, $"[버그수정] -{fixAmount:F0}", new Color(0.4f, 1f, 0.6f));
             }
 
             yield return null;
         }
 
+        if (_bugFixReleased || CurrentStage != ProjectStage.BugFixing) { _bugFixReleased = false; yield break; }
         DevelopmentPanelUI.Instance.SetBug(0f);
         GameTimeManager.Instance.StopTime();
-        AlertUI.Instance.Show("버그 작업이 끝났습니다.", () => ShowResult());
+        AlertUI.Instance.Show("버그 작업이 끝났습니다.", () =>
+        {
+            if (_bugFixReleased || CurrentStage != ProjectStage.BugFixing) { _bugFixReleased = false; return; }
+            ShowResult();
+        });
     }
 
     void ShowResult()
@@ -358,6 +404,7 @@ public class DevelopmentManager : MonoBehaviour
 
     public void OnClickRelease()
     {
+        _bugFixReleased = true;
         if (_bugFixCoroutine != null)
         {
             StopCoroutine(_bugFixCoroutine);
@@ -381,8 +428,8 @@ public class DevelopmentManager : MonoBehaviour
         }
 
         string msg = BugPenalty > 0f
-            ? $"버그 작업을 중단합니다.\n[버그 페널티] 최종점수 {BugPenalty * 100f:F0}% 감점\n출시 시작"
-            : "버그 작업을 중단합니다.\n출시 시작";
+            ? $"디버깅을 중단합니다.\n{BugPenalty * 100f:F0}% 감점\n출시 시작"
+            : "디버깅을 중단합니다.\n출시 시작";
 
         AlertUI.Instance.Show(msg, () =>
         {
@@ -433,6 +480,7 @@ public class DevelopmentManager : MonoBehaviour
             GameTimeManager.Instance.ForceStartTime();
             Debug.Log("팀장점수완료 저장");
 
+            MoneyManager.Instance.SaveMoney();
             ProjectSaveManager.Instance.SaveProject();
             GameTimeManager.Instance.SaveGameTime();
             GameTimeManager.Instance.ForceStartTime();
@@ -484,8 +532,9 @@ public class DevelopmentManager : MonoBehaviour
                 break;
 
             case ProjectStage.BugFixing:
-                _isRunning = true; // ← 추가
-                GameTimeManager.Instance.ForceStartTime(); // ← 추가
+                _isRunning = true;
+                _bugFixReleased = false;
+                GameTimeManager.Instance.ForceStartTime();
                 _bugFixCoroutine = StartCoroutine(BugFixCoroutine());
                 break;
         }
@@ -614,12 +663,14 @@ public class DevelopmentManager : MonoBehaviour
         int index = _tickIndexMap[id];
         const float gap = 1.5f;
 
+        float minTime = _elapsed;
         for (int i = index; i < times.Count; i++)
         {
-            if (times[i] <= _elapsed)
-                times[i] = _elapsed + gap * (i - index + 1);
+            minTime += gap;
+            if (times[i] < minTime)
+                times[i] = minTime;
             else
-                break;
+                minTime = times[i]; // 이미 충분히 먼 틱은 그 시간을 기준으로
         }
     }
 
@@ -771,7 +822,6 @@ public class DevelopmentManager : MonoBehaviour
         ProjectSetupUI.SelectedPlatform = default;
 
         IsOvertimeActive = false;
-        EmployeeManager.Instance?.OnProjectCompleted();
         GameTimeManager.Instance.ForceStartTime();
         Debug.Log("프로젝트 초기화 완료");
     }

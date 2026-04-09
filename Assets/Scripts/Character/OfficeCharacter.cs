@@ -35,6 +35,7 @@ public class OfficeCharacter : MonoBehaviour
     public void ApplyDeskAnimation()
     {
         if (assignedDesk == null) return;
+        if (_mover != null && _mover.IsMoving) return;
 
         if (assignedDesk.stationType == WorkStationType.Talking)
         {
@@ -44,11 +45,12 @@ public class OfficeCharacter : MonoBehaviour
         }
 
         // WorkStationType.Working
-        bool isStarted = DevelopmentManager.Instance != null && DevelopmentManager.Instance.IsStarted;
-        if (isStarted)
+        var stage = DevelopmentManager.Instance != null ? DevelopmentManager.Instance.CurrentStage : ProjectStage.None;
+        bool isDeveloping = stage == ProjectStage.Developing || stage == ProjectStage.BugFixing;
+        if (isDeveloping)
         {
             State = CharacterState.Working;
-            _animator?.SetWorking(true);   // isWorking=true, isFront=true
+            _animator?.SetWorking(true);
         }
         else
         {
@@ -111,7 +113,7 @@ public class OfficeCharacter : MonoBehaviour
             StopCoroutine(_patrolCoroutine);
             _patrolCoroutine = null;
         }
-        State = CharacterState.Working;
+        State = CharacterState.Moving; // Patrolling 해제 → OnArrived에서 ApplyDeskAnimation 호출됨
         GoToDesk();
     }
 

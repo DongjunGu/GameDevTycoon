@@ -8,6 +8,8 @@ public class SalesSaveManager : MonoBehaviour
 
     private string _rowInDate = null;
     private bool _hasPendingRestore = false;
+    private bool _insertInProgress = false;
+    private Param _pendingUpdate = null;
 
     // ── 로드된 데이터 ─────────────────────────
     private bool _loadedIsActive;
@@ -24,6 +26,14 @@ public class SalesSaveManager : MonoBehaviour
     private float _loadedArt;
     private float _loadedCreativity;
     private float _loadedBug;
+    private bool _loadedNewProjectStarted;
+    private string _loadedCompletedProjectRowInDate;
+
+    public bool LoadedNewProjectStarted => _loadedNewProjectStarted;
+    public string LoadedCompletedProjectRowInDate => _loadedCompletedProjectRowInDate;
+
+    public bool HasPendingRestore => _hasPendingRestore;
+    public bool WasRestored { get; private set; } = false;
 
     void Awake()
     {
@@ -62,14 +72,30 @@ public class SalesSaveManager : MonoBehaviour
                     Debug.LogError($"판매 저장 실패: {bro}");
             });
         }
+        else if (_insertInProgress)
+        {
+            // Insert 진행 중 — 완료 후 적용될 업데이트로 캐시
+            _pendingUpdate = param;
+        }
         else
         {
+            _insertInProgress = true;
+            _pendingUpdate = null;
             Backend.GameData.Insert("UserSales", param, bro =>
             {
+                _insertInProgress = false;
                 if (bro.IsSuccess())
                 {
                     _rowInDate = bro.GetInDate();
                     Debug.Log("판매 Insert 완료");
+                    if (_pendingUpdate != null)
+                    {
+                        Backend.GameData.UpdateV2("UserSales", _rowInDate, Backend.UserInDate, _pendingUpdate, bro2 =>
+                        {
+                            if (!bro2.IsSuccess()) Debug.LogError($"판매 pendingUpdate 실패: {bro2}");
+                        });
+                        _pendingUpdate = null;
+                    }
                 }
                 else
                 {
@@ -77,6 +103,32 @@ public class SalesSaveManager : MonoBehaviour
                 }
             });
         }
+    }
+
+    // ── 완료 프로젝트 rowInDate 저장 ──────────
+    public void SaveCompletedProjectRowInDate(string rowInDate)
+    {
+        if (string.IsNullOrEmpty(_rowInDate)) return;
+        var param = new Param();
+        param.Add("completedProjectRowInDate", rowInDate);
+        Backend.GameData.UpdateV2("UserSales", _rowInDate, Backend.UserInDate, param, bro =>
+        {
+            if (!bro.IsSuccess())
+                Debug.LogError($"completedProjectRowInDate 저장 실패: {bro}");
+        });
+    }
+
+    // ── 새 프로젝트 시작 플래그 저장 ─────────
+    public void SaveNewProjectStarted()
+    {
+        if (string.IsNullOrEmpty(_rowInDate)) return;
+        var param = new Param();
+        param.Add("newProjectStarted", true);
+        Backend.GameData.UpdateV2("UserSales", _rowInDate, Backend.UserInDate, param, bro =>
+        {
+            if (!bro.IsSuccess())
+                Debug.LogError($"newProjectStarted 저장 실패: {bro}");
+        });
     }
 
     // ── 판매 완료 ─────────────────────────────
@@ -116,7 +168,22 @@ public class SalesSaveManager : MonoBehaviour
             var rows = bro.FlattenRows();
             if (rows == null || rows.Count == 0)
             {
-                onComplete?.Invoke();
+                // 첫 플레이 — 빈 행 미리 생성해 _rowInDate 확보 (이후 모든 저장이 UpdateV2 사용)
+                var initParam = new Param();
+                initParam.Add("isActive", false);
+                Backend.GameData.Insert("UserSales", initParam, initBro =>
+                {
+                    if (initBro.IsSuccess())
+                    {
+                        _rowInDate = initBro.GetInDate();
+                        Debug.Log($"[SalesSaveManager] 초기 행 생성: {_rowInDate}");
+                    }
+                    else
+                    {
+                        Debug.LogError($"[SalesSaveManager] 초기 행 생성 실패: {initBro}");
+                    }
+                    onComplete?.Invoke();
+                });
                 return;
             }
 
@@ -143,7 +210,9 @@ public class SalesSaveManager : MonoBehaviour
             _loadedDevelop        = SafeFloat(row, "develop", 0f);
             _loadedArt            = SafeFloat(row, "art", 0f);
             _loadedCreativity     = SafeFloat(row, "creativity", 0f);
-            _loadedBug            = SafeFloat(row, "bug", 0f);
+            _loadedBug                = SafeFloat(row, "bug", 0f);
+            _loadedNewProjectStarted           = SafeBool(row,   "newProjectStarted",         false);
+            _loadedCompletedProjectRowInDate   = SafeString(row, "completedProjectRowInDate",  "");
 
             _hasPendingRestore = true;
             Debug.Log($"판매 로드 완료: completedWeeks={_loadedCompletedWeeks}");
@@ -156,16 +225,23 @@ public class SalesSaveManager : MonoBehaviour
     {
         if (!_hasPendingRestore) return;
         _hasPendingRestore = false;
+        WasRestored = true;
 
-        AlertUI.Instance.Show("판매 시작!", () =>
-        {
-            SalesUI.Instance.ShowWithProjectName(
-                _loadedQualityScore, _loadedSalesScale, _loadedProjectName,
-                _loadedCachedScale, _loadedCachedGenre, _loadedCachedPlatform,
-                _loadedPlanning, _loadedDevelop, _loadedArt, _loadedCreativity, _loadedBug,
-                _loadedCompletedWeeks, _loadedTotalUnits
-            );
-        });
+        void OpenSales() => SalesUI.Instance.ShowWithProjectName(
+            _loadedQualityScore, _loadedSalesScale, _loadedProjectName,
+            _loadedCachedScale, _loadedCachedGenre, _loadedCachedPlatform,
+            _loadedPlanning, _loadedDevelop, _loadedArt, _loadedCreativity, _loadedBug,
+            _loadedCompletedWeeks, _loadedTotalUnits, applyCompletion: false
+        );
+
+        Debug.Log($"[SalesSaveManager] RestoreIfNeeded: completedWeeks={_loadedCompletedWeeks}");
+        StartCoroutine(RestoreNextFrame(OpenSales));
+    }
+
+    System.Collections.IEnumerator RestoreNextFrame(System.Action action)
+    {
+        yield return null; // GameSceneInitializer.StartTime() 이후 실행 보장
+        action();
     }
 
     // ── 헬퍼 ─────────────────────────────────

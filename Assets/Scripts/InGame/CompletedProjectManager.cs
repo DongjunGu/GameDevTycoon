@@ -16,7 +16,7 @@ public class CompletedProjectManager : MonoBehaviour
         DontDestroyOnLoad(gameObject);
     }
 
-    // ── 저장 ──────────────────────────────────
+    // ── 저장 (Sales 시작 시 0으로 insert) ─────
     public void SaveCompletedProject(CompletedProjectData data)
     {
         Backend.GameData.Insert("CompletedProjects", data.ToParam(), bro =>
@@ -26,12 +26,44 @@ public class CompletedProjectManager : MonoBehaviour
                 data.rowInDate = bro.GetInDate();
                 completedProjects.Add(data);
                 GenreFatigueManager.Instance?.UpdateFatigue((ProjectGenre)data.genre);
-                Debug.Log($"완료 프로젝트 저장: {data.projectName}");
+                SalesSaveManager.Instance?.SaveCompletedProjectRowInDate(data.rowInDate);
+                Debug.Log($"완료 프로젝트 저장: {data.projectName} rowInDate={data.rowInDate}");
+
+                // Sales가 먼저 끝났다면 (totalUnits이 이미 기록됨) 즉시 업데이트
+                if (data.totalUnits > 0)
+                    ExecuteSalesResultUpdate(data);
             }
             else
             {
                 Debug.LogError($"완료 프로젝트 저장 실패: {bro}");
             }
+        });
+    }
+
+    // ── 판매 완료 시 매출/판매량 업데이트 ──────
+    public void UpdateSalesResult(CompletedProjectData data, int totalUnits, int totalRevenue)
+    {
+        data.totalUnits   = totalUnits;
+        data.totalRevenue = totalRevenue;
+
+        // rowInDate가 아직 없으면 값만 저장 — Insert 콜백에서 처리
+        if (string.IsNullOrEmpty(data.rowInDate)) return;
+
+        ExecuteSalesResultUpdate(data);
+    }
+
+    void ExecuteSalesResultUpdate(CompletedProjectData data)
+    {
+        var param = new BackEnd.Param();
+        param.Add("totalUnits",   data.totalUnits);
+        param.Add("totalRevenue", data.totalRevenue);
+
+        Backend.GameData.UpdateV2("CompletedProjects", data.rowInDate, Backend.UserInDate, param, bro =>
+        {
+            if (bro.IsSuccess())
+                Debug.Log($"판매 결과 업데이트: {data.projectName} units={data.totalUnits}");
+            else
+                Debug.LogError($"판매 결과 업데이트 실패: {bro}");
         });
     }
 

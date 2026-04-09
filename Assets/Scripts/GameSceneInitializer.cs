@@ -7,8 +7,8 @@ public class GameSceneInitializer : MonoBehaviour
         var dialogUI = FindAnyObjectByType<DialogUI>();
         if (dialogUI != null)
             DialogManager.Instance.SetDialogUI(dialogUI);
-        ProjectSaveManager.Instance.RestoreIfNeeded();
         SalesSaveManager.Instance.RestoreIfNeeded();
+        ProjectSaveManager.Instance.RestoreIfNeeded();
 
         HUDUI.Instance?.RefreshAll();
 
