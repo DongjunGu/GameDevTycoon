@@ -203,6 +203,7 @@ public class GameTimeManager : MonoBehaviour
     {
         SaveGameTime();
         ProjectSaveManager.Instance.SaveProject();
+        EmployeeManager.Instance?.SaveAllEmployees();
     }
     void PayAnnualSalary()
     {

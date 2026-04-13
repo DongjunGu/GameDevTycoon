@@ -193,7 +193,7 @@ public class DevelopmentManager : MonoBehaviour
     {
         CurrentStage = ProjectStage.Developing;
         _isRunning = true;
-        OfficeManager.Instance?.RefreshAllDeskAnimations();
+        OfficeManager.Instance?.SetAllWorking();
         if (!_patrolStarted)
         {
             _patrolStarted = true;
@@ -314,6 +314,7 @@ public class DevelopmentManager : MonoBehaviour
     IEnumerator BugFixCoroutine()
     {
         CurrentStage = ProjectStage.BugFixing;
+        OfficeManager.Instance?.SetAllWorking();
         OfficeManager.Instance?.StopDevelopmentPatrol();
         GameTimeManager.Instance.StartTime();
 

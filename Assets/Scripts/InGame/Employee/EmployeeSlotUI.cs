@@ -18,6 +18,7 @@ public class EmployeeSlotUI : MonoBehaviour
     public TextMeshProUGUI salaryText;
     public TextMeshProUGUI satisfactionText;
     public Button selectButton;
+    public GameObject ownedBadge;  // 보유중 뱃지 이미지
     private static readonly Color ColorNormal = new Color(0.92f, 0.92f, 0.92f);
     private static readonly Color ColorRare = new Color(0.75f, 0.88f, 0.95f);
     private static readonly Color ColorEpic = new Color(0.82f, 0.75f, 0.95f);
@@ -37,6 +38,11 @@ public class EmployeeSlotUI : MonoBehaviour
         enhancementText.text     = $"+{data.enhancementLevel}";
         satisfactionText.text = data.SatisfactionText();
         _pendingGrade = data.grade;
+
+        // 보유중 뱃지 (masterEmployeeId 공백이면 이름으로 대조)
+        bool isOwned = EmployeeManager.Instance.ownedEmployees
+            .Exists(e => IsSameEmployee(e, data));
+        if (ownedBadge != null) ownedBadge.SetActive(isOwned);
 
         selectButton.onClick.RemoveAllListeners();
         selectButton.onClick.AddListener(() => hiringUI.OnSelectEmployee(data));
@@ -65,6 +71,14 @@ public class EmployeeSlotUI : MonoBehaviour
             EmployeeGrade.Epic => ColorEpic,
             _ => ColorNormal
         };
+    }
+
+    // masterEmployeeId가 없는 구형 데이터는 이름으로 대조
+    public static bool IsSameEmployee(EmployeeData owned, EmployeeData candidate)
+    {
+        if (!string.IsNullOrEmpty(owned.masterEmployeeId))
+            return owned.masterEmployeeId == candidate.id;
+        return owned.employeeName == candidate.employeeName;
     }
 
     System.Collections.IEnumerator UniqueShimmer()

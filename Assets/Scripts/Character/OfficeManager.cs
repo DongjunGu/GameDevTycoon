@@ -83,6 +83,15 @@ public class OfficeManager : MonoBehaviour
         StartCoroutine(WalkOutAndDestroy(oc));
     }
 
+    IEnumerator RefreshAnimationsNextFrame()
+    {
+        yield return null;
+        var stage = DevelopmentManager.Instance != null ? DevelopmentManager.Instance.CurrentStage : ProjectStage.None;
+        bool isDeveloping = stage == ProjectStage.Developing || stage == ProjectStage.BugFixing;
+        if (isDeveloping) SetAllWorking();
+        else RefreshAllDeskAnimations();
+    }
+
     IEnumerator WalkOutAndDestroy(OfficeCharacter oc)
     {
         var controller = oc.GetComponent<CharacterController>();
@@ -118,12 +127,11 @@ public class OfficeManager : MonoBehaviour
             var oc  = obj.GetComponent<OfficeCharacter>();
             oc.Init(employee.id, desk);
 
-            oc.ApplyDeskAnimation();
-
             _characters[employee.id] = oc;
         }
 
         EnsurePatrolScheduler();
+        StartCoroutine(RefreshAnimationsNextFrame());
     }
 
     // 특정 직원의 patrol 여부 확인 (DevelopmentManager 틱 체크용)
@@ -146,6 +154,12 @@ public class OfficeManager : MonoBehaviour
     {
         foreach (var oc in _characters.Values)
             oc.ApplyDeskAnimation();
+    }
+
+    public void SetAllWorking()
+    {
+        foreach (var oc in _characters.Values)
+            oc.SetDeskWorking();
     }
 
     // 개발 시작 시 호출 — patrol 포인트 갱신

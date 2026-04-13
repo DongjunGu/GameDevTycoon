@@ -7,10 +7,11 @@ public class OfficeCharacter : MonoBehaviour
     public WorkStation assignedDesk;
     public Transform statPopupAnchor; // 머리 위 위치 (Inspector에서 설정)
 
-    public CharacterState State { get; private set; } = CharacterState.Idle;
-    public bool IsPatrolling => State == CharacterState.Patrolling;
+    [SerializeField] private CharacterState _state = CharacterState.Idle;
+    public CharacterState State => _state;
+    public bool IsPatrolling => _state == CharacterState.Patrolling;
 
-    public void SetState(CharacterState state) => State = state;
+    public void SetState(CharacterState state) => _state = state;
 
     private CharacterController _controller;
     private CharacterMover _mover;
@@ -32,29 +33,37 @@ public class OfficeCharacter : MonoBehaviour
         ApplyDeskAnimation();
     }
 
+    public void SetDeskWorking()
+    {
+        if (_mover != null && _mover.IsMoving) return;
+        if (_state == CharacterState.Patrolling) return;
+        _state = CharacterState.Working;
+        _animator?.SetWorking(true);
+    }
+
     public void ApplyDeskAnimation()
     {
         if (assignedDesk == null) return;
         if (_mover != null && _mover.IsMoving) return;
+        if (_state == CharacterState.Patrolling) return;
 
         if (assignedDesk.stationType == WorkStationType.Talking)
         {
-            State = CharacterState.Idle;
+            _state = CharacterState.Idle;
             _animator?.SetTalking();
             return;
         }
 
-        // WorkStationType.Working
         var stage = DevelopmentManager.Instance != null ? DevelopmentManager.Instance.CurrentStage : ProjectStage.None;
         bool isDeveloping = stage == ProjectStage.Developing || stage == ProjectStage.BugFixing;
         if (isDeveloping)
         {
-            State = CharacterState.Working;
+            _state = CharacterState.Working;
             _animator?.SetWorking(true);
         }
         else
         {
-            State = CharacterState.Idle;
+            _state = CharacterState.Idle;
             _animator?.SetIdle(true);
         }
     }
@@ -68,7 +77,7 @@ public class OfficeCharacter : MonoBehaviour
             _patrolCoroutine = null;
         }
         assignedDesk = null;
-        State = CharacterState.Idle;
+        _state = CharacterState.Idle;
     }
 
     // 채용 시 초기화
@@ -113,13 +122,13 @@ public class OfficeCharacter : MonoBehaviour
             StopCoroutine(_patrolCoroutine);
             _patrolCoroutine = null;
         }
-        State = CharacterState.Moving; // Patrolling 해제 → OnArrived에서 ApplyDeskAnimation 호출됨
+        _state = CharacterState.Moving; // Patrolling 해제 → OnArrived에서 ApplyDeskAnimation 호출됨
         GoToDesk();
     }
 
     IEnumerator PatrolRoutine(Transform target, float stayDuration)
     {
-        State = CharacterState.Patrolling;
+        _state = CharacterState.Patrolling;
         Debug.Log($"[Patrol] {employeeId} → Patrolling 시작, target={target.name}");
         _animator?.SetWorking(false);
 
@@ -149,16 +158,15 @@ public class OfficeCharacter : MonoBehaviour
         yield return null;
         Debug.Log($"[Patrol] {employeeId} → GoToDesk 후 IsMoving={_mover.IsMoving}");
         yield return new WaitUntil(() => !_mover.IsMoving);
-        Debug.Log($"[Patrol] {employeeId} → 데스크 복귀 완료, State={State} → Working으로 전환");
+        Debug.Log($"[Patrol] {employeeId} → 데스크 복귀 완료");
 
-        State = CharacterState.Working;
-        _animator?.SetWorking(true);
         _patrolCoroutine = null;
+        ApplyDeskAnimation();
     }
 
     IEnumerator PatrolWithDialogRoutine(Transform target, string dialogGroupId, bool triggerOnce)
     {
-        State = CharacterState.Patrolling;
+        _state = CharacterState.Patrolling;
         _animator?.SetWorking(false);
 
         // 1. 목적지로 이동
@@ -205,9 +213,8 @@ public class OfficeCharacter : MonoBehaviour
         yield return null;
         yield return new WaitUntil(() => !_mover.IsMoving);
 
-        State = CharacterState.Working;
-        _animator?.SetWorking(true);
         _patrolCoroutine = null;
+        ApplyDeskAnimation();
     }
 
     // 머리 위 수치 팝업 표시

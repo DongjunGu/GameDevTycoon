@@ -85,19 +85,6 @@ public class CharacterController : MonoBehaviour
     {
         SetState(CharacterState.Working);
 
-        // 마지막 방향 저장
-        var oc = GetComponent<OfficeCharacter>();
-        if (oc != null)
-        {
-            var employee = EmployeeManager.Instance.ownedEmployees
-                .Find(e => e.id == oc.employeeId);
-
-            if (employee != null)
-            {
-                employee.lastIsFront = GetComponent<CharacterAnimator>()?.GetCurrentIsFront() ?? true;
-                EmployeeManager.Instance.UpdateEmployee(employee);
-            }
-        }
 
         if (_isPatrolling)
         {
