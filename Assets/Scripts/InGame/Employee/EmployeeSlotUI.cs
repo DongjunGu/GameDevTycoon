@@ -29,9 +29,9 @@ public class EmployeeSlotUI : MonoBehaviour
         roleText.text = data.RoleToString();
         gradeText.text = data.GradeToString();
         potentialText.text = data.PotentialToString();
-        developSkillText.text = data.DevelopRangeText();
-        planningSkillText.text = data.PlanningRangeText();
-        artSkillText.text = data.ArtRangeText();
+        developSkillText.text = data.DevelopDisplayText();
+        planningSkillText.text = data.PlanningDisplayText();
+        artSkillText.text = data.ArtDisplayText();
         perfectionSkillText.text = data.PerfectionRangeText();
         salaryText.text = data.SalaryRangeText();
         enhancementText.text     = $"+{data.enhancementLevel}";

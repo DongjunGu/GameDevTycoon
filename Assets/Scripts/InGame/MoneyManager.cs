@@ -21,7 +21,7 @@ public class MoneyManager : MonoBehaviour
     // 앱 시작 시 호출
     public void LoadMoney(System.Action onComplete = null)
     {
-        Backend.GameData.GetMyData("UserMoney", new Where(), bro =>
+        BackendRetry.Instance.GetMyData("UserMoney", bro =>
         {
             if (bro.IsSuccess())
             {
@@ -35,15 +35,10 @@ public class MoneyManager : MonoBehaviour
                 }
                 else
                 {
-                    // 신규 유저 초기 지급
                     _gold = 10000;
                     SaveMoney();
                     Debug.Log("신규 유저 초기 재화 지급: 10,000G");
                 }
-            }
-            else
-            {
-                Debug.LogError($"재화 로드 실패: {bro}");
             }
 
             HUDUI.Instance?.RefreshAll();

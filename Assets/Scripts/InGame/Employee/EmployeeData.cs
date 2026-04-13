@@ -43,12 +43,29 @@ public class EmployeeData
     public int artMin, artMax;
     public int perfectionMin, perfectionMax;
     public int salaryMin, salaryMax;
+
+    // 강화로 인한 주스탯/부스탯 증가 (표시용)
+    public int mainStatEnhanceGain;
+    public int subStatEnhanceMin;
+    public int subStatEnhanceMax;
     public string assignedDeskId = "";
+    public bool isDefault; // true = 항상 채용 풀 등장, false = 획득 필요
 
     public EmployeeState state;
     public string assignedProjectId;
     public string portraitId;
     public bool lastIsFront = true; // 마지막 방향 저장
+
+    // 마스터 데이터 복사본 생성 (채용 후보 표시용)
+    public EmployeeData Clone() => new EmployeeData(
+        id, employeeName, role,
+        developMin, developMax,
+        planningMin, planningMax,
+        artMin, artMax,
+        perfectionMin, perfectionMax,
+        salaryMin, salaryMax,
+        maxGrade
+    ) { portraitId = this.portraitId, isDefault = this.isDefault };
 
     // ── 생성자 (EmployeePool 마스터 데이터용) ──
     public EmployeeData(string id, string name, EmployeeRole role,
@@ -158,6 +175,17 @@ public class EmployeeData
     public string PlanningText() => $"기획: {planningSkill}";
     public string ArtText() => $"아트: {artSkill}";
     public string PerfectionText() => $"완성도: {perfectionSkill}";
+
+    // 주스탯은 강화 반영 범위, 부스탯은 확정 수치로 표시
+    public string DevelopDisplayText()  => role == EmployeeRole.Programmer
+        ? $"개발: {developMin + mainStatEnhanceGain}~{developMax + mainStatEnhanceGain}"
+        : DevelopText();
+    public string PlanningDisplayText() => role == EmployeeRole.Planner
+        ? $"기획: {planningMin + mainStatEnhanceGain}~{planningMax + mainStatEnhanceGain}"
+        : PlanningText();
+    public string ArtDisplayText()      => role == EmployeeRole.Artist
+        ? $"아트: {artMin + mainStatEnhanceGain}~{artMax + mainStatEnhanceGain}"
+        : ArtText();
     public string SatisfactionText() => $"만족도: {satisfaction}";
 
     public string RoleToString() => role switch

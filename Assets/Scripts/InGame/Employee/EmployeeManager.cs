@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using BackEnd;
+using BackEnd.Content;
 
 public class EmployeeManager : MonoBehaviour
 {
@@ -8,7 +9,7 @@ public class EmployeeManager : MonoBehaviour
 
     public List<EmployeeData> ownedEmployees = new();
     public List<EmployeeData> poolEmployees = new();
-    private List<EmployeeData> _defaultEmployees;
+    private readonly HashSet<string> _acquiredEmployeeIds = new();
 
     private bool _satisfactionDroppedThisCycle = false;
 
@@ -18,105 +19,177 @@ public class EmployeeManager : MonoBehaviour
         Instance = this;
         DontDestroyOnLoad(gameObject);
 
-        _defaultEmployees = new List<EmployeeData>
-        {
-            //                                                             dev      plan     art      perfection   salary        maxGrade
-            new EmployeeData("emp_01", "김기획", EmployeeRole.Planner,    40,50, 80,90, 25,35, 15,25, 1400,1600, EmployeeGrade.Rare) { portraitId = "portrait_emp_01" },
-            new EmployeeData("emp_02", "이코딩", EmployeeRole.Programmer, 88,95, 20,30, 50,60, 20,30, 2300,2700, EmployeeGrade.Unique){ portraitId = "portrait_emp_01" },
-            new EmployeeData("emp_03", "박아트", EmployeeRole.Artist,      8,15, 45,55, 82,92, 11,22,  900,1100, EmployeeGrade.Normal){ portraitId = "portrait_emp_01" },
-            new EmployeeData("emp_04", "최사운", EmployeeRole.Programmer, 25,35, 35,45, 48,62, 10,20,  650, 750, EmployeeGrade.Normal){ portraitId = "portrait_emp_01" },
-            new EmployeeData("emp_05", "정기획", EmployeeRole.Planner,    12,20, 70,80, 20,30, 11,22,  900,1000, EmployeeGrade.Rare){ portraitId = "portrait_emp_01" },
-            new EmployeeData("emp_06", "한개발", EmployeeRole.Programmer, 80,90, 30,40, 42,50, 15,25, 1500,1700, EmployeeGrade.Epic){ portraitId = "portrait_emp_02" },
-            new EmployeeData("emp_07", "오아트", EmployeeRole.Artist,      8,15, 48,58, 90,99, 20,30, 2000,2400, EmployeeGrade.Unique){ portraitId = "portrait_emp_02" },
-            new EmployeeData("emp_08", "윤기획", EmployeeRole.Planner,     8,14, 60,70, 15,25, 10,20,  600, 700, EmployeeGrade.Normal){ portraitId = "portrait_emp_02" },
-            new EmployeeData("emp_09", "장개발", EmployeeRole.Programmer, 73,82, 25,35, 38,48, 11,22, 1000,1100, EmployeeGrade.Rare){ portraitId = "portrait_emp_02" },
-            new EmployeeData("emp_10", "강아트", EmployeeRole.Artist,     12,20, 40,50, 78,88, 15,25, 1350,1550, EmployeeGrade.Epic){ portraitId = "portrait_emp_02" },
-        };
     }
 
     // ── 초기 로드 ─────────────────────────────
     public void LoadAllData(System.Action onComplete = null)
     {
-        LoadEmployeePool(() => LoadEmployees(onComplete));
+        LoadMasterEmployees(() => LoadAcquiredEmployees(() => LoadEmployees(onComplete)));
     }
 
-    // ── EmployeePool 불러오기 ─────────────────
-    public void LoadEmployeePool(System.Action onComplete = null)
+    // ── 마스터 직원 풀 로드 (뒤끝 차트) ──────
+    public void LoadMasterEmployees(System.Action onComplete = null)
     {
-        Backend.GameData.GetMyData("EmployeePool", new Where(), bro =>
+        poolEmployees.Clear();
+
+        // 1) 차트 테이블 목록 조회
+        BackendContentTableReturnObject tableResult = Backend.CDN.Content.Table.Get();
+        if (!tableResult.IsSuccess())
         {
-            if (!bro.IsSuccess())
+            Debug.LogError($"마스터 직원 차트 테이블 조회 실패: {tableResult}");
+            onComplete?.Invoke();
+            return;
+        }
+
+        List<ContentTableItem> tableList = tableResult.GetContentTableItemList();
+
+        // 2) chartName으로 chartId 탐색
+        string targetChartId = null;
+        foreach (ContentTableItem item in tableList)
+        {
+            if (item.chartName == "EmployeeMasterData")
             {
-                Debug.LogError($"EmployeePool 불러오기 실패: {bro}");
-                return;
+                targetChartId = item.chartId;
+                break;
             }
+        }
 
-            var rows = bro.FlattenRows();
+        if (targetChartId == null)
+        {
+            Debug.LogError("마스터 직원 차트를 찾을 수 없음: EmployeeMasterData");
+            onComplete?.Invoke();
+            return;
+        }
 
-            if (rows.Count == 0)
+        // 3) 차트 내용 로드
+        BackendContentReturnObject contentResult = Backend.CDN.Content.Get(tableList);
+        if (!contentResult.IsSuccess())
+        {
+            Debug.LogError($"마스터 직원 차트 내용 로드 실패: {contentResult}");
+            onComplete?.Invoke();
+            return;
+        }
+
+        // 4) chartId로 해당 차트 꺼내기
+        Dictionary<string, ContentItem> dic = contentResult.GetContentDictionarySortByChartId();
+        if (!dic.ContainsKey(targetChartId))
+        {
+            Debug.LogError("마스터 직원 차트 데이터 없음");
+            onComplete?.Invoke();
+            return;
+        }
+
+        LitJson.JsonData rows = dic[targetChartId].contentJson;
+        for (int i = 0; i < rows.Count; i++)
+        {
+            LitJson.JsonData row = rows[i];
+            try
             {
-                InsertDefaultEmployees(onComplete);
-                return;
+                var data = new EmployeeData(
+                    id:            row["employeeId"].ToString(),
+                    name:          row["employeeName"].ToString(),
+                    role:          (EmployeeRole)int.Parse(row["role"].ToString()),
+                    developMin:    int.Parse(row["developMin"].ToString()),
+                    developMax:    int.Parse(row["developMax"].ToString()),
+                    planningMin:   int.Parse(row["planningMin"].ToString()),
+                    planningMax:   int.Parse(row["planningMax"].ToString()),
+                    artMin:        int.Parse(row["artMin"].ToString()),
+                    artMax:        int.Parse(row["artMax"].ToString()),
+                    perfectionMin: int.Parse(row["perfectionMin"].ToString()),
+                    perfectionMax: int.Parse(row["perfectionMax"].ToString()),
+                    salaryMin:     int.Parse(row["salaryMin"].ToString()),
+                    salaryMax:     int.Parse(row["salaryMax"].ToString()),
+                    maxGrade:      (EmployeeGrade)int.Parse(row["maxGrade"].ToString())
+                );
+                data.portraitId = row["portraitId"].ToString();
+                data.isDefault  = row["isDefault"].ToString() == "1";
+                poolEmployees.Add(data);
             }
-
-            poolEmployees.Clear();
-            foreach (var row in rows)
+            catch (System.Exception e)
             {
-                var employee = EmployeeData.FromServerRow((LitJson.JsonData)row);
-                poolEmployees.Add(employee);
+                Debug.LogError($"직원 데이터 파싱 실패 (row {i}): {e.Message}");
             }
+        }
 
-            Debug.Log($"EmployeePool {poolEmployees.Count}명 로드 완료");
+        Debug.Log($"마스터 직원 {poolEmployees.Count}명 로드 완료");
+        onComplete?.Invoke();
+    }
+
+    // ── 획득 직원 로드 ────────────────────────
+    public void LoadAcquiredEmployees(System.Action onComplete = null)
+    {
+        BackendRetry.Instance.GetMyData("AcquiredEmployee", bro =>
+        {
+            _acquiredEmployeeIds.Clear();
+            if (bro.IsSuccess())
+            {
+                var rows = bro.FlattenRows();
+                foreach (LitJson.JsonData row in rows)
+                {
+                    try
+                    {
+                        string empId = row["employeeId"].ToString();
+                        if (!string.IsNullOrEmpty(empId))
+                            _acquiredEmployeeIds.Add(empId);
+                    }
+                    catch { }
+                }
+            }
+            Debug.Log($"획득 직원 {_acquiredEmployeeIds.Count}개 로드");
             onComplete?.Invoke();
         });
     }
 
-    void InsertDefaultEmployees(System.Action onComplete = null)
+    // ── 직원 획득 (아웃게임 등에서 호출) ──────
+    public void AcquireEmployee(string masterEmployeeId)
     {
-        int savedCount = 0;
-
-        foreach (var employee in _defaultEmployees)
+        if (_acquiredEmployeeIds.Contains(masterEmployeeId))
         {
-            Backend.GameData.Insert("EmployeePool", employee.ToParam(), bro =>
-            {
-                if (bro.IsSuccess())
-                {
-                    employee.rowInDate = bro.GetInDate();
-                    poolEmployees.Add(employee);
-                }
-                else
-                {
-                    Debug.LogError($"기본 직원 저장 실패: {bro}");
-                }
-
-                savedCount++;
-                if (savedCount == _defaultEmployees.Count)
-                {
-                    Debug.Log("기본 직원 10명 생성 완료");
-                    onComplete?.Invoke();
-                }
-            });
-        }
-    }
-
-    // ── 채용 후보 랜덤 추출 ───────────────────
-    public void LoadRandomCandidates(int count, System.Action<List<EmployeeData>> onComplete)
-    {
-        if (poolEmployees.Count == 0)
-        {
-            Debug.LogError("EmployeePool 비어있음");
+            Debug.Log($"이미 획득한 직원: {masterEmployeeId}");
             return;
         }
 
-        var shuffled = ShuffleList(poolEmployees);
-        int take = Mathf.Min(count, shuffled.Count);
-        var candidates = shuffled.GetRange(0, take);
+        _acquiredEmployeeIds.Add(masterEmployeeId);
+
+        var param = new Param();
+        param.Add("employeeId", masterEmployeeId);
+        Backend.GameData.Insert("AcquiredEmployee", param, bro =>
+        {
+            if (bro.IsSuccess())
+                Debug.Log($"직원 획득 저장: {masterEmployeeId}");
+            else
+                Debug.LogError($"직원 획득 저장 실패: {bro}");
+        });
+    }
+
+    public bool IsAcquired(string masterEmployeeId) =>
+        _acquiredEmployeeIds.Contains(masterEmployeeId);
+
+    // ── 채용 후보 랜덤 추출 ───────────────────
+    public void LoadRandomCandidates(int count, int tierIndex, System.Action<List<EmployeeData>> onComplete)
+    {
+        // isDefault이거나 유저가 획득한 직원만 채용 풀로 사용
+        var availablePool = poolEmployees.FindAll(e => e.isDefault || _acquiredEmployeeIds.Contains(e.id));
+
+        if (availablePool.Count == 0)
+        {
+            Debug.LogError("채용 가능한 직원 없음");
+            return;
+        }
+
+        // 복원 허용: count만큼 랜덤 추출 (같은 직원이 다른 등급으로 중복 등장 가능)
+        var candidates = new List<EmployeeData>();
+        for (int i = 0; i < count; i++)
+        {
+            int idx = UnityEngine.Random.Range(0, availablePool.Count);
+            candidates.Add(availablePool[idx].Clone());
+        }
 
         foreach (var employee in candidates)
         {
             // Grade / Potential 결정
             employee.grade = RollGrade(employee.maxGrade);
-            employee.potential = RollPotential(employee.grade);
+            employee.potential = RollPotential(employee.grade, tierIndex);
 
             // 능력치는 마스터 min~max 범위로 재랜덤
             employee.developSkill = UnityEngine.Random.Range(employee.developMin, employee.developMax + 1);
@@ -174,7 +247,7 @@ public class EmployeeManager : MonoBehaviour
         inGameEmployee.enhancementLevel = poolEmployee.enhancementLevel;
         inGameEmployee.portraitId      = poolEmployee.portraitId;
         inGameEmployee.assignedProjectId = "";
-        inGameEmployee.satisfaction = 90;
+        inGameEmployee.satisfaction = 80;
         
         Backend.GameData.Insert("Employee", inGameEmployee.ToParam(), bro =>
         {
@@ -213,17 +286,40 @@ public class EmployeeManager : MonoBehaviour
         return (EmployeeGrade)rolled;
     }
 
-    private EmployeePotential RollPotential(EmployeeGrade grade)
+    // [tierIndex][gradeIndex] → C, B, A, S 가중치
+    // gradeIndex: Normal=0, Rare=1, Epic=2, Unique=3
+    private static readonly int[][][] PotentialWeightTable =
     {
-        // 순서: C, B, A, S
-        int[] weights = grade switch
+        // 1단계
+        new int[][]
         {
-            EmployeeGrade.Normal => new[] { 6, 3, 1, 0 },
-            EmployeeGrade.Rare   => new[] { 4, 4, 2, 0 },
-            EmployeeGrade.Epic   => new[] { 2, 4, 3, 1 },
-            EmployeeGrade.Unique => new[] { 0, 2, 4, 4 },
-            _                    => new[] { 6, 3, 1, 0 }
-        };
+            new[] { 60, 40,  0,  0 },  // Normal
+            new[] { 50, 30, 20,  0 },  // Rare
+            new[] { 40, 30, 30,  0 },  // Epic
+            new[] { 40, 30, 30,  0 },  // Unique
+        },
+        // 2단계
+        new int[][]
+        {
+            new[] { 50, 30, 20,  0 },  // Normal
+            new[] { 40, 40, 20,  0 },  // Rare
+            new[] { 30, 40, 30,  0 },  // Epic
+            new[] { 30, 40, 30, 10 },  // Unique
+        },
+        // 3단계
+        new int[][]
+        {
+            new[] { 40, 30, 30,  0 },  // Normal
+            new[] { 30, 40, 30,  0 },  // Rare
+            new[] { 20, 50, 30, 10 },  // Epic
+            new[] { 20, 40, 40, 20 },  // Unique
+        },
+    };
+
+    private EmployeePotential RollPotential(EmployeeGrade grade, int tierIndex)
+    {
+        int ti = Mathf.Clamp(tierIndex, 0, PotentialWeightTable.Length - 1);
+        int[] weights = PotentialWeightTable[ti][(int)grade];
 
         int total = 0;
         foreach (int w in weights) total += w;
@@ -241,11 +337,12 @@ public class EmployeeManager : MonoBehaviour
     // ── 보유 직원 불러오기 ────────────────────
     public void LoadEmployees(System.Action onComplete = null)
     {
-        Backend.GameData.GetMyData("Employee", new Where(), bro =>
+        BackendRetry.Instance.GetMyData("Employee", bro =>
         {
             if (!bro.IsSuccess())
             {
                 Debug.LogError($"직원 불러오기 실패: {bro}");
+                onComplete?.Invoke();
                 return;
             }
 
@@ -258,17 +355,6 @@ public class EmployeeManager : MonoBehaviour
             Debug.Log($"보유 직원 {ownedEmployees.Count}명 로드 완료");
             onComplete?.Invoke();
             HUDUI.Instance?.RefreshAll();
-        });
-    }
-
-    public void UpdateEmployeePool(EmployeeData employee)
-    {
-        if (string.IsNullOrEmpty(employee.rowInDate)) return;
-
-        Backend.GameData.UpdateV2("EmployeePool", employee.rowInDate, Backend.UserInDate, employee.ToParam(), bro =>
-        {
-            if (!bro.IsSuccess())
-                Debug.LogError($"직원 업그레이드 실패: {bro}");
         });
     }
 
@@ -457,6 +543,83 @@ public class EmployeeManager : MonoBehaviour
 
         // 연봉 증가 (강화 성공 시 — tableIndex = 새 레벨 - 1)
         employee.salary += EnhanceSalaryTable[tableIndex];
+    }
+
+    // 강화 레벨별 누적 기댓값 비용 (0강=0원, 11강=4696원, ...)
+    // EnhanceCostTable + EnhanceTable 확률로 계산한 값
+    private static readonly int[] CumulativeExpectedEnhanceCost =
+    {
+            0,  // 0강
+           51,  // 1강
+          158,  // 2강
+          282,  // 3강
+          421,  // 4강
+          643,  // 5강
+          917,  // 6강
+         1249,  // 7강
+         1735,  // 8강
+         2393,  // 9강
+         3295,  // 10강
+         4696,  // 11강
+        11363,  // 12강
+        24696,  // 13강
+        44696,  // 14강
+    };
+
+    public static int GetExpectedEnhanceCost(int enhancementLevel)
+    {
+        if (enhancementLevel <= 0) return 0;
+        int idx = Mathf.Clamp(enhancementLevel, 0, CumulativeExpectedEnhanceCost.Length - 1);
+        return CumulativeExpectedEnhanceCost[idx];
+    }
+
+    // 채용 시 기댓값 기반 강화 적용 (랜덤 없이 각 단계 기댓값을 확정 적용)
+    public void ApplyEnhancementExpected(EmployeeData employee, int targetLevel)
+    {
+        employee.enhancementLevel = targetLevel;
+        if (targetLevel <= 0) return;
+
+        int potentialBonus = employee.potential switch
+        {
+            EmployeePotential.C => 0,
+            EmployeePotential.B => 1,
+            EmployeePotential.A => 3,
+            EmployeePotential.S => 5,
+            _ => 0
+        };
+
+        int mainGainTotal  = 0;
+        int subGainTotal   = 0;
+        int subGainMinTotal = 0;
+        int subGainMaxTotal = 0;
+        int salaryGain     = 0;
+
+        for (int lv = 1; lv <= targetLevel; lv++)
+        {
+            int ti = Mathf.Clamp(lv - 1, 0, MainStatGainTable.Length - 1);
+            var (minG, maxG) = MainStatGainTable[ti];
+            int stepMain = (minG + maxG) / 2 + potentialBonus;
+            int stepSub  = Mathf.RoundToInt(stepMain * UnityEngine.Random.Range(0.3f, 0.5f));
+
+            mainGainTotal   += stepMain;
+            subGainTotal    += stepSub;
+            subGainMinTotal += Mathf.RoundToInt(stepMain * 0.3f);
+            subGainMaxTotal += Mathf.RoundToInt(stepMain * 0.5f);
+            salaryGain      += EnhanceSalaryTable[ti];
+        }
+
+        employee.mainStatEnhanceGain = mainGainTotal;
+        employee.subStatEnhanceMin = subGainMinTotal;
+        employee.subStatEnhanceMax = subGainMaxTotal;
+
+        string mainStat  = GetMainStatKey(employee.role);
+        var    subStats  = GetSubStatKeys(employee.role);
+
+        ApplyStat(employee, mainStat,    mainGainTotal);
+        ApplyStat(employee, subStats[0], subGainTotal);
+        ApplyStat(employee, subStats[1], subGainTotal);
+
+        employee.salary += salaryGain;
     }
 
     private string GetMainStatKey(EmployeeRole role) => role switch

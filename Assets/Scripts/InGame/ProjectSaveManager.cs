@@ -138,11 +138,10 @@ public class ProjectSaveManager : MonoBehaviour
     // ── 로드 (씬 전, 데이터만 파싱) ──────────
     public void LoadProject(System.Action onComplete = null)
     {
-        Backend.GameData.GetMyData("UserProject", new Where(), bro =>
+        BackendRetry.Instance.GetMyData("UserProject", bro =>
         {
             if (!bro.IsSuccess())
             {
-                Debug.LogError($"프로젝트 로드 실패: {bro}");
                 onComplete?.Invoke();
                 return;
             }
