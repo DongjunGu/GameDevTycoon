@@ -6,6 +6,9 @@ public class BackendManager : MonoBehaviour
 {
     void Start()
     {
+        if (BackendRetry.Instance == null)
+            gameObject.AddComponent<BackendRetry>();
+
         var bro = Backend.Initialize();
 
         if (bro.IsSuccess())

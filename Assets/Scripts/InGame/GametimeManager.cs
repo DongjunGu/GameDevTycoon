@@ -47,15 +47,9 @@ public class GameTimeManager : MonoBehaviour
         DontDestroyOnLoad(gameObject);
     }
 
-    void OnApplicationPause(bool paused)
-    {
-        if (paused) SaveGameTime();
-    }
+    void OnApplicationPause(bool paused) { }
 
-    void OnApplicationQuit()
-    {
-        SaveGameTime();
-    }
+    void OnApplicationQuit() { }
 
     void Update()
     {
@@ -72,7 +66,7 @@ public class GameTimeManager : MonoBehaviour
     // ── 로드 ──────────────────────────────────
     public void LoadGameTime(System.Action onComplete = null)
     {
-        Backend.GameData.GetMyData("UserGameTime", new Where(), bro =>
+        BackendRetry.Instance.GetMyData("UserGameTime", bro =>
         {
             if (bro.IsSuccess())
             {
@@ -83,7 +77,6 @@ public class GameTimeManager : MonoBehaviour
                 {
                     JsonData row = rows[rows.Count - 1];
 
-                    // row 키 전체 출력
                     foreach (var key in row.Keys)
                         Debug.Log($"key: {key} / value: {row[key]}");
 
@@ -104,10 +97,6 @@ public class GameTimeManager : MonoBehaviour
                     _isLoaded = true;
                     SaveGameTime();
                 }
-            }
-            else
-            {
-                Debug.LogError($"게임 시간 로드 실패: {bro}");
             }
 
             HUDUI.Instance?.RefreshTime();

@@ -29,20 +29,20 @@ public class HiringUI : MonoBehaviour
     public TextMeshProUGUI confirmPerfectionText;
     public TextMeshProUGUI confirmSalaryText;
     public TextMeshProUGUI confirmSatisfactionText;
+    public TextMeshProUGUI confirmHireCostText;
     [Header("Settings")]
     public int candidateCount = 4;
 
     private EmployeeData _selectedEmployee;
     private List<EmployeeData> _currentCandidates = new();
+    private int _hireCost;
 
-    // 티어 데이터
+    // 티어 데이터 (강화 레벨 범위/가중치, 잠재력 확률은 EmployeeManager.PotentialWeightTable 참조)
     private static readonly (string label, int cost, int[] range, int[] weights)[] Tiers =
     {
-        ("기본 채용",      500,   new[] { 0 },                        new[] { 1 }),
-        ("일반 채용",     2000,   new[] { 0, 1, 2, 3 },              new[] { 4, 3, 2, 1 }),
-        ("고급 채용",     7000,   new[] { 3, 4, 5, 6, 7, 8 },        new[] { 6, 5, 4, 3, 2, 1 }),
-        ("프리미엄 채용", 20000,  new[] { 7, 8, 9, 10, 11, 12, 13, 14 }, new[] { 8, 7, 6, 5, 4, 3, 2, 1 }),
-        ("레전더리 채용", 50000,  new[] { 13,14,15, 16, 17, 18, 19, 20 }, new[] { 8, 7, 6, 5, 4, 3, 2, 1 }),
+        ("채용 1단계", 2000,  new[] { 0 }, new[] { 1 }),
+        ("채용 2단계", 7000,  new[] { 0, 11 }, new[] { 1, 1 }),
+        ("채용 3단계", 20000, new[] { 12, 14 }, new[] { 1, 1 }),
     };
 
     void Awake()
@@ -88,7 +88,7 @@ public class HiringUI : MonoBehaviour
                 if (loadingPanel != null) loadingPanel.SetActive(true);
 
                 _currentCandidates.Clear();
-                EmployeeManager.Instance.LoadRandomCandidates(candidateCount, candidates =>
+                EmployeeManager.Instance.LoadRandomCandidates(candidateCount, tierIndex, candidates =>
                 {
                     // 티어별 강화 수치 적용
                     foreach (var employee in candidates)
@@ -121,13 +121,9 @@ public class HiringUI : MonoBehaviour
         return range[0];
     }
 
-    // 강화 수치만큼 ApplyEnhancement 반복
     void ApplyEnhancementLevel(EmployeeData employee, int targetLevel)
     {
-        for (int i = 0; i < targetLevel; i++)
-            EmployeeManager.Instance.ApplyEnhancement(employee);
-
-        employee.enhancementLevel = targetLevel;
+        EmployeeManager.Instance.ApplyEnhancementExpected(employee, targetLevel);
     }
 
     void ShowCandidates(List<EmployeeData> candidates)
@@ -153,16 +149,21 @@ public class HiringUI : MonoBehaviour
     {
         _selectedEmployee = employee;
 
+        int baseHireCost = EmployeeManager.GetExpectedEnhanceCost(employee.enhancementLevel);
+        _hireCost = Mathf.RoundToInt(baseHireCost * UnityEngine.Random.Range(0.8f, 1.2f));
+
         confirmNameText.text = employee.employeeName;
         confirmRoleText.text = employee.RoleToString();
         confirmGradeText.text = employee.GradeToString();
         confirmPotentialText.text = employee.PotentialToString();
-        confirmDevelopText.text = employee.DevelopRangeText();
-        confirmPlanningText.text = employee.PlanningRangeText();
-        confirmArtText.text = employee.ArtRangeText();
+        confirmDevelopText.text = employee.DevelopDisplayText();
+        confirmPlanningText.text = employee.PlanningDisplayText();
+        confirmArtText.text = employee.ArtDisplayText();
         confirmPerfectionText.text = employee.PerfectionRangeText();
         confirmSalaryText.text = employee.SalaryRangeText();
         enhancementText.text = $"+{employee.enhancementLevel}";
+        if (confirmHireCostText != null)
+            confirmHireCostText.text = _hireCost > 0 ? $"{_hireCost:N0}G" : "무료";
         
         if (confirmSatisfactionText != null)
         confirmSatisfactionText.text = employee.SatisfactionText();
@@ -176,6 +177,17 @@ public class HiringUI : MonoBehaviour
 
     public void OnClickConfirmHire()
     {
+        if (_hireCost > 0 && !MoneyManager.Instance.CanAfford(_hireCost))
+        {
+            GameUIHelper.ShowLoanPrompt();
+            return;
+        }
+        if (_hireCost > 0)
+        {
+            MoneyManager.Instance.SpendGold(_hireCost);
+            Debug.Log($"[채용] {_selectedEmployee.employeeName} 채용 비용 차감: {_hireCost:N0}G (강화 +{_selectedEmployee.enhancementLevel})");
+        }
+
         GameTimeManager.Instance?.StartTime();
         EmployeeManager.Instance.HireEmployee(_selectedEmployee);
         hiringPanel.SetActive(false);
