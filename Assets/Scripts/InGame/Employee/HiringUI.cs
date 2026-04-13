@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using TMPro;
 using UnityEngine.UI;
+using System;
 
 public class HiringUI : MonoBehaviour
 {
@@ -30,10 +31,26 @@ public class HiringUI : MonoBehaviour
     public TextMeshProUGUI confirmSalaryText;
     public TextMeshProUGUI confirmSatisfactionText;
     public TextMeshProUGUI confirmHireCostText;
+    [Header("Comparison")]
+    public GameObject comparisonSection;        // 보유 직원 비교 섹션 (없으면 숨김)
+    public TextMeshProUGUI ownedNameText;
+    public TextMeshProUGUI ownedRoleText;
+    public TextMeshProUGUI ownedGradeText;
+    public TextMeshProUGUI ownedPotentialText;
+    public TextMeshProUGUI ownedDevelopText;
+    public TextMeshProUGUI ownedPlanningText;
+    public TextMeshProUGUI ownedArtText;
+    public TextMeshProUGUI ownedPerfectionText;
+    public TextMeshProUGUI ownedSalaryText;
+    public TextMeshProUGUI ownedEnhancementText;
+    public Button confirmButton;                // 채용하기 버튼
+    public Button keepButton;                   // 유지하기 버튼
+
     [Header("Settings")]
     public int candidateCount = 4;
 
     private EmployeeData _selectedEmployee;
+    private EmployeeData _conflictingOwned;     // 동일 masterEmployeeId 보유 직원
     private List<EmployeeData> _currentCandidates = new();
     private int _hireCost;
 
@@ -164,12 +181,33 @@ public class HiringUI : MonoBehaviour
         enhancementText.text = $"+{employee.enhancementLevel}";
         if (confirmHireCostText != null)
             confirmHireCostText.text = _hireCost > 0 ? $"{_hireCost:N0}G" : "무료";
-        
         if (confirmSatisfactionText != null)
-        confirmSatisfactionText.text = employee.SatisfactionText();
-    else
-        Debug.LogError("confirmSatisfactionText가 null입니다. 인스펙터 할당 확인");
+            confirmSatisfactionText.text = employee.SatisfactionText();
+        else
+            Debug.LogError("confirmSatisfactionText가 null입니다. 인스펙터 할당 확인");
 
+        // 동일 직원 보유 여부 확인 (masterEmployeeId 공백이면 이름으로 대조)
+        _conflictingOwned = EmployeeManager.Instance.ownedEmployees
+            .Find(e => EmployeeSlotUI.IsSameEmployee(e, employee));
+
+        bool hasConflict = _conflictingOwned != null;
+        if (comparisonSection != null) comparisonSection.SetActive(hasConflict);
+        if (keepButton != null) keepButton.gameObject.SetActive(hasConflict);
+
+        if (hasConflict)
+        {
+            var owned = _conflictingOwned;
+            if (ownedNameText != null)       ownedNameText.text       = owned.employeeName;
+            if (ownedRoleText != null)       ownedRoleText.text       = owned.RoleToString();
+            if (ownedGradeText != null)      ownedGradeText.text      = owned.GradeToString();
+            if (ownedPotentialText != null)  ownedPotentialText.text  = owned.PotentialToString();
+            if (ownedDevelopText != null)    ownedDevelopText.text    = owned.DevelopText();
+            if (ownedPlanningText != null)   ownedPlanningText.text   = owned.PlanningText();
+            if (ownedArtText != null)        ownedArtText.text        = owned.ArtText();
+            if (ownedPerfectionText != null) ownedPerfectionText.text = owned.PerfectionText();
+            if (ownedSalaryText != null)     ownedSalaryText.text     = owned.SalaryText();
+            if (ownedEnhancementText != null)ownedEnhancementText.text= $"+{owned.enhancementLevel}";
+        }
 
         hiringPanel.SetActive(false);
         confirmPanel.SetActive(true);
@@ -188,12 +226,30 @@ public class HiringUI : MonoBehaviour
             Debug.Log($"[채용] {_selectedEmployee.employeeName} 채용 비용 차감: {_hireCost:N0}G (강화 +{_selectedEmployee.enhancementLevel})");
         }
 
+        // 동일 직원이 있으면 해고 후 채용
+        if (_conflictingOwned != null)
+        {
+            EmployeeManager.Instance.FireEmployee(_conflictingOwned);
+            _conflictingOwned = null;
+        }
+
         GameTimeManager.Instance?.StartTime();
         EmployeeManager.Instance.HireEmployee(_selectedEmployee);
         hiringPanel.SetActive(false);
         confirmPanel.SetActive(false);
 
-        DialogManager.Instance.Resume();//다이얼로그 다시재생
+        DialogManager.Instance.Resume();
+    }
+
+    // 보유 직원 유지하기 (비교 패널에서)
+    public void OnClickKeep()
+    {
+        GameTimeManager.Instance?.StartTime();
+        hiringPanel.SetActive(false);
+        confirmPanel.SetActive(false);
+        tierPanel.SetActive(false);
+        if (loadingPanel != null) loadingPanel.SetActive(false);
+        DialogManager.Instance.Resume();
     }
 
     public void OnClickBack()

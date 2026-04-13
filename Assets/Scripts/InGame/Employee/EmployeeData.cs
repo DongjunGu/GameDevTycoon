@@ -49,12 +49,12 @@ public class EmployeeData
     public int subStatEnhanceMin;
     public int subStatEnhanceMax;
     public string assignedDeskId = "";
+    public string masterEmployeeId = ""; // 마스터 풀의 원본 ID (emp_01 등)
     public bool isDefault; // true = 항상 채용 풀 등장, false = 획득 필요
 
     public EmployeeState state;
     public string assignedProjectId;
     public string portraitId;
-    public bool lastIsFront = true; // 마지막 방향 저장
 
     // 마스터 데이터 복사본 생성 (채용 후보 표시용)
     public EmployeeData Clone() => new EmployeeData(
@@ -125,7 +125,7 @@ public class EmployeeData
         data.portraitId = SafeString(row, "portraitId", "portrait_secretary");
         data.satisfaction = SafeInt(row, "satisfaction", 90);
         data.assignedDeskId = SafeString(row, "assignedDeskId", "");
-        data.lastIsFront = SafeBool(row, "lastIsFront", true);
+        data.masterEmployeeId = SafeString(row, "masterEmployeeId", "");
         return data;
     }
 
@@ -159,7 +159,7 @@ public class EmployeeData
         param.Add("portraitId", portraitId);
         param.Add("satisfaction", satisfaction);
         param.Add("assignedDeskId", assignedDeskId);
-        param.Add("lastIsFront", lastIsFront);
+        param.Add("masterEmployeeId", masterEmployeeId);
         return param;
     }
 

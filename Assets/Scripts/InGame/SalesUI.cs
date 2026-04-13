@@ -86,7 +86,10 @@ public class SalesUI : MonoBehaviour
         _newProjectStartedDuringSales = !applyCompletion && SalesSaveManager.Instance != null && SalesSaveManager.Instance.LoadedNewProjectStarted;
         // 새 프로젝트가 진행 중이면 CurrentStage를 Sales로 바꾸지 않음 (Developing 유지 → 틱/애니메이션 정상 작동)
         if (!_newProjectStartedDuringSales)
+        {
             DevelopmentManager.Instance.CurrentStage = ProjectStage.Sales;
+            OfficeManager.Instance?.RefreshAllDeskAnimations();
+        }
         if (!applyCompletion)
         {
             // 복원 시: rowInDate로 정확히 찾아 연결

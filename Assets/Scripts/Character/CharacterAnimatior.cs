@@ -44,18 +44,11 @@ public class CharacterAnimator : MonoBehaviour
 
     public void SetIdle(bool isWorking)
     {
+        _targetSpeed = 0f;
         animator.SetBool(IsWorking, isWorking);
         animator.SetBool(IsFront, true);
         spriteRenderer.flipX = false;
         spriteRenderer.flipY = false;
-        StartCoroutine(PlayOneFrameThenFreeze());
-    }
-
-    IEnumerator PlayOneFrameThenFreeze()
-    {
-        animator.speed = 1f; // IsRunning 무관하게 한 프레임 강제 재생
-        yield return null;
-        _targetSpeed = 0f;
     }
 
     public void SetWorking(bool isWorking)

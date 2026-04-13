@@ -245,7 +245,8 @@ public class EmployeeManager : MonoBehaviour
         inGameEmployee.perfectionSkill = poolEmployee.perfectionSkill;
         inGameEmployee.salary = poolEmployee.salary;
         inGameEmployee.enhancementLevel = poolEmployee.enhancementLevel;
-        inGameEmployee.portraitId      = poolEmployee.portraitId;
+        inGameEmployee.portraitId       = poolEmployee.portraitId;
+        inGameEmployee.masterEmployeeId = poolEmployee.id;
         inGameEmployee.assignedProjectId = "";
         inGameEmployee.satisfaction = 80;
         
@@ -392,10 +393,7 @@ public class EmployeeManager : MonoBehaviour
             int dropAmount = isOvertime ? 10 : 5;
 
             foreach (var emp in ownedEmployees)
-            {
                 emp.satisfaction = Mathf.Clamp(emp.satisfaction - dropAmount, 0, 100);
-                UpdateEmployee(emp);
-            }
         }
 
         RandomEventManager.Instance?.CheckConditionEvents();
@@ -413,6 +411,12 @@ public class EmployeeManager : MonoBehaviour
 
     public EmployeeData GetEmployee(string id) =>
         ownedEmployees.Find(e => e.id == id);
+
+    public void SaveAllEmployees()
+    {
+        foreach (var emp in ownedEmployees)
+            UpdateEmployee(emp);
+    }
 
     public void UpdateEmployee(EmployeeData employee)
     {
