@@ -86,7 +86,13 @@ public class GameTimeManager : MonoBehaviour
                     _rowInDate = SafeString(row, "inDate", "");
                     _isLoaded = true;
 
+                    int negMonth = SafeInt(row, "negotiationMonth", 0);
+                    int negWeek  = SafeInt(row, "negotiationWeek", 0);
+                    bool negDone = SafeString(row, "negotiatedThisYear", "False") == "True";
+                    SalaryNegotiationManager.Instance?.LoadSchedule(negMonth, negWeek, negDone);
+
                     Debug.Log($"로드 완료: {Year}년 {Month}월 {Week}주 / rowInDate: {_rowInDate}");
+                    SaveGameTime(); // 신규 컬럼 자동 추가
                 }
                 else
                 {
@@ -116,17 +122,19 @@ public class GameTimeManager : MonoBehaviour
             {
                 Month = 1;
                 Year++;
-                Debug.Log($"[연봉협상] {Year}년 시작 - 연봉협상 발생 예정");
                 QuestManager.Instance?.UpdateProgress(QuestType.SurviveYears, 1);
+                SalaryNegotiationManager.Instance?.ResetYearFlag();
                 PayAnnualSalary();
-
             }
         }
 
         OnTimeChanged?.Invoke();
         HUDUI.Instance?.RefreshTime();
         LoanManager.Instance.CheckDueLoans();
-        //SaveGameTime();
+
+        // 11~12월 연봉협상 트리거 체크 (롤오버 후 새 주차 기준 — HUD 표시와 일치)
+        if (Month == 11 || Month == 12)
+            SalaryNegotiationManager.Instance?.CheckNegotiationTrigger(Month, Week);
 
         Debug.Log($"시간 경과: {Year}년 {Month}월 {Week}주");
     }
@@ -159,6 +167,9 @@ public class GameTimeManager : MonoBehaviour
         param.Add("year", Year);
         param.Add("month", Month);
         param.Add("week", Week);
+        param.Add("negotiationMonth",    SalaryNegotiationManager.Instance?.ScheduledMonth ?? 0);
+        param.Add("negotiationWeek",     SalaryNegotiationManager.Instance?.ScheduledWeek  ?? 0);
+        param.Add("negotiatedThisYear",  SalaryNegotiationManager.Instance?.NegotiatedThisYear ?? false);
 
         if (!string.IsNullOrEmpty(_rowInDate))
         {
@@ -239,14 +250,8 @@ public class GameTimeManager : MonoBehaviour
             }
             else
             {
-                StartCoroutine(StartNegotiationDelay());
+                ForceStartTime();
             }
         });
-    }
-    IEnumerator StartNegotiationDelay()
-    {
-        yield return new WaitForSeconds(2f);
-        ForceStartTime();
-        SalaryNegotiationManager.Instance.StartNegotiation();
     }
 }

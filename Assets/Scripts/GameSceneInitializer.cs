@@ -25,11 +25,6 @@ public class GameSceneInitializer : MonoBehaviour
         //     EventDialogTable.PlayManual("event_game_start");
     }
 
-    public void TestStartNegotiation()
-    {
-        SalaryNegotiationManager.Instance.StartNegotiation();
-    }
-
     public void TestGameStartDialog()
     {
         EventDialogTable.PlayManual("event_game_start");

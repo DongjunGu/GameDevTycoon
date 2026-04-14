@@ -6,7 +6,7 @@
 public enum SpeakerType { Player, NPC, System, None }
 public enum TextSpeed { Normal, Fast, Slow }
 public enum ConditionType { None, Gold, Level }
-public enum ResultType { None, GoldChange, OpenHiring, SalaryUpdate, SalaryReject, SatisfactionChange }
+public enum ResultType { None, GoldChange, OpenHiring, SalaryUpdate, SalaryReject, SatisfactionChange, SalaryAccept, SalaryFreeze }
 
 [System.Serializable]
 public class DialogNodeData
