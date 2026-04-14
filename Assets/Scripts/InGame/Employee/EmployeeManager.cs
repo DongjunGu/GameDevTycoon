@@ -396,7 +396,32 @@ public class EmployeeManager : MonoBehaviour
                 emp.satisfaction = Mathf.Clamp(emp.satisfaction - dropAmount, 0, 100);
         }
 
+        CheckLowSatisfaction();
         RandomEventManager.Instance?.CheckConditionEvents();
+    }
+
+    void CheckLowSatisfaction()
+    {
+        foreach (var emp in ownedEmployees)
+        {
+            if (emp.satisfaction >= 40) continue;
+
+            // 스탯 ×0.8 (데이터 패널티만 처리, 이벤트 트리거는 RandomEventManager 담당)
+            emp.developSkill    = Mathf.Max(1, Mathf.RoundToInt(emp.developSkill    * 0.8f));
+            emp.planningSkill   = Mathf.Max(1, Mathf.RoundToInt(emp.planningSkill   * 0.8f));
+            emp.artSkill        = Mathf.Max(1, Mathf.RoundToInt(emp.artSkill        * 0.8f));
+            emp.perfectionSkill = Mathf.Max(1, Mathf.RoundToInt(emp.perfectionSkill * 0.8f));
+        }
+    }
+
+    public void ReduceAllSatisfactionExcept(int amount, EmployeeData except)
+    {
+        foreach (var emp in ownedEmployees)
+        {
+            if (emp == except) continue;
+            emp.satisfaction = Mathf.Clamp(emp.satisfaction - amount, 0, 100);
+        }
+        SaveAllEmployees();
     }
 
     // 프로젝트 완성 시 호출 — 전 직원 만족도 +40
@@ -516,6 +541,44 @@ public class EmployeeManager : MonoBehaviour
         (50,100),  // 24→25
     };
 
+    [System.Serializable]
+    private class EnhancementRecord
+    {
+        public int level;
+        public string sub0Stat;
+        public int sub0Gain;
+        public string sub1Stat;
+        public int sub1Gain;
+    }
+
+    [System.Serializable]
+    private class EnhancementRecordListWrapper
+    {
+        public List<EnhancementRecord> records = new();
+    }
+
+    private List<EnhancementRecord> ParseEnhancementRecords(EmployeeData employee)
+    {
+        if (string.IsNullOrEmpty(employee.enhancementRecordsJson) || employee.enhancementRecordsJson == "[]")
+            return new List<EnhancementRecord>();
+        try
+        {
+            var wrapper = JsonUtility.FromJson<EnhancementRecordListWrapper>(
+                "{\"records\":" + employee.enhancementRecordsJson + "}");
+            return wrapper?.records ?? new List<EnhancementRecord>();
+        }
+        catch { return new List<EnhancementRecord>(); }
+    }
+
+    private string SerializeRecords(List<EnhancementRecord> records)
+    {
+        var wrapper = new EnhancementRecordListWrapper { records = records };
+        string json = JsonUtility.ToJson(wrapper);
+        int start = json.IndexOf('[');
+        int end   = json.LastIndexOf(']');
+        return (start >= 0 && end >= 0) ? json.Substring(start, end - start + 1) : "[]";
+    }
+
     public void ApplyEnhancement(EmployeeData employee)
     {
         // 주스탯: 강화 레벨 기반 테이블 (++후 호출되므로 -1로 인덱스)
@@ -540,13 +603,60 @@ public class EmployeeManager : MonoBehaviour
         Shuffle(subStats);
         int subGain0 = Mathf.RoundToInt(totalMainGain * UnityEngine.Random.Range(0.3f, 0.5f));
         int subGain1 = Mathf.RoundToInt(totalMainGain * UnityEngine.Random.Range(0.3f, 0.5f));
+        int salaryGain = EnhanceSalaryTable[tableIndex];
 
         ApplyStat(employee, mainStat, totalMainGain);
         ApplyStat(employee, subStats[0], subGain0);
         ApplyStat(employee, subStats[1], subGain1);
-
-        // 연봉 증가 (강화 성공 시 — tableIndex = 새 레벨 - 1)
         employee.salary += EnhanceSalaryTable[tableIndex];
+
+        // 부스탯 배정 기록 저장 (하락 시 롤백용, 주스탯/연봉은 테이블로 계산 가능)
+        var records = ParseEnhancementRecords(employee);
+        records.RemoveAll(r => r.level == employee.enhancementLevel); // 같은 레벨 재강화 시 덮어쓰기
+        records.Add(new EnhancementRecord
+        {
+            level    = employee.enhancementLevel,
+            sub0Stat = subStats[0],
+            sub0Gain = subGain0,
+            sub1Stat = subStats[1],
+            sub1Gain = subGain1,
+        });
+        employee.enhancementRecordsJson = SerializeRecords(records);
+    }
+
+    // 강화 하락 시 해당 레벨의 스탯/연봉을 되돌림
+    // 주스탯/연봉: 테이블 고정값으로 계산, 부스탯: 기록에서 조회
+    public void ReverseEnhancement(EmployeeData employee, int levelToReverse)
+    {
+        int tableIndex = Mathf.Clamp(levelToReverse - 1, 0, MainStatGainTable.Length - 1);
+        var (mainMin, mainMax) = MainStatGainTable[tableIndex];
+
+        int potentialBonus = employee.potential switch
+        {
+            EmployeePotential.C => 0,
+            EmployeePotential.B => 1,
+            EmployeePotential.A => 3,
+            EmployeePotential.S => 5,
+            _ => 0
+        };
+        int mainGain = (mainMin + mainMax) / 2 + potentialBonus; // 0~10강은 min==max
+
+        ApplyStat(employee, GetMainStatKey(employee.role), -mainGain);
+        employee.salary = Mathf.Max(0, employee.salary - EnhanceSalaryTable[tableIndex]);
+
+        var records = ParseEnhancementRecords(employee);
+        var record  = records.Find(r => r.level == levelToReverse);
+        if (record != null)
+        {
+            ApplyStat(employee, record.sub0Stat, -record.sub0Gain);
+            ApplyStat(employee, record.sub1Stat, -record.sub1Gain);
+            records.Remove(record);
+            employee.enhancementRecordsJson = SerializeRecords(records);
+        }
+        else
+        {
+            Debug.LogWarning($"부스탯 강화 기록 없음 (lv {levelToReverse}), 부스탯 롤백 스킵");
+        }
     }
 
     // 강화 레벨별 누적 기댓값 비용 (0강=0원, 11강=4696원, ...)

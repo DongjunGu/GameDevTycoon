@@ -61,6 +61,8 @@ public class SalaryNegotiationManager : MonoBehaviour
             HideEmployeeSlot();
             Debug.Log("연봉협상 전체 완료");
             GameTimeManager.Instance.SaveGameTime();
+            MoneyManager.Instance?.SaveMoney();
+            ProjectSaveManager.Instance?.SaveProject();
             GameTimeManager.Instance.ForceStartTime();
             DialogManager.Instance.ClearPlaceholders();
             return;
@@ -94,6 +96,8 @@ public class SalaryNegotiationManager : MonoBehaviour
         {
             // 두번째 거절 → 퇴사 확률 체크
             _currentEmployee?.ChangeSatisfaction(-5); // 거절 시 만족도 하락
+            if (_currentEmployee != null)
+                EmployeeManager.Instance.UpdateEmployee(_currentEmployee);
             if (UnityEngine.Random.value <= resignChance)
             {
                 _isResigning = true;

@@ -39,7 +39,8 @@ public class QuestUI : MonoBehaviour
 
         var quests = QuestManager.Instance.GetAllQuests()
             .Where(q => q.isVisible)
-            .OrderBy(q => q.isRewarded ? 2 : q.isCompleted ? 1 : 0) // ← 진행중→완료→수령완료 순
+            .OrderBy(q => q.isMainQuest ? 0 : 1)                      // 메인퀘스트 상단 고정
+            .ThenBy(q => q.isRewarded ? 2 : q.isCompleted ? 1 : 0)   // 진행중→완료→수령완료 순
             .ToList();
 
         foreach (var quest in quests)
@@ -70,6 +71,10 @@ public class QuestUI : MonoBehaviour
 
             // 배경 이미지
             var itemImage = item.GetComponent<Image>();
+
+            // 메인퀘스트 특별 표시
+            if (quest.isMainQuest)
+                titleText.text = $"[메인] {quest.title}";
 
             // 상태별 색상
             if (quest.isRewarded)

@@ -117,6 +117,7 @@ public class GameTimeManager : MonoBehaviour
                 Month = 1;
                 Year++;
                 Debug.Log($"[연봉협상] {Year}년 시작 - 연봉협상 발생 예정");
+                QuestManager.Instance?.UpdateProgress(QuestType.SurviveYears, 1);
                 PayAnnualSalary();
 
             }
@@ -151,6 +152,7 @@ public class GameTimeManager : MonoBehaviour
     public void SaveGameTime()
     {
         if (!_isLoaded) return;
+        EmployeeManager.Instance?.SaveAllEmployees();
         Debug.Log($"저장 시도 - rowInDate: {_rowInDate} / {Year}년 {Month}월 {Week}주");
 
         var param = new Param();
@@ -202,6 +204,7 @@ public class GameTimeManager : MonoBehaviour
     public void OnClickSave()
     {
         SaveGameTime();
+        MoneyManager.Instance?.SaveMoney();
         ProjectSaveManager.Instance.SaveProject();
         EmployeeManager.Instance?.SaveAllEmployees();
     }
@@ -222,12 +225,15 @@ public class GameTimeManager : MonoBehaviour
 
             MoneyManager.Instance.ForceSpendGold(totalSalary);
             SaveGameTime();
+            ProjectSaveManager.Instance?.SaveProject();
 
             if (goldAfter < 0)
             {
                 AlertUI.Instance.Show($"파산하셨습니다!\n현재 재화: {goldAfter:N0}G", () =>
                 {
                     SaveGameTime();
+                    MoneyManager.Instance?.SaveMoney();
+                    ProjectSaveManager.Instance?.SaveProject();
                     Debug.Log("파산 처리 예정");
                 });
             }

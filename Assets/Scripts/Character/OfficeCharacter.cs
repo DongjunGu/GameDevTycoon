@@ -153,6 +153,7 @@ public class OfficeCharacter : MonoBehaviour
         Debug.Log($"[Patrol] {employeeId} → 대기 완료, GoToDesk 호출");
 
         // 3. 원래 데스크로 복귀
+        _state = CharacterState.Moving; // Patrolling 해제 → OnArrived/ApplyDeskAnimation 정상 동작
         GoToDesk();
 
         yield return null;
@@ -208,6 +209,7 @@ public class OfficeCharacter : MonoBehaviour
         }
 
         // 3. 원래 데스크로 복귀
+        _state = CharacterState.Moving; // Patrolling 해제 → OnArrived/ApplyDeskAnimation 정상 동작
         GoToDesk();
 
         yield return null;

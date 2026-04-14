@@ -8,6 +8,7 @@ public class RandomEventManager : MonoBehaviour
     private bool _triggered50 = false;
     private List<RandomEventData> _eventPool = new();
     private List<RandomEventData> _conditionEventPool = new();
+    private Queue<string> _nextWeekPopups = new();
 
 
     [Header("개발 이벤트")]
@@ -40,6 +41,24 @@ public class RandomEventManager : MonoBehaviour
 
         // 조건 이벤트 풀은 게임 내내 활성화
         RandomEvents_Condition.Register(_conditionEventPool, this);
+    }
+
+    void Start()
+    {
+        if (GameTimeManager.Instance != null)
+            GameTimeManager.Instance.OnTimeChanged += OnWeekChanged;
+    }
+
+    void OnDestroy()
+    {
+        if (GameTimeManager.Instance != null)
+            GameTimeManager.Instance.OnTimeChanged -= OnWeekChanged;
+    }
+
+    void OnWeekChanged()
+    {
+        while (_nextWeekPopups.Count > 0)
+            AlertUI.Instance.Show(_nextWeekPopups.Dequeue());
     }
 
     public void InitEvents()
@@ -155,25 +174,20 @@ public class RandomEventManager : MonoBehaviour
 
     public void CheckConditionEvents()
     {
-        // 만족도 40 미만 직원 중 한 명만 퇴사 이벤트 체크
-        var candidates = EmployeeManager.Instance.ownedEmployees
-            .FindAll(e => e.satisfaction < 40);
-        if (candidates.Count == 0) return;
+        foreach (var emp in new List<EmployeeData>(EmployeeManager.Instance.ownedEmployees))
+        {
+            if (emp.satisfaction >= 40) continue;
 
-        int idx = UnityEngine.Random.Range(0, candidates.Count);
-        TryTriggerConditionEvent(RandomEventType.EmployeeRun, candidates[idx]);
+            float triggerChance = (50 - emp.satisfaction) / 100f;
+            if (UnityEngine.Random.value >= triggerChance) continue;
+
+            var captured = emp;
+            if (UnityEngine.Random.value < 0.7f)
+                TriggerEmployeeResignationEvent(captured);
+            else
+                TriggerEmployeeRunEvent(captured);
+        }
     }
-
-    void TryTriggerConditionEvent(RandomEventType type, EmployeeData target = null)
-    {
-        var evt = _conditionEventPool.Find(e => e.type == type);
-        if (evt == null) return;
-        if (UnityEngine.Random.value > evt.triggerChance) return;
-
-        _pendingResignTarget = target;
-        evt.onApply?.Invoke();
-    }
-
 
     // ── stub 메서드 (구현 예정) ───────────────
 
@@ -183,17 +197,39 @@ public class RandomEventManager : MonoBehaviour
     public void TriggerEmployeeFightEvent() { }
     public void TriggerBadCompanyEvent() { }
 
-    private EmployeeData _pendingResignTarget;
-
-    public void TriggerEmployeeRunEvent()
+    public void TriggerEmployeeResignationEvent(EmployeeData emp)
     {
-        var emp = _pendingResignTarget;
-        _pendingResignTarget = null;
-        if (emp == null) return;
+        // TODO: 야근 모드 구현 후 IsOvertimeActive 조건 교체
+        bool isOvertime = false;
+        string message = isOvertime
+            ? RandomEvents_Condition.ResignationOvertimeMessage
+            : RandomEvents_Condition.ResignationMessages[
+                UnityEngine.Random.Range(0, RandomEvents_Condition.ResignationMessages.Length)];
 
-        AlertUI.Instance?.Show(
-            $"{emp.employeeName}이(가) 만족도 저하로 퇴사했습니다.",
-            () => EmployeeManager.Instance.FireEmployee(emp)
-        );
+        EventUI.Instance.Show("사직서 제출", emp.portraitId, $"{emp.employeeName}\n\n{message}", () =>
+        {
+            EmployeeManager.Instance.FireEmployee(emp);
+            EmployeeManager.Instance.ReduceAllSatisfactionExcept(10, emp);
+            AlertUI.Instance.Show(
+                $"{emp.employeeName}이(가) 사직서를 제출하고 퇴사했습니다.\n남은 직원들의 만족도가 10 하락합니다."
+            );
+        });
+    }
+
+    public void TriggerEmployeeRunEvent(EmployeeData emp)
+    {
+        string message = RandomEvents_Condition.RunAwayMessages[
+            UnityEngine.Random.Range(0, RandomEvents_Condition.RunAwayMessages.Length)];
+
+        EventUI.Instance.Show("직원 도망", emp.portraitId, $"{emp.employeeName}\n\n{message}", () =>
+        {
+            EmployeeManager.Instance.FireEmployee(emp);
+            EmployeeManager.Instance.ReduceAllSatisfactionExcept(10, emp);
+            AlertUI.Instance.Show(
+                $"{emp.employeeName}이(가) 도망쳤습니다.\n남은 직원들의 만족도가 10 하락합니다."
+            );
+            // TODO: 1주 후 팝업 내용 확정 후 아래 내용 교체
+            _nextWeekPopups.Enqueue($"[{emp.employeeName}]\n...");
+        });
     }
 }

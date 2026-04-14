@@ -48,6 +48,10 @@ public class EmployeeData
     public int mainStatEnhanceGain;
     public int subStatEnhanceMin;
     public int subStatEnhanceMax;
+
+    // 강화 단계별 실제 적용 수치 기록 (하락 시 정확한 롤백용)
+    public string enhancementRecordsJson = "[]";
+
     public string assignedDeskId = "";
     public string masterEmployeeId = ""; // 마스터 풀의 원본 ID (emp_01 등)
     public bool isDefault; // true = 항상 채용 풀 등장, false = 획득 필요
@@ -126,6 +130,7 @@ public class EmployeeData
         data.satisfaction = SafeInt(row, "satisfaction", 90);
         data.assignedDeskId = SafeString(row, "assignedDeskId", "");
         data.masterEmployeeId = SafeString(row, "masterEmployeeId", "");
+        data.enhancementRecordsJson = SafeString(row, "enhancementRecordsJson", "[]");
         return data;
     }
 
@@ -160,6 +165,7 @@ public class EmployeeData
         param.Add("satisfaction", satisfaction);
         param.Add("assignedDeskId", assignedDeskId);
         param.Add("masterEmployeeId", masterEmployeeId);
+        param.Add("enhancementRecordsJson", enhancementRecordsJson);
         return param;
     }
 

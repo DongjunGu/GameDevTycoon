@@ -19,7 +19,7 @@ GameObject:
   - component: {fileID: 8491685843416925312}
   - component: {fileID: 9003967233656116799}
   m_Layer: 7
-  m_Name: portrait_emp_01
+  m_Name: portrait_ugi_01
   m_TagString: Player
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -38,7 +38,7 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 8445538752518208412}
+  - {fileID: 1226709612750572647}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!212 &7431818280364430177
@@ -90,12 +90,12 @@ SpriteRenderer:
   m_SortingLayer: -3
   m_SortingOrder: 0
   m_MaskInteraction: 0
-  m_Sprite: {fileID: -3147242479794837615, guid: fc754e4c8792745468b4b68f5fe7d310, type: 3}
+  m_Sprite: {fileID: -7324182446463259531, guid: 01b372b7be99bf64db990289b861e3ad, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
   m_DrawMode: 0
-  m_Size: {x: 1.0625, y: 1.34375}
+  m_Size: {x: 1, y: 1.4375}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
   m_WasSpriteAssigned: 1
@@ -110,7 +110,7 @@ Animator:
   m_GameObject: {fileID: 2828724654860466180}
   m_Enabled: 1
   m_Avatar: {fileID: 0}
-  m_Controller: {fileID: 9100000, guid: 615dcca6dcb504a49a2f0838901d5b5c, type: 2}
+  m_Controller: {fileID: 9100000, guid: d373209afa5ef7d48854045a70dbe8c0, type: 2}
   m_CullingMode: 0
   m_UpdateMode: 0
   m_ApplyRootMotion: 0
@@ -160,8 +160,8 @@ BoxCollider2D:
   m_SpriteTilingProperty:
     border: {x: 0, y: 0, z: 0, w: 0}
     pivot: {x: 0.5, y: 0.1}
-    oldSize: {x: 1.0625, y: 1.34375}
-    newSize: {x: 1.0625, y: 1.34375}
+    oldSize: {x: 1, y: 1.4375}
+    newSize: {x: 1, y: 1.4375}
     adaptiveTilingThreshold: 0.5
     drawMode: 0
     adaptiveTiling: 0
@@ -235,7 +235,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 712252ce09655194fb5dd9658c89da84, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CharacterMover
-  moveSpeed: 2
+  moveSpeed: 1.3
 --- !u!114 &4899371010554159077
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -278,8 +278,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::OfficeCharacter
   employeeId: 
   assignedDesk: {fileID: 0}
-  statPopupAnchor: {fileID: 8445538752518208412}
---- !u!1 &4722472104953814707
+  statPopupAnchor: {fileID: 0}
+--- !u!1 &3768800444653447588
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -287,21 +287,21 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 8445538752518208412}
+  - component: {fileID: 1226709612750572647}
   m_Layer: 7
-  m_Name: anchor
+  m_Name: GameObject
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!4 &8445538752518208412
+--- !u!4 &1226709612750572647
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4722472104953814707}
+  m_GameObject: {fileID: 3768800444653447588}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 1.074, z: 0}

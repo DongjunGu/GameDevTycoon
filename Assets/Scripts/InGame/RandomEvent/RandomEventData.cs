@@ -17,6 +17,7 @@ public enum RandomEventType
     PerfectTiming,
     AlgorithmChoice,
     EmployeeRun,
+    EmployeeResignation,
     EmployeeFight,
     BadCompany,
 }

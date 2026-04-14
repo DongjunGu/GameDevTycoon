@@ -2,6 +2,8 @@ public enum QuestType
 {
     TotalSales,
     HireEmployee,
+    SurviveYears,
+    TotalRevenue,
 }
 
 [System.Serializable]
@@ -18,6 +20,8 @@ public class QuestData
     public bool isCompleted;
     public bool isRewarded;
     public bool isVisible;
+    public bool isMainQuest;
+    public string unlockAfter; // 이 questId 완료 시 공개 (빈 값 = 처음부터 공개)
     public string rowInDate;
 
     public float Progress => targetValue > 0 ? (float)currentValue / targetValue : 0f;
