@@ -55,6 +55,8 @@ public class EmployeeData
     public string assignedDeskId = "";
     public string masterEmployeeId = ""; // 마스터 풀의 원본 ID (emp_01 등)
     public bool isDefault; // true = 항상 채용 풀 등장, false = 획득 필요
+    public int hiredYear; // 채용된 게임 연도 (연봉협상 첫해 제외 조건에 사용)
+    public bool isFemale; // 여직원 여부 (연봉협상 특수 대사 조건, EmployeeMasterData 차트 isFemale 컬럼 필요)
 
     public EmployeeState state;
     public string assignedProjectId;
@@ -131,6 +133,8 @@ public class EmployeeData
         data.assignedDeskId = SafeString(row, "assignedDeskId", "");
         data.masterEmployeeId = SafeString(row, "masterEmployeeId", "");
         data.enhancementRecordsJson = SafeString(row, "enhancementRecordsJson", "[]");
+        data.hiredYear = SafeInt(row, "hiredYear", 0);
+        data.isFemale  = SafeBool(row, "isFemale", false);
         return data;
     }
 
@@ -166,6 +170,8 @@ public class EmployeeData
         param.Add("assignedDeskId", assignedDeskId);
         param.Add("masterEmployeeId", masterEmployeeId);
         param.Add("enhancementRecordsJson", enhancementRecordsJson);
+        param.Add("hiredYear", hiredYear);
+        param.Add("isFemale",  isFemale);
         return param;
     }
 
@@ -259,6 +265,15 @@ public class EmployeeData
         try { return bool.Parse(row[key].ToString()); }
         catch { return defaultValue; }
     }
+
+    // 역할별 주스탯 반환 (연봉협상 대상 선정에 사용)
+    public int GetMainStat() => role switch
+    {
+        EmployeeRole.Planner    => planningSkill,
+        EmployeeRole.Programmer => developSkill,
+        EmployeeRole.Artist     => artSkill,
+        _ => 0
+    };
 
     // 만족도 변경 (1~100 클램프)
     public void ChangeSatisfaction(int amount)

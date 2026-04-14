@@ -103,6 +103,7 @@ public class EmployeeManager : MonoBehaviour
                 );
                 data.portraitId = row["portraitId"].ToString();
                 data.isDefault  = row["isDefault"].ToString() == "1";
+                data.isFemale   = row.ContainsKey("isFemale") && row["isFemale"].ToString() == "1";
                 poolEmployees.Add(data);
             }
             catch (System.Exception e)
@@ -249,6 +250,8 @@ public class EmployeeManager : MonoBehaviour
         inGameEmployee.masterEmployeeId = poolEmployee.id;
         inGameEmployee.assignedProjectId = "";
         inGameEmployee.satisfaction = 80;
+        inGameEmployee.hiredYear = GameTimeManager.Instance != null ? GameTimeManager.Instance.Year : 0;
+        inGameEmployee.isFemale  = poolEmployee.isFemale;
         
         Backend.GameData.Insert("Employee", inGameEmployee.ToParam(), bro =>
         {
@@ -351,7 +354,15 @@ public class EmployeeManager : MonoBehaviour
             var rows = bro.FlattenRows();
 
             foreach (var row in rows)
-                ownedEmployees.Add(EmployeeData.FromServerRow((LitJson.JsonData)row));
+            {
+                var emp = EmployeeData.FromServerRow((LitJson.JsonData)row);
+
+                // isFemale은 마스터 데이터 기준으로 덮어씌움 (기존 레코드 자동 마이그레이션)
+                var master = poolEmployees.Find(p => p.id == emp.masterEmployeeId);
+                if (master != null) emp.isFemale = master.isFemale;
+
+                ownedEmployees.Add(emp);
+            }
 
             Debug.Log($"보유 직원 {ownedEmployees.Count}명 로드 완료");
             onComplete?.Invoke();
