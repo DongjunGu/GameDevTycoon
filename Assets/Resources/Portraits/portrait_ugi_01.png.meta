@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: 397f4b116c136f949a22223541602173
+guid: 6a801dce108b66841a54453174a50dd8
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: 8615247444537230285
-    second: portrait_emp_01_0
+      213: -5280740782487554709
+    second: "\u110B\u116E\u1100\u1175_0"
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -46,7 +46,7 @@ TextureImporter:
   nPOTScale: 0
   lightmap: 0
   compressionQuality: 50
-  spriteMode: 2
+  spriteMode: 1
   spriteExtrude: 1
   spriteMeshType: 1
   alignment: 0
@@ -122,17 +122,30 @@ TextureImporter:
     ignorePlatformSupport: 0
     androidETC2FallbackOverride: 0
     forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: iOS
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
   spriteSheet:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: portrait_emp_01_0
+      name: "\u110B\u116E\u1100\u1175_0"
       rect:
         serializedVersion: 2
-        x: 82
-        y: 20
-        width: 260
-        height: 467
+        x: 575
+        y: 4
+        width: 1269
+        height: 2496
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -141,8 +154,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: dc3cbbfb7e18f8770800000000000000
-      internalID: 8615247444537230285
+      spriteID: b6539e4ac3a07b6b0800000000000000
+      internalID: -5280740782487554709
       vertices: []
       indices: 
       edges: []
@@ -151,7 +164,7 @@ TextureImporter:
     customData: 
     physicsShape: []
     bones: []
-    spriteID: 
+    spriteID: 5e97eb03825dee720800000000000000
     internalID: 0
     vertices: []
     indices: 
@@ -161,7 +174,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      portrait_emp_01_0: 8615247444537230285
+      "\u110B\u116E\u1100\u1175_0": -5280740782487554709
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

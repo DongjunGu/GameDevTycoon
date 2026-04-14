@@ -254,6 +254,7 @@ public class SalesUI : MonoBehaviour
             totalRevenueText.text = $"총 매출: {endUnits * 9:N0}G";
 
             MoneyManager.Instance.AddGold(weeklyRevenue);
+            QuestManager.Instance?.UpdateProgress(QuestType.TotalRevenue, weeklyRevenue);
 
             _completedBarIndex = i + 1;
             SalesSaveManager.Instance?.SaveSales(
@@ -261,6 +262,8 @@ public class SalesUI : MonoBehaviour
                 _cachedScale, _cachedGenre, _cachedPlatform,
                 _cachedPlanning, _cachedDevelop, _cachedArt, _cachedCreativity, _cachedBug
             );
+            GameTimeManager.Instance?.SaveGameTime();
+            ProjectSaveManager.Instance?.SaveProject();
 
             cumulativeUnits = endUnits;
 

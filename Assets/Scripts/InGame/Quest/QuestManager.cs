@@ -59,6 +59,8 @@ public class QuestManager : MonoBehaviour
                         string typeStr = row["type"]?.ToString();
                         if (!System.Enum.TryParse(typeStr, out QuestType questType)) continue;
 
+                        bool isMain = SafeInt(row, "isMainQuest", 0) == 1;
+                        string unlockAfter = row.ContainsKey("unlockAfter") ? row["unlockAfter"]?.ToString() : "";
                         _quests.Add(new QuestData
                         {
                             questId     = row["questId"]?.ToString(),
@@ -67,7 +69,9 @@ public class QuestManager : MonoBehaviour
                             type        = questType,
                             targetValue = SafeInt(row, "targetValue", 0),
                             rewardGold  = SafeInt(row, "rewardGold", 0),
-                            isVisible   = false, // 기본 숨김
+                            isMainQuest = isMain,
+                            unlockAfter = unlockAfter,
+                            isVisible   = SafeInt(row, "isVisible", 0) == 1, // 차트 isVisible 컬럼으로 직접 제어
                         });
                     }
                 }
@@ -127,11 +131,11 @@ public class QuestManager : MonoBehaviour
     {
         bool anyUpdated = false;
 
-        foreach (var quest in _quests)
+        // 루프 시작 전 스냅샷 — 루프 중 isVisible 변경(체인 해금)으로 인한 중복 처리 방지
+        var targets = _quests.FindAll(q => q.type == type && q.isVisible && !q.isCompleted);
+
+        foreach (var quest in targets)
         {
-            if (quest.type != type) continue;
-            if (!quest.isVisible) continue;   // 공개된 퀘스트만 진행
-            if (quest.isCompleted) continue;
 
             quest.currentValue += value;
 
@@ -153,10 +157,42 @@ public class QuestManager : MonoBehaviour
 
     void OnQuestCompleted(QuestData quest)
     {
-        AlertUI.Instance.Show(
-            $"퀘스트 완료!\n{quest.title}\n보상: {quest.rewardGold:N0}G",
-            () => QuestUI.Instance?.Show()
-        );
+        if (quest.isMainQuest)
+        {
+            quest.isRewarded = true; // 보상 없이 자동 완료 처리
+            UnlockChainedMainQuests(quest.questId);
+
+            if (string.IsNullOrEmpty(quest.unlockAfter))
+            {
+                bool allRootCompleted = _quests.TrueForAll(
+                    q => !q.isMainQuest || !q.isVisible || !string.IsNullOrEmpty(q.unlockAfter) || q.isCompleted);
+                if (allRootCompleted)
+                    AlertUI.Instance.Show("메인퀘스트 완료!", null);
+            }
+        }
+        else
+        {
+            AlertUI.Instance.Show(
+                $"퀘스트 완료!\n{quest.title}\n보상: {quest.rewardGold:N0}G",
+                () => QuestUI.Instance?.Show()
+            );
+        }
+    }
+
+    void UnlockChainedMainQuests(string completedQuestId)
+    {
+        bool anyUnlocked = false;
+        foreach (var q in _quests)
+        {
+            if (q.unlockAfter == completedQuestId && !q.isVisible)
+            {
+                q.isVisible = true;
+                SaveQuest(q);
+                anyUnlocked = true;
+            }
+        }
+        if (anyUnlocked)
+            QuestUI.Instance?.Refresh();
     }
 
     public void ClaimReward(QuestData quest)
@@ -173,6 +209,10 @@ public class QuestManager : MonoBehaviour
 
     void SaveQuest(QuestData quest)
     {
+        GameTimeManager.Instance?.SaveGameTime();
+        MoneyManager.Instance?.SaveMoney();
+        ProjectSaveManager.Instance?.SaveProject();
+
         var param = new Param();
         param.Add("questId",      quest.questId);
         param.Add("currentValue", quest.currentValue);

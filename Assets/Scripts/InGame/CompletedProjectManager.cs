@@ -98,10 +98,7 @@ public void LoadCompletedProjects(System.Action onComplete = null)
             return a.week.CompareTo(b.week);
         });
 
-        foreach (var p in completedProjects)
-            Debug.Log($"[정렬확인] {p.year}년 {p.month}월 {p.week}주 / 장르:{p.genre} ({(ProjectGenre)p.genre})");
         GenreFatigueManager.Instance?.RebuildFromHistory(completedProjects);
-        Debug.Log($"완료 프로젝트 {completedProjects.Count}개 로드");
         onComplete?.Invoke();
     });
 }

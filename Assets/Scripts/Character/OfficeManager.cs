@@ -246,8 +246,12 @@ public class OfficeManager : MonoBehaviour
                 yield return null;
             }
 
+            float devProgress = DevelopmentManager.Instance.developmentDuration > 0
+                ? DevelopmentManager.Instance.GetElapsed() / DevelopmentManager.Instance.developmentDuration
+                : 0f;
             if (_patrolPoints != null && _patrolPoints.Length > 0
-                && DevelopmentManager.Instance.CurrentStage != ProjectStage.BugFixing)
+                && DevelopmentManager.Instance.CurrentStage != ProjectStage.BugFixing
+                && devProgress < 0.7f)
                 TriggerPatrolRandom(patrolCountPerCycle);
             CheckDialogPatrols();
         }

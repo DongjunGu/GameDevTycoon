@@ -305,6 +305,7 @@ public class DevelopmentManager : MonoBehaviour
             {
                 ProjectSaveManager.Instance.SaveProject();
                 GameTimeManager.Instance.SaveGameTime();
+                MoneyManager.Instance?.SaveMoney();
                 _bugFixReleased = false;
                 _bugFixCoroutine = StartCoroutine(BugFixCoroutine());
             }
@@ -436,6 +437,7 @@ public class DevelopmentManager : MonoBehaviour
         {
             ProjectSaveManager.Instance.SaveProject();
             GameTimeManager.Instance.SaveGameTime();
+            MoneyManager.Instance?.SaveMoney();
             ShowResult();
         });
     }

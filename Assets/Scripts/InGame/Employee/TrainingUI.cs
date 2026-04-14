@@ -242,6 +242,7 @@ public class TrainingUI : MonoBehaviour
         }
         else if (downgrade > 0 && roll >= success + maintain)
         {
+            EmployeeManager.Instance.ReverseEnhancement(_selectedEmployee, level);
             _selectedEmployee.enhancementLevel = Mathf.Max(0, level - 1);
             outcome = "X 강화 하락";
         }
@@ -251,8 +252,6 @@ public class TrainingUI : MonoBehaviour
         }
 
         EmployeeManager.Instance.UpdateEmployee(_selectedEmployee);
-        GameTimeManager.Instance?.SaveGameTime();
-        ProjectSaveManager.Instance?.SaveProject();
         ShowResult(outcome, results, beforeDev, beforePlanning, beforeArt, beforePerfection, beforeLevel);
     }
     string StatDisplayName(string key) => key switch
