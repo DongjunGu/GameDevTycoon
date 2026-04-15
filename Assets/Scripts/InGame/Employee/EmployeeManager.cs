@@ -425,6 +425,13 @@ public class EmployeeManager : MonoBehaviour
         }
     }
 
+    public void ReduceAllSatisfaction(int amount)
+    {
+        foreach (var emp in ownedEmployees)
+            emp.satisfaction = Mathf.Clamp(emp.satisfaction - amount, 0, 100);
+        SaveAllEmployees();
+    }
+
     public void ReduceAllSatisfactionExcept(int amount, EmployeeData except)
     {
         foreach (var emp in ownedEmployees)
