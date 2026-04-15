@@ -18,8 +18,9 @@ public class OfficeManager : MonoBehaviour
     // employeeId → OfficeCharacter
     private Dictionary<string, OfficeCharacter> _characters = new();
 
-    public float CharacterSpeedMultiplier { get; private set; } = 1f;
-    public void SetCharacterSpeedMultiplier(float value) => CharacterSpeedMultiplier = value;
+    [SerializeField] private float _characterSpeedMultiplier = 1f;
+    public float CharacterSpeedMultiplier => _characterSpeedMultiplier;
+    public void SetCharacterSpeedMultiplier(float value) => _characterSpeedMultiplier = value;
 
     private PatrolPoint[] _patrolPoints;
     private DialogPatrolPoint[] _dialogPatrolPoints;
@@ -193,6 +194,19 @@ public class OfficeManager : MonoBehaviour
 
         foreach (var oc in _characters.Values)
             oc.CancelPatrol();
+    }
+
+    // 특정 직원을 pointId 위치로 즉시 강제 이동 (이벤트 트리거용)
+    public void ForceCharacterToPatrolPoint(string employeeId, string pointId, float stayDuration = 5f)
+    {
+        if (!_characters.TryGetValue(employeeId, out var oc)) return;
+        var point = System.Array.Find(_patrolPoints, p => p.pointId == pointId);
+        if (point == null)
+        {
+            Debug.LogWarning($"[ForcePatrol] pointId '{pointId}' 를 찾을 수 없음");
+            return;
+        }
+        oc.ForcePatrolTo(point.transform, stayDuration);
     }
 
     // 랜덤 n명 patrol 발동 (스케줄러 자동 호출 or 외부에서 직접 호출)

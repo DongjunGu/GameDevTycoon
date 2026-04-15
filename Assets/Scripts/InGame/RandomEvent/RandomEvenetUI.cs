@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.UI;
 using TMPro;
 
 public class RandomEventUI : MonoBehaviour
@@ -11,6 +12,7 @@ public class RandomEventUI : MonoBehaviour
     [Header("UI")]
     public TextMeshProUGUI titleText;
     public TextMeshProUGUI descriptionText;
+    public Image portraitImage;
 
     private RandomEventData _currentEvent;
 
@@ -26,6 +28,16 @@ public class RandomEventUI : MonoBehaviour
         _currentEvent = evt;
         titleText.text = evt.title;
         descriptionText.text = evt.description;
+
+        if (portraitImage != null)
+        {
+            Sprite portrait = !string.IsNullOrEmpty(evt.portraitId)
+                ? Resources.Load<Sprite>($"Portraits/{evt.portraitId}")
+                : null;
+            portraitImage.sprite = portrait;
+            portraitImage.gameObject.SetActive(portrait != null);
+        }
+
         eventPanel.SetActive(true);
     }
 

@@ -61,6 +61,12 @@ public class CharacterAnimator : MonoBehaviour
         spriteRenderer.flipY = false;
     }
 
+    public void SetFacing(bool isFront, bool flipX)
+    {
+        animator.SetBool(IsFront, isFront);
+        spriteRenderer.flipX = flipX;
+    }
+
     public void SetTalking()
     {
         StartCoroutine(TalkingFreeze());

@@ -50,8 +50,9 @@ public class ProjectSaveManager : MonoBehaviour
     private int _loadedTickSeed;
     private string _loadedTickIndices;
     private string _loadedMidDevData;
-    private bool _loadedTriggered50;
-    private float _loadedDevDuration;
+    private string _loadedScheduledEvents = "";
+    private int    _loadedScheduledNextIndex;
+    private float  _loadedDevDuration;
     private float _loadedNetworkSlowEndElapsed;
     private float _loadedProgOffsetElapsedAtEvent;
     private float _loadedProgOffsetExtension;
@@ -113,7 +114,8 @@ public class ProjectSaveManager : MonoBehaviour
         param.Add("tickSeed", dm.GetTickSeed());
         param.Add("tickIndices", dm.GetTickIndices());
         param.Add("midDevData", dm.GetMidDevData());
-        param.Add("triggered50", RandomEventManager.Instance.IsTriggered50);
+        param.Add("scheduledEvents", RandomEventManager.Instance.GetScheduledEventsString());
+        param.Add("scheduledNextIndex", RandomEventManager.Instance.GetNextScheduledIndex());
         param.Add("devDuration", dm.developmentDuration);
         param.Add("networkSlowEndElapsed", dm.GetNetworkSlowEndElapsed());
         param.Add("progOffsetElapsedAtEvent", dm.GetProgressOffsetElapsedAtEvent());
@@ -210,7 +212,8 @@ public class ProjectSaveManager : MonoBehaviour
             _loadedTickSeed = SafeInt(row, "tickSeed", 0);
             _loadedTickIndices = SafeString(row, "tickIndices", "");
             _loadedMidDevData = SafeString(row, "midDevData", "");
-            _loadedTriggered50 = SafeBool(row, "triggered50", false);
+            _loadedScheduledEvents    = SafeString(row, "scheduledEvents", "");
+            _loadedScheduledNextIndex = SafeInt(row, "scheduledNextIndex", 0);
             _loadedDevDuration = SafeFloat(row, "devDuration", 0f);
             _loadedNetworkSlowEndElapsed = SafeFloat(row, "networkSlowEndElapsed", 0f);
             _loadedProgOffsetElapsedAtEvent = SafeFloat(row, "progOffsetElapsedAtEvent", 0f);
@@ -247,7 +250,8 @@ public class ProjectSaveManager : MonoBehaviour
         );
 
         // ── RandomEvent 상태 복원 ──
-        RandomEventManager.Instance.SetTriggered50(_loadedTriggered50);
+        // InitEvents()가 RestoreState() 내부에서 이미 호출되어 풀이 구성된 상태
+        RandomEventManager.Instance.RestoreSchedule(_loadedScheduledEvents, _loadedScheduledNextIndex);
         RandomEventManager.Instance.InvestmentAccepted = _loadedInvestmentAccepted;
         RandomEventManager.Instance.InvestmentStat = _loadedInvestmentStat;
         RandomEventManager.Instance.InvestmentStatName = _loadedInvestmentStatName;

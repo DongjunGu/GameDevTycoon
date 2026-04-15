@@ -2,25 +2,41 @@ using System;
 
 public enum RandomEventType
 {
-    Blackout,       // 정전         모든수치    -50%
-    TeamDinner,     // 회식         모든수치    +50%
-    DevBoost,       // 개발         개발수치    +50
-    PlanBoost,      // 기획         기획수치    +50
-    ArtBoost,       // 아트         아트수치    +50
-    CreativityBoost,// 창의성       창의성수치  +30
+    // ── 기존 (내부 시스템용으로 유지) ─────────────────────────
+    Blackout,
+    TeamDinner,
+    DevBoost,
+    PlanBoost,
+    ArtBoost,
+    CreativityBoost,
     Investment,
     EmployeeScout,
     BetaTestIssue,
-    NetworkIssue,
-    
-    // 출시 이벤트
-    CompetitorRelease,
-    PerfectTiming,
-    AlgorithmChoice,
+
+    // ── 조건 이벤트 ───────────────────────────────────────────
     EmployeeRun,
     EmployeeResignation,
     EmployeeFight,
     BadCompany,
+    CompetitorRelease,
+    PerfectTiming,
+    AlgorithmChoice,
+
+    // ── 개발 중 랜덤 이벤트 (신규) ────────────────────────────
+    NetworkIssue,           // 네트워크 끊김          1~74%
+    CompetitorGame,         // 대형 게임사의 경쟁작 출시   1~99%
+    TangsuYukFight,         // 탕수육 부먹 찍먹 싸움      1~99%
+    AvoidingEmployee,       // 나를 피하는 직원            1~99%
+    Cold,                   // 감기                        1~99%
+    BadReview,              // 이유 없는 별점 1점           1~99%
+    Birthday,               // 생일                        1~99%
+    EarlyLeaveRequest,      // 퇴근 요청                   1~99%
+    EquipmentUpgrade,       // 장비 업그레이드 요청         1~99%
+    GameUpgradeRequest,     // 게임 업그레이드 요청         1~99%
+    CompanyDinner,          // 오늘은 회식이다!             1~99%
+    BossGossip,             // 사장님 뒷담까기              1~99%
+    HackyCode,              // 야매코드                    26~99%
+    YoutuberRequest,        // 유튜버 선공개 요청          51~99%
 }
 
 [Serializable]
@@ -29,7 +45,22 @@ public class RandomEventData
     public RandomEventType type;
     public string title;
     public string description;
-    public float  weight;        // 가중치 (클수록 뽑힐 확률 높음)
-    public float    scoreBonus;   // ← 출시 이벤트용 점수 보정값
-    public System.Action onApply;       // 실제 효과
+    public float  weight;
+    public float  scoreBonus;
+
+    // 이 이벤트가 등장할 수 있는 카테고리 범위 (1~4)
+    // 예) categoryMin=1, categoryMax=3 → 카테고리 1·2·3 풀에 포함
+    //     categoryMin=2, categoryMax=2 → 카테고리 2 전용
+    public int    categoryMin;
+    public int    categoryMax;
+    public string portraitId;       // 특정 직원 이벤트일 때 설정, 없으면 ""
+
+    // 패트롤 도착 트리거 설정
+    public bool   requiresPatrol        = false; // true면 진행도 도달 후 패트롤 도착 시 발동
+    public string requiredPatrolPointId = "";    // 비어있으면 모든 지점에서 발동, 설정 시 해당 pointId에서만 발동
+    public string targetEmployeeId      = "";    // onSetup에서 세팅 — 해당 직원이 도착해야 발동, 비어있으면 누구든 OK
+
+    // Show() 직전에 호출 — portraitId·description 등 동적 내용 세팅용
+    public System.Action onSetup;
+    public System.Action onApply;
 }
