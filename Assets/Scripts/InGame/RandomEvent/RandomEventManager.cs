@@ -10,6 +10,14 @@ public class RandomEventManager : MonoBehaviour
     private List<RandomEventData> _conditionEventPool = new();
     private Queue<string> _nextWeekPopups = new();
 
+    private struct RunEventPayload
+    {
+        public string employeeName;
+        public string portraitId;
+        public string message;
+    }
+    private Queue<RunEventPayload> _nextWeekRunEvents = new();
+
     // ── 이벤트 스케줄 (프로젝트 시작 시 전부 결정) ──────────
     private struct ScheduledEvent
     {
@@ -105,6 +113,18 @@ public class RandomEventManager : MonoBehaviour
     {
         while (_nextWeekPopups.Count > 0)
             AlertUI.Instance.Show(_nextWeekPopups.Dequeue());
+
+        while (_nextWeekRunEvents.Count > 0)
+        {
+            var payload = _nextWeekRunEvents.Dequeue();
+            EmployeeManager.Instance.ReduceAllSatisfaction(10);
+            EventUI.Instance.Show(
+                "직원 도망",
+                payload.portraitId,
+                $"{payload.employeeName}\n\n{payload.message}",
+                null
+            );
+        }
     }
 
     // ── 풀 구성만 (StartDevelopment/RestoreState 양쪽에서 호출) ──
@@ -399,17 +419,16 @@ public class RandomEventManager : MonoBehaviour
 
     public void TriggerEmployeeRunEvent(EmployeeData emp)
     {
+        EmployeeManager.Instance.FireEmployee(emp);
+
         string message = RandomEvents_Condition.RunAwayMessages[
             UnityEngine.Random.Range(0, RandomEvents_Condition.RunAwayMessages.Length)];
 
-        EventUI.Instance.Show("직원 도망", emp.portraitId, $"{emp.employeeName}\n\n{message}", () =>
+        _nextWeekRunEvents.Enqueue(new RunEventPayload
         {
-            EmployeeManager.Instance.FireEmployee(emp);
-            EmployeeManager.Instance.ReduceAllSatisfactionExcept(10, emp);
-            AlertUI.Instance.Show(
-                $"{emp.employeeName}이(가) 도망쳤습니다.\n남은 직원들의 만족도가 10 하락합니다."
-            );
-            _nextWeekPopups.Enqueue($"[{emp.employeeName}]\n...");
+            employeeName = emp.employeeName,
+            portraitId   = emp.portraitId,
+            message      = message
         });
     }
 
