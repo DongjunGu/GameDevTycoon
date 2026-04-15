@@ -17,7 +17,8 @@ public class CharacterAnimator : MonoBehaviour
     void Update()
     {
         bool isRunning = GameTimeManager.Instance == null || GameTimeManager.Instance.IsRunning;
-        animator.speed = isRunning ? _targetSpeed : 0f;
+        float multiplier = OfficeManager.Instance != null ? OfficeManager.Instance.CharacterSpeedMultiplier : 1f;
+        animator.speed = isRunning ? _targetSpeed * multiplier : 0f;
     }
 
     public bool GetCurrentIsFront()

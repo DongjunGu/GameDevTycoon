@@ -11,6 +11,7 @@ public enum RandomEventType
     Investment,
     EmployeeScout,
     BetaTestIssue,
+    NetworkIssue,
     
     // 출시 이벤트
     CompetitorRelease,
@@ -28,7 +29,7 @@ public class RandomEventData
     public RandomEventType type;
     public string title;
     public string description;
-    public float  triggerChance; // 0~1 발동 확률
+    public float  weight;        // 가중치 (클수록 뽑힐 확률 높음)
     public float    scoreBonus;   // ← 출시 이벤트용 점수 보정값
     public System.Action onApply;       // 실제 효과
 }

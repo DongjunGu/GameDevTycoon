@@ -29796,9 +29796,15 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::RandomEventManager
   eventTriggerChance: 1
-  blackoutChance: 1
-  teamDinnerChance: 1
-  eventDetailTriggerChance: 1
+  blackoutWeight: 1
+  teamDinnerWeight: 1
+  devBoostWeight: 1
+  planBoostWeight: 1
+  artBoostWeight: 1
+  creativityBoostWeight: 1
+  employeeScoutWeight: 1
+  betaTestIssueWeight: 1
+  networkIssueWeight: 1
   employeeRunChance: 1
   employeeFightChance: 1
   badCompanyChance: 1
@@ -45784,8 +45790,8 @@ RectTransform:
   m_Father: {fileID: 866213735}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchorMax: {x: 1, y: 1}
+  m_AnchoredPosition: {x: -0.00012207031, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1361792547
@@ -60722,9 +60728,15 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::RandomEventManager
   eventTriggerChance: 1
-  blackoutChance: 1
-  teamDinnerChance: 1
-  eventDetailTriggerChance: 1
+  blackoutWeight: 1
+  teamDinnerWeight: 1
+  devBoostWeight: 1
+  planBoostWeight: 1
+  artBoostWeight: 1
+  creativityBoostWeight: 1
+  employeeScoutWeight: 1
+  betaTestIssueWeight: 1
+  networkIssueWeight: 1
   employeeRunChance: 1
   employeeFightChance: 1
   badCompanyChance: 1

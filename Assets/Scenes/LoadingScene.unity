@@ -1679,9 +1679,15 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::RandomEventManager
   eventTriggerChance: 1
-  blackoutChance: 1
-  teamDinnerChance: 1
-  eventDetailTriggerChance: 1
+  blackoutWeight: 0
+  teamDinnerWeight: 0
+  devBoostWeight: 0
+  planBoostWeight: 0
+  artBoostWeight: 0
+  creativityBoostWeight: 0
+  employeeScoutWeight: 0
+  betaTestIssueWeight: 0
+  networkIssueWeight: 1
   employeeRunChance: 1
   employeeFightChance: 1
   badCompanyChance: 1
@@ -1702,7 +1708,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::SalaryNegotiationManager
   employeeSlotAreaName: EmployeeSlotArea
   ownedEmployeeSlotPrefab: {fileID: 1983924396680351385, guid: 23524c125c52de440a5a21ca65b5e7b9, type: 3}
-  resignChance: 1
 --- !u!114 &2062941528
 MonoBehaviour:
   m_ObjectHideFlags: 0

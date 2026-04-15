@@ -40,6 +40,11 @@ public class DevelopmentManager : MonoBehaviour
     private bool _triggered75;
     private bool _patrolStarted;
 
+    // 네트워크 이벤트 등 duration 연장 시 진행도 표시 보정
+    private float _progressVisualOffset = 0f;      // 현재 남은 시각 보정값
+    private float _progressOffsetElapsedAtEvent = 0f; // 이벤트 발동 시점 _elapsed
+    private float _progressOffsetExtension = 0f;   // 연장된 초 (보정 감소 기준)
+
     private Dictionary<string, List<float>> _tickTimesMap = new();
     private Dictionary<string, int> _tickIndexMap = new();
     private Dictionary<string, int[]> _tickOrderMap = new();
@@ -59,13 +64,27 @@ public class DevelopmentManager : MonoBehaviour
     public void StartDevelopment()
     {
         GameTimeManager.Instance.SetProjectSpeed(ProjectSetupUI.SelectedScale);
-        developmentDuration = ProjectSetupUI.SelectedScale switch
+        float baseDuration = ProjectSetupUI.SelectedScale switch
         {
             ProjectScale.Small  => 80f,
             ProjectScale.Medium => 100.8f,
             ProjectScale.Large  => 124.8f,
             _ => 80f
         };
+
+        // 인원 수에 따른 개발 기간 조정 (추천 인원 대비 1명 차이 = 1주 증감)
+        int recommended = ProjectData.GetRecommendedStaff(ProjectSetupUI.SelectedScale);
+        int actual = EmployeeManager.Instance.ownedEmployees.Count;
+        int diff = actual - recommended; // 양수: 초과(기간 감소), 음수: 부족(기간 증가)
+        float secondsPerWeek = ProjectSetupUI.SelectedScale switch
+        {
+            ProjectScale.Small  => 5f,
+            ProjectScale.Medium => 4.2f,
+            ProjectScale.Large  => 3.9f,
+            _ => 5f
+        };
+        developmentDuration = baseDuration - diff * secondsPerWeek;
+
         IsStarted = true;
         _patrolStarted = false;
         _elapsed = 0f;
@@ -77,12 +96,14 @@ public class DevelopmentManager : MonoBehaviour
         programmerLeader = null;
         artistLeader = null;
 
-
         InitTickMap();
         DevelopmentPanelUI.Instance.ResetValues();
         RandomEventManager.Instance.InitEvents();
         GameTimeManager.Instance.StopTime();
-        RandomEventManager.Instance.TriggerInvestmentEvent(() => //투자 이벤트
+
+        void ProceedToInvestment()
+        {
+            RandomEventManager.Instance.TriggerInvestmentEvent(() => //투자 이벤트
             {
                 LeaderSelectUI.Instance.Open(LeaderType.Planner, () =>
                 {
@@ -91,6 +112,22 @@ public class DevelopmentManager : MonoBehaviour
                     StartCoroutine(DevelopmentCoroutine());
                 });
             });
+        }
+
+        if (diff != 0)
+        {
+            int absDiff = Mathf.Abs(diff);
+            string sign   = diff > 0 ? "많아서" : "적어서";
+            string effect = diff > 0 ? "줄었습니다" : "늘었습니다";
+            AlertUI.Instance.Show(
+                $"개발 인원이 추천보다 {absDiff}명 {sign}\n개발기간이 {absDiff}주 {effect}.",
+                ProceedToInvestment
+            );
+        }
+        else
+        {
+            ProceedToInvestment();
+        }
     }
 
     void InitTickMap()
@@ -209,7 +246,8 @@ public class DevelopmentManager : MonoBehaviour
             }
 
 
-            _elapsed += Time.deltaTime * GetElapsedMultiplier();
+            // _elapsed += Time.deltaTime * GetElapsedMultiplier(); // 인원 수 기반 elapsed 가속 (duration 직접 조정 방식으로 대체)
+            _elapsed += Time.deltaTime;
             float progress = _elapsed / developmentDuration;
 
             RandomEventManager.Instance.CheckTrigger(progress);
@@ -497,23 +535,46 @@ public class DevelopmentManager : MonoBehaviour
         float accumPlanning, float accumDevelop, float accumArt,
         float accumBug, float accumCreativity,
         ProjectStage stage,
-        int tickSeed = 0, string tickIndices = "", string midDevData = "")
+        int tickSeed = 0, string tickIndices = "", string midDevData = "",
+        float savedDuration = 0f, float networkSlowEndElapsed = 0f,
+        float progOffsetElapsedAtEvent = 0f, float progOffsetExtension = 0f, float progVisualOffset = 0f)
     {
-        developmentDuration = ProjectSetupUI.SelectedScale switch
+        float baseDuration = ProjectSetupUI.SelectedScale switch
         {
             ProjectScale.Small  => 80f,
             ProjectScale.Medium => 100.8f,
             ProjectScale.Large  => 124.8f,
             _ => 80f
         };
+        int recommended = ProjectData.GetRecommendedStaff(ProjectSetupUI.SelectedScale);
+        int actual = EmployeeManager.Instance.ownedEmployees.Count;
+        int diff = actual - recommended;
+        float secondsPerWeek = ProjectSetupUI.SelectedScale switch
+        {
+            ProjectScale.Small  => 5f,
+            ProjectScale.Medium => 4.2f,
+            ProjectScale.Large  => 3.9f,
+            _ => 5f
+        };
+        developmentDuration = savedDuration > 0f ? savedDuration : baseDuration - diff * secondsPerWeek;
         _elapsed = elapsed;
+
+        // 네트워크 이슈 progress 보정 복원
+        _progressOffsetElapsedAtEvent = progOffsetElapsedAtEvent;
+        _progressOffsetExtension = progOffsetExtension;
+        _progressVisualOffset = progVisualOffset;
+
+        // 캐릭터 속도 감소 복원
+        if (networkSlowEndElapsed > elapsed)
+        {
+            OfficeManager.Instance?.SetCharacterSpeedMultiplier(0.5f);
+            StartCoroutine(RestoreCharacterSpeedAfter(networkSlowEndElapsed - elapsed));
+        }
         _triggered25 = triggered25;
         _triggered75 = triggered75;
         CurrentStage = stage;
         IsStarted = true;
         RandomEventManager.Instance.InitEvents();
-        if (elapsed / developmentDuration >= 0.5f)
-            RandomEventManager.Instance.SetTriggered50(true);
 
         plannerLeader = EmployeeManager.Instance.ownedEmployees.Find(e => e.id == plannerLeaderId);
         programmerLeader = EmployeeManager.Instance.ownedEmployees.Find(e => e.id == programmerLeaderId);
@@ -525,8 +586,39 @@ public class DevelopmentManager : MonoBehaviour
         {
             case ProjectStage.Developing:
                 _tickSeed = tickSeed != 0 ? tickSeed : UnityEngine.Random.Range(int.MinValue, int.MaxValue);
-                InitTickMapWithSeed(_tickSeed);
-                RestoreMidDevData(midDevData);
+
+                // 연장이 있으면 원본 duration으로 틱 생성 후 동일한 scaling 재적용
+                if (progOffsetExtension > 0f && savedDuration > 0f)
+                {
+                    float preDuration = savedDuration - progOffsetExtension;
+                    float oldRemaining = preDuration - progOffsetElapsedAtEvent;
+                    float newRemaining = savedDuration - progOffsetElapsedAtEvent;
+                    float scale = oldRemaining > 0f ? newRemaining / oldRemaining : 1f;
+
+                    // 원본 직원: preDuration 기준 생성
+                    developmentDuration = preDuration;
+                    InitTickMapWithSeed(_tickSeed);
+
+                    // mid-dev 직원: preDuration 기준 생성 (실시간과 동일 조건)
+                    RestoreMidDevData(midDevData);
+                    developmentDuration = savedDuration;
+
+                    // 원본 + mid-dev 모두 동일한 scaling 적용
+                    foreach (var empId in new System.Collections.Generic.List<string>(_tickIndexMap.Keys))
+                    {
+                        if (!_tickTimesMap.ContainsKey(empId)) continue;
+                        var times = _tickTimesMap[empId];
+                        for (int i = 0; i < times.Count; i++)
+                            if (times[i] > progOffsetElapsedAtEvent)
+                                times[i] = progOffsetElapsedAtEvent + (times[i] - progOffsetElapsedAtEvent) * scale;
+                    }
+                }
+                else
+                {
+                    InitTickMapWithSeed(_tickSeed);
+                    RestoreMidDevData(midDevData);
+                }
+
                 RestoreTickIndices(tickIndices);
 
                 _isRunning = true;
@@ -545,7 +637,22 @@ public class DevelopmentManager : MonoBehaviour
         Debug.Log($"프로젝트 복원 완료: {stage} / elapsed: {elapsed:F1}");
     }
 
-    public float GetProgress() => developmentDuration > 0 ? _elapsed / developmentDuration : 0f;
+    public float GetNetworkSlowEndElapsed() =>
+        _progressOffsetExtension > 0f ? _progressOffsetElapsedAtEvent + _progressOffsetExtension : 0f;
+    public float GetProgressVisualOffset()       => _progressVisualOffset;
+    public float GetProgressOffsetElapsedAtEvent() => _progressOffsetElapsedAtEvent;
+    public float GetProgressOffsetExtension()    => _progressOffsetExtension;
+
+    public float GetProgress()
+    {
+        if (developmentDuration <= 0f) return 0f;
+        float actual = _elapsed / developmentDuration;
+        if (_progressVisualOffset <= 0f) return actual;
+
+        float t = Mathf.Clamp01((_elapsed - _progressOffsetElapsedAtEvent) / _progressOffsetExtension);
+        float offset = _progressVisualOffset * (1f - t);
+        return actual + offset;
+    }
 
     int CalcLeaderTickCount(int skill)
     {
@@ -798,6 +905,10 @@ public class DevelopmentManager : MonoBehaviour
         BugPenalty = 0f;
         BugEventBonus = 0f;
         _patrolStarted = false;
+        _progressVisualOffset = 0f;
+        _progressOffsetElapsedAtEvent = 0f;
+        _progressOffsetExtension = 0f;
+        OfficeManager.Instance?.SetCharacterSpeedMultiplier(1f);
         OfficeManager.Instance?.StopDevelopmentPatrol();
 
         plannerLeader = null;
@@ -828,6 +939,49 @@ public class DevelopmentManager : MonoBehaviour
         GameTimeManager.Instance.ForceStartTime();
         Debug.Log("프로젝트 초기화 완료");
     }
+    public void ExtendDevelopmentDuration(float extensionSeconds)
+    {
+        float oldRemaining = developmentDuration - _elapsed;
+        float actualProgressBefore = developmentDuration > 0f ? _elapsed / developmentDuration : 0f;
+
+        developmentDuration += extensionSeconds;
+        float newRemaining = developmentDuration - _elapsed;
+
+        if (oldRemaining <= 0f) return;
+        float scale = newRemaining / oldRemaining;
+
+        // 아직 발동 안 된 틱들을 새 remaining 기준으로 비례 재분배
+        foreach (var empId in new List<string>(_tickIndexMap.Keys))
+        {
+            if (!_tickTimesMap.ContainsKey(empId)) continue;
+            var times = _tickTimesMap[empId];
+            int startIdx = _tickIndexMap[empId];
+            for (int i = startIdx; i < times.Count; i++)
+                times[i] = _elapsed + (times[i] - _elapsed) * scale;
+        }
+
+        // 진행도 표시 보정: 연장 직후에도 시각적으로 이전 progress 유지, 연장분만큼 천천히 수렴
+        float actualProgressAfter = _elapsed / developmentDuration;
+        _progressVisualOffset = actualProgressBefore - actualProgressAfter;
+        _progressOffsetElapsedAtEvent = _elapsed;
+        _progressOffsetExtension = extensionSeconds;
+
+        // 캐릭터 속도 50% 감소 → extensionSeconds 후 복귀
+        OfficeManager.Instance?.SetCharacterSpeedMultiplier(0.5f);
+        StartCoroutine(RestoreCharacterSpeedAfter(extensionSeconds));
+    }
+
+    IEnumerator RestoreCharacterSpeedAfter(float extensionSeconds)
+    {
+        float endElapsed = _elapsed + extensionSeconds;
+        while (_elapsed < endElapsed)
+        {
+            if (!_isRunning) { yield return null; continue; }
+            yield return null;
+        }
+        OfficeManager.Instance?.SetCharacterSpeedMultiplier(1f);
+    }
+
     public void PauseForEvent()
     {
         _isRunning = false;
@@ -838,6 +992,7 @@ public class DevelopmentManager : MonoBehaviour
         _isRunning = true;
         GameTimeManager.Instance.ForceStartTime();
     }
+    /*
     float GetElapsedMultiplier()
     {
         int recommended = ProjectData.GetRecommendedStaff(ProjectSetupUI.SelectedScale);
@@ -845,6 +1000,7 @@ public class DevelopmentManager : MonoBehaviour
         int diff = actual - recommended;
         return 1f + diff * 0.1f;
     }
+    */
 
     float GetSatisfactionMultiplier(EmployeeData employee)
     {
