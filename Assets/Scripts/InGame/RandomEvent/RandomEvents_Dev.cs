@@ -1,115 +1,200 @@
 using System.Collections.Generic;
 using UnityEngine;
 
+// ── 카테고리 구간 ────────────────────────────────────────────
+// 1:  1~24%   2: 26~49%   3: 51~74%   4: 76~99%
+//
+// categoryMin~categoryMax 범위에 속하는 카테고리 풀에 포함.
+// 스케줄링 중 한 카테고리에서 선택된 이벤트는 이후 카테고리에서 완전 제외.
+//
+// 이벤트별 등장 범위
+//   CompetitorGame   76~99%  (min=4, max=4)
+//   TangsuYukFight   76~99%  (min=4, max=4)
+//   NetworkIssue      1~74%  (min=1, max=3)
+//   AvoidingEmployee  1~99%  (min=1, max=4)
+//   Cold              1~99%  (min=1, max=4)
+//   BadReview         1~99%  (min=1, max=4)
+//   Birthday          1~99%  (min=1, max=4)
+//   EarlyLeaveRequest 1~99%  (min=1, max=4)
+//   EquipmentUpgrade  1~99%  (min=1, max=4)
+//   GameUpgradeRequest1~99%  (min=1, max=4)
+//   CompanyDinner     1~99%  (min=1, max=4)
+//   BossGossip        1~99%  (min=1, max=4)
+//   HackyCode        26~99%  (min=2, max=4)
+//   YoutuberRequest  51~99%  (min=3, max=4)
+
 public static class RandomEvents_Dev
 {
     public static void Register(List<RandomEventData> pool, RandomEventManager mgr)
     {
+        // ── 1~99% ───────────────────────────────────────────────
+        // ── 76~99% ──────────────────────────────────────────────
         pool.Add(new RandomEventData
         {
-            type = RandomEventType.Blackout,
-            title = "정전 발생!",
-            description = "갑작스러운 정전으로\n작업 데이터가 손실되었습니다.\n기획, 개발, 아트 수치가 절반으로 감소합니다.",
-            weight = mgr.blackoutWeight,
-            onApply = () =>
+            type        = RandomEventType.CompetitorGame,
+            title       = "대형 게임사의 경쟁작 출시",
+            description = "TODO",
+            weight      = mgr.competitorGameWeight,
+            categoryMin = 4, categoryMax = 4,
+            onApply     = () => { /* TODO */ }
+        });
+
+        pool.Add(new RandomEventData
+        {
+            type        = RandomEventType.TangsuYukFight,
+            title       = "탕수육 부먹 찍먹 싸움",
+            description = "TODO",
+            weight      = mgr.tangsuYukFightWeight,
+            categoryMin = 4, categoryMax = 4,
+            onApply     = () => { /* TODO */ }
+        });
+
+        pool.Add(new RandomEventData
+        {
+            type        = RandomEventType.AvoidingEmployee,
+            title       = "나를 피하는 직원",
+            description = "TODO",
+            weight      = mgr.avoidingEmployeeWeight,
+            categoryMin = 1, categoryMax = 4,
+            onApply     = () => { /* TODO */ }
+        });
+
+        pool.Add(new RandomEventData
+        {
+            type        = RandomEventType.Cold,
+            title       = "감기",
+            description = "TODO",
+            weight      = mgr.coldWeight,
+            categoryMin = 1, categoryMax = 4,
+            onApply     = () => { /* TODO */ }
+        });
+
+        pool.Add(new RandomEventData
+        {
+            type        = RandomEventType.BadReview,
+            title       = "이유 없는 별점 1점",
+            description = "TODO",
+            weight      = mgr.badReviewWeight,
+            categoryMin = 1, categoryMax = 4,
+            onApply     = () => { /* TODO */ }
+        });
+
+        pool.Add(new RandomEventData
+        {
+            type        = RandomEventType.Birthday,
+            title       = "생일",
+            description = "TODO",
+            weight      = mgr.birthdayWeight,
+            categoryMin = 1, categoryMax = 4,
+            onApply     = () => { /* TODO */ }
+        });
+
+        pool.Add(new RandomEventData
+        {
+            type        = RandomEventType.EarlyLeaveRequest,
+            title       = "퇴근 요청",
+            description = "TODO",
+            weight      = mgr.earlyLeaveRequestWeight,
+            categoryMin = 1, categoryMax = 4,
+            onApply     = () => { /* TODO */ }
+        });
+
+        pool.Add(new RandomEventData
+        {
+            type        = RandomEventType.EquipmentUpgrade,
+            title       = "장비 업그레이드 요청",
+            description = "TODO",
+            weight      = mgr.equipmentUpgradeWeight,
+            categoryMin = 1, categoryMax = 4,
+            onApply     = () => { /* TODO */ }
+        });
+
+        pool.Add(new RandomEventData
+        {
+            type        = RandomEventType.GameUpgradeRequest,
+            title       = "게임 업그레이드 요청",
+            description = "TODO",
+            weight      = mgr.gameUpgradeRequestWeight,
+            categoryMin = 1, categoryMax = 4,
+            onApply     = () => { /* TODO */ }
+        });
+
+        pool.Add(new RandomEventData
+        {
+            type        = RandomEventType.CompanyDinner,
+            title       = "오늘은 회식이다!",
+            description = "TODO",
+            weight      = mgr.companyDinnerWeight,
+            categoryMin = 1, categoryMax = 4,
+            onApply     = () => { /* TODO */ }
+        });
+
+        pool.Add(new RandomEventData
+        {
+            type        = RandomEventType.BossGossip,
+            title       = "사장님 뒷담까기",
+            description = "TODO",
+            weight      = mgr.bossGossipWeight,
+            categoryMin = 1, categoryMax = 4,
+            onApply     = () => { /* TODO */ }
+        });
+
+        // ── 1~74% ───────────────────────────────────────────────
+        {
+            int delayWeeks = 0;
+            RandomEventData networkEvt = null;
+            networkEvt = new RandomEventData
             {
-                DevelopmentPanelUI.Instance.MultiplyValues(0.5f);
-                foreach (var e in EmployeeManager.Instance.ownedEmployees)
+                type                  = RandomEventType.NetworkIssue,
+                title                 = "네트워크 끊김",
+                weight                = mgr.networkIssueWeight,
+                categoryMin           = 1, categoryMax = 3,
+                requiresPatrol        = true,
+                requiredPatrolPointId = "master_desk",
+                onSetup               = () =>
                 {
-                    e.ChangeSatisfaction(-10);
-                    EmployeeManager.Instance.UpdateEmployee(e);
+                    var employees = EmployeeManager.Instance.ownedEmployees;
+                    var emp = employees[UnityEngine.Random.Range(0, employees.Count)];
+                    delayWeeks = UnityEngine.Random.Range(1, 4); // 1~3주
+                    networkEvt.portraitId      = emp.portraitId;
+                    networkEvt.targetEmployeeId = emp.id;
+                    networkEvt.description     = $"사장님 제가 넘어지면서 실수로 코드를 뽑아버렸습니다...\n개발 기간 {delayWeeks}주 지연";
+                },
+                onApply     = () =>
+                {
+                    float secondsPerWeek = ProjectSetupUI.SelectedScale switch
+                    {
+                        ProjectScale.Small  => 5f,
+                        ProjectScale.Medium => 4.2f,
+                        ProjectScale.Large  => 3.9f,
+                        _ => 5f
+                    };
+                    DevelopmentManager.Instance.ExtendDevelopmentDuration(delayWeeks * secondsPerWeek);
                 }
-            }
-        });
+            };
+            pool.Add(networkEvt);
+        }
 
+        // ── 26~99% ──────────────────────────────────────────────
         pool.Add(new RandomEventData
         {
-            type = RandomEventType.TeamDinner,
-            title = "회식 진행!",
-            description = "팀원들의 사기가\n올랐습니다!\n기획, 개발, 아트 수치가 2배로 증가합니다.",
-            weight = mgr.teamDinnerWeight,
-            onApply = () =>
-            {
-                DevelopmentPanelUI.Instance.MultiplyValues(2.0f);
-                foreach (var e in EmployeeManager.Instance.ownedEmployees)
-                {
-                    e.ChangeSatisfaction(+10);
-                    EmployeeManager.Instance.UpdateEmployee(e);
-                }
-            }
+            type        = RandomEventType.HackyCode,
+            title       = "야매코드",
+            description = "TODO",
+            weight      = mgr.hackyCodeWeight,
+            categoryMin = 2, categoryMax = 4,
+            onApply     = () => { /* TODO */ }
         });
 
+        // ── 51~99% ──────────────────────────────────────────────
         pool.Add(new RandomEventData
         {
-            type = RandomEventType.DevBoost,
-            title = "개발 돌파구 발견!",
-            description = "팀이 기술적 난관을\n극복했습니다!\n개발 수치가 50 증가합니다.",
-            weight = mgr.devBoostWeight,
-            onApply = () => DevelopmentPanelUI.Instance.AddValues(0f, 50f, 0f, 0f, 0f)
-        });
-
-        pool.Add(new RandomEventData
-        {
-            type = RandomEventType.PlanBoost,
-            title = "기획 아이디어 폭발!",
-            description = "기획팀에서 혁신적인\n아이디어가 나왔습니다!\n기획 수치가 50 증가합니다.",
-            weight = mgr.planBoostWeight,
-            onApply = () => DevelopmentPanelUI.Instance.AddValues(50f, 0f, 0f, 0f, 0f)
-        });
-
-        pool.Add(new RandomEventData
-        {
-            type = RandomEventType.ArtBoost,
-            title = "아트 영감 폭발!",
-            description = "아트팀이 놀라운 영감을\n받았습니다!\n아트 수치가 50 증가합니다.",
-            weight = mgr.artBoostWeight,
-            onApply = () => DevelopmentPanelUI.Instance.AddValues(0f, 0f, 50f, 0f, 0f)
-        });
-
-        pool.Add(new RandomEventData
-        {
-            type = RandomEventType.CreativityBoost,
-            title = "창의적 영감!",
-            description = "팀에 창의적인\n아이디어가 넘칩니다!\n창의성이 30 증가합니다.",
-            weight = mgr.creativityBoostWeight,
-            onApply = () => DevelopmentPanelUI.Instance.AddValues(0f, 0f, 0f, 0f, 30f)
-        });
-
-        pool.Add(new RandomEventData
-        {
-            type = RandomEventType.NetworkIssue,
-            title = "네트워크 장애 발생!",
-            description = "네트워크 장애로 인해\n2주간 개발속도가 50% 느려집니다.\n개발기간이 2주 늘어납니다.",
-            weight = mgr.networkIssueWeight,
-            onApply = () =>
-            {
-                float secondsPerWeek = ProjectSetupUI.SelectedScale switch
-                {
-                    ProjectScale.Small  => 5f,
-                    ProjectScale.Medium => 4.2f,
-                    ProjectScale.Large  => 3.9f,
-                    _ => 5f
-                };
-                DevelopmentManager.Instance.ExtendDevelopmentDuration(2f * secondsPerWeek);
-            }
-        });
-
-        pool.Add(new RandomEventData
-        {
-            type = RandomEventType.EmployeeScout,
-            title = "스카우트 제안!",
-            description = "경쟁사에서 직원에게\n스카우트 제안을 했습니다!",
-            weight = mgr.employeeScoutWeight,
-            onApply = () => mgr.TriggerScoutEvent()
-        });
-
-        pool.Add(new RandomEventData
-        {
-            type = RandomEventType.BetaTestIssue,
-            title = "베타 테스트 유출!",
-            description = "베타 테스트 영상이\n유출되었습니다!",
-            weight = mgr.betaTestIssueWeight,
-            onApply = () => mgr.TriggerBetaTestEvent()
+            type        = RandomEventType.YoutuberRequest,
+            title       = "유튜버 선공개 요청",
+            description = "TODO",
+            weight      = mgr.youtuberRequestWeight,
+            categoryMin = 3, categoryMax = 4,
+            onApply     = () => { /* TODO */ }
         });
     }
 }

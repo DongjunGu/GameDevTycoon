@@ -183,10 +183,23 @@ public class EmployeeData
     public string SalaryRangeText() => $"연봉: {salary:N0}G";
     public string SalaryText() => $"연봉: {salary:N0}G";
 
-    public string DevelopText() => $"개발: {developSkill}";
-    public string PlanningText() => $"기획: {planningSkill}";
-    public string ArtText() => $"아트: {artSkill}";
-    public string PerfectionText() => $"완성도: {perfectionSkill}";
+    public float GetSatisfactionMultiplier()
+    {
+        if (satisfaction >= 81) return 1.1f;
+        if (satisfaction >= 61) return 1.0f;
+        if (satisfaction >= 41) return 0.9f;
+        return 0.8f;
+    }
+
+    public int EffectivePlanningSkill   => (int)(planningSkill    * GetSatisfactionMultiplier());
+    public int EffectiveDevelopSkill    => (int)(developSkill     * GetSatisfactionMultiplier());
+    public int EffectiveArtSkill        => (int)(artSkill         * GetSatisfactionMultiplier());
+    public int EffectivePerfectionSkill => (int)(perfectionSkill  * GetSatisfactionMultiplier());
+
+    public string DevelopText()    => $"개발: {EffectiveDevelopSkill}";
+    public string PlanningText()   => $"기획: {EffectivePlanningSkill}";
+    public string ArtText()        => $"아트: {EffectiveArtSkill}";
+    public string PerfectionText() => $"완성도: {EffectivePerfectionSkill}";
 
     // 주스탯은 강화 반영 범위, 부스탯은 확정 수치로 표시
     public string DevelopDisplayText()  => role == EmployeeRole.Programmer

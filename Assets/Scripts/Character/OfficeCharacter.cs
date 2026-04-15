@@ -113,6 +113,13 @@ public class OfficeCharacter : MonoBehaviour
         _patrolCoroutine = StartCoroutine(PatrolWithDialogRoutine(target, dialogGroupId, triggerOnce));
     }
 
+    // 현재 patrol 중단 후 즉시 지정 위치로 강제 이동 (이벤트 트리거용)
+    public void ForcePatrolTo(Transform target, float stayDuration)
+    {
+        if (_patrolCoroutine != null) StopCoroutine(_patrolCoroutine);
+        _patrolCoroutine = StartCoroutine(PatrolRoutine(target, stayDuration));
+    }
+
     // 개발 완료 등 외부 이벤트로 즉시 복귀
     public void CancelPatrol()
     {
@@ -141,6 +148,18 @@ public class OfficeCharacter : MonoBehaviour
         Debug.Log($"[Patrol] {employeeId} → 이동 시작 후 IsMoving={_mover.IsMoving}");
         yield return new WaitUntil(() => !_mover.IsMoving);
         Debug.Log($"[Patrol] {employeeId} → patrol 지점 도착, State={State}");
+
+        // 패트롤 도착 → 방향 강제 적용 (패트롤 포인트에 설정된 경우)
+        var pp = target.GetComponent<PatrolPoint>();
+        if (pp != null && pp.overrideFacing)
+            _animator?.SetFacing(pp.facingFront, pp.facingFlipX);
+
+        // 패트롤 도착 → 개발 중 대기 이벤트 발동 체크
+        if (DevelopmentManager.Instance != null &&
+            DevelopmentManager.Instance.CurrentStage == ProjectStage.Developing)
+        {
+            RandomEventManager.Instance?.OnPatrolArrived(pp != null ? pp.pointId : "", employeeId);
+        }
 
         // 2. 목적지에서 대기 (게임 시간 기준)
         float stayed = 0f;

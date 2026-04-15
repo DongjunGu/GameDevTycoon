@@ -99,6 +99,7 @@ public class DevelopmentManager : MonoBehaviour
         InitTickMap();
         DevelopmentPanelUI.Instance.ResetValues();
         RandomEventManager.Instance.InitEvents();
+        RandomEventManager.Instance.ScheduleEvents();
         GameTimeManager.Instance.StopTime();
 
         void ProceedToInvestment()
@@ -250,7 +251,7 @@ public class DevelopmentManager : MonoBehaviour
             _elapsed += Time.deltaTime;
             float progress = _elapsed / developmentDuration;
 
-            RandomEventManager.Instance.CheckTrigger(progress);
+            RandomEventManager.Instance.CheckProgress(progress);
 
             foreach (var employee in EmployeeManager.Instance.ownedEmployees.ToList())
             {
@@ -808,15 +809,17 @@ public class DevelopmentManager : MonoBehaviour
     void AccumulateByType(EmployeeData employee, int tickType)
     {
         float satisfactionMultiplier = GetSatisfactionMultiplier(employee);
-        float totalMultiplier = satisfactionMultiplier;
 
-        int skill = employee.role switch
+        // 만족도 배율을 스킬 값 자체에 적용 (주스탯·부스탯 모두)
+        int skill = (int)(employee.role switch
         {
             EmployeeRole.Planner    => employee.planningSkill,
             EmployeeRole.Programmer => employee.developSkill,
             EmployeeRole.Artist     => employee.artSkill,
             _ => 0
-        };
+        } * satisfactionMultiplier);
+
+        int effectivePerfection = (int)(employee.perfectionSkill * satisfactionMultiplier);
 
         float planning = 0f, develop = 0f, art = 0f, bug = 0f, creativity = 0f;
 
@@ -826,7 +829,7 @@ public class DevelopmentManager : MonoBehaviour
                 int jackpotVal = UnityEngine.Random.Range(1, 4)
                     + (int)(skill / 50)
                     + (int)System.Math.Pow(skill / 300.0, 2);
-                float jackpot = Mathf.Max(1, jackpotVal) * totalMultiplier;
+                float jackpot = Mathf.Max(1, jackpotVal);
                 switch (employee.role)
                 {
                     case EmployeeRole.Planner:
@@ -848,7 +851,7 @@ public class DevelopmentManager : MonoBehaviour
                 int successVal = UnityEngine.Random.Range(0, 2)
                     + (int)(skill / 100)
                     + (int)System.Math.Pow(skill / 400.0, 2);
-                float success = Mathf.Max(0, successVal) * totalMultiplier;
+                float success = Mathf.Max(0, successVal);
                 switch (employee.role)
                 {
                     case EmployeeRole.Planner:
@@ -867,12 +870,12 @@ public class DevelopmentManager : MonoBehaviour
                 break;
 
             case 2: // 창의성
-                creativity = 10f * totalMultiplier;
+                creativity = 10f;
                 OfficeManager.Instance?.ShowStatPopup(employee.id, $"[창의성] +창의 {creativity:F1}", new Color(0.5f, 1f, 0.9f));
                 break;
 
             case 3: // 버그
-                int perfReduction = (int)(employee.perfectionSkill / 100);
+                int perfReduction = (int)(effectivePerfection / 100);
                 int bugRaw = ProjectSetupUI.SelectedScale switch
                 {
                     ProjectScale.Small  => UnityEngine.Random.Range(3, 7)  - perfReduction,
@@ -1002,13 +1005,7 @@ public class DevelopmentManager : MonoBehaviour
     }
     */
 
-    float GetSatisfactionMultiplier(EmployeeData employee)
-    {
-        int sat = employee.satisfaction;
-        if (sat >= 80) return 1.1f;
-        if (sat >= 60) return 1.0f;
-        return 0.9f; // 40~60, ~40 모두 -10%
-    }
+    float GetSatisfactionMultiplier(EmployeeData employee) => employee.GetSatisfactionMultiplier();
     void UpdateInvestmentProgress()
     {
         if (!RandomEventManager.Instance.InvestmentAccepted) return;

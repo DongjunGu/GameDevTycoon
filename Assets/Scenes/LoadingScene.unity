@@ -1678,16 +1678,26 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a87f636af0ebf6b49b22cf112449b34a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::RandomEventManager
-  eventTriggerChance: 1
-  blackoutWeight: 0
-  teamDinnerWeight: 0
-  devBoostWeight: 0
-  planBoostWeight: 0
-  artBoostWeight: 0
-  creativityBoostWeight: 0
-  employeeScoutWeight: 0
-  betaTestIssueWeight: 0
+  debugMode: 1
+  debugEventType: 16
+  category1Chance: 0.5
+  category2Chance: 0.7
+  category3Chance: 0.7
+  category4Chance: 0.5
+  competitorGameWeight: 1
+  tangsuYukFightWeight: 1
+  avoidingEmployeeWeight: 1
+  coldWeight: 1
+  badReviewWeight: 1
+  birthdayWeight: 1
+  earlyLeaveRequestWeight: 1
+  equipmentUpgradeWeight: 1
+  gameUpgradeRequestWeight: 1
+  companyDinnerWeight: 1
+  bossGossipWeight: 1
   networkIssueWeight: 1
+  hackyCodeWeight: 1
+  youtuberRequestWeight: 1
   employeeRunChance: 1
   employeeFightChance: 1
   badCompanyChance: 1

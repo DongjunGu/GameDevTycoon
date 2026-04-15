@@ -17,12 +17,16 @@ public class PatrolTestUI : MonoBehaviour
 
     [Header("다이얼로그 Patrol (랜덤 직원)")]
     public Button btnDialogPatrol;
+ 
+    [Header("이벤트 테스트")]
+    public Button btnTestNetworkIssue;
 
     void Start()
     {
         btnPatrolRandom?.onClick.AddListener(OnClickRandom);
         btnPatrolEmployee?.onClick.AddListener(OnClickEmployee);
         btnDialogPatrol?.onClick.AddListener(OnClickDialogPatrol);
+        btnTestNetworkIssue?.onClick.AddListener(OnClickTestNetworkIssue);
     }
 
     void OnClickRandom()
@@ -43,5 +47,10 @@ public class PatrolTestUI : MonoBehaviour
     void OnClickDialogPatrol()
     {
         OfficeManager.Instance?.TriggerDialogPatrolRandom();
+    }
+
+    void OnClickTestNetworkIssue()
+    {
+        RandomEventManager.Instance?.TriggerEventTest(RandomEventType.NetworkIssue);
     }
 }
