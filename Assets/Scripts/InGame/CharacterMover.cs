@@ -74,10 +74,11 @@ public class CharacterMover : MonoBehaviour
                     continue;
                 }
 
+                float multiplier = OfficeManager.Instance != null ? OfficeManager.Instance.CharacterSpeedMultiplier : 1f;
                 transform.position = Vector3.MoveTowards(
                     transform.position,
                     targetPos,
-                    moveSpeed * Time.deltaTime);
+                    moveSpeed * multiplier * Time.deltaTime);
 
                 yield return null;
             }

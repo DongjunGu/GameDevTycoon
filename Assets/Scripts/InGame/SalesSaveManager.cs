@@ -142,14 +142,9 @@ public class SalesSaveManager : MonoBehaviour
         Backend.GameData.UpdateV2("UserSales", _rowInDate, Backend.UserInDate, param, bro =>
         {
             if (bro.IsSuccess())
-            {
-                _rowInDate = null;
                 Debug.Log("판매 완료 처리");
-            }
             else
-            {
                 Debug.LogError($"판매 완료 저장 실패: {bro}");
-            }
         });
     }
 

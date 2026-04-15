@@ -13,15 +13,22 @@ public class RandomEventManager : MonoBehaviour
 
     [Header("개발 이벤트")]
     [Range(0f, 1f)] public float eventTriggerChance = 0.5f;
-    [Range(0f, 1f)] public float blackoutChance = 0.5f;
-    [Range(0f, 1f)] public float teamDinnerChance = 0.5f;
-    [Range(0f, 1f)] public float eventDetailTriggerChance = 0.5f;
+    public float blackoutWeight = 1f;
+    public float teamDinnerWeight = 1f;
+    public float devBoostWeight = 1f;
+    public float planBoostWeight = 1f;
+    public float artBoostWeight = 1f;
+    public float creativityBoostWeight = 1f;
+    public float employeeScoutWeight = 1f; 
+    public float betaTestIssueWeight = 1f;
+    public float networkIssueWeight = 1f;
 
     [Header("조건 이벤트")]
     [Range(0f, 1f)] public float employeeRunChance = 0.5f;
     [Range(0f, 1f)] public float employeeFightChance = 0.5f;
     [Range(0f, 1f)] public float badCompanyChance = 0.3f;
     [Header("투자 이벤트")]
+
     [Range(0f, 1f)] public float investmentTriggerChance = 0.5f;
     public float investmentThreshold = 80f;  // 달성 기준 수치
     public int investmentReward = 1000; // 성공/실패 금액
@@ -30,6 +37,7 @@ public class RandomEventManager : MonoBehaviour
     public bool InvestmentAccepted { get; set; } = false;
     public string InvestmentStat { get; set; } = "";
     public string InvestmentStatName { get; set; } = "";
+    public bool IsTriggered50 => _triggered50;
     public void SetTriggered50(bool value) => _triggered50 = value;
 
 
@@ -95,11 +103,20 @@ public class RandomEventManager : MonoBehaviour
         if (UnityEngine.Random.value > eventTriggerChance) return;
         if (_eventPool.Count == 0) return;
 
-        var evt = _eventPool[UnityEngine.Random.Range(0, _eventPool.Count)];
-        if (UnityEngine.Random.value > evt.triggerChance) return;
+        float totalWeight = 0f;
+        foreach (var e in _eventPool) totalWeight += e.weight;
+
+        float roll = UnityEngine.Random.value * totalWeight;
+        float cumulative = 0f;
+        RandomEventData selected = _eventPool[_eventPool.Count - 1];
+        foreach (var e in _eventPool)
+        {
+            cumulative += e.weight;
+            if (roll <= cumulative) { selected = e; break; }
+        }
 
         DevelopmentManager.Instance.PauseForEvent();
-        RandomEventUI.Instance.Show(evt);
+        RandomEventUI.Instance.Show(selected);
     }
 
     public void TriggerInvestmentEvent(System.Action onComplete)

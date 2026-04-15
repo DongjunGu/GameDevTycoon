@@ -18,6 +18,9 @@ public class OfficeManager : MonoBehaviour
     // employeeId → OfficeCharacter
     private Dictionary<string, OfficeCharacter> _characters = new();
 
+    public float CharacterSpeedMultiplier { get; private set; } = 1f;
+    public void SetCharacterSpeedMultiplier(float value) => CharacterSpeedMultiplier = value;
+
     private PatrolPoint[] _patrolPoints;
     private DialogPatrolPoint[] _dialogPatrolPoints;
     private Coroutine _patrolScheduler;

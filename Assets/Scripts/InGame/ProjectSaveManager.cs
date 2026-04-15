@@ -50,6 +50,12 @@ public class ProjectSaveManager : MonoBehaviour
     private int _loadedTickSeed;
     private string _loadedTickIndices;
     private string _loadedMidDevData;
+    private bool _loadedTriggered50;
+    private float _loadedDevDuration;
+    private float _loadedNetworkSlowEndElapsed;
+    private float _loadedProgOffsetElapsedAtEvent;
+    private float _loadedProgOffsetExtension;
+    private float _loadedProgVisualOffset;
 
     private string _loadedProjectName = "프로젝트명";
     public string GetLoadedProjectName() => _loadedProjectName;
@@ -107,6 +113,12 @@ public class ProjectSaveManager : MonoBehaviour
         param.Add("tickSeed", dm.GetTickSeed());
         param.Add("tickIndices", dm.GetTickIndices());
         param.Add("midDevData", dm.GetMidDevData());
+        param.Add("triggered50", RandomEventManager.Instance.IsTriggered50);
+        param.Add("devDuration", dm.developmentDuration);
+        param.Add("networkSlowEndElapsed", dm.GetNetworkSlowEndElapsed());
+        param.Add("progOffsetElapsedAtEvent", dm.GetProgressOffsetElapsedAtEvent());
+        param.Add("progOffsetExtension", dm.GetProgressOffsetExtension());
+        param.Add("progVisualOffset", dm.GetProgressVisualOffset());
 
         if (!string.IsNullOrEmpty(_rowInDate))
         {
@@ -198,6 +210,12 @@ public class ProjectSaveManager : MonoBehaviour
             _loadedTickSeed = SafeInt(row, "tickSeed", 0);
             _loadedTickIndices = SafeString(row, "tickIndices", "");
             _loadedMidDevData = SafeString(row, "midDevData", "");
+            _loadedTriggered50 = SafeBool(row, "triggered50", false);
+            _loadedDevDuration = SafeFloat(row, "devDuration", 0f);
+            _loadedNetworkSlowEndElapsed = SafeFloat(row, "networkSlowEndElapsed", 0f);
+            _loadedProgOffsetElapsedAtEvent = SafeFloat(row, "progOffsetElapsedAtEvent", 0f);
+            _loadedProgOffsetExtension = SafeFloat(row, "progOffsetExtension", 0f);
+            _loadedProgVisualOffset = SafeFloat(row, "progVisualOffset", 0f);
 
             Debug.Log($"프로젝트 로드 완료: stage={_loadedStage} elapsed={_loadedElapsed:F1}");
             onComplete?.Invoke();
@@ -223,10 +241,13 @@ public class ProjectSaveManager : MonoBehaviour
             _loadedAccumPlanning, _loadedAccumDevelop, _loadedAccumArt,
             _loadedAccumBug, _loadedAccumCreativity,
             _loadedStage,
-            _loadedTickSeed, _loadedTickIndices, _loadedMidDevData
+            _loadedTickSeed, _loadedTickIndices, _loadedMidDevData,
+            _loadedDevDuration, _loadedNetworkSlowEndElapsed,
+            _loadedProgOffsetElapsedAtEvent, _loadedProgOffsetExtension, _loadedProgVisualOffset
         );
 
         // ── RandomEvent 상태 복원 ──
+        RandomEventManager.Instance.SetTriggered50(_loadedTriggered50);
         RandomEventManager.Instance.InvestmentAccepted = _loadedInvestmentAccepted;
         RandomEventManager.Instance.InvestmentStat = _loadedInvestmentStat;
         RandomEventManager.Instance.InvestmentStatName = _loadedInvestmentStatName;
