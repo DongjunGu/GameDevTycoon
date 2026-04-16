@@ -7,6 +7,10 @@ public class GameSceneInitializer : MonoBehaviour
         var dialogUI = FindAnyObjectByType<DialogUI>();
         if (dialogUI != null)
             DialogManager.Instance.SetDialogUI(dialogUI);
+
+        // StartTime을 먼저 호출해야 RestoreState 내부에서 StopTime()으로 상쇄 가능
+        GameTimeManager.Instance.StartTime();
+
         SalesSaveManager.Instance.RestoreIfNeeded();
         ProjectSaveManager.Instance.RestoreIfNeeded();
 
@@ -17,8 +21,6 @@ public class GameSceneInitializer : MonoBehaviour
         var stage = DevelopmentManager.Instance.CurrentStage;
         if (stage == ProjectStage.Developing || stage == ProjectStage.BugFixing)
             GameTimeManager.Instance.SetProjectSpeed(ProjectSetupUI.SelectedScale);
-
-        GameTimeManager.Instance.StartTime();
 
         //         // 게임 시작 다이얼로그 (첫 시작 시)
         // if (DialogManager.Instance.HasGroup("event_game_start"))

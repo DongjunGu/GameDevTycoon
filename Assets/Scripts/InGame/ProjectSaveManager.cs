@@ -57,6 +57,8 @@ public class ProjectSaveManager : MonoBehaviour
     private float _loadedProgOffsetElapsedAtEvent;
     private float _loadedProgOffsetExtension;
     private float _loadedProgVisualOffset;
+    private bool _loadedPendingLeaderScore25;
+    private bool _loadedPendingLeaderScore75;
 
     private string _loadedProjectName = "프로젝트명";
     public string GetLoadedProjectName() => _loadedProjectName;
@@ -121,6 +123,8 @@ public class ProjectSaveManager : MonoBehaviour
         param.Add("progOffsetElapsedAtEvent", dm.GetProgressOffsetElapsedAtEvent());
         param.Add("progOffsetExtension", dm.GetProgressOffsetExtension());
         param.Add("progVisualOffset", dm.GetProgressVisualOffset());
+        param.Add("pendingLeaderScore25", dm.IsPendingLeaderScore25);
+        param.Add("pendingLeaderScore75", dm.IsPendingLeaderScore75);
 
         if (!string.IsNullOrEmpty(_rowInDate))
         {
@@ -219,6 +223,8 @@ public class ProjectSaveManager : MonoBehaviour
             _loadedProgOffsetElapsedAtEvent = SafeFloat(row, "progOffsetElapsedAtEvent", 0f);
             _loadedProgOffsetExtension = SafeFloat(row, "progOffsetExtension", 0f);
             _loadedProgVisualOffset = SafeFloat(row, "progVisualOffset", 0f);
+            _loadedPendingLeaderScore25 = SafeBool(row, "pendingLeaderScore25", false);
+            _loadedPendingLeaderScore75 = SafeBool(row, "pendingLeaderScore75", false);
 
             Debug.Log($"프로젝트 로드 완료: stage={_loadedStage} elapsed={_loadedElapsed:F1}");
             onComplete?.Invoke();
@@ -246,7 +252,8 @@ public class ProjectSaveManager : MonoBehaviour
             _loadedStage,
             _loadedTickSeed, _loadedTickIndices, _loadedMidDevData,
             _loadedDevDuration, _loadedNetworkSlowEndElapsed,
-            _loadedProgOffsetElapsedAtEvent, _loadedProgOffsetExtension, _loadedProgVisualOffset
+            _loadedProgOffsetElapsedAtEvent, _loadedProgOffsetExtension, _loadedProgVisualOffset,
+            _loadedPendingLeaderScore25, _loadedPendingLeaderScore75
         );
 
         // ── RandomEvent 상태 복원 ──

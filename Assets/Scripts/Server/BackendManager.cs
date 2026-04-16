@@ -32,6 +32,10 @@ public class BackendManager : MonoBehaviour
 
     void LoadAllAndEnterGame()
     {
+        // 차트 데이터는 동기 로드 — 로그인 직후 한 번만 실행, 이후 캐시 반환
+        RandomEventChartLoader.Load();
+        RandomEventManager.Instance.InitConditionEvents();
+
         EmployeeManager.Instance.LoadAllData(() =>
         {
             MoneyManager.Instance.LoadMoney(() =>

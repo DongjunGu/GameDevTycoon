@@ -16,24 +16,31 @@ public static class RandomEvents_Condition
         "책상 위에 포스트잇 한 장이 붙어 있습니다.\n'회사 탈출은 지능순'"
     };
 
-    public static void Register(List<RandomEventData> pool, RandomEventManager mgr)
+    public static void Register(List<RandomEventData> pool, RandomEventManager mgr,
+                                System.Collections.Generic.Dictionary<string, RandomEventChartRow> chart = null)
     {
-        pool.Add(new RandomEventData
+        Add(pool, chart, new RandomEventData
         {
-            type          = RandomEventType.EmployeeFight,
-            title         = "직원 불화 발생!",
-            description   = "직원 두 명이 크게 싸웠습니다!\n누구의 편을 들겠습니까?",
-            //triggerChance = mgr.employeeFightChance,
-            onApply       = () => mgr.TriggerEmployeeFightEvent()
+            type    = RandomEventType.EmployeeFight,
+            // title       = "직원 불화 발생!",
+            // description = "직원 두 명이 크게 싸웠습니다!\n누구의 편을 들겠습니까?",
+            onApply = () => mgr.TriggerEmployeeFightEvent()
         });
 
-        pool.Add(new RandomEventData
+        Add(pool, chart, new RandomEventData
         {
-            type          = RandomEventType.BadCompany,
-            title         = "악명 높은 기업!",
-            description   = "잦은 해고로 악명이 높아졌습니다!\n채용 조건이 불리해집니다.",
-            //triggerChance = mgr.badCompanyChance,
-            onApply       = () => mgr.TriggerBadCompanyEvent()
+            type    = RandomEventType.BadCompany,
+            // title       = "악명 높은 기업!",
+            // description = "잦은 해고로 악명이 높아졌습니다!\n채용 조건이 불리해집니다.",
+            onApply = () => mgr.TriggerBadCompanyEvent()
         });
+    }
+
+    static void Add(List<RandomEventData> pool,
+                    System.Collections.Generic.Dictionary<string, RandomEventChartRow> chart,
+                    RandomEventData evt)
+    {
+        RandomEventChartLoader.Apply(evt, chart);
+        pool.Add(evt);
     }
 }
