@@ -32,6 +32,8 @@ public class DevelopmentManager : MonoBehaviour
     public bool IsStarted { get; private set; } = false;
     public bool IsTriggered25 => _triggered25;
     public bool IsTriggered75 => _triggered75;
+    public bool IsPendingLeaderScore25 => _pendingLeaderScore25;
+    public bool IsPendingLeaderScore75 => _pendingLeaderScore75;
     public ProjectStage CurrentStage { get; set; } = ProjectStage.None;
 
     private float _elapsed;
@@ -39,6 +41,9 @@ public class DevelopmentManager : MonoBehaviour
     private bool _triggered25;
     private bool _triggered75;
     private bool _patrolStarted;
+    private bool _pendingLeaderScore25;
+    private bool _pendingLeaderScore75;
+    private bool _pendingDevelopmentComplete;
 
     // 네트워크 이벤트 등 duration 연장 시 진행도 표시 보정
     private float _progressVisualOffset = 0f;      // 현재 남은 시각 보정값
@@ -283,13 +288,17 @@ public class DevelopmentManager : MonoBehaviour
             {
                 _triggered25 = true;
                 _isRunning = false;
-                GameTimeManager.Instance.StopTime();
-                LeaderSelectUI.Instance.Open(LeaderType.Programmer, () =>
+
+                if (RandomEventManager.Instance.HasPendingEvent)
                 {
-                    GameTimeManager.Instance.ForceStartTime();
-                    _isRunning = true;
-                    StartCoroutine(DevelopmentCoroutine());
-                });
+                    // pending 중: 시간·캐릭터 이동은 유지, 진행도만 중단
+                    _pendingLeaderScore25 = true;
+                    yield break;
+                }
+
+                // pending 없음: 시간도 멈추고 팀장 선택 UI 표시
+                GameTimeManager.Instance.StopTime();
+                LeaderSelectUI.Instance.Open(LeaderType.Programmer, null);
                 yield break;
             }
 
@@ -297,17 +306,29 @@ public class DevelopmentManager : MonoBehaviour
             {
                 _triggered75 = true;
                 _isRunning = false;
-                GameTimeManager.Instance.StopTime();
-                LeaderSelectUI.Instance.Open(LeaderType.Artist, () =>
+
+                if (RandomEventManager.Instance.HasPendingEvent)
                 {
-                    _isRunning = true;
-                    GameTimeManager.Instance.ForceStartTime();
-                    StartCoroutine(DevelopmentCoroutine());
-                });
+                    // pending 중: 시간·캐릭터 이동은 유지, 진행도만 중단
+                    _pendingLeaderScore75 = true;
+                    yield break;
+                }
+
+                // pending 없음: 시간도 멈추고 팀장 선택 UI 표시
+                GameTimeManager.Instance.StopTime();
+                LeaderSelectUI.Instance.Open(LeaderType.Artist, null);
                 yield break;
             }
 
             yield return null;
+        }
+
+        if (RandomEventManager.Instance.HasPendingEvent)
+        {
+            // pending 이벤트가 끝난 뒤 ResumeFromEvent()에서 처리
+            _pendingDevelopmentComplete = true;
+            _isRunning = false;  // 진행도만 멈춤 (시간·캐릭터 이동은 계속)
+            yield break;
         }
 
         OnDevelopmentComplete();
@@ -538,7 +559,8 @@ public class DevelopmentManager : MonoBehaviour
         ProjectStage stage,
         int tickSeed = 0, string tickIndices = "", string midDevData = "",
         float savedDuration = 0f, float networkSlowEndElapsed = 0f,
-        float progOffsetElapsedAtEvent = 0f, float progOffsetExtension = 0f, float progVisualOffset = 0f)
+        float progOffsetElapsedAtEvent = 0f, float progOffsetExtension = 0f, float progVisualOffset = 0f,
+        bool pendingLeaderScore25 = false, bool pendingLeaderScore75 = false)
     {
         float baseDuration = ProjectSetupUI.SelectedScale switch
         {
@@ -622,9 +644,25 @@ public class DevelopmentManager : MonoBehaviour
 
                 RestoreTickIndices(tickIndices);
 
-                _isRunning = true;
-                GameTimeManager.Instance.ForceStartTime();
-                StartCoroutine(DevelopmentCoroutine());
+                // 저장 시점에 팀장 점수가 미뤄진 상태였으면 LeaderSelectUI부터 표시
+                if (pendingLeaderScore75)
+                {
+                    _pendingLeaderScore75 = false;
+                    GameTimeManager.Instance.StopTime(); // GameSceneInitializer.StartTime() 상쇄
+                    LeaderSelectUI.Instance.Open(LeaderType.Artist, null);
+                }
+                else if (pendingLeaderScore25)
+                {
+                    _pendingLeaderScore25 = false;
+                    GameTimeManager.Instance.StopTime(); // GameSceneInitializer.StartTime() 상쇄
+                    LeaderSelectUI.Instance.Open(LeaderType.Programmer, null);
+                }
+                else
+                {
+                    _isRunning = true;
+                    GameTimeManager.Instance.ForceStartTime();
+                    StartCoroutine(DevelopmentCoroutine());
+                }
                 break;
 
             case ProjectStage.BugFixing:
@@ -905,6 +943,9 @@ public class DevelopmentManager : MonoBehaviour
         _isRunning = false;
         _triggered25 = false;
         _triggered75 = false;
+        _pendingLeaderScore25 = false;
+        _pendingLeaderScore75 = false;
+        _pendingDevelopmentComplete = false;
         BugPenalty = 0f;
         BugEventBonus = 0f;
         _patrolStarted = false;
@@ -992,6 +1033,34 @@ public class DevelopmentManager : MonoBehaviour
     }
     public void ResumeFromEvent()
     {
+        RandomEventManager.Instance.ClearEventInProgress();
+
+        // 이벤트 종료 시점에 미뤄진 팀장 점수가 있으면 시간을 재개하지 않고 팀장 선택 UI 표시
+        if (_pendingDevelopmentComplete)
+        {
+            _pendingDevelopmentComplete = false;
+            // PauseForEvent()의 StopTime 카운트를 해소한 뒤 OnDevelopmentComplete 내부에서 다시 StopTime
+            GameTimeManager.Instance.ForceStartTime();
+            OnDevelopmentComplete();
+            return;
+        }
+
+        if (_pendingLeaderScore75)
+        {
+            _pendingLeaderScore75 = false;
+            // PauseForEvent()가 이미 시간을 멈췄으므로 그대로 팀장 선택 UI 표시
+            LeaderSelectUI.Instance.Open(LeaderType.Artist, null);
+            return;
+        }
+
+        if (_pendingLeaderScore25)
+        {
+            _pendingLeaderScore25 = false;
+            // PauseForEvent()가 이미 시간을 멈췄으므로 그대로 팀장 선택 UI 표시
+            LeaderSelectUI.Instance.Open(LeaderType.Programmer, null);
+            return;
+        }
+
         _isRunning = true;
         GameTimeManager.Instance.ForceStartTime();
     }

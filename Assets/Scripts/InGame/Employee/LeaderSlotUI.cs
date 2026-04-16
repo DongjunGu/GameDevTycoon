@@ -33,6 +33,13 @@ public class LeaderSlotUI : MonoBehaviour
         perfectionSkillText.text = data.PerfectionText();
         enhancementText.text     = $"+{data.enhancementLevel}";
         satisfactionText.text = data.SatisfactionText();
+
+        float mult = data.GetSatisfactionMultiplier();
+        Color statColor = mult > 1.0f ? Color.red : mult < 1.0f ? Color.blue : Color.white;
+        developSkillText.color = statColor;
+        planningSkillText.color = statColor;
+        artSkillText.color = statColor;
+        perfectionSkillText.color = statColor;
         _pendingGrade = data.grade;
 
         selectButton.onClick.RemoveAllListeners();

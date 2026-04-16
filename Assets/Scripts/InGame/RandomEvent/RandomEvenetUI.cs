@@ -12,6 +12,7 @@ public class RandomEventUI : MonoBehaviour
     [Header("UI")]
     public TextMeshProUGUI titleText;
     public TextMeshProUGUI descriptionText;
+    public TextMeshProUGUI systemMessageText;
     public Image portraitImage;
 
     private RandomEventData _currentEvent;
@@ -28,6 +29,13 @@ public class RandomEventUI : MonoBehaviour
         _currentEvent = evt;
         titleText.text = evt.title;
         descriptionText.text = evt.description;
+
+        if (systemMessageText != null)
+        {
+            bool hasSystem = !string.IsNullOrEmpty(evt.systemMessage);
+            systemMessageText.text = evt.systemMessage;
+            systemMessageText.gameObject.SetActive(hasSystem);
+        }
 
         if (portraitImage != null)
         {

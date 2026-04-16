@@ -54,6 +54,7 @@ public class RandomEventData
     public int    categoryMin;
     public int    categoryMax;
     public string portraitId;       // 특정 직원 이벤트일 때 설정, 없으면 ""
+    public string systemMessage;   // 시스템 효과 안내 문구, 없으면 ""
 
     // 패트롤 도착 트리거 설정
     public bool   requiresPatrol        = false; // true면 진행도 도달 후 패트롤 도착 시 발동

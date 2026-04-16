@@ -32,6 +32,13 @@ public class TrainingSlotUI : MonoBehaviour
         artSkillText.text        = data.ArtText();
         perfectionSkillText.text = data.PerfectionText();
         satisfactionText.text = data.SatisfactionText();
+
+        float mult = data.GetSatisfactionMultiplier();
+        Color statColor = mult > 1.0f ? Color.red : mult < 1.0f ? Color.blue : Color.white;
+        developSkillText.color = statColor;
+        planningSkillText.color = statColor;
+        artSkillText.color = statColor;
+        perfectionSkillText.color = statColor;
         enhancementText.text     = $"+{data.enhancementLevel}";
 
         _pendingGrade = data.grade;

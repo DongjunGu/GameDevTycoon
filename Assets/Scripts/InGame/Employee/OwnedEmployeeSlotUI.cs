@@ -42,6 +42,13 @@ public class OwnedEmployeeSlotUI : MonoBehaviour
         salaryText.text = data.SalaryText();
         enhancementText.text = $"+{data.enhancementLevel}";
         satisfactionText.text = data.SatisfactionText();
+
+        float mult = data.GetSatisfactionMultiplier();
+        Color statColor = mult > 1.0f ? Color.red : mult < 1.0f ? Color.blue : Color.white;
+        developSkillText.color = statColor;
+        planningSkillText.color = statColor;
+        artSkillText.color = statColor;
+        perfectionSkillText.color = statColor;
         //stateText.text           = data.StateToString();
         _pendingGrade = data.grade;
         if (data.grade != EmployeeGrade.Unique)

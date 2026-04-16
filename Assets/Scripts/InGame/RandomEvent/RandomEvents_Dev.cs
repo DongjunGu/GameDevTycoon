@@ -25,118 +25,119 @@ using UnityEngine;
 
 public static class RandomEvents_Dev
 {
-    public static void Register(List<RandomEventData> pool, RandomEventManager mgr)
+    public static void Register(List<RandomEventData> pool, RandomEventManager mgr,
+                                System.Collections.Generic.Dictionary<string, RandomEventChartRow> chart = null)
     {
-        // ── 1~99% ───────────────────────────────────────────────
         // ── 76~99% ──────────────────────────────────────────────
-        pool.Add(new RandomEventData
+        Add(pool, chart, new RandomEventData
         {
-            type        = RandomEventType.CompetitorGame,
-            title       = "대형 게임사의 경쟁작 출시",
-            description = "TODO",
-            weight      = mgr.competitorGameWeight,
-            categoryMin = 4, categoryMax = 4,
-            onApply     = () => { /* TODO */ }
+            type    = RandomEventType.CompetitorGame,
+            // title       = "대형 게임사의 경쟁작 출시",
+            // description = "TODO",
+            // weight      = mgr.competitorGameWeight,
+            // categoryMin = 4, categoryMax = 4,
+            onApply = () => { /* TODO */ }
         });
 
-        pool.Add(new RandomEventData
+        Add(pool, chart, new RandomEventData
         {
-            type        = RandomEventType.TangsuYukFight,
-            title       = "탕수육 부먹 찍먹 싸움",
-            description = "TODO",
-            weight      = mgr.tangsuYukFightWeight,
-            categoryMin = 4, categoryMax = 4,
-            onApply     = () => { /* TODO */ }
+            type    = RandomEventType.TangsuYukFight,
+            // title       = "탕수육 부먹 찍먹 싸움",
+            // description = "TODO",
+            // weight      = mgr.tangsuYukFightWeight,
+            // categoryMin = 4, categoryMax = 4,
+            onApply = () => { /* TODO */ }
         });
 
-        pool.Add(new RandomEventData
+        // ── 1~99% ───────────────────────────────────────────────
+        Add(pool, chart, new RandomEventData
         {
-            type        = RandomEventType.AvoidingEmployee,
-            title       = "나를 피하는 직원",
-            description = "TODO",
-            weight      = mgr.avoidingEmployeeWeight,
-            categoryMin = 1, categoryMax = 4,
-            onApply     = () => { /* TODO */ }
+            type    = RandomEventType.AvoidingEmployee,
+            // title       = "나를 피하는 직원",
+            // description = "TODO",
+            // weight      = mgr.avoidingEmployeeWeight,
+            // categoryMin = 1, categoryMax = 4,
+            onApply = () => { /* TODO */ }
         });
 
-        pool.Add(new RandomEventData
+        Add(pool, chart, new RandomEventData
         {
-            type        = RandomEventType.Cold,
-            title       = "감기",
-            description = "TODO",
-            weight      = mgr.coldWeight,
-            categoryMin = 1, categoryMax = 4,
-            onApply     = () => { /* TODO */ }
+            type    = RandomEventType.Cold,
+            // title       = "감기",
+            // description = "TODO",
+            // weight      = mgr.coldWeight,
+            // categoryMin = 1, categoryMax = 4,
+            onApply = () => { /* TODO */ }
         });
 
-        pool.Add(new RandomEventData
+        Add(pool, chart, new RandomEventData
         {
-            type        = RandomEventType.BadReview,
-            title       = "이유 없는 별점 1점",
-            description = "TODO",
-            weight      = mgr.badReviewWeight,
-            categoryMin = 1, categoryMax = 4,
-            onApply     = () => { /* TODO */ }
+            type    = RandomEventType.BadReview,
+            // title       = "이유 없는 별점 1점",
+            // description = "TODO",
+            // weight      = mgr.badReviewWeight,
+            // categoryMin = 1, categoryMax = 4,
+            onApply = () => { /* TODO */ }
         });
 
-        pool.Add(new RandomEventData
+        Add(pool, chart, new RandomEventData
         {
-            type        = RandomEventType.Birthday,
-            title       = "생일",
-            description = "TODO",
-            weight      = mgr.birthdayWeight,
-            categoryMin = 1, categoryMax = 4,
-            onApply     = () => { /* TODO */ }
+            type    = RandomEventType.Birthday,
+            // title       = "생일",
+            // description = "TODO",
+            // weight      = mgr.birthdayWeight,
+            // categoryMin = 1, categoryMax = 4,
+            onApply = () => { /* TODO */ }
         });
 
-        pool.Add(new RandomEventData
+        Add(pool, chart, new RandomEventData
         {
-            type        = RandomEventType.EarlyLeaveRequest,
-            title       = "퇴근 요청",
-            description = "TODO",
-            weight      = mgr.earlyLeaveRequestWeight,
-            categoryMin = 1, categoryMax = 4,
-            onApply     = () => { /* TODO */ }
+            type    = RandomEventType.EarlyLeaveRequest,
+            // title       = "퇴근 요청",
+            // description = "TODO",
+            // weight      = mgr.earlyLeaveRequestWeight,
+            // categoryMin = 1, categoryMax = 4,
+            onApply = () => { /* TODO */ }
         });
 
-        pool.Add(new RandomEventData
+        Add(pool, chart, new RandomEventData
         {
-            type        = RandomEventType.EquipmentUpgrade,
-            title       = "장비 업그레이드 요청",
-            description = "TODO",
-            weight      = mgr.equipmentUpgradeWeight,
-            categoryMin = 1, categoryMax = 4,
-            onApply     = () => { /* TODO */ }
+            type    = RandomEventType.EquipmentUpgrade,
+            // title       = "장비 업그레이드 요청",
+            // description = "TODO",
+            // weight      = mgr.equipmentUpgradeWeight,
+            // categoryMin = 1, categoryMax = 4,
+            onApply = () => { /* TODO */ }
         });
 
-        pool.Add(new RandomEventData
+        Add(pool, chart, new RandomEventData
         {
-            type        = RandomEventType.GameUpgradeRequest,
-            title       = "게임 업그레이드 요청",
-            description = "TODO",
-            weight      = mgr.gameUpgradeRequestWeight,
-            categoryMin = 1, categoryMax = 4,
-            onApply     = () => { /* TODO */ }
+            type    = RandomEventType.GameUpgradeRequest,
+            // title       = "게임 업그레이드 요청",
+            // description = "TODO",
+            // weight      = mgr.gameUpgradeRequestWeight,
+            // categoryMin = 1, categoryMax = 4,
+            onApply = () => { /* TODO */ }
         });
 
-        pool.Add(new RandomEventData
+        Add(pool, chart, new RandomEventData
         {
-            type        = RandomEventType.CompanyDinner,
-            title       = "오늘은 회식이다!",
-            description = "TODO",
-            weight      = mgr.companyDinnerWeight,
-            categoryMin = 1, categoryMax = 4,
-            onApply     = () => { /* TODO */ }
+            type    = RandomEventType.CompanyDinner,
+            // title       = "오늘은 회식이다!",
+            // description = "TODO",
+            // weight      = mgr.companyDinnerWeight,
+            // categoryMin = 1, categoryMax = 4,
+            onApply = () => { /* TODO */ }
         });
 
-        pool.Add(new RandomEventData
+        Add(pool, chart, new RandomEventData
         {
-            type        = RandomEventType.BossGossip,
-            title       = "사장님 뒷담까기",
-            description = "TODO",
-            weight      = mgr.bossGossipWeight,
-            categoryMin = 1, categoryMax = 4,
-            onApply     = () => { /* TODO */ }
+            type    = RandomEventType.BossGossip,
+            // title       = "사장님 뒷담까기",
+            // description = "TODO",
+            // weight      = mgr.bossGossipWeight,
+            // categoryMin = 1, categoryMax = 4,
+            onApply = () => { /* TODO */ }
         });
 
         // ── 1~74% ───────────────────────────────────────────────
@@ -145,22 +146,30 @@ public static class RandomEvents_Dev
             RandomEventData networkEvt = null;
             networkEvt = new RandomEventData
             {
-                type                  = RandomEventType.NetworkIssue,
-                title                 = "네트워크 끊김",
-                weight                = mgr.networkIssueWeight,
-                categoryMin           = 1, categoryMax = 3,
-                requiresPatrol        = true,
-                requiredPatrolPointId = "master_desk",
-                onSetup               = () =>
+                type = RandomEventType.NetworkIssue,
+                // title                 = "네트워크 끊김",
+                // weight                = mgr.networkIssueWeight,
+                // categoryMin           = 1, categoryMax = 3,
+                // requiresPatrol        = true,
+                // requiredPatrolPointId = "master_desk",
+                onSetup = () =>
                 {
                     var employees = EmployeeManager.Instance.ownedEmployees;
                     var emp = employees[UnityEngine.Random.Range(0, employees.Count)];
-                    delayWeeks = UnityEngine.Random.Range(1, 4); // 1~3주
-                    networkEvt.portraitId      = emp.portraitId;
+                    delayWeeks = ProjectSetupUI.SelectedScale switch
+                    {
+                        ProjectScale.Small  => 1,
+                        ProjectScale.Medium => 2,
+                        ProjectScale.Large  => 3,
+                        _ => 1
+                    };
+                    networkEvt.portraitId       = emp.portraitId;   // 랜덤 직원 → 동적
                     networkEvt.targetEmployeeId = emp.id;
-                    networkEvt.description     = $"사장님 제가 넘어지면서 실수로 코드를 뽑아버렸습니다...\n개발 기간 {delayWeeks}주 지연";
+                    // description은 차트에서 관리 — 하드코딩 제거
+                    // systemMessage는 차트 템플릿({0})에 주수 대입
+                    networkEvt.systemMessage = string.Format(networkEvt.systemMessage, delayWeeks);
                 },
-                onApply     = () =>
+                onApply = () =>
                 {
                     float secondsPerWeek = ProjectSetupUI.SelectedScale switch
                     {
@@ -169,32 +178,41 @@ public static class RandomEvents_Dev
                         ProjectScale.Large  => 3.9f,
                         _ => 5f
                     };
-                    DevelopmentManager.Instance.ExtendDevelopmentDuration(delayWeeks * secondsPerWeek);
+                    DevelopmentManager.Instance.ExtendDevelopmentDuration(delayWeeks * 2 * secondsPerWeek);
                 }
             };
+            RandomEventChartLoader.Apply(networkEvt, chart);
             pool.Add(networkEvt);
         }
 
         // ── 26~99% ──────────────────────────────────────────────
-        pool.Add(new RandomEventData
+        Add(pool, chart, new RandomEventData
         {
-            type        = RandomEventType.HackyCode,
-            title       = "야매코드",
-            description = "TODO",
-            weight      = mgr.hackyCodeWeight,
-            categoryMin = 2, categoryMax = 4,
-            onApply     = () => { /* TODO */ }
+            type    = RandomEventType.HackyCode,
+            // title       = "야매코드",
+            // description = "TODO",
+            // weight      = mgr.hackyCodeWeight,
+            // categoryMin = 2, categoryMax = 4,
+            onApply = () => { /* TODO */ }
         });
 
         // ── 51~99% ──────────────────────────────────────────────
-        pool.Add(new RandomEventData
+        Add(pool, chart, new RandomEventData
         {
-            type        = RandomEventType.YoutuberRequest,
-            title       = "유튜버 선공개 요청",
-            description = "TODO",
-            weight      = mgr.youtuberRequestWeight,
-            categoryMin = 3, categoryMax = 4,
-            onApply     = () => { /* TODO */ }
+            type    = RandomEventType.YoutuberRequest,
+            // title       = "유튜버 선공개 요청",
+            // description = "TODO",
+            // weight      = mgr.youtuberRequestWeight,
+            // categoryMin = 3, categoryMax = 4,
+            onApply = () => { /* TODO */ }
         });
+    }
+
+    static void Add(List<RandomEventData> pool,
+                    System.Collections.Generic.Dictionary<string, RandomEventChartRow> chart,
+                    RandomEventData evt)
+    {
+        RandomEventChartLoader.Apply(evt, chart);
+        pool.Add(evt);
     }
 }

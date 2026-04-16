@@ -30,6 +30,12 @@ public class RandomEventManager : MonoBehaviour
     // 진행도 도달 후 패트롤 도착을 기다리는 대기 이벤트
     private RandomEventData _pendingEvent = null;
 
+    // 패트롤 도착 후 1초 딜레이 + 이벤트 UI 표시 중 구간도 포함한 "이벤트 진행 중" 플래그
+    private bool _eventInProgress = false;
+
+    // _pendingEvent 이동 중 OR 도착 후 UI가 닫힐 때까지 true
+    public bool HasPendingEvent => _pendingEvent != null || _eventInProgress;
+
     // ── 디버그 ────────────────────────────────────────────────
     [Header("Debug - 테스트 이벤트")]
     public bool            debugMode      = false;
@@ -66,7 +72,7 @@ public class RandomEventManager : MonoBehaviour
     public float companyDinnerWeight     = 1f; // 오늘은 회식이다!
     public float bossGossipWeight        = 1f; // 사장님 뒷담까기
     // 1~74%
-    public float networkIssueWeight      = 1f; // 네트워크 끊김
+    public float networkIssueWeight      = 1.3f; // 네트워크 끊김
     // 26~99%
     public float hackyCodeWeight         = 1f; // 야매코드
     // 51~99%
@@ -94,7 +100,8 @@ public class RandomEventManager : MonoBehaviour
         if (Instance != null) { Destroy(gameObject); return; }
         Instance = this;
         DontDestroyOnLoad(gameObject);
-        RandomEvents_Condition.Register(_conditionEventPool, this);
+        // 조건 이벤트 등록은 차트 로드 후 BackendManager에서 InitConditionEvents() 호출
+        // (Awake 시점엔 Cache가 null이므로 여기서 등록하지 않음)
     }
 
     void Start()
@@ -127,6 +134,13 @@ public class RandomEventManager : MonoBehaviour
         }
     }
 
+    // ── 조건 이벤트 등록 (BackendManager에서 차트 로드 후 호출) ──
+    public void InitConditionEvents()
+    {
+        _conditionEventPool.Clear();
+        RandomEvents_Condition.Register(_conditionEventPool, this, RandomEventChartLoader.Cache);
+    }
+
     // ── 풀 구성만 (StartDevelopment/RestoreState 양쪽에서 호출) ──
     public void InitEvents()
     {
@@ -136,7 +150,7 @@ public class RandomEventManager : MonoBehaviour
         _scheduledEvents.Clear();
         _nextScheduledIndex = 0;
         _eventPool.Clear();
-        RandomEvents_Dev.Register(_eventPool, this);
+        RandomEvents_Dev.Register(_eventPool, this, RandomEventChartLoader.Cache);
     }
 
     // ── 신규 프로젝트 시작 시: 스케줄 결정 ──────────────────
@@ -304,6 +318,7 @@ public class RandomEventManager : MonoBehaviour
         _scheduledEvents.Clear();
         _nextScheduledIndex = 0;
         _pendingEvent       = null;
+        _eventInProgress    = false;
         InvestmentProgressUI.Instance?.Hide();
     }
 
@@ -471,10 +486,13 @@ public class RandomEventManager : MonoBehaviour
 
     System.Collections.IEnumerator ShowEventAfterDelay(RandomEventData evt, float delay)
     {
+        _eventInProgress = true;  // 도착~UI 닫힘까지 HasPendingEvent = true 유지
         yield return new UnityEngine.WaitForSeconds(delay);
         DevelopmentManager.Instance.PauseForEvent();
         RandomEventUI.Instance.Show(evt);
     }
+
+    public void ClearEventInProgress() => _eventInProgress = false;
 
     // ── 내부 헬퍼 ─────────────────────────────────────────────
     RandomEventData PickWeighted(List<RandomEventData> pool)

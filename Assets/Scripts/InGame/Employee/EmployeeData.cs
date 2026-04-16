@@ -35,7 +35,7 @@ public class EmployeeData
     public int perfectionSkill;
     public int salary;
     public int enhancementLevel;
-    public int satisfaction = 90;
+    public int satisfaction = 80;
 
     // ── 범위 수치 ─────────────────────────────
     public int developMin, developMax;
@@ -129,7 +129,7 @@ public class EmployeeData
         data.state = (EmployeeState)SafeInt(row, "state", 0);
         data.assignedProjectId = SafeString(row, "assignedProjectId", "");
         data.portraitId = SafeString(row, "portraitId", "portrait_secretary");
-        data.satisfaction = SafeInt(row, "satisfaction", 90);
+        data.satisfaction = SafeInt(row, "satisfaction", 80);
         data.assignedDeskId = SafeString(row, "assignedDeskId", "");
         data.masterEmployeeId = SafeString(row, "masterEmployeeId", "");
         data.enhancementRecordsJson = SafeString(row, "enhancementRecordsJson", "[]");
@@ -190,6 +190,7 @@ public class EmployeeData
         if (satisfaction >= 41) return 0.9f;
         return 0.8f;
     }
+
 
     public int EffectivePlanningSkill   => (int)(planningSkill    * GetSatisfactionMultiplier());
     public int EffectiveDevelopSkill    => (int)(developSkill     * GetSatisfactionMultiplier());
