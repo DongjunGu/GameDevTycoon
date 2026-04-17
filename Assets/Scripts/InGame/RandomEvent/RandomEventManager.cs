@@ -6,8 +6,9 @@ public class RandomEventManager : MonoBehaviour
 {
     public static RandomEventManager Instance { get; private set; }
 
-    private List<RandomEventData> _eventPool = new();
-    private List<RandomEventData> _conditionEventPool = new();
+    private List<RandomEventData>       _eventPool       = new();
+    private List<RandomEventChoiceData> _choiceEventPool = new();
+    private List<RandomEventData>       _conditionEventPool = new();
     private Queue<string> _nextWeekPopups = new();
 
     private struct RunEventPayload
@@ -23,18 +24,27 @@ public class RandomEventManager : MonoBehaviour
     {
         public float           triggerProgress; // 발동 진행도 (0~1)
         public RandomEventType eventType;
+        public bool            isChoiceEvent;
+    }
+
+    private struct SchedulableEntry
+    {
+        public RandomEventType type;
+        public float           weight;
+        public bool            isChoiceEvent;
     }
     private List<ScheduledEvent> _scheduledEvents = new();
     private int _nextScheduledIndex = 0;
 
     // 진행도 도달 후 패트롤 도착을 기다리는 대기 이벤트
-    private RandomEventData _pendingEvent = null;
+    private RandomEventData       _pendingEvent       = null;
+    private RandomEventChoiceData _pendingChoiceEvent = null;
 
     // 패트롤 도착 후 1초 딜레이 + 이벤트 UI 표시 중 구간도 포함한 "이벤트 진행 중" 플래그
     private bool _eventInProgress = false;
 
     // _pendingEvent 이동 중 OR 도착 후 UI가 닫힐 때까지 true
-    public bool HasPendingEvent => _pendingEvent != null || _eventInProgress;
+    public bool HasPendingEvent => _pendingEvent != null || _pendingChoiceEvent != null || _eventInProgress;
 
     // ── 디버그 ────────────────────────────────────────────────
     [Header("Debug - 테스트 이벤트")]
@@ -151,6 +161,8 @@ public class RandomEventManager : MonoBehaviour
         _nextScheduledIndex = 0;
         _eventPool.Clear();
         RandomEvents_Dev.Register(_eventPool, this, RandomEventChartLoader.Cache);
+        _choiceEventPool.Clear();
+        RandomEvents_Choice.Register(_choiceEventPool, this, RandomEventChoiceChartLoader.Cache);
     }
 
     // ── 신규 프로젝트 시작 시: 스케줄 결정 ──────────────────
@@ -162,15 +174,18 @@ public class RandomEventManager : MonoBehaviour
         // 디버그 모드: 지정 이벤트를 진행도 1%에 강제 배치
         if (debugMode)
         {
-            var debugEvt = _eventPool.Find(e => e.type == debugEventType);
-            if (debugEvt != null)
+            bool inChoice = _choiceEventPool.Exists(e => e.type == debugEventType);
+            bool inNormal = _eventPool.Exists(e => e.type == debugEventType);
+
+            if (inChoice || inNormal)
             {
                 _scheduledEvents.Add(new ScheduledEvent
                 {
                     triggerProgress = 0.01f,
-                    eventType       = debugEventType
+                    eventType       = debugEventType,
+                    isChoiceEvent   = inChoice
                 });
-                Debug.Log($"[Debug] 이벤트 강제 스케줄: {debugEventType} @ 1%");
+                Debug.Log($"[Debug] 이벤트 강제 스케줄: {debugEventType} @ 1% (choice={inChoice})");
             }
             else
             {
@@ -188,24 +203,28 @@ public class RandomEventManager : MonoBehaviour
         {
             if (UnityEngine.Random.value > chances[cat - 1]) continue;
 
-            // categoryMin~categoryMax 범위에 이 카테고리가 포함되고,
-            // 아직 다른 카테고리에서 선택되지 않은 이벤트만 풀에 포함
-            var pool = _eventPool
-                .Where(e => cat >= e.categoryMin && cat <= e.categoryMax
-                            && !usedTypes.Contains(e.type))
-                .ToList();
-            if (pool.Count == 0) continue;
+            // 두 풀을 합쳐 카테고리 범위와 중복 여부 확인
+            var combined = new List<SchedulableEntry>();
+            foreach (var e in _eventPool)
+                if (cat >= e.categoryMin && cat <= e.categoryMax && !usedTypes.Contains(e.type))
+                    combined.Add(new SchedulableEntry { type = e.type, weight = e.weight, isChoiceEvent = false });
+            foreach (var e in _choiceEventPool)
+                if (cat >= e.categoryMin && cat <= e.categoryMax && !usedTypes.Contains(e.type))
+                    combined.Add(new SchedulableEntry { type = e.type, weight = e.weight, isChoiceEvent = true });
+
+            if (combined.Count == 0) continue;
 
             var (min, max) = CategoryRanges[cat - 1];
             float progress = UnityEngine.Random.Range(min, max);
 
-            var selected = PickWeighted(pool);
+            var selected = PickWeightedEntry(combined);
             usedTypes.Add(selected.type);   // 이후 카테고리에서 영구 제외
 
             _scheduledEvents.Add(new ScheduledEvent
             {
                 triggerProgress = progress,
-                eventType       = selected.type
+                eventType       = selected.type,
+                isChoiceEvent   = selected.isChoiceEvent
             });
         }
 
@@ -223,13 +242,43 @@ public class RandomEventManager : MonoBehaviour
         if (_nextScheduledIndex >= _scheduledEvents.Count) return;
         if (progress < _scheduledEvents[_nextScheduledIndex].triggerProgress) return;
 
-        var evt = _eventPool.Find(e => e.type == _scheduledEvents[_nextScheduledIndex].eventType);
+        var scheduled = _scheduledEvents[_nextScheduledIndex];
         _nextScheduledIndex++;
+
+        // ── 선택지 이벤트 ───────────────────────────────────────
+        if (scheduled.isChoiceEvent)
+        {
+            var choiceData = _choiceEventPool.Find(e => e.type == scheduled.eventType);
+            if (choiceData == null) return;
+            RandomEventChoiceChartLoader.Apply(choiceData, scheduled.eventType.ToString(), RandomEventChoiceChartLoader.Cache);
+            choiceData.onSetup?.Invoke();
+
+            if (choiceData.requiresPatrol)
+            {
+                _pendingChoiceEvent = choiceData;
+                if (!string.IsNullOrEmpty(choiceData.targetEmployeeId) &&
+                    !string.IsNullOrEmpty(choiceData.requiredPatrolPointId))
+                {
+                    OfficeManager.Instance?.ForceCharacterToPatrolPoint(
+                        choiceData.targetEmployeeId, choiceData.requiredPatrolPointId, stayDuration: 1f);
+                }
+            }
+            else
+            {
+                DevelopmentManager.Instance.PauseForEvent();
+                RandomEventChoiceUI.Instance.Show(choiceData);
+            }
+            return;
+        }
+
+        // ── 일반 이벤트 ─────────────────────────────────────────
+        var evt = _eventPool.Find(e => e.type == scheduled.eventType);
         if (evt == null) return;
 
         if (evt.requiresPatrol)
         {
-            // onSetup 먼저 호출 → 직원 결정(targetEmployeeId 세팅)
+            // 차트 데이터 복원 후 onSetup 호출 (systemMessage 등 템플릿 초기화)
+            RandomEventChartLoader.Apply(evt, RandomEventChartLoader.Cache);
             evt.onSetup?.Invoke();
             _pendingEvent = evt;
 
@@ -243,7 +292,8 @@ public class RandomEventManager : MonoBehaviour
         }
         else
         {
-            // 패트롤 불필요 → 즉시 발동
+            // 차트 데이터 복원 후 onSetup 호출
+            RandomEventChartLoader.Apply(evt, RandomEventChartLoader.Cache);
             evt.onSetup?.Invoke();
             DevelopmentManager.Instance.PauseForEvent();
             RandomEventUI.Instance.Show(evt);
@@ -253,25 +303,55 @@ public class RandomEventManager : MonoBehaviour
     // ── 패트롤 도착 시 OfficeCharacter에서 호출 ──────────────
     public void OnPatrolArrived(string pointId = "", string employeeId = "")
     {
-        if (_pendingEvent == null) return;
+        // ── 일반 이벤트 ─────────────────────────────────────
+        if (_pendingEvent != null)
+        {
+            string requiredPoint = _pendingEvent.requiredPatrolPointId;
+            if (!string.IsNullOrEmpty(requiredPoint) && requiredPoint != pointId) goto checkChoice;
 
-        // 지점 ID 검사 (설정된 경우)
-        string requiredPoint = _pendingEvent.requiredPatrolPointId;
-        if (!string.IsNullOrEmpty(requiredPoint) && requiredPoint != pointId) return;
+            string requiredEmp = _pendingEvent.targetEmployeeId;
+            if (!string.IsNullOrEmpty(requiredEmp) && requiredEmp != employeeId) goto checkChoice;
 
-        // 직원 ID 검사 (설정된 경우)
-        string requiredEmp = _pendingEvent.targetEmployeeId;
-        if (!string.IsNullOrEmpty(requiredEmp) && requiredEmp != employeeId) return;
+            var evt = _pendingEvent;
+            _pendingEvent = null;
 
-        var evt = _pendingEvent;
-        _pendingEvent = null;
+            if (!string.IsNullOrEmpty(employeeId))
+            {
+                evt.targetEmployeeId = employeeId;
+                var arrivedEmp = EmployeeManager.Instance.GetEmployee(employeeId);
+                if (arrivedEmp != null) evt.portraitId = arrivedEmp.portraitId;
+            }
 
-        // onSetup은 requiresPatrol=true일 때 이미 호출됨 (progress 시점에 호출)
-        StartCoroutine(ShowEventAfterDelay(evt, 1f));
+            StartCoroutine(ShowEventAfterDelay(evt, 1f));
+            return;
+        }
+
+        checkChoice:
+        // ── 선택지 이벤트 ───────────────────────────────────
+        if (_pendingChoiceEvent != null)
+        {
+            string requiredPoint = _pendingChoiceEvent.requiredPatrolPointId;
+            if (!string.IsNullOrEmpty(requiredPoint) && requiredPoint != pointId) return;
+
+            string requiredEmp = _pendingChoiceEvent.targetEmployeeId;
+            if (!string.IsNullOrEmpty(requiredEmp) && requiredEmp != employeeId) return;
+
+            var choiceData = _pendingChoiceEvent;
+            _pendingChoiceEvent = null;
+
+            if (!string.IsNullOrEmpty(employeeId))
+            {
+                choiceData.targetEmployeeId = employeeId;
+                var arrivedEmp = EmployeeManager.Instance.GetEmployee(employeeId);
+                if (arrivedEmp != null) choiceData.portraitId = arrivedEmp.portraitId;
+            }
+
+            StartCoroutine(ShowChoiceEventAfterDelay(choiceData, 1f));
+        }
     }
 
     // ── 저장 ─────────────────────────────────────────────────
-    // 형식: "0.1234:Blackout|0.4321:TeamDinner"
+    // 형식: "0.1234:Blackout:0|0.4321:Birthday:1"  (마지막 필드: isChoiceEvent 0/1)
     public string GetScheduledEventsString()
     {
         if (_scheduledEvents.Count == 0) return "";
@@ -283,6 +363,8 @@ public class RandomEventManager : MonoBehaviour
                 System.Globalization.CultureInfo.InvariantCulture));
             sb.Append(':');
             sb.Append(s.eventType.ToString());
+            sb.Append(':');
+            sb.Append(s.isChoiceEvent ? '1' : '0');
         }
         return sb.ToString();
     }
@@ -299,13 +381,19 @@ public class RandomEventManager : MonoBehaviour
         foreach (var entry in data.Split('|'))
         {
             var parts = entry.Split(':');
-            if (parts.Length != 2) continue;
+            if (parts.Length < 2) continue;
             if (!float.TryParse(parts[0],
                     System.Globalization.NumberStyles.Float,
                     System.Globalization.CultureInfo.InvariantCulture,
                     out float prog)) continue;
             if (!System.Enum.TryParse(parts[1], out RandomEventType type)) continue;
-            _scheduledEvents.Add(new ScheduledEvent { triggerProgress = prog, eventType = type });
+            bool isChoice = parts.Length >= 3 && parts[2] == "1";
+            _scheduledEvents.Add(new ScheduledEvent
+            {
+                triggerProgress = prog,
+                eventType       = type,
+                isChoiceEvent   = isChoice
+            });
         }
     }
 
@@ -318,6 +406,7 @@ public class RandomEventManager : MonoBehaviour
         _scheduledEvents.Clear();
         _nextScheduledIndex = 0;
         _pendingEvent       = null;
+        _pendingChoiceEvent = null;
         _eventInProgress    = false;
         InvestmentProgressUI.Instance?.Hide();
     }
@@ -453,10 +542,22 @@ public class RandomEventManager : MonoBehaviour
         // 풀이 비어있으면 먼저 구성
         if (_eventPool.Count == 0)
         {
-            _eventPool.Clear();
-            RandomEvents_Dev.Register(_eventPool, this);
+            RandomEvents_Dev.Register(_eventPool, this, RandomEventChartLoader.Cache);
+            RandomEvents_Choice.Register(_choiceEventPool, this, RandomEventChoiceChartLoader.Cache);
         }
 
+        // ── 선택지 이벤트 우선 탐색 ─────────────────────────────
+        var choiceData = _choiceEventPool.Find(e => e.type == type);
+        if (choiceData != null)
+        {
+            RandomEventChoiceChartLoader.Apply(choiceData, type.ToString(), RandomEventChoiceChartLoader.Cache);
+            choiceData.onSetup?.Invoke();
+            DevelopmentManager.Instance.PauseForEvent();
+            RandomEventChoiceUI.Instance.Show(choiceData);
+            return;
+        }
+
+        // ── 일반 이벤트 ─────────────────────────────────────────
         var evt = _eventPool.Find(e => e.type == type);
         if (evt == null)
         {
@@ -466,6 +567,7 @@ public class RandomEventManager : MonoBehaviour
 
         if (evt.requiresPatrol)
         {
+            RandomEventChartLoader.Apply(evt, RandomEventChartLoader.Cache);
             evt.onSetup?.Invoke();
             _pendingEvent = evt;
 
@@ -478,6 +580,7 @@ public class RandomEventManager : MonoBehaviour
         }
         else
         {
+            RandomEventChartLoader.Apply(evt, RandomEventChartLoader.Cache);
             evt.onSetup?.Invoke();
             DevelopmentManager.Instance.PauseForEvent();
             RandomEventUI.Instance.Show(evt);
@@ -486,10 +589,18 @@ public class RandomEventManager : MonoBehaviour
 
     System.Collections.IEnumerator ShowEventAfterDelay(RandomEventData evt, float delay)
     {
-        _eventInProgress = true;  // 도착~UI 닫힘까지 HasPendingEvent = true 유지
+        _eventInProgress = true;
         yield return new UnityEngine.WaitForSeconds(delay);
         DevelopmentManager.Instance.PauseForEvent();
         RandomEventUI.Instance.Show(evt);
+    }
+
+    System.Collections.IEnumerator ShowChoiceEventAfterDelay(RandomEventChoiceData choiceData, float delay)
+    {
+        _eventInProgress = true;
+        yield return new UnityEngine.WaitForSeconds(delay);
+        DevelopmentManager.Instance.PauseForEvent();
+        RandomEventChoiceUI.Instance.Show(choiceData);
     }
 
     public void ClearEventInProgress() => _eventInProgress = false;
@@ -503,6 +614,22 @@ public class RandomEventManager : MonoBehaviour
         float roll       = UnityEngine.Random.value * total;
         float cumulative = 0f;
         RandomEventData selected = pool[pool.Count - 1];
+        foreach (var e in pool)
+        {
+            cumulative += e.weight;
+            if (roll <= cumulative) { selected = e; break; }
+        }
+        return selected;
+    }
+
+    SchedulableEntry PickWeightedEntry(List<SchedulableEntry> pool)
+    {
+        float total = 0f;
+        foreach (var e in pool) total += e.weight;
+
+        float roll       = UnityEngine.Random.value * total;
+        float cumulative = 0f;
+        SchedulableEntry selected = pool[pool.Count - 1];
         foreach (var e in pool)
         {
             cumulative += e.weight;

@@ -7,7 +7,7 @@ AnimatorState:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: kimWork
+  m_Name: otakuWork
   m_Speed: 0.5
   m_CycleOffset: 0
   m_Transitions: []
@@ -20,7 +20,7 @@ AnimatorState:
   m_MirrorParameterActive: 0
   m_CycleOffsetParameterActive: 0
   m_TimeParameterActive: 0
-  m_Motion: {fileID: 7400000, guid: ef748e37d4b2f5f4c89c2d5902b5670d, type: 2}
+  m_Motion: {fileID: 7400000, guid: 4254b8c9d0f193a40b66548091ab4657, type: 2}
   m_Tag: 
   m_SpeedParameter: 
   m_MirrorParameter: 
@@ -93,7 +93,7 @@ AnimatorState:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: ugiWalkFront
+  m_Name: otakuWalkFront
   m_Speed: 0.5
   m_CycleOffset: 0
   m_Transitions: []
@@ -106,7 +106,7 @@ AnimatorState:
   m_MirrorParameterActive: 0
   m_CycleOffsetParameterActive: 0
   m_TimeParameterActive: 0
-  m_Motion: {fileID: 7400000, guid: 2da86cdf50c8d3d4586f59b1e3f05404, type: 2}
+  m_Motion: {fileID: 7400000, guid: 5a3cbb9d490604341a0fce70492481b5, type: 2}
   m_Tag: 
   m_SpeedParameter: 
   m_MirrorParameter: 
@@ -146,7 +146,7 @@ AnimatorController:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: ugiAnimation
+  m_Name: otakuAnimation
   serializedVersion: 5
   m_AnimatorParameters:
   - m_Name: isFront
@@ -181,7 +181,7 @@ AnimatorState:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: ugiWalkBack
+  m_Name: otakuWalkBack
   m_Speed: 0.5
   m_CycleOffset: 0
   m_Transitions: []
@@ -194,7 +194,7 @@ AnimatorState:
   m_MirrorParameterActive: 0
   m_CycleOffsetParameterActive: 0
   m_TimeParameterActive: 0
-  m_Motion: {fileID: 7400000, guid: f7edb3bfa57ebb644aa1b5d725f1139d, type: 2}
+  m_Motion: {fileID: 7400000, guid: 0a6013e5b9c87cb4a9c45bafa9d410a9, type: 2}
   m_Tag: 
   m_SpeedParameter: 
   m_MirrorParameter: 

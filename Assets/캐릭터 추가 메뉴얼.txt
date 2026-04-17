@@ -1,0 +1,23 @@
+캐릭터 추가 메뉴얼
+
+저장 후
+Sprites - CharacterSprite - 캐릭터 폴더 생성
+
+애니메이션 - PPU 32, FilterMode Point(no filter), compression None 3개 설정
+Open Sprite Editor -> 각 애니메이션 pivot Custom X=0.5, Y=0.1 설정
+
+Hierarchy에 드래그 후 Animation - 해당 캐릭터 폴더에 애니메이션 저장
+
+기존 애니메이션 복사 후 이름,애니메이션 변경
+
+Resources-Character에 Prefab 복사
+Sprite Renderer 변경
+Animator 변경
+
+Resources-Potraits 추가
+
+EmployeeMasterData에 id 변경/추가
+
+뒤끝 EmployeeMasterData 차트 업로드/수정
+
+기존 Employee 삭제/수정

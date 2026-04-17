@@ -407,6 +407,12 @@ public class EmployeeManager : MonoBehaviour
                 emp.satisfaction = Mathf.Clamp(emp.satisfaction - dropAmount, 0, 100);
         }
 
+        foreach (var emp in ownedEmployees)
+        {
+            if (emp.statDebuffWeeksLeft > 0)
+                emp.statDebuffWeeksLeft--;
+        }
+
         CheckLowSatisfaction();
         RandomEventManager.Instance?.CheckConditionEvents();
     }
