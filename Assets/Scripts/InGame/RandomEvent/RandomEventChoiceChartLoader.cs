@@ -46,6 +46,7 @@ public static class RandomEventChoiceChartLoader
     public static void Load()
     {
         _cache = LoadFromServer();
+        Debug.Log($"[RandomEventChoiceChart] 로드 결과: {_cache.Count}개 / 키: {string.Join(", ", _cache.Keys)}");
     }
 
     // RandomEventChoiceData에 차트 값 적용

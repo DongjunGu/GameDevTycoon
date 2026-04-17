@@ -57,8 +57,9 @@ public class ProjectSaveManager : MonoBehaviour
     private float _loadedProgOffsetElapsedAtEvent;
     private float _loadedProgOffsetExtension;
     private float _loadedProgVisualOffset;
-    private bool _loadedPendingLeaderScore25;
-    private bool _loadedPendingLeaderScore75;
+    private bool   _loadedPendingLeaderScore25;
+    private bool   _loadedPendingLeaderScore75;
+    private string _loadedPendingEventData = "";
 
     private string _loadedProjectName = "프로젝트명";
     public string GetLoadedProjectName() => _loadedProjectName;
@@ -125,6 +126,7 @@ public class ProjectSaveManager : MonoBehaviour
         param.Add("progVisualOffset", dm.GetProgressVisualOffset());
         param.Add("pendingLeaderScore25", dm.IsPendingLeaderScore25);
         param.Add("pendingLeaderScore75", dm.IsPendingLeaderScore75);
+        param.Add("pendingEventData", RandomEventManager.Instance.GetPendingEventData());
 
         if (!string.IsNullOrEmpty(_rowInDate))
         {
@@ -225,6 +227,7 @@ public class ProjectSaveManager : MonoBehaviour
             _loadedProgVisualOffset = SafeFloat(row, "progVisualOffset", 0f);
             _loadedPendingLeaderScore25 = SafeBool(row, "pendingLeaderScore25", false);
             _loadedPendingLeaderScore75 = SafeBool(row, "pendingLeaderScore75", false);
+            _loadedPendingEventData     = SafeString(row, "pendingEventData", "");
 
             Debug.Log($"프로젝트 로드 완료: stage={_loadedStage} elapsed={_loadedElapsed:F1}");
             onComplete?.Invoke();
@@ -259,6 +262,7 @@ public class ProjectSaveManager : MonoBehaviour
         // ── RandomEvent 상태 복원 ──
         // InitEvents()가 RestoreState() 내부에서 이미 호출되어 풀이 구성된 상태
         RandomEventManager.Instance.RestoreSchedule(_loadedScheduledEvents, _loadedScheduledNextIndex);
+        RandomEventManager.Instance.RestorePendingEventFromSave(_loadedPendingEventData);
         RandomEventManager.Instance.InvestmentAccepted = _loadedInvestmentAccepted;
         RandomEventManager.Instance.InvestmentStat = _loadedInvestmentStat;
         RandomEventManager.Instance.InvestmentStatName = _loadedInvestmentStatName;
