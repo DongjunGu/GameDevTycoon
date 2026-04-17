@@ -371,6 +371,42 @@ public class RandomEventManager : MonoBehaviour
 
     public int GetNextScheduledIndex() => _nextScheduledIndex;
 
+    // 형식: "EventType:0" (일반) or "EventType:1" (선택지), 없으면 ""
+    public string GetPendingEventData()
+    {
+        if (_pendingEvent != null)       return $"{_pendingEvent.type}:0";
+        if (_pendingChoiceEvent != null) return $"{_pendingChoiceEvent.type}:1";
+        return "";
+    }
+
+    public void RestorePendingEventFromSave(string data)
+    {
+        if (string.IsNullOrEmpty(data)) return;
+        var parts = data.Split(':');
+        if (parts.Length < 2) return;
+        if (!System.Enum.TryParse(parts[0], out RandomEventType type)) return;
+        bool isChoice = parts[1] == "1";
+
+        if (isChoice)
+        {
+            var choiceData = _choiceEventPool.Find(e => e.type == type);
+            if (choiceData == null) return;
+            RandomEventChoiceChartLoader.Apply(choiceData, type.ToString(), RandomEventChoiceChartLoader.Cache);
+            choiceData.onSetup?.Invoke();
+            DevelopmentManager.Instance.PauseForEvent();
+            RandomEventChoiceUI.Instance.Show(choiceData);
+        }
+        else
+        {
+            var evt = _eventPool.Find(e => e.type == type);
+            if (evt == null) return;
+            RandomEventChartLoader.Apply(evt, RandomEventChartLoader.Cache);
+            evt.onSetup?.Invoke();
+            DevelopmentManager.Instance.PauseForEvent();
+            RandomEventUI.Instance.Show(evt);
+        }
+    }
+
     // ── 복원 ─────────────────────────────────────────────────
     public void RestoreSchedule(string data, int nextIndex)
     {
@@ -552,8 +588,22 @@ public class RandomEventManager : MonoBehaviour
         {
             RandomEventChoiceChartLoader.Apply(choiceData, type.ToString(), RandomEventChoiceChartLoader.Cache);
             choiceData.onSetup?.Invoke();
-            DevelopmentManager.Instance.PauseForEvent();
-            RandomEventChoiceUI.Instance.Show(choiceData);
+
+            if (choiceData.requiresPatrol)
+            {
+                _pendingChoiceEvent = choiceData;
+                if (!string.IsNullOrEmpty(choiceData.targetEmployeeId) &&
+                    !string.IsNullOrEmpty(choiceData.requiredPatrolPointId))
+                {
+                    OfficeManager.Instance?.ForceCharacterToPatrolPoint(
+                        choiceData.targetEmployeeId, choiceData.requiredPatrolPointId, stayDuration: 1f);
+                }
+            }
+            else
+            {
+                DevelopmentManager.Instance.PauseForEvent();
+                RandomEventChoiceUI.Instance.Show(choiceData);
+            }
             return;
         }
 
