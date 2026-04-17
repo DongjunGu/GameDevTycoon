@@ -1,5 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
+using TMPro;
+using System;
 
 /// <summary>
 /// patrol 테스트용 버튼 UI.
@@ -11,22 +13,33 @@ public class PatrolTestUI : MonoBehaviour
     public Button btnPatrolRandom;
     public int randomCount = 1;
 
-    [Header("특정 직원")]
-    public Button btnPatrolEmployee;
-    public string targetEmployeeId;
+    [Header("직원획득")]
+    public Button btnAquiredTest;
 
     [Header("다이얼로그 Patrol (랜덤 직원)")]
     public Button btnDialogPatrol;
- 
+
     [Header("이벤트 테스트")]
-    public Button btnTestNetworkIssue;
+    public TMP_Dropdown eventDropdown;
+    public Button btnTestEvent;
 
     void Start()
     {
         btnPatrolRandom?.onClick.AddListener(OnClickRandom);
-        btnPatrolEmployee?.onClick.AddListener(OnClickEmployee);
+        btnAquiredTest?.onClick.AddListener(OnClickAquired);
         btnDialogPatrol?.onClick.AddListener(OnClickDialogPatrol);
-        btnTestNetworkIssue?.onClick.AddListener(OnClickTestNetworkIssue);
+        btnTestEvent?.onClick.AddListener(OnClickTestEvent);
+
+        SetupEventDropdown();
+    }
+
+    void SetupEventDropdown()
+    {
+        if (eventDropdown == null) return;
+
+        eventDropdown.ClearOptions();
+        var names = Enum.GetNames(typeof(RandomEventType));
+        eventDropdown.AddOptions(new System.Collections.Generic.List<string>(names));
     }
 
     void OnClickRandom()
@@ -34,14 +47,10 @@ public class PatrolTestUI : MonoBehaviour
         OfficeManager.Instance?.TriggerPatrolRandom(randomCount);
     }
 
-    void OnClickEmployee()
+    void OnClickAquired()
     {
-        if (string.IsNullOrEmpty(targetEmployeeId))
-        {
-            Debug.LogWarning("[PatrolTest] targetEmployeeId가 비어있습니다.");
-            return;
-        }
-        OfficeManager.Instance?.TriggerPatrolForEmployee(targetEmployeeId);
+        EmployeeManager.Instance?.AcquireEmployee("otaku_01");
+        Debug.Log("직원 획득");
     }
 
     void OnClickDialogPatrol()
@@ -49,8 +58,13 @@ public class PatrolTestUI : MonoBehaviour
         OfficeManager.Instance?.TriggerDialogPatrolRandom();
     }
 
-    void OnClickTestNetworkIssue()
+    void OnClickTestEvent()
     {
-        RandomEventManager.Instance?.TriggerEventTest(RandomEventType.NetworkIssue);
+        if (eventDropdown == null) return;
+        var names = Enum.GetNames(typeof(RandomEventType));
+        if (eventDropdown.value >= names.Length) return;
+
+        if (Enum.TryParse(names[eventDropdown.value], out RandomEventType type))
+            RandomEventManager.Instance?.TriggerEventTest(type);
     }
 }

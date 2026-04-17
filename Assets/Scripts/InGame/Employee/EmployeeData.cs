@@ -36,6 +36,7 @@ public class EmployeeData
     public int salary;
     public int enhancementLevel;
     public int satisfaction = 80;
+    public int statDebuffWeeksLeft = 0; // 임시 능력치 -20% 디버프 남은 주차
 
     // ── 범위 수치 ─────────────────────────────
     public int developMin, developMax;
@@ -135,6 +136,7 @@ public class EmployeeData
         data.enhancementRecordsJson = SafeString(row, "enhancementRecordsJson", "[]");
         data.hiredYear = SafeInt(row, "hiredYear", 0);
         data.isFemale  = SafeBool(row, "isFemale", false);
+        data.statDebuffWeeksLeft = SafeInt(row, "statDebuffWeeksLeft", 0);
         return data;
     }
 
@@ -172,6 +174,7 @@ public class EmployeeData
         param.Add("enhancementRecordsJson", enhancementRecordsJson);
         param.Add("hiredYear", hiredYear);
         param.Add("isFemale",  isFemale);
+        param.Add("statDebuffWeeksLeft", statDebuffWeeksLeft);
         return param;
     }
 
@@ -191,11 +194,18 @@ public class EmployeeData
         return 0.8f;
     }
 
+    public void ApplyStatDebuff(int weeks)
+    {
+        statDebuffWeeksLeft = Mathf.Max(statDebuffWeeksLeft, weeks);
+    }
 
-    public int EffectivePlanningSkill   => (int)(planningSkill    * GetSatisfactionMultiplier());
-    public int EffectiveDevelopSkill    => (int)(developSkill     * GetSatisfactionMultiplier());
-    public int EffectiveArtSkill        => (int)(artSkill         * GetSatisfactionMultiplier());
-    public int EffectivePerfectionSkill => (int)(perfectionSkill  * GetSatisfactionMultiplier());
+    // 주 스탯 기준 20% 합연산 디버프량
+    public int GetStatDebuffAmount() => statDebuffWeeksLeft > 0 ? (int)(GetMainStat() * 0.2f) : 0;
+
+    public int EffectivePlanningSkill   => (int)(planningSkill   * GetSatisfactionMultiplier()) - (role == EmployeeRole.Planner    ? GetStatDebuffAmount() : 0);
+    public int EffectiveDevelopSkill    => (int)(developSkill    * GetSatisfactionMultiplier()) - (role == EmployeeRole.Programmer ? GetStatDebuffAmount() : 0);
+    public int EffectiveArtSkill        => (int)(artSkill        * GetSatisfactionMultiplier()) - (role == EmployeeRole.Artist     ? GetStatDebuffAmount() : 0);
+    public int EffectivePerfectionSkill => (int)(perfectionSkill * GetSatisfactionMultiplier());
 
     public string DevelopText()    => $"개발: {EffectiveDevelopSkill}";
     public string PlanningText()   => $"기획: {EffectivePlanningSkill}";
@@ -288,6 +298,14 @@ public class EmployeeData
         EmployeeRole.Artist     => artSkill,
         _ => 0
     };
+
+    // 원래 수치 대비 현재 수치로 색상 결정 (높으면 빨강, 낮으면 파랑, 같으면 흰색)
+    public static Color GetStatColor(int baseSkill, int effectiveSkill)
+    {
+        if (effectiveSkill > baseSkill) return Color.red;
+        if (effectiveSkill < baseSkill) return Color.blue;
+        return Color.white;
+    }
 
     // 만족도 변경 (1~100 클램프)
     public void ChangeSatisfaction(int amount)

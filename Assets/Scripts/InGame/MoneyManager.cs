@@ -84,6 +84,7 @@ public class MoneyManager : MonoBehaviour
 
     public void SaveMoney()
     {
+        Debug.Log($"[MoneyManager] SaveMoney 호출 — 현재 잔액: {_gold:N0}G");
         var param = new Param();
         param.Add("gold", _gold);
 
@@ -118,10 +119,10 @@ public class MoneyManager : MonoBehaviour
             return val;
         return fallback;
     }
-    public void ForceSpendGold(int amount)
+    public void ForceSpendGold(int amount, bool saveImmediately = true)
     {
         _gold -= amount;
-        SaveMoney();
+        if (saveImmediately) SaveMoney();
         HUDUI.Instance?.RefreshMoney();
         Debug.Log($"강제 차감: -{amount:N0}G / 잔액: {_gold:N0}G");
     }

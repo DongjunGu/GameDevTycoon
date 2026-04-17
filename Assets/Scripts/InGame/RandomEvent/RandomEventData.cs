@@ -37,6 +37,8 @@ public enum RandomEventType
     BossGossip,             // 사장님 뒷담까기              1~99%
     HackyCode,              // 야매코드                    26~99%
     YoutuberRequest,        // 유튜버 선공개 요청          51~99%
+    DrillEvent,             // 옆 사무실 공사               1~99%
+    ThiefEvent,             // 도둑이야!                    1~99%
 }
 
 [Serializable]
