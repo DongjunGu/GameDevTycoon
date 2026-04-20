@@ -21,14 +21,6 @@ public static class RandomEvents_Condition
     {
         Add(pool, chart, new RandomEventData
         {
-            type    = RandomEventType.EmployeeFight,
-            // title       = "직원 불화 발생!",
-            // description = "직원 두 명이 크게 싸웠습니다!\n누구의 편을 들겠습니까?",
-            onApply = () => mgr.TriggerEmployeeFightEvent()
-        });
-
-        Add(pool, chart, new RandomEventData
-        {
             type    = RandomEventType.BadCompany,
             // title       = "악명 높은 기업!",
             // description = "잦은 해고로 악명이 높아졌습니다!\n채용 조건이 불리해집니다.",

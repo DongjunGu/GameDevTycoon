@@ -19,6 +19,7 @@ public class RandomEventChoiceChartRow
     public string title;
     public string description;
     public string portraitId;
+    public string portraitId2;
     public float  weight;
     public int    categoryMin;
     public int    categoryMax;
@@ -32,6 +33,8 @@ public class RandomEventChoiceOptionRow
     public string label;
     public string resultTitle;
     public string resultDescription;
+    public string resultDescription2;
+    public string resultDescription3;
     public string resultSystemMessage;
 }
 
@@ -59,6 +62,7 @@ public static class RandomEventChoiceChartLoader
         if (!string.IsNullOrEmpty(row.title))       data.title       = row.title;
         if (!string.IsNullOrEmpty(row.description)) data.description = row.description;
         if (!string.IsNullOrEmpty(row.portraitId))  data.portraitId  = row.portraitId;
+        if (!string.IsNullOrEmpty(row.portraitId2)) data.portraitId2 = row.portraitId2;
         if (row.weight > 0)                         data.weight      = row.weight;
         if (row.categoryMin > 0)                    data.categoryMin = row.categoryMin;
         if (row.categoryMax > 0)                    data.categoryMax = row.categoryMax;
@@ -71,10 +75,17 @@ public static class RandomEventChoiceChartLoader
             var src = row.choices[i];
             var dst = data.choices[i];
 
-            if (!string.IsNullOrEmpty(src.label))               dst.buttonLabel           = src.label;
-            if (!string.IsNullOrEmpty(src.resultTitle))         dst.resultTitle           = src.resultTitle;
-            if (!string.IsNullOrEmpty(src.resultDescription))   dst.resultDescription     = src.resultDescription;
-            if (!string.IsNullOrEmpty(src.resultSystemMessage)) dst.resultSystemMessage   = src.resultSystemMessage;
+            if (!string.IsNullOrEmpty(src.label))               dst.buttonLabel         = src.label;
+            if (!string.IsNullOrEmpty(src.resultTitle))         dst.resultTitle         = src.resultTitle;
+            if (!string.IsNullOrEmpty(src.resultSystemMessage)) dst.resultSystemMessage = src.resultSystemMessage;
+
+            // resultDescriptions 리스트 구성
+            dst.resultDescriptions.Clear();
+            if (!string.IsNullOrEmpty(src.resultDescription))  dst.resultDescriptions.Add(src.resultDescription);
+            if (!string.IsNullOrEmpty(src.resultDescription2)) dst.resultDescriptions.Add(src.resultDescription2);
+            if (!string.IsNullOrEmpty(src.resultDescription3)) dst.resultDescriptions.Add(src.resultDescription3);
+            // 단일 항목이면 resultDescription도 유지 (기존 코드 호환)
+            if (dst.resultDescriptions.Count == 1) dst.resultDescription = dst.resultDescriptions[0];
         }
     }
 
@@ -129,6 +140,7 @@ public static class RandomEventChoiceChartLoader
                 title                 = S(row, "title"),
                 description           = S(row, "description"),
                 portraitId            = S(row, "portraitId"),
+                portraitId2           = S(row, "portraitId2"),
                 weight                = F(row, "weight"),
                 categoryMin           = N(row, "categoryMin"),
                 categoryMax           = N(row, "categoryMax"),
@@ -146,6 +158,8 @@ public static class RandomEventChoiceChartLoader
                     label               = label,
                     resultTitle         = S(row, $"choice{c}_resultTitle"),
                     resultDescription   = S(row, $"choice{c}_resultDescription"),
+                    resultDescription2  = S(row, $"choice{c}_resultDescription2"),
+                    resultDescription3  = S(row, $"choice{c}_resultDescription3"),
                     resultSystemMessage = S(row, $"choice{c}_systemMessage"),
                 });
             }

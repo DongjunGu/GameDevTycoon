@@ -44,17 +44,6 @@ public static class RandomEvents_Dev
             }
         });
 
-        // ── 탕수육 부먹 찍먹 싸움 ───────────────────────────────
-        Add(pool, chart, new RandomEventData
-        {
-            type    = RandomEventType.TangsuYukFight,
-            // title       = "탕수육 부먹 찍먹 싸움",
-            // description = "TODO",
-            // weight      = mgr.tangsuYukFightWeight,
-            // categoryMin = 4, categoryMax = 4,
-            onApply = () => { /* TODO */ }
-        });
-
         // ── 1~99% ───────────────────────────────────────────────
 
         // ── 나를 피하는 직원 ─────────────────────────────────────
@@ -67,6 +56,7 @@ public static class RandomEvents_Dev
                 onSetup = () =>
                 {
                     var employees = EmployeeManager.Instance.ownedEmployees;
+                    if (employees.Count == 0) { avoidEvt.cancelled = true; return; }
                     avoidEmp = employees[UnityEngine.Random.Range(0, employees.Count)];
                     avoidEvt.portraitId      = avoidEmp.portraitId;
                     avoidEvt.targetEmployeeId = avoidEmp.id;
@@ -94,6 +84,7 @@ public static class RandomEvents_Dev
                 onSetup = () =>
                 {
                     var employees = EmployeeManager.Instance.ownedEmployees;
+                    if (employees.Count == 0) { coldEvt.cancelled = true; return; }
                     coldEmp   = employees[UnityEngine.Random.Range(0, employees.Count)];
                     coldWeeks = UnityEngine.Random.Range(4, 9);
                     coldEvt.portraitId    = coldEmp.portraitId;
@@ -122,6 +113,7 @@ public static class RandomEvents_Dev
                 onSetup = () =>
                 {
                     var employees = EmployeeManager.Instance.ownedEmployees;
+                    if (employees.Count == 0) { badReviewEvt.cancelled = true; return; }
                     badReviewEmp = employees[UnityEngine.Random.Range(0, employees.Count)];
                     badReviewEvt.targetEmployeeId = badReviewEmp.id;
                     if (!string.IsNullOrEmpty(badReviewEvt.systemMessage))
@@ -137,17 +129,6 @@ public static class RandomEvents_Dev
             };
             Add(pool, chart, badReviewEvt);
         }
-
-        // ── 퇴근 요청 ────────────────────────────────────────────
-        Add(pool, chart, new RandomEventData
-        {
-            type    = RandomEventType.EarlyLeaveRequest,
-            // title       = "퇴근 요청",
-            // description = "TODO",
-            // weight      = mgr.earlyLeaveRequestWeight,
-            // categoryMin = 1, categoryMax = 4,
-            onApply = () => { /* TODO */ }
-        });
 
         // ── 장비 업그레이드 요청 ─────────────────────────────────
         Add(pool, chart, new RandomEventData
@@ -210,6 +191,7 @@ public static class RandomEvents_Dev
                 onSetup = () =>
                 {
                     var employees = EmployeeManager.Instance.ownedEmployees;
+                    if (employees.Count == 0) { networkEvt.cancelled = true; return; }
                     var emp = employees[UnityEngine.Random.Range(0, employees.Count)];
                     delayWeeks = ProjectSetupUI.SelectedScale switch
                     {
@@ -251,6 +233,7 @@ public static class RandomEvents_Dev
                 onSetup = () =>
                 {
                     var employees = EmployeeManager.Instance.ownedEmployees;
+                    if (employees.Count == 0) { drillEvt.cancelled = true; return; }
                     drillEmp   = employees[UnityEngine.Random.Range(0, employees.Count)];
                     drillWeeks = UnityEngine.Random.Range(4, 9);
                     drillEvt.portraitId       = drillEmp.portraitId;
@@ -291,17 +274,6 @@ public static class RandomEvents_Dev
         }
 
         // ── 26~99% ──────────────────────────────────────────────
-
-        // ── 야매코드 ─────────────────────────────────────────────
-        Add(pool, chart, new RandomEventData
-        {
-            type    = RandomEventType.HackyCode,
-            // title       = "야매코드",
-            // description = "TODO",
-            // weight      = mgr.hackyCodeWeight,
-            // categoryMin = 2, categoryMax = 4,
-            onApply = () => { /* TODO */ }
-        });
 
         // ── 51~99% ──────────────────────────────────────────────
 
