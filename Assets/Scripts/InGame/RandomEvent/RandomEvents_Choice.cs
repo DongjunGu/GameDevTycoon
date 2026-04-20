@@ -52,8 +52,8 @@ public static class RandomEvents_Choice
                     birthdayEvt.portraitId      = birthdayEmp.portraitId;
                     birthdayEvt.targetEmployeeId = birthdayEmp.id;
 
-                    // choice2 버튼 텍스트에 골드 금액 반영 (차트 텍스트 뒤에 비용 추가)
-                    int cost = Mathf.Max(1, (int)(birthdayEmp.salary * 0.03f));
+                    // choice2 버튼 텍스트에 골드 금액 반영 (전체 연봉 합계 3%)
+                    int cost = Mathf.Max(1, (int)(EmployeeManager.Instance.GetTotalSalary() * 0.03f));
                     birthdayEvt.choices[1].buttonLabel += $"-{cost}G";
 
                     // 플레이스홀더 치환 ({해당직원이름}, {비용})
@@ -68,6 +68,272 @@ public static class RandomEvents_Choice
             };
             Apply(birthdayEvt, chart);
             pool.Add(birthdayEvt);
+        }
+
+        // ── 장비 업그레이드 요청 ──────────────────────────────────
+        {
+            EmployeeData equipEmp = null;
+            RandomEventChoiceData equipEvt = null;
+            int equipCostSnapshot = 0;
+            equipEvt = new RandomEventChoiceData
+            {
+                type        = RandomEventType.EquipmentUpgrade,
+                weight      = 1f,
+                categoryMin = 1,
+                categoryMax = 4,
+                requiresPatrol        = true,
+                requiredPatrolPointId = "master_desk",
+                choices = new List<RandomEventChoiceOption>
+                {
+                    // ── 선택지 1: 구매 ───────────────────────────
+                    new RandomEventChoiceOption
+                    {
+                        onChoose = () =>
+                        {
+                            var emp = EmployeeManager.Instance.GetEmployee(equipEvt.targetEmployeeId);
+                            if (emp == null) return;
+
+                            MoneyManager.Instance.ForceSpendGold(equipCostSnapshot, saveImmediately: false);
+
+                            int buffWeeks = UnityEngine.Random.Range(4, 9);
+                            emp.ApplyStatBuff(buffWeeks);
+
+                            string weeks = buffWeeks.ToString();
+                            equipEvt.choices[0].resultSystemMessage =
+                                equipEvt.choices[0].resultSystemMessage?.Replace("{주수}", weeks);
+                        }
+                    },
+                    // ── 선택지 2: 거절 ───────────────────────────
+                    new RandomEventChoiceOption
+                    {
+                        onChoose = () => { }
+                    }
+                }
+            };
+            Apply(equipEvt, chart);
+
+            string equipLabel0Template  = equipEvt.choices[0].buttonLabel ?? "";
+            string equipSystem0Template = equipEvt.choices[0].resultSystemMessage ?? "";
+
+            equipEvt.onSetup = () =>
+            {
+                var candidates = EmployeeManager.Instance.ownedEmployees
+                    .FindAll(e => e.role == EmployeeRole.Planner ||
+                                  e.role == EmployeeRole.Programmer ||
+                                  e.role == EmployeeRole.Artist);
+                if (candidates.Count == 0) { equipEvt.cancelled = true; return; }
+
+                equipEmp = candidates[UnityEngine.Random.Range(0, candidates.Count)];
+                equipEvt.portraitId       = equipEmp.portraitId;
+                equipEvt.targetEmployeeId = equipEmp.id;
+
+                equipEvt.description = equipEmp.role == EmployeeRole.Artist
+                    ? "사장님, 태블릿 하나 새로 사주시죠"
+                    : "사장님, 컴퓨터 새로 하나 바꿔주시죠";
+
+                equipCostSnapshot = Mathf.Max(1, (int)(EmployeeManager.Instance.GetTotalSalary() * 0.03f));
+
+                equipEvt.choices[0].buttonLabel =
+                    equipLabel0Template.Replace("{N}", equipCostSnapshot.ToString());
+                equipEvt.choices[0].resultSystemMessage =
+                    equipSystem0Template.Replace("{해당직원이름}", equipEmp.employeeName);
+            };
+            pool.Add(equipEvt);
+        }
+
+        // ── 오늘은 회식이다! ──────────────────────────────────────
+        {
+            RandomEventChoiceData dinnerEvt = null;
+            int    dinnerCost5    = 0;
+            int    dinnerCost10   = 0;
+            string dinnerDesc2Happy = "";
+            string dinnerDesc2Meh   = "";
+            dinnerEvt = new RandomEventChoiceData
+            {
+                type        = RandomEventType.CompanyDinner,
+                weight      = 1f,
+                categoryMin = 1,
+                categoryMax = 4,
+                choices = new List<RandomEventChoiceOption>
+                {
+                    // ── 선택지 1: 거절 ───────────────────────────
+                    new RandomEventChoiceOption
+                    {
+                        onChoose = () =>
+                            EmployeeManager.Instance.ChangeAllSatisfaction(-5)
+                    },
+                    // ── 선택지 2: 삼겹살 (50% 확률로 만족도 +5) ──
+                    new RandomEventChoiceOption
+                    {
+                        onChoose = () =>
+                        {
+                            MoneyManager.Instance.ForceSpendGold(dinnerCost5, saveImmediately: false);
+
+                            bool happy = UnityEngine.Random.value < 0.5f;
+                            if (happy)
+                                EmployeeManager.Instance.ChangeAllSatisfaction(5);
+
+                            // 결과에 맞는 설명과 시스템 문구를 직접 세팅
+                            dinnerEvt.choices[1].resultDescriptions.Clear();
+                            dinnerEvt.choices[1].resultDescriptions.Add(
+                                happy ? dinnerDesc2Happy : dinnerDesc2Meh);
+                            dinnerEvt.choices[1].resultSystemMessage = happy
+                                ? $"전 직원 만족도 +5 / -{dinnerCost5}G"
+                                : $"-{dinnerCost5}G";
+                        }
+                    },
+                    // ── 선택지 3: 소고기 ─────────────────────────
+                    new RandomEventChoiceOption
+                    {
+                        onChoose = () =>
+                        {
+                            MoneyManager.Instance.ForceSpendGold(dinnerCost10, saveImmediately: false);
+                            EmployeeManager.Instance.ChangeAllSatisfaction(10);
+                        }
+                    }
+                }
+            };
+            Apply(dinnerEvt, chart);
+
+            string dinnerLabel1Template  = dinnerEvt.choices[1].buttonLabel ?? "";
+            string dinnerLabel2Template  = dinnerEvt.choices[2].buttonLabel ?? "";
+            string dinnerSystem2Template = dinnerEvt.choices[2].resultSystemMessage ?? "";
+            // 삼겹살 결과 문구 두 가지 캡처 (CSV resultDescription / resultDescription2)
+            dinnerDesc2Happy = dinnerEvt.choices[1].resultDescriptions.Count > 0
+                ? dinnerEvt.choices[1].resultDescriptions[0] : "";
+            dinnerDesc2Meh   = dinnerEvt.choices[1].resultDescriptions.Count > 1
+                ? dinnerEvt.choices[1].resultDescriptions[1] : "";
+
+            dinnerEvt.onSetup = () =>
+            {
+                int total    = EmployeeManager.Instance.GetTotalSalary();
+                dinnerCost5  = Mathf.Max(1, (int)(total * 0.05f));
+                dinnerCost10 = Mathf.Max(1, (int)(total * 0.10f));
+
+                dinnerEvt.choices[1].buttonLabel = dinnerLabel1Template.Replace("{N}", dinnerCost5.ToString());
+                dinnerEvt.choices[2].buttonLabel = dinnerLabel2Template.Replace("{N}", dinnerCost10.ToString());
+                // 삼겹살 resultDescriptions 복원 (onChoose에서 덮어쓰기 때문에 매번 복원)
+                dinnerEvt.choices[1].resultDescriptions.Clear();
+                dinnerEvt.choices[1].resultDescriptions.Add(dinnerDesc2Happy);
+                dinnerEvt.choices[1].resultDescriptions.Add(dinnerDesc2Meh);
+                dinnerEvt.choices[2].resultSystemMessage = dinnerSystem2Template.Replace("{비용}", dinnerCost10.ToString());
+            };
+            pool.Add(dinnerEvt);
+        }
+
+        // ── 사장님 뒷담까기 ──────────────────────────────────────
+        {
+            EmployeeData gossiperEmp = null;
+            RandomEventChoiceData bossGossipEvt = null;
+            bossGossipEvt = new RandomEventChoiceData
+            {
+                type        = RandomEventType.BossGossip,
+                weight      = 1f,
+                categoryMin = 1,
+                categoryMax = 4,
+                choices = new List<RandomEventChoiceOption>
+                {
+                    // ── 선택지 1: 간식 ───────────────────────────
+                    new RandomEventChoiceOption
+                    {
+                        onChoose = () => EmployeeManager.Instance.ChangeAllSatisfaction(5)
+                    },
+                    // ── 선택지 2: 면담 ───────────────────────────
+                    new RandomEventChoiceOption
+                    {
+                        onChoose = () =>
+                        {
+                            var emp = EmployeeManager.Instance.GetEmployee(gossiperEmp?.id);
+                            if (emp == null) return;
+                            emp.ChangeSatisfaction(-10);
+                            OfficeManager.Instance?.ShowStatPopup(emp.id, "만족도 -10", new Color(0.4f, 0.6f, 1f));
+                        }
+                    }
+                }
+            };
+            Apply(bossGossipEvt, chart);
+
+            string gossipDescTemplate    = bossGossipEvt.description ?? "";
+            string gossipSystem1Template = bossGossipEvt.choices[1].resultSystemMessage ?? "";
+
+            bossGossipEvt.onSetup = () =>
+            {
+                var employees = EmployeeManager.Instance.ownedEmployees;
+                if (employees.Count == 0) { bossGossipEvt.cancelled = true; return; }
+                gossiperEmp = employees[UnityEngine.Random.Range(0, employees.Count)];
+
+                bossGossipEvt.description =
+                    gossipDescTemplate.Replace("{직원이름}", gossiperEmp.employeeName);
+                bossGossipEvt.choices[1].resultSystemMessage =
+                    gossipSystem1Template.Replace("{직원이름}", gossiperEmp.employeeName);
+            };
+            pool.Add(bossGossipEvt);
+        }
+
+        // ── 유튜버 선공개 요청 ────────────────────────────────────
+        {
+            RandomEventChoiceData youtuberEvt = null;
+            youtuberEvt = new RandomEventChoiceData
+            {
+                type        = RandomEventType.YoutuberRequest,
+                weight      = 1f,
+                categoryMin = 3,
+                categoryMax = 4,
+                choices = new List<RandomEventChoiceOption>
+                {
+                    // ── 선택지 1: 전달 ───────────────────────────
+                    new RandomEventChoiceOption
+                    {
+                        onChoose = () =>
+                        {
+                            int pop = GenrePopularityManager.Instance != null
+                                ? GenrePopularityManager.Instance.GetPopularity(ProjectSetupUI.SelectedGenre)
+                                : 2;
+
+                            if (pop >= 3)
+                            {
+                                mgr.YoutuberSalesBonus = 1.05f;
+                                youtuberEvt.choices[0].resultDescriptions.Clear();
+                                youtuberEvt.choices[0].resultDescriptions.Add(
+                                    "인기있는 장르여서 좋은 반응이 나오고 있습니다.");
+                                youtuberEvt.choices[0].resultSystemMessage =
+                                    "이번 게임의 기대감이 오르고 있습니다.";
+                            }
+                            else if (pop == 2)
+                            {
+                                mgr.YoutuberSalesBonus = 1.0f;
+                                youtuberEvt.choices[0].resultDescriptions.Clear();
+                                youtuberEvt.choices[0].resultDescriptions.Add(
+                                    "흐음 애매한 반응이네요 이걸 좋아해야 할지 안 좋아해야 할지…");
+                                youtuberEvt.choices[0].resultSystemMessage = "";
+                            }
+                            else
+                            {
+                                mgr.YoutuberSalesBonus = 0.95f;
+                                youtuberEvt.choices[0].resultDescriptions.Clear();
+                                youtuberEvt.choices[0].resultDescriptions.Add(
+                                    "인기없는 장르라서 그런가… 다들 노잼이라는 반응이 나오고 있습니다.");
+                                youtuberEvt.choices[0].resultSystemMessage =
+                                    "이번 게임의 기대감이 떨어지고 있습니다.";
+                            }
+                        }
+                    },
+                    // ── 선택지 2: 패스 ───────────────────────────
+                    new RandomEventChoiceOption
+                    {
+                        onChoose = () => { }
+                    }
+                }
+            };
+            Apply(youtuberEvt, chart);
+
+            youtuberEvt.onSetup = () =>
+            {
+                // 선택지1 resultDescriptions는 onChoose에서 결정되므로 매번 초기화
+                youtuberEvt.choices[0].resultDescriptions.Clear();
+                youtuberEvt.choices[0].resultSystemMessage = "";
+            };
+            pool.Add(youtuberEvt);
         }
 
         // ── 두 직원 싸움 계열 (EmployeeFight wrapper) ─────────────
@@ -145,7 +411,13 @@ public static class RandomEvents_Choice
                             emp.ChangeSatisfaction(5);
                             OfficeManager.Instance?.ShowStatPopup(emp.id, "만족도 +5", new Color(1f, 0.4f, 0.4f));
 
-                            int delayWeeks = UnityEngine.Random.Range(1, 4); // 1~3주 랜덤
+                            int delayWeeks = ProjectSetupUI.SelectedScale switch
+                            {
+                                ProjectScale.Small  => 1,
+                                ProjectScale.Medium => 2,
+                                ProjectScale.Large  => 3,
+                                _ => 1
+                            };
                             float secondsPerWeek = ProjectSetupUI.SelectedScale switch
                             {
                                 ProjectScale.Small  => 5f,
@@ -154,19 +426,28 @@ public static class RandomEvents_Choice
                                 _ => 5f
                             };
                             DevelopmentManager.Instance.ExtendDevelopmentDuration(delayWeeks * 2 * secondsPerWeek);
+
+                            string weeks = delayWeeks.ToString();
+                            earlyLeaveEvt.choices[1].resultSystemMessage =
+                                earlyLeaveEvt.choices[1].resultSystemMessage?.Replace("{주수}", weeks);
                         }
                     }
-                },
-                onSetup = () =>
-                {
-                    var employees = EmployeeManager.Instance.ownedEmployees;
-                    if (employees.Count == 0) { earlyLeaveEvt.cancelled = true; return; }
-                    earlyLeaveEmp = employees[UnityEngine.Random.Range(0, employees.Count)];
-                    earlyLeaveEvt.portraitId      = earlyLeaveEmp.portraitId;
-                    earlyLeaveEvt.targetEmployeeId = earlyLeaveEmp.id;
                 }
             };
             Apply(earlyLeaveEvt, chart);
+
+            string earlyLeaveSystem2Template = earlyLeaveEvt.choices[1].resultSystemMessage ?? "";
+
+            earlyLeaveEvt.onSetup = () =>
+            {
+                var employees = EmployeeManager.Instance.ownedEmployees;
+                if (employees.Count == 0) { earlyLeaveEvt.cancelled = true; return; }
+                earlyLeaveEmp = employees[UnityEngine.Random.Range(0, employees.Count)];
+                earlyLeaveEvt.portraitId       = earlyLeaveEmp.portraitId;
+                earlyLeaveEvt.targetEmployeeId = earlyLeaveEmp.id;
+
+                earlyLeaveEvt.choices[1].resultSystemMessage = earlyLeaveSystem2Template;
+            };
             pool.Add(earlyLeaveEvt);
         }
 
@@ -204,7 +485,13 @@ public static class RandomEvents_Choice
                     {
                         onChoose = () =>
                         {
-                            int delayWeeks = UnityEngine.Random.Range(1, 4);
+                            int delayWeeks = ProjectSetupUI.SelectedScale switch
+                            {
+                                ProjectScale.Small  => 1,
+                                ProjectScale.Medium => 2,
+                                ProjectScale.Large  => 3,
+                                _ => 1
+                            };
                             float secondsPerWeek = ProjectSetupUI.SelectedScale switch
                             {
                                 ProjectScale.Small  => 5f,

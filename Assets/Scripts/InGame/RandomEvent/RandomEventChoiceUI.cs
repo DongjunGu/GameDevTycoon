@@ -122,10 +122,10 @@ public class RandomEventChoiceUI : MonoBehaviour
         GameTimeManager.Instance.SaveGameTime();
         EmployeeManager.Instance.SaveAllEmployees();
 
-        DevelopmentManager.Instance.ResumeFromEvent();
-
         if (!string.IsNullOrEmpty(_chosenSystemMessage))
-            AlertUI.Instance.Show(_chosenSystemMessage);
+            AlertUI.Instance.Show(_chosenSystemMessage, () => DevelopmentManager.Instance.ResumeFromEvent());
+        else
+            DevelopmentManager.Instance.ResumeFromEvent();
     }
 
     // ── 선택지 ──────────────────────────────────────────────────

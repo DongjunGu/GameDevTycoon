@@ -221,9 +221,7 @@ public class GameTimeManager : MonoBehaviour
     }
     void PayAnnualSalary()
     {
-        int totalSalary = 0;
-        foreach (var employee in EmployeeManager.Instance.ownedEmployees)
-            totalSalary += employee.salary;
+        int totalSalary = EmployeeManager.Instance.GetTotalSalary();
         if (!MoneyManager.Instance.CanAfford(totalSalary))
         {
             GameUIHelper.ShowLoanPrompt();

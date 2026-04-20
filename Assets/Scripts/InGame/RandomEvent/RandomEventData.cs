@@ -4,7 +4,7 @@ public enum RandomEventType
 {
     // ── 기존 (내부 시스템용으로 유지) ─────────────────────────
     Blackout,
-    TeamDinner,
+
     DevBoost,
     PlanBoost,
     ArtBoost,
