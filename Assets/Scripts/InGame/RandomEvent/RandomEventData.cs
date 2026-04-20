@@ -25,7 +25,9 @@ public enum RandomEventType
     // ── 개발 중 랜덤 이벤트 (신규) ────────────────────────────
     NetworkIssue,           // 네트워크 끊김          1~74%
     CompetitorGame,         // 대형 게임사의 경쟁작 출시   1~99%
-    TangsuYukFight,         // 탕수육 부먹 찍먹 싸움      1~99%
+    TangsuYukFight,         // 탕수육 부먹 찍먹 싸움      76~99%
+    AntiMintchoc,           // 반민초파의 공격             76~99%
+    AcWar,                  // 에어컨 전쟁                 76~99%
     AvoidingEmployee,       // 나를 피하는 직원            1~99%
     Cold,                   // 감기                        1~99%
     BadReview,              // 이유 없는 별점 1점           1~99%
@@ -62,6 +64,9 @@ public class RandomEventData
     public bool   requiresPatrol        = false; // true면 진행도 도달 후 패트롤 도착 시 발동
     public string requiredPatrolPointId = "";    // 비어있으면 모든 지점에서 발동, 설정 시 해당 pointId에서만 발동
     public string targetEmployeeId      = "";    // onSetup에서 세팅 — 해당 직원이 도착해야 발동, 비어있으면 누구든 OK
+
+    // onSetup에서 true로 설정하면 이벤트 전체 스킵
+    public bool cancelled = false;
 
     // Show() 직전에 호출 — portraitId·description 등 동적 내용 세팅용
     public System.Action onSetup;

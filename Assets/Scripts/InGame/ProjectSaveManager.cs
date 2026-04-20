@@ -60,6 +60,12 @@ public class ProjectSaveManager : MonoBehaviour
     private bool   _loadedPendingLeaderScore25;
     private bool   _loadedPendingLeaderScore75;
     private string _loadedPendingEventData = "";
+    private float  _loadedLeaderDevelopBonusTotal;
+    private float  _loadedLeaderPlanningBonusTotal;
+    private float  _loadedLeaderArtBonusTotal;
+    private float  _loadedPendingHackyCodePenalty;
+    private string _loadedPendingHackyCodePortraitId = "";
+    private int    _loadedPendingHackyCodeWeeksLeft;
 
     private string _loadedProjectName = "프로젝트명";
     public string GetLoadedProjectName() => _loadedProjectName;
@@ -127,6 +133,12 @@ public class ProjectSaveManager : MonoBehaviour
         param.Add("pendingLeaderScore25", dm.IsPendingLeaderScore25);
         param.Add("pendingLeaderScore75", dm.IsPendingLeaderScore75);
         param.Add("pendingEventData", RandomEventManager.Instance.GetPendingEventData());
+        param.Add("leaderDevelopBonusTotal", dm.LeaderDevelopBonusTotal);
+        param.Add("leaderPlanningBonusTotal", dm.LeaderPlanningBonusTotal);
+        param.Add("leaderArtBonusTotal", dm.LeaderArtBonusTotal);
+        param.Add("pendingHackyCodePenalty", RandomEventManager.Instance.PendingHackyCodePenalty);
+        param.Add("pendingHackyCodePortraitId", RandomEventManager.Instance.PendingHackyCodePortraitId);
+        param.Add("pendingHackyCodeWeeksLeft", RandomEventManager.Instance.PendingHackyCodeWeeksLeft);
 
         if (!string.IsNullOrEmpty(_rowInDate))
         {
@@ -225,9 +237,15 @@ public class ProjectSaveManager : MonoBehaviour
             _loadedProgOffsetElapsedAtEvent = SafeFloat(row, "progOffsetElapsedAtEvent", 0f);
             _loadedProgOffsetExtension = SafeFloat(row, "progOffsetExtension", 0f);
             _loadedProgVisualOffset = SafeFloat(row, "progVisualOffset", 0f);
-            _loadedPendingLeaderScore25 = SafeBool(row, "pendingLeaderScore25", false);
-            _loadedPendingLeaderScore75 = SafeBool(row, "pendingLeaderScore75", false);
-            _loadedPendingEventData     = SafeString(row, "pendingEventData", "");
+            _loadedPendingLeaderScore25     = SafeBool(row, "pendingLeaderScore25", false);
+            _loadedPendingLeaderScore75     = SafeBool(row, "pendingLeaderScore75", false);
+            _loadedPendingEventData         = SafeString(row, "pendingEventData", "");
+            _loadedLeaderDevelopBonusTotal       = SafeFloat(row, "leaderDevelopBonusTotal", 0f);
+            _loadedLeaderPlanningBonusTotal      = SafeFloat(row, "leaderPlanningBonusTotal", 0f);
+            _loadedLeaderArtBonusTotal           = SafeFloat(row, "leaderArtBonusTotal", 0f);
+            _loadedPendingHackyCodePenalty       = SafeFloat(row, "pendingHackyCodePenalty", 0f);
+            _loadedPendingHackyCodePortraitId    = SafeString(row, "pendingHackyCodePortraitId", "");
+            _loadedPendingHackyCodeWeeksLeft     = SafeInt(row, "pendingHackyCodeWeeksLeft", 0);
 
             Debug.Log($"프로젝트 로드 완료: stage={_loadedStage} elapsed={_loadedElapsed:F1}");
             onComplete?.Invoke();
@@ -263,6 +281,12 @@ public class ProjectSaveManager : MonoBehaviour
         // InitEvents()가 RestoreState() 내부에서 이미 호출되어 풀이 구성된 상태
         RandomEventManager.Instance.RestoreSchedule(_loadedScheduledEvents, _loadedScheduledNextIndex);
         RandomEventManager.Instance.RestorePendingEventFromSave(_loadedPendingEventData);
+        DevelopmentManager.Instance.SetLeaderDevelopBonusTotal(_loadedLeaderDevelopBonusTotal);
+        DevelopmentManager.Instance.SetLeaderPlanningBonusTotal(_loadedLeaderPlanningBonusTotal);
+        DevelopmentManager.Instance.SetLeaderArtBonusTotal(_loadedLeaderArtBonusTotal);
+        RandomEventManager.Instance.PendingHackyCodePenalty    = _loadedPendingHackyCodePenalty;
+        RandomEventManager.Instance.PendingHackyCodePortraitId = _loadedPendingHackyCodePortraitId;
+        RandomEventManager.Instance.PendingHackyCodeWeeksLeft  = _loadedPendingHackyCodeWeeksLeft;
         RandomEventManager.Instance.InvestmentAccepted = _loadedInvestmentAccepted;
         RandomEventManager.Instance.InvestmentStat = _loadedInvestmentStat;
         RandomEventManager.Instance.InvestmentStatName = _loadedInvestmentStatName;

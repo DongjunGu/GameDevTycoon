@@ -34,6 +34,19 @@ public class DevelopmentManager : MonoBehaviour
     public bool IsTriggered75 => _triggered75;
     public bool IsPendingLeaderScore25 => _pendingLeaderScore25;
     public bool IsPendingLeaderScore75 => _pendingLeaderScore75;
+    public float LeaderDevelopBonusTotal  => _leaderDevelopBonusTotal;
+    public float LeaderPlanningBonusTotal => _leaderPlanningBonusTotal;
+    public float LeaderArtBonusTotal      => _leaderArtBonusTotal;
+    public void SetLeaderDevelopBonusTotal(float val)  => _leaderDevelopBonusTotal  = val;
+    public void SetLeaderPlanningBonusTotal(float val) => _leaderPlanningBonusTotal = val;
+    public void SetLeaderArtBonusTotal(float val)      => _leaderArtBonusTotal      = val;
+    public float GetLeaderBonusByRole(EmployeeRole role) => role switch
+    {
+        EmployeeRole.Planner    => _leaderPlanningBonusTotal,
+        EmployeeRole.Programmer => _leaderDevelopBonusTotal,
+        EmployeeRole.Artist     => _leaderArtBonusTotal,
+        _ => 0f
+    };
     public ProjectStage CurrentStage { get; set; } = ProjectStage.None;
 
     private float _elapsed;
@@ -44,6 +57,9 @@ public class DevelopmentManager : MonoBehaviour
     private bool _pendingLeaderScore25;
     private bool _pendingLeaderScore75;
     private bool _pendingDevelopmentComplete;
+    private float _leaderDevelopBonusTotal;
+    private float _leaderPlanningBonusTotal;
+    private float _leaderArtBonusTotal;
 
     // 네트워크 이벤트 등 duration 연장 시 진행도 표시 보정
     private float _progressVisualOffset = 0f;      // 현재 남은 시각 보정값
@@ -522,6 +538,9 @@ public class DevelopmentManager : MonoBehaviour
         int n = CalcLeaderTickCount(skill);
 
         float total = CalcLeaderScore(skill, n);
+        if (type == LeaderType.Programmer) _leaderDevelopBonusTotal  = total;
+        if (type == LeaderType.Planner)    _leaderPlanningBonusTotal = total;
+        if (type == LeaderType.Artist)     _leaderArtBonusTotal      = total;
         int weightSum = n * (n + 1) / 2;
 
         int[] weights = new int[n];
@@ -946,6 +965,9 @@ public class DevelopmentManager : MonoBehaviour
         _pendingLeaderScore25 = false;
         _pendingLeaderScore75 = false;
         _pendingDevelopmentComplete = false;
+        _leaderDevelopBonusTotal  = 0f;
+        _leaderPlanningBonusTotal = 0f;
+        _leaderArtBonusTotal      = 0f;
         BugPenalty = 0f;
         BugEventBonus = 0f;
         _patrolStarted = false;

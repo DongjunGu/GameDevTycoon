@@ -103,6 +103,9 @@ public class RandomEventManager : MonoBehaviour
     public bool   InvestmentAccepted    { get; set; } = false;
     public string InvestmentStat        { get; set; } = "";
     public string InvestmentStatName    { get; set; } = "";
+    public float  PendingHackyCodePenalty    { get; set; } = 0f;
+    public string PendingHackyCodePortraitId { get; set; } = "";
+    public int    PendingHackyCodeWeeksLeft  { get; set; } = 0;
 
     // ─────────────────────────────────────────────────────────
     void Awake()
@@ -130,6 +133,25 @@ public class RandomEventManager : MonoBehaviour
     {
         while (_nextWeekPopups.Count > 0)
             AlertUI.Instance.Show(_nextWeekPopups.Dequeue());
+
+        if (PendingHackyCodePenalty > 0f)
+        {
+            PendingHackyCodeWeeksLeft--;
+            if (PendingHackyCodeWeeksLeft <= 0)
+            {
+                float penalty   = PendingHackyCodePenalty;
+                string portraitId = PendingHackyCodePortraitId;
+                PendingHackyCodePenalty    = 0f;
+                PendingHackyCodePortraitId = "";
+                PendingHackyCodeWeeksLeft  = 0;
+                DevelopmentPanelUI.Instance.AddValues(0f, -penalty, 0f, 0f, 0f);
+                EventUI.Instance.Show(
+                    "야매 코드 문제 발생",
+                    portraitId,
+                    $"임시 처리 해둔 코드가 문제가 생겼습니다!\n개발 점수 -{Mathf.RoundToInt(penalty)}"
+                );
+            }
+        }
 
         while (_nextWeekRunEvents.Count > 0)
         {
@@ -201,6 +223,7 @@ public class RandomEventManager : MonoBehaviour
 
         for (int cat = 1; cat <= 4; cat++)
         {
+            if (_scheduledEvents.Count >= 2) break;
             if (UnityEngine.Random.value > chances[cat - 1]) continue;
 
             // 두 풀을 합쳐 카테고리 범위와 중복 여부 확인
@@ -251,7 +274,9 @@ public class RandomEventManager : MonoBehaviour
             var choiceData = _choiceEventPool.Find(e => e.type == scheduled.eventType);
             if (choiceData == null) return;
             RandomEventChoiceChartLoader.Apply(choiceData, scheduled.eventType.ToString(), RandomEventChoiceChartLoader.Cache);
+            choiceData.cancelled = false;
             choiceData.onSetup?.Invoke();
+            if (choiceData.cancelled) return;
 
             if (choiceData.requiresPatrol)
             {
@@ -279,7 +304,9 @@ public class RandomEventManager : MonoBehaviour
         {
             // 차트 데이터 복원 후 onSetup 호출 (systemMessage 등 템플릿 초기화)
             RandomEventChartLoader.Apply(evt, RandomEventChartLoader.Cache);
+            evt.cancelled = false;
             evt.onSetup?.Invoke();
+            if (evt.cancelled) return;
             _pendingEvent = evt;
 
             // 특정 직원 + 특정 지점이 설정된 경우 즉시 강제 이동
@@ -294,7 +321,9 @@ public class RandomEventManager : MonoBehaviour
         {
             // 차트 데이터 복원 후 onSetup 호출
             RandomEventChartLoader.Apply(evt, RandomEventChartLoader.Cache);
+            evt.cancelled = false;
             evt.onSetup?.Invoke();
+            if (evt.cancelled) return;
             DevelopmentManager.Instance.PauseForEvent();
             RandomEventUI.Instance.Show(evt);
         }
@@ -436,9 +465,12 @@ public class RandomEventManager : MonoBehaviour
     // ─────────────────────────────────────────────────────────
     public void Reset()
     {
-        InvestmentAccepted  = false;
-        InvestmentStat      = "";
-        InvestmentStatName  = "";
+        InvestmentAccepted       = false;
+        InvestmentStat           = "";
+        InvestmentStatName       = "";
+        PendingHackyCodePenalty    = 0f;
+        PendingHackyCodePortraitId = "";
+        PendingHackyCodeWeeksLeft  = 0;
         _scheduledEvents.Clear();
         _nextScheduledIndex = 0;
         _pendingEvent       = null;
@@ -536,7 +568,6 @@ public class RandomEventManager : MonoBehaviour
     public void TriggerScoutEvent()      { }
     public void TriggerBetaTestEvent()   { }
     public void TriggerAlgorithmEvent()  { }
-    public void TriggerEmployeeFightEvent() { }
     public void TriggerBadCompanyEvent() { }
 
     public void TriggerEmployeeResignationEvent(EmployeeData emp)
@@ -587,10 +618,13 @@ public class RandomEventManager : MonoBehaviour
         if (choiceData != null)
         {
             RandomEventChoiceChartLoader.Apply(choiceData, type.ToString(), RandomEventChoiceChartLoader.Cache);
+            choiceData.cancelled = false;
             choiceData.onSetup?.Invoke();
+            if (choiceData.cancelled) return;
 
             if (choiceData.requiresPatrol)
             {
+                _pendingEvent       = null;
                 _pendingChoiceEvent = choiceData;
                 if (!string.IsNullOrEmpty(choiceData.targetEmployeeId) &&
                     !string.IsNullOrEmpty(choiceData.requiredPatrolPointId))
