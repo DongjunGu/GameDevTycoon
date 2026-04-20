@@ -130,16 +130,6 @@ public static class RandomEvents_Dev
             Add(pool, chart, badReviewEvt);
         }
 
-        // ── 장비 업그레이드 요청 ─────────────────────────────────
-        Add(pool, chart, new RandomEventData
-        {
-            type    = RandomEventType.EquipmentUpgrade,
-            // title       = "장비 업그레이드 요청",
-            // description = "TODO",
-            // weight      = mgr.equipmentUpgradeWeight,
-            // categoryMin = 1, categoryMax = 4,
-            onApply = () => { /* TODO */ }
-        });
 
         // ── 게임 업그레이드 요청 ─────────────────────────────────
         Add(pool, chart, new RandomEventData
@@ -152,27 +142,6 @@ public static class RandomEvents_Dev
             onApply = () => { /* TODO */ }
         });
 
-        // ── 오늘은 회식이다! ─────────────────────────────────────
-        Add(pool, chart, new RandomEventData
-        {
-            type    = RandomEventType.CompanyDinner,
-            // title       = "오늘은 회식이다!",
-            // description = "TODO",
-            // weight      = mgr.companyDinnerWeight,
-            // categoryMin = 1, categoryMax = 4,
-            onApply = () => { /* TODO */ }
-        });
-
-        // ── 사장님 뒷담까기 ──────────────────────────────────────
-        Add(pool, chart, new RandomEventData
-        {
-            type    = RandomEventType.BossGossip,
-            // title       = "사장님 뒷담까기",
-            // description = "TODO",
-            // weight      = mgr.bossGossipWeight,
-            // categoryMin = 1, categoryMax = 4,
-            onApply = () => { /* TODO */ }
-        });
 
         // ── 1~74% ───────────────────────────────────────────────
 

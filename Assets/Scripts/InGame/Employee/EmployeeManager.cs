@@ -8,6 +8,13 @@ public class EmployeeManager : MonoBehaviour
     public static EmployeeManager Instance { get; private set; }
 
     public List<EmployeeData> ownedEmployees = new();
+
+    public int GetTotalSalary()
+    {
+        int total = 0;
+        foreach (var e in ownedEmployees) total += e.salary;
+        return total;
+    }
     public List<EmployeeData> poolEmployees = new();
     private readonly HashSet<string> _acquiredEmployeeIds = new();
 
@@ -411,6 +418,8 @@ public class EmployeeManager : MonoBehaviour
         {
             if (emp.statDebuffWeeksLeft > 0)
                 emp.statDebuffWeeksLeft--;
+            if (emp.statBuffWeeksLeft > 0)
+                emp.statBuffWeeksLeft--;
         }
 
         CheckLowSatisfaction();
@@ -429,6 +438,12 @@ public class EmployeeManager : MonoBehaviour
             emp.artSkill        = Mathf.Max(1, Mathf.RoundToInt(emp.artSkill        * 0.8f));
             emp.perfectionSkill = Mathf.Max(1, Mathf.RoundToInt(emp.perfectionSkill * 0.8f));
         }
+    }
+
+    public void ChangeAllSatisfaction(int delta)
+    {
+        foreach (var emp in ownedEmployees)
+            emp.ChangeSatisfaction(delta);
     }
 
     public void ReduceAllSatisfaction(int amount)

@@ -100,6 +100,7 @@ public class RandomEventManager : MonoBehaviour
     public float investmentThreshold = 80f;
     public int   investmentReward    = 1000;
 
+    public float  YoutuberSalesBonus    { get; set; } = 1.0f; // 유튜버 선공개 이벤트 매출 배율
     public bool   InvestmentAccepted    { get; set; } = false;
     public string InvestmentStat        { get; set; } = "";
     public string InvestmentStatName    { get; set; } = "";
@@ -465,6 +466,7 @@ public class RandomEventManager : MonoBehaviour
     // ─────────────────────────────────────────────────────────
     public void Reset()
     {
+        YoutuberSalesBonus       = 1.0f;
         InvestmentAccepted       = false;
         InvestmentStat           = "";
         InvestmentStatName       = "";

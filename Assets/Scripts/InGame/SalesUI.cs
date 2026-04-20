@@ -154,10 +154,14 @@ public class SalesUI : MonoBehaviour
             totalUnits = savedTotalUnits;
         else
         {
-            float rand = UnityEngine.Random.Range(0.9f, 1.1f);
+            float rand         = UnityEngine.Random.Range(0.9f, 1.1f);
+            float youtuberBonus = RandomEventManager.Instance != null
+                ? RandomEventManager.Instance.YoutuberSalesBonus : 1.0f;
             totalUnits = Mathf.RoundToInt(
-                (5000f + 200f * scaleMultiplier * Mathf.Pow(qualityScore / 100f, 2f)) * rand
+                (5000f + 200f * scaleMultiplier * Mathf.Pow(qualityScore / 100f, 2f)) * rand * youtuberBonus
             );
+            if (RandomEventManager.Instance != null)
+                RandomEventManager.Instance.YoutuberSalesBonus = 1.0f; // 적용 후 초기화
         }
         _cachedTotalUnits = totalUnits;
         _completedBarIndex = completedWeeks;

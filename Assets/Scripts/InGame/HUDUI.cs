@@ -32,10 +32,7 @@ public class HUDUI : MonoBehaviour
 
     void RefreshSalary()
     {
-        int total = 0;
-        foreach (var employee in EmployeeManager.Instance.ownedEmployees)
-            total += employee.salary;
-
+        int total = EmployeeManager.Instance.GetTotalSalary();
         totalSalaryText.text = $"총 연봉: {total:N0}G";
     }
     public void RefreshMoney()
