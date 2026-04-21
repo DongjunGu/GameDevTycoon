@@ -91,6 +91,22 @@ public class GameTimeManager : MonoBehaviour
                     bool negDone = SafeString(row, "negotiatedThisYear", "False") == "True";
                     SalaryNegotiationManager.Instance?.LoadSchedule(negMonth, negWeek, negDone);
 
+                    EmployeeManager.Instance?.LoadExitStats(
+                        SafeInt(row, "yearlyExitCount", 0),
+                        SafeInt(row, "exitCountYear", 0)
+                    );
+                    RandomEventManager.Instance?.LoadHiringPenalty(
+                        SafeInt(row, "hiringPenalty", 0),
+                        SafeInt(row, "hiringPenaltyEndYear", -1)
+                    );
+                    RandomEventManager.Instance?.LoadRomanceState(
+                        SafeString(row, "activeCoupleIds", ""),
+                        SafeString(row, "pendingRomance", "")
+                    );
+                    RandomEventManager.Instance?.LoadUnstableCompanyWeeksLeft(
+                        SafeInt(row, "unstableCompanyWeeksLeft", -1)
+                    );
+
                     Debug.Log($"로드 완료: {Year}년 {Month}월 {Week}주 / rowInDate: {_rowInDate}");
                     SaveGameTime(); // 신규 컬럼 자동 추가
                 }
@@ -170,6 +186,13 @@ public class GameTimeManager : MonoBehaviour
         param.Add("negotiationMonth",    SalaryNegotiationManager.Instance?.ScheduledMonth ?? 0);
         param.Add("negotiationWeek",     SalaryNegotiationManager.Instance?.ScheduledWeek  ?? 0);
         param.Add("negotiatedThisYear",  SalaryNegotiationManager.Instance?.NegotiatedThisYear ?? false);
+        param.Add("yearlyExitCount",      EmployeeManager.Instance?.YearlyExitCount      ?? 0);
+        param.Add("exitCountYear",        EmployeeManager.Instance?.ExitCountYear        ?? 0);
+        param.Add("hiringPenalty",        RandomEventManager.Instance?.HiringPenalty        ?? 0);
+        param.Add("hiringPenaltyEndYear", RandomEventManager.Instance?.HiringPenaltyEndYear ?? -1);
+        param.Add("activeCoupleIds",            RandomEventManager.Instance?.GetActiveCoupleString()           ?? "");
+        param.Add("pendingRomance",             RandomEventManager.Instance?.GetPendingRomanceString()          ?? "");
+        param.Add("unstableCompanyWeeksLeft",   RandomEventManager.Instance?.GetUnstableCompanyWeeksLeft()     ?? -1);
 
         if (!string.IsNullOrEmpty(_rowInDate))
         {
@@ -248,7 +271,10 @@ public class GameTimeManager : MonoBehaviour
             }
             else
             {
-                ForceStartTime();
+                bool rumorTriggered = RandomEventManager.Instance?.CheckUnstableCompanyOnNewYear(Year) ?? false;
+                EmployeeManager.Instance?.ResetYearlyExitCount();
+                if (!rumorTriggered)
+                    ForceStartTime();
             }
         });
     }

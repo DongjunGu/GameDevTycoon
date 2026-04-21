@@ -105,7 +105,8 @@ public class HiringUI : MonoBehaviour
                 if (loadingPanel != null) loadingPanel.SetActive(true);
 
                 _currentCandidates.Clear();
-                EmployeeManager.Instance.LoadRandomCandidates(candidateCount, tierIndex, candidates =>
+                int effectiveCount = Mathf.Max(1, candidateCount - (RandomEventManager.Instance?.HiringPenalty ?? 0));
+                EmployeeManager.Instance.LoadRandomCandidates(effectiveCount, tierIndex, candidates =>
                 {
                     // 티어별 강화 수치 적용
                     foreach (var employee in candidates)
@@ -229,7 +230,7 @@ public class HiringUI : MonoBehaviour
         // 동일 직원이 있으면 해고 후 채용
         if (_conflictingOwned != null)
         {
-            EmployeeManager.Instance.FireEmployee(_conflictingOwned);
+            EmployeeManager.Instance.FireEmployee(_conflictingOwned, countAsExit: false);
             _conflictingOwned = null;
         }
 

@@ -154,12 +154,8 @@ public class OfficeCharacter : MonoBehaviour
         if (pp != null && pp.overrideFacing)
             _animator?.SetFacing(pp.facingFront, pp.facingFlipX);
 
-        // 패트롤 도착 → 개발 중 대기 이벤트 발동 체크
-        if (DevelopmentManager.Instance != null &&
-            DevelopmentManager.Instance.CurrentStage == ProjectStage.Developing)
-        {
-            RandomEventManager.Instance?.OnPatrolArrived(pp != null ? pp.pointId : "", employeeId);
-        }
+        // 패트롤 도착 → 이벤트 발동 체크 (개발 외 타이밍도 포함: 사내연애 등)
+        RandomEventManager.Instance?.OnPatrolArrived(pp != null ? pp.pointId : "", employeeId);
 
         // 2. 목적지에서 대기 (게임 시간 기준)
         float stayed = 0f;

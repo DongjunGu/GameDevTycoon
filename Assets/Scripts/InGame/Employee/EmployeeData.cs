@@ -36,8 +36,9 @@ public class EmployeeData
     public int salary;
     public int enhancementLevel;
     public int satisfaction = 80;
-    public int statDebuffWeeksLeft = 0; // 임시 능력치 -20% 디버프 남은 주차
-    public int statBuffWeeksLeft   = 0; // 임시 능력치 +20% 버프 남은 주차
+    public int statDebuffWeeksLeft  = 0; // 임시 능력치 -20% 디버프 남은 주차
+    public int statBuffWeeksLeft    = 0; // 임시 능력치 +20% 버프 남은 주차
+    public int romanceBuffWeeksLeft = 0; // 사내 연애 능력치 +10% 버프 남은 주차
 
     // ── 범위 수치 ─────────────────────────────
     public int developMin, developMax;
@@ -73,7 +74,7 @@ public class EmployeeData
         perfectionMin, perfectionMax,
         salaryMin, salaryMax,
         maxGrade
-    ) { portraitId = this.portraitId, isDefault = this.isDefault };
+    ) { portraitId = this.portraitId, isDefault = this.isDefault, isFemale = this.isFemale };
 
     // ── 생성자 (EmployeePool 마스터 데이터용) ──
     public EmployeeData(string id, string name, EmployeeRole role,
@@ -137,8 +138,9 @@ public class EmployeeData
         data.enhancementRecordsJson = SafeString(row, "enhancementRecordsJson", "[]");
         data.hiredYear = SafeInt(row, "hiredYear", 0);
         data.isFemale  = SafeBool(row, "isFemale", false);
-        data.statDebuffWeeksLeft = SafeInt(row, "statDebuffWeeksLeft", 0);
-        data.statBuffWeeksLeft   = SafeInt(row, "statBuffWeeksLeft",   0);
+        data.statDebuffWeeksLeft  = SafeInt(row, "statDebuffWeeksLeft",  0);
+        data.statBuffWeeksLeft    = SafeInt(row, "statBuffWeeksLeft",    0);
+        data.romanceBuffWeeksLeft = SafeInt(row, "romanceBuffWeeksLeft", 0);
         return data;
     }
 
@@ -176,8 +178,9 @@ public class EmployeeData
         param.Add("enhancementRecordsJson", enhancementRecordsJson);
         param.Add("hiredYear", hiredYear);
         param.Add("isFemale",  isFemale);
-        param.Add("statDebuffWeeksLeft", statDebuffWeeksLeft);
-        param.Add("statBuffWeeksLeft",   statBuffWeeksLeft);
+        param.Add("statDebuffWeeksLeft",  statDebuffWeeksLeft);
+        param.Add("statBuffWeeksLeft",    statBuffWeeksLeft);
+        param.Add("romanceBuffWeeksLeft", romanceBuffWeeksLeft);
         return param;
     }
 
@@ -207,13 +210,14 @@ public class EmployeeData
         statBuffWeeksLeft = Mathf.Max(statBuffWeeksLeft, weeks);
     }
 
-    // 주 스탯 기준 20% 합연산 디버프/버프량
-    public int GetStatDebuffAmount() => statDebuffWeeksLeft > 0 ? (int)(GetMainStat() * 0.2f) : 0;
-    public int GetStatBuffAmount()   => statBuffWeeksLeft   > 0 ? (int)(GetMainStat() * 0.2f) : 0;
+    // 주 스탯 기준 합연산 디버프/버프량
+    public int GetStatDebuffAmount()    => statDebuffWeeksLeft   > 0 ? (int)(GetMainStat() * 0.2f) : 0;
+    public int GetStatBuffAmount()      => statBuffWeeksLeft     > 0 ? (int)(GetMainStat() * 0.2f) : 0;
+    public int GetRomanceBuffAmount()   => romanceBuffWeeksLeft  > 0 ? (int)(GetMainStat() * 0.1f) : 0;
 
-    public int EffectivePlanningSkill   => (int)(planningSkill   * GetSatisfactionMultiplier()) - (role == EmployeeRole.Planner    ? GetStatDebuffAmount() : 0) + (role == EmployeeRole.Planner    ? GetStatBuffAmount() : 0);
-    public int EffectiveDevelopSkill    => (int)(developSkill    * GetSatisfactionMultiplier()) - (role == EmployeeRole.Programmer ? GetStatDebuffAmount() : 0) + (role == EmployeeRole.Programmer ? GetStatBuffAmount() : 0);
-    public int EffectiveArtSkill        => (int)(artSkill        * GetSatisfactionMultiplier()) - (role == EmployeeRole.Artist     ? GetStatDebuffAmount() : 0) + (role == EmployeeRole.Artist     ? GetStatBuffAmount() : 0);
+    public int EffectivePlanningSkill   => (int)(planningSkill   * GetSatisfactionMultiplier()) - (role == EmployeeRole.Planner    ? GetStatDebuffAmount() : 0) + (role == EmployeeRole.Planner    ? GetStatBuffAmount() : 0) + (role == EmployeeRole.Planner    ? GetRomanceBuffAmount() : 0);
+    public int EffectiveDevelopSkill    => (int)(developSkill    * GetSatisfactionMultiplier()) - (role == EmployeeRole.Programmer ? GetStatDebuffAmount() : 0) + (role == EmployeeRole.Programmer ? GetStatBuffAmount() : 0) + (role == EmployeeRole.Programmer ? GetRomanceBuffAmount() : 0);
+    public int EffectiveArtSkill        => (int)(artSkill        * GetSatisfactionMultiplier()) - (role == EmployeeRole.Artist     ? GetStatDebuffAmount() : 0) + (role == EmployeeRole.Artist     ? GetStatBuffAmount() : 0) + (role == EmployeeRole.Artist     ? GetRomanceBuffAmount() : 0);
     public int EffectivePerfectionSkill => (int)(perfectionSkill * GetSatisfactionMultiplier());
 
     public string DevelopText()    => $"개발: {EffectiveDevelopSkill}";
@@ -249,6 +253,7 @@ public class EmployeeData
         EmployeeGrade.Unique => "Unique",
         _ => ""
     };
+
 
     public string PotentialToString() => potential switch
     {

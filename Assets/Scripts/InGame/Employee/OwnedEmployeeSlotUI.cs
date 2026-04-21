@@ -51,8 +51,7 @@ public class OwnedEmployeeSlotUI : MonoBehaviour
         satisfactionText.color = sat > 1f ? Color.red : sat < 1f ? Color.blue : Color.white;
         //stateText.text           = data.StateToString();
         _pendingGrade = data.grade;
-        if (data.grade != EmployeeGrade.Unique)
-            ApplyGradeColor(_pendingGrade);
+        ApplyGradeColor(_pendingGrade);
 
         fireButton.onClick.RemoveAllListeners();
         if (_listUI != null)

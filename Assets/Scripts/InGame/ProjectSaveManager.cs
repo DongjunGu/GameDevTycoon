@@ -67,6 +67,7 @@ public class ProjectSaveManager : MonoBehaviour
     private string _loadedPendingHackyCodePortraitId = "";
     private int    _loadedPendingHackyCodeWeeksLeft;
     private float  _loadedYoutuberSalesBonus = 1.0f;
+    private string _loadedPendingRunAlerts = "";
 
     private string _loadedProjectName = "프로젝트명";
     public string GetLoadedProjectName() => _loadedProjectName;
@@ -141,6 +142,7 @@ public class ProjectSaveManager : MonoBehaviour
         param.Add("pendingHackyCodePortraitId", RandomEventManager.Instance.PendingHackyCodePortraitId);
         param.Add("pendingHackyCodeWeeksLeft", RandomEventManager.Instance.PendingHackyCodeWeeksLeft);
         param.Add("youtuberSalesBonus", RandomEventManager.Instance.YoutuberSalesBonus);
+        param.Add("pendingRunAlerts", RandomEventManager.Instance.GetPendingRunAlertsString());
 
         if (!string.IsNullOrEmpty(_rowInDate))
         {
@@ -249,6 +251,7 @@ public class ProjectSaveManager : MonoBehaviour
             _loadedPendingHackyCodePortraitId    = SafeString(row, "pendingHackyCodePortraitId", "");
             _loadedPendingHackyCodeWeeksLeft     = SafeInt(row, "pendingHackyCodeWeeksLeft", 0);
             _loadedYoutuberSalesBonus            = SafeFloat(row, "youtuberSalesBonus", 1.0f);
+            _loadedPendingRunAlerts              = SafeString(row, "pendingRunAlerts", "");
 
             Debug.Log($"프로젝트 로드 완료: stage={_loadedStage} elapsed={_loadedElapsed:F1}");
             onComplete?.Invoke();
@@ -291,6 +294,7 @@ public class ProjectSaveManager : MonoBehaviour
         RandomEventManager.Instance.PendingHackyCodePortraitId = _loadedPendingHackyCodePortraitId;
         RandomEventManager.Instance.PendingHackyCodeWeeksLeft  = _loadedPendingHackyCodeWeeksLeft;
         RandomEventManager.Instance.YoutuberSalesBonus         = _loadedYoutuberSalesBonus;
+        RandomEventManager.Instance.RestorePendingRunAlerts(_loadedPendingRunAlerts);
         RandomEventManager.Instance.InvestmentAccepted = _loadedInvestmentAccepted;
         RandomEventManager.Instance.InvestmentStat = _loadedInvestmentStat;
         RandomEventManager.Instance.InvestmentStatName = _loadedInvestmentStatName;
