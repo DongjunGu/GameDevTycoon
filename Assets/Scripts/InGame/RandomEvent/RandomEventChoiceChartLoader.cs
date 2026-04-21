@@ -36,6 +36,8 @@ public class RandomEventChoiceOptionRow
     public string resultDescription2;
     public string resultDescription3;
     public string resultSystemMessage;
+    public string resultSystemMessage2;
+    public string resultSystemMessage3;
 }
 
 public static class RandomEventChoiceChartLoader
@@ -155,12 +157,14 @@ public static class RandomEventChoiceChartLoader
 
                 chartRow.choices.Add(new RandomEventChoiceOptionRow
                 {
-                    label               = label,
-                    resultTitle         = S(row, $"choice{c}_resultTitle"),
-                    resultDescription   = S(row, $"choice{c}_resultDescription"),
-                    resultDescription2  = S(row, $"choice{c}_resultDescription2"),
-                    resultDescription3  = S(row, $"choice{c}_resultDescription3"),
-                    resultSystemMessage = S(row, $"choice{c}_systemMessage"),
+                    label                = label,
+                    resultTitle          = S(row, $"choice{c}_resultTitle"),
+                    resultDescription    = S(row, $"choice{c}_resultDescription"),
+                    resultDescription2   = S(row, $"choice{c}_resultDescription2"),
+                    resultDescription3   = S(row, $"choice{c}_resultDescription3"),
+                    resultSystemMessage  = S(row, $"choice{c}_systemMessage"),
+                    resultSystemMessage2 = S(row, $"choice{c}_systemMessage2"),
+                    resultSystemMessage3 = S(row, $"choice{c}_systemMessage3"),
                 });
             }
 

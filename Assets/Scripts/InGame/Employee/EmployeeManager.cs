@@ -20,6 +20,33 @@ public class EmployeeManager : MonoBehaviour
 
     private bool _satisfactionDroppedThisCycle = false;
 
+    public int YearlyExitCount { get; private set; } = 0;
+    public int ExitCountYear   { get; private set; } = 0;
+
+    public void RecordEmployeeExit()
+    {
+        int currentYear = GameTimeManager.Instance?.Year ?? 0;
+        if (ExitCountYear != currentYear)
+        {
+            YearlyExitCount = 0;
+            ExitCountYear   = currentYear;
+        }
+        YearlyExitCount++;
+        Debug.Log($"[EmployeeManager] 올해({currentYear}) 퇴직자: {YearlyExitCount}명");
+    }
+
+    public void ResetYearlyExitCount()
+    {
+        YearlyExitCount = 0;
+        ExitCountYear   = GameTimeManager.Instance?.Year ?? 0;
+    }
+
+    public void LoadExitStats(int count, int year)
+    {
+        YearlyExitCount = count;
+        ExitCountYear   = year;
+    }
+
     void Awake()
     {
         if (Instance != null) { Destroy(gameObject); return; }
@@ -110,7 +137,8 @@ public class EmployeeManager : MonoBehaviour
                 );
                 data.portraitId = row["portraitId"].ToString();
                 data.isDefault  = row["isDefault"].ToString() == "1";
-                data.isFemale   = row.ContainsKey("isFemale") && row["isFemale"].ToString() == "1";
+                var femaleVal   = row.ContainsKey("isFemale") ? row["isFemale"].ToString() : "0";
+                data.isFemale   = femaleVal == "1" || femaleVal.ToLower() == "true";
                 poolEmployees.Add(data);
             }
             catch (System.Exception e)
@@ -267,6 +295,7 @@ public class EmployeeManager : MonoBehaviour
                 inGameEmployee.rowInDate = bro.GetInDate();
                 ownedEmployees.Add(inGameEmployee);
                 HUDUI.Instance.RefreshAll();
+                RandomEventManager.Instance?.CheckOfficeRomanceOnHire(inGameEmployee);
 
                 QuestManager.Instance.UpdateProgress(QuestType.HireEmployee, 1);
                 OfficeManager.Instance?.OnEmployeeHired(inGameEmployee);
@@ -420,6 +449,8 @@ public class EmployeeManager : MonoBehaviour
                 emp.statDebuffWeeksLeft--;
             if (emp.statBuffWeeksLeft > 0)
                 emp.statBuffWeeksLeft--;
+            if (emp.romanceBuffWeeksLeft > 0)
+                emp.romanceBuffWeeksLeft--;
         }
 
         CheckLowSatisfaction();
@@ -493,9 +524,12 @@ public class EmployeeManager : MonoBehaviour
         });
     }
 
-    public void FireEmployee(EmployeeData employee)
+    public void FireEmployee(EmployeeData employee, bool countAsExit = true)
     {
+        if (countAsExit) RecordEmployeeExit();
         ownedEmployees.Remove(employee);
+        RandomEventManager.Instance?.CheckCoupleOnFire(employee.id);
+        RandomEventManager.Instance?.ClearCoupleIfInvolved(employee.id);
         OfficeManager.Instance?.OnEmployeeFired(employee);
         if (DevelopmentManager.Instance.IsStarted)
             DevelopmentManager.Instance.OnEmployeeFired(employee.id);

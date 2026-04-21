@@ -18,6 +18,10 @@ public enum RandomEventType
     EmployeeResignation,
     EmployeeFight,
     BadCompany,
+    UnstableCompany,    // 불안한 회사 wrapper (연간 퇴직 2명 이상 시 발생)
+    BadRumor,           // 안좋은 소문
+    AnxietyInducing,    // 불안감 조성
+    CompanyBadReview,   // 회사 평점 1점 (퇴사 이벤트 후 30% 확률 연계)
     CompetitorRelease,
     PerfectTiming,
     AlgorithmChoice,
@@ -41,6 +45,11 @@ public enum RandomEventType
     YoutuberRequest,        // 유튜버 선공개 요청          51~99%
     DrillEvent,             // 옆 사무실 공사               1~99%
     ThiefEvent,             // 도둑이야!                    1~99%
+
+    // ── 조건 이벤트 (신규) ────────────────────────────────────
+    OfficeRomance,          // 사내 연애 (채용 2주 후 20%)
+    RomanceBrokeUp,         // 사내 연애 이별 (커플 성사 후 8~16주, 60% 확률)
+    CoupleResignation,      // 동반퇴사 (커플 중 한 명 퇴사/해고 시)
 }
 
 [Serializable]

@@ -13,11 +13,36 @@ public class RandomEventManager : MonoBehaviour
 
     private struct RunEventPayload
     {
-        public string employeeName;
-        public string portraitId;
-        public string message;
+        public string alertMessage;
+        public int    weeksLeft;
     }
-    private Queue<RunEventPayload> _nextWeekRunEvents = new();
+    private List<RunEventPayload> _pendingRunAlerts = new();
+
+    private int _unstableCompanyWeeksLeft = -1; // -1이면 예약 없음
+
+    private struct PendingRomancePayload
+    {
+        public string newEmpId;
+        public string existingEmpId;
+        public int    weeksLeft;
+    }
+    private List<PendingRomancePayload> _pendingRomanceEvents = new();
+
+    // 패트롤 도착 대기 중인 사내 연애 이벤트
+    private struct PendingRomanceEventPayload
+    {
+        public string newEmpId;
+        public string existingEmpId;
+    }
+    private PendingRomanceEventPayload? _pendingRomanceEvent = null;
+
+    private struct ActiveCouple
+    {
+        public string empId1;
+        public string empId2;
+        public int    breakUpWeeksLeft; // -1이면 이별 예정 없음
+    }
+    private ActiveCouple? _activeCouple = null;
 
     // ── 이벤트 스케줄 (프로젝트 시작 시 전부 결정) ──────────
     private struct ScheduledEvent
@@ -100,6 +125,15 @@ public class RandomEventManager : MonoBehaviour
     public float investmentThreshold = 80f;
     public int   investmentReward    = 1000;
 
+    public int    HiringPenalty         { get; set; } = 0;    // 채용 지원 인원 감소량
+    public int    HiringPenaltyEndYear  { get; set; } = -1;   // 패널티 만료 연도 (-1이면 없음)
+
+    public void LoadHiringPenalty(int penalty, int endYear)
+    {
+        HiringPenalty        = penalty;
+        HiringPenaltyEndYear = endYear;
+    }
+
     public float  YoutuberSalesBonus    { get; set; } = 1.0f; // 유튜버 선공개 이벤트 매출 배율
     public bool   InvestmentAccepted    { get; set; } = false;
     public string InvestmentStat        { get; set; } = "";
@@ -154,16 +188,76 @@ public class RandomEventManager : MonoBehaviour
             }
         }
 
-        while (_nextWeekRunEvents.Count > 0)
+        if (_unstableCompanyWeeksLeft > 0)
         {
-            var payload = _nextWeekRunEvents.Dequeue();
-            EmployeeManager.Instance.ReduceAllSatisfaction(10);
-            EventUI.Instance.Show(
-                "직원 도망",
-                payload.portraitId,
-                $"{payload.employeeName}\n\n{payload.message}",
-                null
-            );
+            _unstableCompanyWeeksLeft--;
+            if (_unstableCompanyWeeksLeft == 0)
+            {
+                _unstableCompanyWeeksLeft = -1;
+                RandomEvent_Condition.TriggerUnstableCompanyEvent(this, GameTimeManager.Instance?.Year ?? 2000);
+            }
+        }
+
+        if (_activeCouple.HasValue && _activeCouple.Value.breakUpWeeksLeft > 0)
+        {
+            var couple = _activeCouple.Value;
+            couple.breakUpWeeksLeft--;
+            if (couple.breakUpWeeksLeft <= 0)
+            {
+                string id1 = couple.empId1;
+                string id2 = couple.empId2;
+                _activeCouple = null;
+                RandomEvent_Condition.TriggerRomanceBrokeUpEvent(this, id1, id2);
+            }
+            else
+            {
+                _activeCouple = couple;
+            }
+        }
+
+        for (int i = _pendingRomanceEvents.Count - 1; i >= 0; i--)
+        {
+            var r = _pendingRomanceEvents[i];
+            r.weeksLeft--;
+            if (r.weeksLeft <= 0)
+            {
+                _pendingRomanceEvents.RemoveAt(i);
+                if (!_activeCouple.HasValue && !_pendingRomanceEvent.HasValue)
+                {
+                    _pendingRomanceEvent = new PendingRomanceEventPayload
+                    {
+                        newEmpId      = r.newEmpId,
+                        existingEmpId = r.existingEmpId
+                    };
+                    OfficeManager.Instance?.ForceCharacterToPatrolPoint(
+                        r.existingEmpId, "master_desk", stayDuration: 1f);
+                }
+            }
+            else
+            {
+                _pendingRomanceEvents[i] = r;
+            }
+        }
+
+        for (int i = _pendingRunAlerts.Count - 1; i >= 0; i--)
+        {
+            var alert = _pendingRunAlerts[i];
+            alert.weeksLeft--;
+            if (alert.weeksLeft <= 0)
+            {
+                _pendingRunAlerts.RemoveAt(i);
+                EmployeeManager.Instance.ReduceAllSatisfaction(10);
+                string capturedMsg = alert.alertMessage;
+                AlertUI.Instance.Show(capturedMsg, () =>
+                {
+                    if (UnityEngine.Random.value < 0.3f)
+                        RandomEvent_Condition.TriggerCompanyBadReviewEvent(this, GameTimeManager.Instance?.Year ?? 2000);
+                });
+            }
+            else
+            {
+                _pendingRunAlerts[i] = alert;
+            }
         }
     }
 
@@ -171,7 +265,7 @@ public class RandomEventManager : MonoBehaviour
     public void InitConditionEvents()
     {
         _conditionEventPool.Clear();
-        RandomEvents_Condition.Register(_conditionEventPool, this, RandomEventChartLoader.Cache);
+        RandomEvent_Condition.Register(_conditionEventPool, this, RandomEventChartLoader.Cache);
     }
 
     // ── 풀 구성만 (StartDevelopment/RestoreState 양쪽에서 호출) ──
@@ -333,6 +427,17 @@ public class RandomEventManager : MonoBehaviour
     // ── 패트롤 도착 시 OfficeCharacter에서 호출 ──────────────
     public void OnPatrolArrived(string pointId = "", string employeeId = "")
     {
+        // ── 사내 연애 (개발 이벤트와 독립적으로 체크) ──────────
+        if (_pendingRomanceEvent.HasValue &&
+            pointId == "master_desk" &&
+            _pendingRomanceEvent.Value.existingEmpId == employeeId)
+        {
+            var romance = _pendingRomanceEvent.Value;
+            _pendingRomanceEvent = null;
+            StartCoroutine(ShowRomanceEventAfterDelay(romance.newEmpId, romance.existingEmpId, 1f));
+            return;
+        }
+
         // ── 일반 이벤트 ─────────────────────────────────────
         if (_pendingEvent != null)
         {
@@ -382,6 +487,161 @@ public class RandomEventManager : MonoBehaviour
 
     // ── 저장 ─────────────────────────────────────────────────
     // 형식: "0.1234:Blackout:0|0.4321:Birthday:1"  (마지막 필드: isChoiceEvent 0/1)
+    // 형식: "weeksLeft:escaped_message|weeksLeft:escaped_message"
+    public string GetPendingRunAlertsString()
+    {
+        if (_pendingRunAlerts.Count == 0) return "";
+        var sb = new System.Text.StringBuilder();
+        foreach (var a in _pendingRunAlerts)
+        {
+            if (sb.Length > 0) sb.Append('|');
+            sb.Append(a.weeksLeft);
+            sb.Append(':');
+            sb.Append(a.alertMessage.Replace("\n", "{NL}"));
+        }
+        return sb.ToString();
+    }
+
+    // ── 사내 연애 ─────────────────────────────────────────────
+    public void CheckOfficeRomanceOnHire(EmployeeData newEmp)
+    {
+        if (_activeCouple.HasValue) return;
+        if (UnityEngine.Random.value >= 1f) return;
+
+        var employees = EmployeeManager.Instance?.ownedEmployees;
+        if (employees == null) return;
+
+        var candidates = employees.FindAll(e => e.id != newEmp.id && e.isFemale != newEmp.isFemale);
+        if (candidates.Count == 0) return;
+
+        var partner = candidates[UnityEngine.Random.Range(0, candidates.Count)];
+        _pendingRomanceEvents.Add(new PendingRomancePayload
+        {
+            newEmpId      = newEmp.id,
+            existingEmpId = partner.id,
+            weeksLeft     = 2
+        });
+        Debug.Log($"[사내연애] 예약: {newEmp.employeeName} ↔ {partner.employeeName}, 2주 후 발동");
+    }
+
+    public void SetActiveCouple(string empId1, string empId2)
+    {
+        int breakUp = UnityEngine.Random.value < 1.0f
+            ? UnityEngine.Random.Range(8, 17)
+            : -1;
+        _activeCouple = new ActiveCouple { empId1 = empId1, empId2 = empId2, breakUpWeeksLeft = breakUp };
+    }
+
+    public void CheckCoupleOnFire(string empId)
+    {
+        if (!_activeCouple.HasValue) return;
+        var couple = _activeCouple.Value;
+        if (couple.empId1 != empId && couple.empId2 != empId) return;
+
+        string partnerId = couple.empId1 == empId ? couple.empId2 : couple.empId1;
+        _activeCouple = null;
+        RandomEvent_Condition.TriggerCoupleResignationEvent(partnerId);
+    }
+
+    public void ClearCoupleIfInvolved(string empId)
+    {
+        if (_activeCouple.HasValue &&
+            (_activeCouple.Value.empId1 == empId || _activeCouple.Value.empId2 == empId))
+        {
+            _activeCouple = null;
+            Debug.Log("[사내연애] 커플 해소");
+        }
+        _pendingRomanceEvents.RemoveAll(r => r.newEmpId == empId || r.existingEmpId == empId);
+        if (_pendingRomanceEvent.HasValue &&
+            (_pendingRomanceEvent.Value.newEmpId == empId ||
+             _pendingRomanceEvent.Value.existingEmpId == empId))
+        {
+            _pendingRomanceEvent = null;
+        }
+    }
+
+    public string GetActiveCoupleString()
+    {
+        if (!_activeCouple.HasValue) return "";
+        var emp1 = EmployeeManager.Instance?.GetEmployee(_activeCouple.Value.empId1);
+        var emp2 = EmployeeManager.Instance?.GetEmployee(_activeCouple.Value.empId2);
+        string id1 = emp1?.masterEmployeeId ?? _activeCouple.Value.empId1;
+        string id2 = emp2?.masterEmployeeId ?? _activeCouple.Value.empId2;
+        return $"{id1}|{id2}|{_activeCouple.Value.breakUpWeeksLeft}";
+    }
+
+    // 형식: "weeksLeft:newEmpId:existingEmpId,..."
+    public string GetPendingRomanceString()
+    {
+        if (_pendingRomanceEvents.Count == 0) return "";
+        var sb = new System.Text.StringBuilder();
+        foreach (var r in _pendingRomanceEvents)
+        {
+            if (sb.Length > 0) sb.Append(',');
+            sb.Append(r.weeksLeft);
+            sb.Append(':');
+            sb.Append(r.newEmpId);
+            sb.Append(':');
+            sb.Append(r.existingEmpId);
+        }
+        return sb.ToString();
+    }
+
+    public void LoadRomanceState(string coupleStr, string pendingStr)
+    {
+        _activeCouple = null;
+        if (!string.IsNullOrEmpty(coupleStr))
+        {
+            var parts = coupleStr.Split('|');
+            if (parts.Length >= 2)
+            {
+                var employees = EmployeeManager.Instance?.ownedEmployees;
+                string empId1 = employees?.Find(e => e.masterEmployeeId == parts[0])?.id ?? parts[0];
+                string empId2 = employees?.Find(e => e.masterEmployeeId == parts[1])?.id ?? parts[1];
+                int breakUp = parts.Length >= 3 && int.TryParse(parts[2], out int w) ? w : -1;
+                _activeCouple = new ActiveCouple { empId1 = empId1, empId2 = empId2, breakUpWeeksLeft = breakUp };
+            }
+        }
+
+        _pendingRomanceEvents.Clear();
+        if (string.IsNullOrEmpty(pendingStr)) return;
+        foreach (var entry in pendingStr.Split(','))
+        {
+            var parts = entry.Split(':');
+            if (parts.Length < 3) continue;
+            if (!int.TryParse(parts[0], out int weeks)) continue;
+            _pendingRomanceEvents.Add(new PendingRomancePayload
+            {
+                weeksLeft     = weeks,
+                newEmpId      = parts[1],
+                existingEmpId = parts[2]
+            });
+        }
+    }
+
+    public int  GetUnstableCompanyWeeksLeft() => _unstableCompanyWeeksLeft;
+    public void LoadUnstableCompanyWeeksLeft(int weeks) => _unstableCompanyWeeksLeft = weeks;
+
+    public void ScheduleUnstableCompanyEvent()
+    {
+        _unstableCompanyWeeksLeft = UnityEngine.Random.Range(1, 49); // 1~48주 랜덤
+        Debug.Log($"[UnstableCompany] {_unstableCompanyWeeksLeft}주 후 발동 예약");
+    }
+
+    public void RestorePendingRunAlerts(string data)
+    {
+        _pendingRunAlerts.Clear();
+        if (string.IsNullOrEmpty(data)) return;
+        foreach (var entry in data.Split('|'))
+        {
+            int colonIdx = entry.IndexOf(':');
+            if (colonIdx < 0) continue;
+            if (!int.TryParse(entry.Substring(0, colonIdx), out int weeks)) continue;
+            string msg = entry.Substring(colonIdx + 1).Replace("{NL}", "\n");
+            _pendingRunAlerts.Add(new RunEventPayload { alertMessage = msg, weeksLeft = weeks });
+        }
+    }
+
     public string GetScheduledEventsString()
     {
         if (_scheduledEvents.Count == 0) return "";
@@ -566,6 +826,9 @@ public class RandomEventManager : MonoBehaviour
         }
     }
 
+    public bool CheckUnstableCompanyOnNewYear(int newYear) =>
+        RandomEvent_Condition.CheckUnstableCompanyOnNewYear(this, newYear);
+
     // ── stub ──────────────────────────────────────────────────
     public void TriggerScoutEvent()      { }
     public void TriggerBetaTestEvent()   { }
@@ -574,19 +837,19 @@ public class RandomEventManager : MonoBehaviour
 
     public void TriggerEmployeeResignationEvent(EmployeeData emp)
     {
-        bool isOvertime = false;
-        string message = isOvertime
-            ? RandomEvents_Condition.ResignationOvertimeMessage
-            : RandomEvents_Condition.ResignationMessages[
-                UnityEngine.Random.Range(0, RandomEvents_Condition.ResignationMessages.Length)];
+        bool   isOvertime = false;
+        string message    = RandomEvent_Condition.GetResignationMessage(isOvertime);
+        string title      = RandomEvent_Condition.GetTitle("EmployeeResignation") ?? "사직서 제출";
 
-        EventUI.Instance.Show("사직서 제출", emp.portraitId, $"{emp.employeeName}\n\n{message}", () =>
+        EventUI.Instance.Show(title, emp.portraitId, $"{emp.employeeName}\n\n{message}", () =>
         {
             EmployeeManager.Instance.FireEmployee(emp);
             EmployeeManager.Instance.ReduceAllSatisfactionExcept(10, emp);
-            AlertUI.Instance.Show(
-                $"{emp.employeeName}이(가) 사직서를 제출하고 퇴사했습니다.\n남은 직원들의 만족도가 10 하락합니다."
-            );
+            AlertUI.Instance.Show(RandomEvent_Condition.GetResignationSystemMessage(emp.employeeName), () =>
+            {
+                if (UnityEngine.Random.value < 0.3f)
+                    RandomEvent_Condition.TriggerCompanyBadReviewEvent(this, GameTimeManager.Instance?.Year ?? 2000);
+            });
         });
     }
 
@@ -594,20 +857,104 @@ public class RandomEventManager : MonoBehaviour
     {
         EmployeeManager.Instance.FireEmployee(emp);
 
-        string message = RandomEvents_Condition.RunAwayMessages[
-            UnityEngine.Random.Range(0, RandomEvents_Condition.RunAwayMessages.Length)];
+        // 즉시 EventUI — 제목 없음, 직원 portrait, 랜덤 도망 메시지
+        EventUI.Instance.Show("", emp.portraitId, RandomEvent_Condition.GetRunAwayMessage());
 
-        _nextWeekRunEvents.Enqueue(new RunEventPayload
-        {
-            employeeName = emp.employeeName,
-            portraitId   = emp.portraitId,
-            message      = message
-        });
+        // 2주 후 AlertUI 예약
+        RandomEventConditionChartRow runRow = null;
+        RandomEventConditionChartLoader.Cache?.TryGetValue("EmployeeRun", out runRow);
+        string alertMsg = !string.IsNullOrEmpty(runRow?.systemMessage)
+            ? runRow.systemMessage.Replace("{해당직원이름}", emp.employeeName)
+            : $"{emp.employeeName}이 도망쳤습니다!\n남은 팀원들의 만족도가 10 하락합니다.";
+
+        _pendingRunAlerts.Add(new RunEventPayload { alertMessage = alertMsg, weeksLeft = 2 });
     }
 
     // ── 테스트용 즉시 발동 ────────────────────────────────────
     public void TriggerEventTest(RandomEventType type)
     {
+        // ── 조건 이벤트 ─────────────────────────────────────────
+        if (type == RandomEventType.UnstableCompany)
+        {
+            int year = GameTimeManager.Instance?.Year ?? 2000;
+            if (UnityEngine.Random.value < 0.5f)
+                RandomEvent_Condition.TriggerBadRumorEvent(this, year);
+            else
+                RandomEvent_Condition.TriggerAnxietyInducingEvent();
+            return;
+        }
+        if (type == RandomEventType.BadRumor)
+        {
+            RandomEvent_Condition.TriggerBadRumorEvent(this, GameTimeManager.Instance?.Year ?? 2000);
+            return;
+        }
+        if (type == RandomEventType.AnxietyInducing)
+        {
+            RandomEvent_Condition.TriggerAnxietyInducingEvent();
+            return;
+        }
+        if (type == RandomEventType.CompanyBadReview)
+        {
+            RandomEvent_Condition.TriggerCompanyBadReviewEvent(this, GameTimeManager.Instance?.Year ?? 2000);
+            return;
+        }
+        if (type == RandomEventType.RomanceBrokeUp)
+        {
+            if (!_activeCouple.HasValue)
+            {
+                Debug.LogWarning("[EventTest] RomanceBrokeUp 테스트 실패 — 활성 커플 없음");
+                return;
+            }
+            string id1 = _activeCouple.Value.empId1;
+            string id2 = _activeCouple.Value.empId2;
+            _activeCouple = null;
+            RandomEvent_Condition.TriggerRomanceBrokeUpEvent(this, id1, id2);
+            return;
+        }
+        if (type == RandomEventType.OfficeRomance)
+        {
+            var employees = EmployeeManager.Instance?.ownedEmployees;
+            if (employees == null || employees.Count < 2)
+            {
+                Debug.LogWarning("[EventTest] 사내연애 테스트 실패 — 직원 2명 이상 필요");
+                return;
+            }
+            // 이성 쌍 탐색
+            EmployeeData emp1 = null, emp2 = null;
+            foreach (var e in employees)
+            {
+                var partner = employees.Find(p => p.id != e.id && p.isFemale != e.isFemale);
+                if (partner != null) { emp1 = e; emp2 = partner; break; }
+            }
+            if (emp1 == null)
+            {
+                Debug.LogWarning("[EventTest] 사내연애 테스트 실패 — 이성 직원 없음");
+                return;
+            }
+            _pendingRomanceEvent = new PendingRomanceEventPayload
+            {
+                newEmpId      = emp1.id,
+                existingEmpId = emp2.id
+            };
+            OfficeManager.Instance?.ForceCharacterToPatrolPoint(emp2.id, "master_desk", stayDuration: 1f);
+            return;
+        }
+        if (type == RandomEventType.EmployeeResignation || type == RandomEventType.EmployeeRun)
+        {
+            var employees = EmployeeManager.Instance?.ownedEmployees;
+            if (employees == null || employees.Count == 0)
+            {
+                Debug.LogWarning($"[EventTest] 조건 이벤트 테스트 실패 — 보유 직원 없음");
+                return;
+            }
+            var emp = employees[UnityEngine.Random.Range(0, employees.Count)];
+            if (type == RandomEventType.EmployeeResignation)
+                TriggerEmployeeResignationEvent(emp);
+            else
+                TriggerEmployeeRunEvent(emp);
+            return;
+        }
+
         // 풀이 비어있으면 먼저 구성
         if (_eventPool.Count == 0)
         {
@@ -671,6 +1018,12 @@ public class RandomEventManager : MonoBehaviour
             DevelopmentManager.Instance.PauseForEvent();
             RandomEventUI.Instance.Show(evt);
         }
+    }
+
+    System.Collections.IEnumerator ShowRomanceEventAfterDelay(string newEmpId, string existingEmpId, float delay)
+    {
+        yield return new UnityEngine.WaitForSeconds(delay);
+        RandomEvent_Condition.TriggerOfficeRomanceEvent(this, newEmpId, existingEmpId);
     }
 
     System.Collections.IEnumerator ShowEventAfterDelay(RandomEventData evt, float delay)

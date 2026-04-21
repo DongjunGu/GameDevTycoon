@@ -286,35 +286,37 @@ public static class RandomEvents_Choice
                     {
                         onChoose = () =>
                         {
-                            int pop = GenrePopularityManager.Instance != null
-                                ? GenrePopularityManager.Instance.GetPopularity(ProjectSetupUI.SelectedGenre)
-                                : 2;
+                            int pop = ProjectSetupUI.SelectedGenrePopularity;
+
+                            RandomEventChoiceChartLoader.Cache
+                                .TryGetValue("YoutuberRequest", out var cRow);
+                            var c1 = cRow?.choices.Count > 0 ? cRow.choices[0] : null;
+
+                            youtuberEvt.choices[0].resultDescriptions.Clear();
 
                             if (pop >= 3)
                             {
                                 mgr.YoutuberSalesBonus = 1.05f;
-                                youtuberEvt.choices[0].resultDescriptions.Clear();
                                 youtuberEvt.choices[0].resultDescriptions.Add(
-                                    "인기있는 장르여서 좋은 반응이 나오고 있습니다.");
+                                    c1?.resultDescription ?? "인기있는 장르여서 좋은 반응이 나오고 있습니다.");
                                 youtuberEvt.choices[0].resultSystemMessage =
-                                    "이번 게임의 기대감이 오르고 있습니다.";
+                                    c1?.resultSystemMessage ?? "이번 게임의 기대감이 오르고 있습니다.";
                             }
                             else if (pop == 2)
                             {
                                 mgr.YoutuberSalesBonus = 1.0f;
-                                youtuberEvt.choices[0].resultDescriptions.Clear();
                                 youtuberEvt.choices[0].resultDescriptions.Add(
-                                    "흐음 애매한 반응이네요 이걸 좋아해야 할지 안 좋아해야 할지…");
-                                youtuberEvt.choices[0].resultSystemMessage = "";
+                                    c1?.resultDescription2 ?? "흐음 애매한 반응이네요 이걸 좋아해야 할지 안 좋아해야 할지…");
+                                youtuberEvt.choices[0].resultSystemMessage =
+                                    c1?.resultSystemMessage2 ?? "";
                             }
                             else
                             {
                                 mgr.YoutuberSalesBonus = 0.95f;
-                                youtuberEvt.choices[0].resultDescriptions.Clear();
                                 youtuberEvt.choices[0].resultDescriptions.Add(
-                                    "인기없는 장르라서 그런가… 다들 노잼이라는 반응이 나오고 있습니다.");
+                                    c1?.resultDescription3 ?? "인기없는 장르라서 그런가… 다들 노잼이라는 반응이 나오고 있습니다.");
                                 youtuberEvt.choices[0].resultSystemMessage =
-                                    "이번 게임의 기대감이 떨어지고 있습니다.";
+                                    c1?.resultSystemMessage3 ?? "이번 게임의 기대감이 떨어지고 있습니다.";
                             }
                         }
                     },
