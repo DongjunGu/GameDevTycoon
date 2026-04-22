@@ -59,6 +59,10 @@ public class ProjectSaveManager : MonoBehaviour
     private float _loadedProgVisualOffset;
     private bool   _loadedPendingLeaderScore25;
     private bool   _loadedPendingLeaderScore75;
+    private bool   _loadedPendingLeaderSelect;
+    private bool   _loadedPendingInvestmentUI;
+    private float  _loadedInvestmentThreshold;
+    private int    _loadedInvestmentReward;
     private string _loadedPendingEventData = "";
     private float  _loadedLeaderDevelopBonusTotal;
     private float  _loadedLeaderPlanningBonusTotal;
@@ -134,6 +138,10 @@ public class ProjectSaveManager : MonoBehaviour
         param.Add("progVisualOffset", dm.GetProgressVisualOffset());
         param.Add("pendingLeaderScore25", dm.IsPendingLeaderScore25);
         param.Add("pendingLeaderScore75", dm.IsPendingLeaderScore75);
+        param.Add("pendingLeaderSelect",  dm.IsPendingLeaderSelect);
+        param.Add("pendingInvestmentUI",  RandomEventManager.Instance.PendingInvestmentUI);
+        param.Add("investmentThreshold",  RandomEventManager.Instance.InvestmentThreshold);
+        param.Add("investmentReward",     RandomEventManager.Instance.InvestmentReward);
         param.Add("pendingEventData", RandomEventManager.Instance.GetPendingEventData());
         param.Add("leaderDevelopBonusTotal", dm.LeaderDevelopBonusTotal);
         param.Add("leaderPlanningBonusTotal", dm.LeaderPlanningBonusTotal);
@@ -243,6 +251,10 @@ public class ProjectSaveManager : MonoBehaviour
             _loadedProgVisualOffset = SafeFloat(row, "progVisualOffset", 0f);
             _loadedPendingLeaderScore25     = SafeBool(row, "pendingLeaderScore25", false);
             _loadedPendingLeaderScore75     = SafeBool(row, "pendingLeaderScore75", false);
+            _loadedPendingLeaderSelect      = SafeBool(row, "pendingLeaderSelect",  false);
+            _loadedPendingInvestmentUI      = SafeBool(row,  "pendingInvestmentUI", false);
+            _loadedInvestmentThreshold      = SafeFloat(row, "investmentThreshold", 0f);
+            _loadedInvestmentReward         = SafeInt(row,   "investmentReward",    0);
             _loadedPendingEventData         = SafeString(row, "pendingEventData", "");
             _loadedLeaderDevelopBonusTotal       = SafeFloat(row, "leaderDevelopBonusTotal", 0f);
             _loadedLeaderPlanningBonusTotal      = SafeFloat(row, "leaderPlanningBonusTotal", 0f);
@@ -280,7 +292,8 @@ public class ProjectSaveManager : MonoBehaviour
             _loadedTickSeed, _loadedTickIndices, _loadedMidDevData,
             _loadedDevDuration, _loadedNetworkSlowEndElapsed,
             _loadedProgOffsetElapsedAtEvent, _loadedProgOffsetExtension, _loadedProgVisualOffset,
-            _loadedPendingLeaderScore25, _loadedPendingLeaderScore75
+            _loadedPendingLeaderScore25, _loadedPendingLeaderScore75,
+            _loadedPendingLeaderSelect, _loadedPendingInvestmentUI
         );
 
         // ── RandomEvent 상태 복원 ──
@@ -295,9 +308,11 @@ public class ProjectSaveManager : MonoBehaviour
         RandomEventManager.Instance.PendingHackyCodeWeeksLeft  = _loadedPendingHackyCodeWeeksLeft;
         RandomEventManager.Instance.YoutuberSalesBonus         = _loadedYoutuberSalesBonus;
         RandomEventManager.Instance.RestorePendingRunAlerts(_loadedPendingRunAlerts);
-        RandomEventManager.Instance.InvestmentAccepted = _loadedInvestmentAccepted;
-        RandomEventManager.Instance.InvestmentStat = _loadedInvestmentStat;
-        RandomEventManager.Instance.InvestmentStatName = _loadedInvestmentStatName;
+        RandomEventManager.Instance.InvestmentAccepted  = _loadedInvestmentAccepted;
+        RandomEventManager.Instance.InvestmentStat      = _loadedInvestmentStat;
+        RandomEventManager.Instance.InvestmentStatName  = _loadedInvestmentStatName;
+        RandomEventManager.Instance.InvestmentThreshold = _loadedInvestmentThreshold;
+        RandomEventManager.Instance.InvestmentReward    = _loadedInvestmentReward;
         if (_loadedInvestmentAccepted && !string.IsNullOrEmpty(_loadedInvestmentStatName))
         {
             float currentValue = RandomEventManager.Instance.InvestmentStat switch
@@ -311,9 +326,27 @@ public class ProjectSaveManager : MonoBehaviour
 
             InvestmentProgressUI.Instance?.Show(
                 _loadedInvestmentStatName,
-                RandomEventManager.Instance.investmentThreshold,
+                _loadedInvestmentThreshold,
                 currentValue
             );
+        }
+
+        // 투자 이벤트 UI 표시 중에 종료됐으면 UI 복원 (stat/threshold/reward 복원 후 처리)
+        if (DevelopmentManager.Instance.PendingInvestmentUIRestore)
+        {
+            var dm = DevelopmentManager.Instance;
+            RandomEvents_Condition_Choice.RestoreInvestmentUI(() =>
+            {
+                dm.IsPendingLeaderSelect = true;
+                SaveProject();
+                LeaderSelectUI.Instance.Open(LeaderType.Planner, () =>
+                {
+                    dm.IsPendingLeaderSelect = false;
+                    GameTimeManager.Instance.ForceStartTime();
+                    dm.BeginDevelopmentCoroutine();
+                });
+            });
+            return;
         }
 
         // ── Marketing/Sales: 프로젝트 초기화 (Sales는 SalesSaveManager가 복원) ──
