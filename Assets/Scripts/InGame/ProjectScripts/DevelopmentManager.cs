@@ -10,8 +10,9 @@ public class DevelopmentManager : MonoBehaviour
     public static DevelopmentManager Instance { get; private set; }
 
     [Header("Settings")]
-    public bool IsOvertimeActive { get; private set; } = false;
-    public void SetOvertime(bool active) => IsOvertimeActive = active;
+    public bool IsVoluntaryOvertimeActive { get; private set; } = false;
+    public void SetVoluntaryOvertime(bool active) => IsVoluntaryOvertimeActive = active;
+
 
     public float developmentDuration = 180f;
     public float bugDurationRate = 0.2f;
@@ -117,7 +118,6 @@ public class DevelopmentManager : MonoBehaviour
         programmerLeader = null;
         artistLeader = null;
 
-        InitTickMap();
         DevelopmentPanelUI.Instance.ResetValues();
         RandomEventManager.Instance.InitEvents();
         RandomEventManager.Instance.ScheduleEvents();
@@ -125,6 +125,7 @@ public class DevelopmentManager : MonoBehaviour
 
         void ProceedToInvestment()
         {
+            InitTickMap(); // 야근 선택 완료 후 시드 확정
             RandomEventManager.Instance.TriggerInvestmentEvent(() => //투자 이벤트
             {
                 LeaderSelectUI.Instance.Open(LeaderType.Planner, () =>
@@ -136,6 +137,14 @@ public class DevelopmentManager : MonoBehaviour
             });
         }
 
+        void ProceedToOvertimeSelect()
+        {
+            if (StageManager.Instance != null && StageManager.Instance.CurrentStage >= 2 && OvertimeSelectUI.Instance != null)
+                OvertimeSelectUI.Instance.Open(ProceedToInvestment);
+            else
+                ProceedToInvestment();
+        }
+
         if (diff != 0)
         {
             int absDiff = Mathf.Abs(diff);
@@ -143,12 +152,12 @@ public class DevelopmentManager : MonoBehaviour
             string effect = diff > 0 ? "줄었습니다" : "늘었습니다";
             AlertUI.Instance.Show(
                 $"개발 인원이 추천보다 {absDiff}명 {sign}\n개발기간이 {absDiff}주 {effect}.",
-                ProceedToInvestment
+                ProceedToOvertimeSelect
             );
         }
         else
         {
-            ProceedToInvestment();
+            ProceedToOvertimeSelect();
         }
     }
 
@@ -178,11 +187,13 @@ public class DevelopmentManager : MonoBehaviour
 
             _tickTimesMap[employee.id] = times;
             _tickIndexMap[employee.id] = 0;
-            int[] order = BuildTickOrder(tickCount, IsOvertimeMode, rng);
+            bool empOvertime = employee.isOvertimeWorker || IsOvertimeMode || IsVoluntaryOvertimeActive;
+            int[] order = BuildTickOrder(tickCount, empOvertime, rng);
             _tickOrderMap[employee.id] = order;
 
             var sb = new System.Text.StringBuilder();
-            sb.Append($"[틱 시드={seed}] {employee.employeeName}({employee.id[..8]}) : ");
+            string overtimeTag = empOvertime ? " [야근모드 적용됨]" : "";
+            sb.Append($"[틱 시드={seed}] {employee.employeeName}({employee.id[..8]}){overtimeTag} : ");
             for (int i = 0; i < tickCount; i++)
             {
                 sb.Append($"[{i + 1}] {times[i]:F2}s/{tickTypeNames[order[i]]}");
@@ -423,7 +434,8 @@ public class DevelopmentManager : MonoBehaviour
             }
             elapsed = 0f;
 
-            if (UnityEngine.Random.value < 0.5f)
+            float bugFixChance = IsOvertimeMode ? 0.6f : 0.5f;
+            if (UnityEngine.Random.value < bugFixChance)
             {
                 var workers = EmployeeManager.Instance.ownedEmployees
                     .Where(e => OfficeManager.Instance.GetState(e.id) == CharacterState.Working)
@@ -527,6 +539,31 @@ public class DevelopmentManager : MonoBehaviour
             case LeaderType.Artist: artistLeader = employee; break;
         }
 
+        // 같은 역할 다른 직원 연속 횟수 리셋, 선택 직원 카운트 증가
+        EmployeeRole filterRole = type switch
+        {
+            LeaderType.Planner    => EmployeeRole.Planner,
+            LeaderType.Programmer => EmployeeRole.Programmer,
+            LeaderType.Artist     => EmployeeRole.Artist,
+            _ => EmployeeRole.Planner
+        };
+        var jealousyCandidates = new System.Collections.Generic.List<EmployeeData>();
+        foreach (var emp in EmployeeManager.Instance.ownedEmployees)
+        {
+            if (emp.role == filterRole && emp.id != employee.id)
+            {
+                emp.consecutiveLeaderCount = 0;
+                emp.consecutiveNonLeaderCount++;
+                if (emp.consecutiveNonLeaderCount >= 4)
+                    jealousyCandidates.Add(emp);
+            }
+        }
+        employee.consecutiveLeaderCount++;
+        employee.consecutiveNonLeaderCount = 0;
+
+        EmployeeData jealousyTarget = jealousyCandidates.Count > 0
+            ? jealousyCandidates[UnityEngine.Random.Range(0, jealousyCandidates.Count)] : null;
+
         int skill = type switch
         {
             LeaderType.Planner => employee.planningSkill,
@@ -554,19 +591,38 @@ public class DevelopmentManager : MonoBehaviour
         float[] scores = new float[n];
         for (int i = 0; i < n; i++)
             scores[i] = total * weights[i] / weightSum;
+
+        int leaderCount = employee.consecutiveLeaderCount;
         GameTimeManager.Instance.StopTime();
         LeaderScoreUI.Instance.Show(employee, type, scores, leaderTickDelay, () =>
         {
-            _isRunning = true;
-            CurrentStage = ProjectStage.Developing;
-            GameTimeManager.Instance.ForceStartTime();
-            Debug.Log("팀장점수완료 저장");
+            void StartDeveloping()
+            {
+                _isRunning = true;
+                CurrentStage = ProjectStage.Developing;
+                GameTimeManager.Instance.ForceStartTime();
+                Debug.Log("팀장점수완료 저장");
 
-            MoneyManager.Instance.SaveMoney();
-            ProjectSaveManager.Instance.SaveProject();
-            GameTimeManager.Instance.SaveGameTime();
-            GameTimeManager.Instance.ForceStartTime();
-            StartCoroutine(DevelopmentCoroutine());
+                MoneyManager.Instance.SaveMoney();
+                ProjectSaveManager.Instance.SaveProject();
+                GameTimeManager.Instance.SaveGameTime();
+                EmployeeManager.Instance.SaveAllEmployees();
+                GameTimeManager.Instance.ForceStartTime();
+                StartCoroutine(DevelopmentCoroutine());
+            }
+
+            void AfterBurnout()
+            {
+                if (jealousyTarget != null && UnityEngine.Random.value < 0.7f)
+                    RandomEvents_Condition.TriggerLeaderJealousyEvent(jealousyTarget, StartDeveloping);
+                else
+                    StartDeveloping();
+            }
+
+            if (leaderCount >= 3 && UnityEngine.Random.value < 0.5f)
+                RandomEvents_Condition.TriggerLeaderBurnoutEvent(employee, leaderCount, AfterBurnout);
+            else
+                AfterBurnout();
         });
     }
 
@@ -783,7 +839,9 @@ public class DevelopmentManager : MonoBehaviour
 
         _tickTimesMap[empId] = times;
         _tickIndexMap[empId] = 0;
-        _tickOrderMap[empId] = BuildTickOrder(tickCount, IsOvertimeMode, rng);
+        var empData = EmployeeManager.Instance.ownedEmployees.Find(e => e.id == empId);
+        bool empOvertime = (empData?.isOvertimeWorker ?? false) || IsOvertimeMode || IsVoluntaryOvertimeActive;
+        _tickOrderMap[empId] = BuildTickOrder(tickCount, empOvertime, rng);
     }
 
     public string GetMidDevData()
@@ -937,7 +995,7 @@ public class DevelopmentManager : MonoBehaviour
                 {
                     ProjectScale.Small  => UnityEngine.Random.Range(3, 7)  - perfReduction,
                     ProjectScale.Medium => UnityEngine.Random.Range(6, 10) - perfReduction,
-                    ProjectScale.Large  => IsOvertimeMode
+                    ProjectScale.Large  => (IsOvertimeMode || employee.isOvertimeWorker)
                         ? UnityEngine.Random.Range(10, 21) - perfReduction
                         : UnityEngine.Random.Range(10, 16) - perfReduction,
                     _ => 1
@@ -1001,7 +1059,10 @@ public class DevelopmentManager : MonoBehaviour
         ProjectSetupUI.SelectedGenre = default;
         ProjectSetupUI.SelectedPlatform = default;
 
-        IsOvertimeActive = false;
+        IsVoluntaryOvertimeActive = false;
+        IsOvertimeMode            = false;
+        foreach (var emp in EmployeeManager.Instance.ownedEmployees)
+            emp.isOvertimeWorker = false;
         GameTimeManager.Instance.ForceStartTime();
         Debug.Log("프로젝트 초기화 완료");
     }

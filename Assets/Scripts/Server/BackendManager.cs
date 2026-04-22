@@ -36,6 +36,7 @@ public class BackendManager : MonoBehaviour
         RandomEventChartLoader.Load();
         RandomEventChoiceChartLoader.Load();
         RandomEventConditionChartLoader.Load();
+        ItemChartLoader.Load();
         RandomEventManager.Instance.InitConditionEvents();
 
         EmployeeManager.Instance.LoadAllData(() =>
@@ -56,8 +57,11 @@ public class BackendManager : MonoBehaviour
                                     {
                                         SalesSaveManager.Instance.LoadSales(() =>
                                         {
-                                            DialogManager.Instance.Initialize();
-                                            FindAnyObjectByType<Progress>()?.SetAllDataLoaded();
+                                            ItemManager.Instance.Load(() =>
+                                            {
+                                                DialogManager.Instance.Initialize();
+                                                FindAnyObjectByType<Progress>()?.SetAllDataLoaded();
+                                            });
                                         });
                                     });
                                 });

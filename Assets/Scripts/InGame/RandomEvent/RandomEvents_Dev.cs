@@ -31,6 +31,11 @@ public static class RandomEvents_Dev
         // ── 76~99% ──────────────────────────────────────────────
 
         // ── 대형 게임사의 경쟁작 출시 ───────────────────────────
+        // CDN 로드 실패 시 차트 기본값 (RandomEvent_Chart.csv > CompetitorGame):
+        //   title       = "대형 게임사의 경쟁작 출시"
+        //   description = "사장님 대기업에서 역대급 게임이 나와서 직원들의 기가 죽고 있습니다"
+        //   systemMessage = "전체 직원 만족도 -10"
+        //   weight=4, categoryMin=4, categoryMax=4, portraitId=portrait_secretary
         Add(pool, chart, new RandomEventData
         {
             type    = RandomEventType.CompetitorGame,
@@ -47,6 +52,11 @@ public static class RandomEvents_Dev
         // ── 1~99% ───────────────────────────────────────────────
 
         // ── 나를 피하는 직원 ─────────────────────────────────────
+        // CDN 로드 실패 시 차트 기본값 (RandomEvent_Chart.csv > AvoidingEmployee):
+        //   title       = "나를 피하는 직원"
+        //   description = "사장님 저를 꿈속에서 해고 했어요 오늘은 별로 보고 싶지 않네요"
+        //   systemMessage = "{0} 만족도 -10"  ({0} → 직원이름)
+        //   weight=1, categoryMin=1, categoryMax=4, requiresPatrol=true, requiredPatrolPointId=master_desk
         {
             EmployeeData avoidEmp = null;
             RandomEventData avoidEvt = null;
@@ -74,6 +84,11 @@ public static class RandomEvents_Dev
         }
 
         // ── 감기 ─────────────────────────────────────────────────
+        // CDN 로드 실패 시 차트 기본값 (RandomEvent_Chart.csv > Cold):
+        //   title       = "감기"
+        //   description = "어제 문을 열어두고 자서 그런지 컨디션이 안좋네요"
+        //   systemMessage = "{0} {1}주간 능력치 -20%"  ({0} → 직원이름, {1} → 주수)
+        //   weight=1, categoryMin=1, categoryMax=4, requiresPatrol=true, requiredPatrolPointId=master_desk
         {
             EmployeeData coldEmp = null;
             int coldWeeks = 0;
@@ -104,6 +119,11 @@ public static class RandomEvents_Dev
         }
 
         // ── 이유 없는 별점 1점 ──────────────────────────────────
+        // CDN 로드 실패 시 차트 기본값 (RandomEvent_Chart.csv > BadReview):
+        //   title       = "이유 없는 별점 1점"
+        //   description = "새로운 리뷰가 올라왔는데 '게임은 안 해봤지만 오늘 비가 와서 기분이 안 좋네요. 별점 1점 드립니다.'라고 적혀 있습니다. 이걸 본 담당 직원이 멘탈이 나가서 울고 있어요."
+        //   systemMessage = "{0} 만족도 -10"  ({0} → 직원이름)
+        //   weight=1, categoryMin=1, categoryMax=4, portraitId=portrait_secretary
         {
             EmployeeData badReviewEmp = null;
             RandomEventData badReviewEvt = null;
@@ -132,13 +152,13 @@ public static class RandomEvents_Dev
 
 
         // ── 게임 업그레이드 요청 ─────────────────────────────────
+        // CDN 로드 실패 시 차트 기본값 (RandomEvent_Chart.csv > GameUpgradeRequest):
+        //   title       = "게임 업그레이드 요청"
+        //   description = "TODO"
+        //   weight=1, categoryMin=1, categoryMax=4
         Add(pool, chart, new RandomEventData
         {
             type    = RandomEventType.GameUpgradeRequest,
-            // title       = "게임 업그레이드 요청",
-            // description = "TODO",
-            // weight      = mgr.gameUpgradeRequestWeight,
-            // categoryMin = 1, categoryMax = 4,
             onApply = () => { /* TODO */ }
         });
 
@@ -146,17 +166,17 @@ public static class RandomEvents_Dev
         // ── 1~74% ───────────────────────────────────────────────
 
         // ── 네트워크 끊김 ────────────────────────────────────────
+        // CDN 로드 실패 시 차트 기본값 (RandomEvent_Chart.csv > NetworkIssue):
+        //   title       = "네트워크 끊김"
+        //   description = "사장님 제가 넘어지면서 실수로 코드를 뽑아버렸습니다..."
+        //   systemMessage = "개발 기간 {0}주 지연"  ({0} → 지연 주수)
+        //   weight=1.3, categoryMin=1, categoryMax=3, requiresPatrol=true, requiredPatrolPointId=master_desk
         {
             int delayWeeks = 0;
             RandomEventData networkEvt = null;
             networkEvt = new RandomEventData
             {
                 type = RandomEventType.NetworkIssue,
-                // title                 = "네트워크 끊김",
-                // weight                = mgr.networkIssueWeight,
-                // categoryMin           = 1, categoryMax = 3,
-                // requiresPatrol        = true,
-                // requiredPatrolPointId = "master_desk",
                 onSetup = () =>
                 {
                     var employees = EmployeeManager.Instance.ownedEmployees;
@@ -192,6 +212,11 @@ public static class RandomEvents_Dev
         }
 
         // ── 드릴 소리에 내 머리도 지잉~ ────────────────────────
+        // CDN 로드 실패 시 차트 기본값 (RandomEvent_Chart.csv > DrillEvent):
+        //   title       = "드릴 소리에 내 머리도 지잉~"
+        //   description = "옆 사무실에서 공사를 시작했는데 하루 종일 '드르륵- 쾅쾅!' 소리가 들려서 도저히 집중할 수가 없습니다"
+        //   systemMessage = "{0} {1}주간 능력치 -20%"  ({0} → 직원이름, {1} → 주수)
+        //   weight=1, categoryMin=1, categoryMax=4, requiresPatrol=true, requiredPatrolPointId=master_desk
         {
             EmployeeData drillEmp = null;
             int drillWeeks = 0;
@@ -222,6 +247,11 @@ public static class RandomEvents_Dev
         }
 
         // ── 도둑이야! ────────────────────────────────────────────
+        // CDN 로드 실패 시 차트 기본값 (RandomEvent_Chart.csv > ThiefEvent):
+        //   title       = "도둑이야!"
+        //   description = "어제 회사에 도둑이 들었습니다! 확인해보니 내부자의 소행인 것 같기도?"
+        //   systemMessage = "{0}G가 감소하였습니다"  ({0} → 도난 금액)
+        //   weight=1, categoryMin=1, categoryMax=4, portraitId=portrait_secretary
         {
             int stolenGold = 0;
             RandomEventData thiefEvt = null;
@@ -247,13 +277,13 @@ public static class RandomEvents_Dev
         // ── 51~99% ──────────────────────────────────────────────
 
         // ── 유튜버 선공개 요청 ───────────────────────────────────
+        // CDN 로드 실패 시 차트 기본값 (RandomEvent_Chart.csv > YoutuberRequest):
+        //   title       = "유튜버 선공개 요청"
+        //   description = "TODO"
+        //   weight=1, categoryMin=3, categoryMax=4
         Add(pool, chart, new RandomEventData
         {
             type    = RandomEventType.YoutuberRequest,
-            // title       = "유튜버 선공개 요청",
-            // description = "TODO",
-            // weight      = mgr.youtuberRequestWeight,
-            // categoryMin = 3, categoryMax = 4,
             onApply = () => { /* TODO */ }
         });
     }

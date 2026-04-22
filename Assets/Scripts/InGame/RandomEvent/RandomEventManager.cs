@@ -194,7 +194,7 @@ public class RandomEventManager : MonoBehaviour
             if (_unstableCompanyWeeksLeft == 0)
             {
                 _unstableCompanyWeeksLeft = -1;
-                RandomEvent_Condition.TriggerUnstableCompanyEvent(this, GameTimeManager.Instance?.Year ?? 2000);
+                RandomEvents_Condition.TriggerUnstableCompanyEvent(this, GameTimeManager.Instance?.Year ?? 2000);
             }
         }
 
@@ -207,7 +207,7 @@ public class RandomEventManager : MonoBehaviour
                 string id1 = couple.empId1;
                 string id2 = couple.empId2;
                 _activeCouple = null;
-                RandomEvent_Condition.TriggerRomanceBrokeUpEvent(this, id1, id2);
+                RandomEvents_Condition.TriggerRomanceBrokeUpEvent(this, id1, id2);
             }
             else
             {
@@ -251,7 +251,7 @@ public class RandomEventManager : MonoBehaviour
                 AlertUI.Instance.Show(capturedMsg, () =>
                 {
                     if (UnityEngine.Random.value < 0.3f)
-                        RandomEvent_Condition.TriggerCompanyBadReviewEvent(this, GameTimeManager.Instance?.Year ?? 2000);
+                        RandomEvents_Condition.TriggerCompanyBadReviewEvent(this, GameTimeManager.Instance?.Year ?? 2000);
                 });
             }
             else
@@ -265,7 +265,7 @@ public class RandomEventManager : MonoBehaviour
     public void InitConditionEvents()
     {
         _conditionEventPool.Clear();
-        RandomEvent_Condition.Register(_conditionEventPool, this, RandomEventChartLoader.Cache);
+        RandomEvents_Condition.Register(_conditionEventPool, this, RandomEventChartLoader.Cache);
     }
 
     // ── 풀 구성만 (StartDevelopment/RestoreState 양쪽에서 호출) ──
@@ -540,7 +540,7 @@ public class RandomEventManager : MonoBehaviour
 
         string partnerId = couple.empId1 == empId ? couple.empId2 : couple.empId1;
         _activeCouple = null;
-        RandomEvent_Condition.TriggerCoupleResignationEvent(partnerId);
+        RandomEvents_Condition.TriggerCoupleResignationEvent(partnerId);
     }
 
     public void ClearCoupleIfInvolved(string empId)
@@ -811,6 +811,22 @@ public class RandomEventManager : MonoBehaviour
     // ── 조건 이벤트 ───────────────────────────────────────────
     public void CheckConditionEvents()
     {
+        // 만족도 90이상: 10% 확률로 자발적 야근 (개발 중에만)
+        if (DevelopmentManager.Instance?.CurrentStage == ProjectStage.Developing &&
+            !DevelopmentManager.Instance.IsVoluntaryOvertimeActive)
+        {
+            var highSatCandidates = new List<EmployeeData>();
+            foreach (var emp in EmployeeManager.Instance.ownedEmployees)
+                if (emp.satisfaction >= 90) highSatCandidates.Add(emp);
+
+            if (highSatCandidates.Count > 0 && UnityEngine.Random.value < 0.1f)
+            {
+                var target = highSatCandidates[UnityEngine.Random.Range(0, highSatCandidates.Count)];
+                RandomEvents_Condition.TriggerVoluntaryOvertimeEvent(target);
+                return;
+            }
+        }
+
         foreach (var emp in new List<EmployeeData>(EmployeeManager.Instance.ownedEmployees))
         {
             if (emp.satisfaction >= 41) continue;
@@ -827,7 +843,7 @@ public class RandomEventManager : MonoBehaviour
     }
 
     public bool CheckUnstableCompanyOnNewYear(int newYear) =>
-        RandomEvent_Condition.CheckUnstableCompanyOnNewYear(this, newYear);
+        RandomEvents_Condition.CheckUnstableCompanyOnNewYear(this, newYear);
 
     // ── stub ──────────────────────────────────────────────────
     public void TriggerScoutEvent()      { }
@@ -838,17 +854,17 @@ public class RandomEventManager : MonoBehaviour
     public void TriggerEmployeeResignationEvent(EmployeeData emp)
     {
         bool   isOvertime = false;
-        string message    = RandomEvent_Condition.GetResignationMessage(isOvertime);
-        string title      = RandomEvent_Condition.GetTitle("EmployeeResignation") ?? "사직서 제출";
+        string message    = RandomEvents_Condition.GetResignationMessage(isOvertime);
+        string title      = RandomEvents_Condition.GetTitle("EmployeeResignation") ?? "사직서 제출";
 
         EventUI.Instance.Show(title, emp.portraitId, $"{emp.employeeName}\n\n{message}", () =>
         {
             EmployeeManager.Instance.FireEmployee(emp);
             EmployeeManager.Instance.ReduceAllSatisfactionExcept(10, emp);
-            AlertUI.Instance.Show(RandomEvent_Condition.GetResignationSystemMessage(emp.employeeName), () =>
+            AlertUI.Instance.Show(RandomEvents_Condition.GetResignationSystemMessage(emp.employeeName), () =>
             {
                 if (UnityEngine.Random.value < 0.3f)
-                    RandomEvent_Condition.TriggerCompanyBadReviewEvent(this, GameTimeManager.Instance?.Year ?? 2000);
+                    RandomEvents_Condition.TriggerCompanyBadReviewEvent(this, GameTimeManager.Instance?.Year ?? 2000);
             });
         });
     }
@@ -858,7 +874,7 @@ public class RandomEventManager : MonoBehaviour
         EmployeeManager.Instance.FireEmployee(emp);
 
         // 즉시 EventUI — 제목 없음, 직원 portrait, 랜덤 도망 메시지
-        EventUI.Instance.Show("", emp.portraitId, RandomEvent_Condition.GetRunAwayMessage());
+        EventUI.Instance.Show("", emp.portraitId, RandomEvents_Condition.GetRunAwayMessage());
 
         // 2주 후 AlertUI 예약
         RandomEventConditionChartRow runRow = null;
@@ -878,24 +894,24 @@ public class RandomEventManager : MonoBehaviour
         {
             int year = GameTimeManager.Instance?.Year ?? 2000;
             if (UnityEngine.Random.value < 0.5f)
-                RandomEvent_Condition.TriggerBadRumorEvent(this, year);
+                RandomEvents_Condition.TriggerBadRumorEvent(this, year);
             else
-                RandomEvent_Condition.TriggerAnxietyInducingEvent();
+                RandomEvents_Condition.TriggerAnxietyInducingEvent();
             return;
         }
         if (type == RandomEventType.BadRumor)
         {
-            RandomEvent_Condition.TriggerBadRumorEvent(this, GameTimeManager.Instance?.Year ?? 2000);
+            RandomEvents_Condition.TriggerBadRumorEvent(this, GameTimeManager.Instance?.Year ?? 2000);
             return;
         }
         if (type == RandomEventType.AnxietyInducing)
         {
-            RandomEvent_Condition.TriggerAnxietyInducingEvent();
+            RandomEvents_Condition.TriggerAnxietyInducingEvent();
             return;
         }
         if (type == RandomEventType.CompanyBadReview)
         {
-            RandomEvent_Condition.TriggerCompanyBadReviewEvent(this, GameTimeManager.Instance?.Year ?? 2000);
+            RandomEvents_Condition.TriggerCompanyBadReviewEvent(this, GameTimeManager.Instance?.Year ?? 2000);
             return;
         }
         if (type == RandomEventType.RomanceBrokeUp)
@@ -908,7 +924,7 @@ public class RandomEventManager : MonoBehaviour
             string id1 = _activeCouple.Value.empId1;
             string id2 = _activeCouple.Value.empId2;
             _activeCouple = null;
-            RandomEvent_Condition.TriggerRomanceBrokeUpEvent(this, id1, id2);
+            RandomEvents_Condition.TriggerRomanceBrokeUpEvent(this, id1, id2);
             return;
         }
         if (type == RandomEventType.OfficeRomance)
@@ -1023,7 +1039,7 @@ public class RandomEventManager : MonoBehaviour
     System.Collections.IEnumerator ShowRomanceEventAfterDelay(string newEmpId, string existingEmpId, float delay)
     {
         yield return new UnityEngine.WaitForSeconds(delay);
-        RandomEvent_Condition.TriggerOfficeRomanceEvent(this, newEmpId, existingEmpId);
+        RandomEvents_Condition.TriggerOfficeRomanceEvent(this, newEmpId, existingEmpId);
     }
 
     System.Collections.IEnumerator ShowEventAfterDelay(RandomEventData evt, float delay)

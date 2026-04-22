@@ -39,6 +39,9 @@ public class EmployeeData
     public int statDebuffWeeksLeft  = 0; // 임시 능력치 -20% 디버프 남은 주차
     public int statBuffWeeksLeft    = 0; // 임시 능력치 +20% 버프 남은 주차
     public int romanceBuffWeeksLeft = 0; // 사내 연애 능력치 +10% 버프 남은 주차
+    public int consecutiveLeaderCount    = 0; // 연속 팀장 선정 횟수
+    public int consecutiveNonLeaderCount = 0; // 연속 팀장 미선정 횟수
+    public bool isOvertimeWorker = false;     // 이번 프로젝트 야근 여부 (프로젝트 단위 리셋)
 
     // ── 범위 수치 ─────────────────────────────
     public int developMin, developMax;
@@ -138,9 +141,12 @@ public class EmployeeData
         data.enhancementRecordsJson = SafeString(row, "enhancementRecordsJson", "[]");
         data.hiredYear = SafeInt(row, "hiredYear", 0);
         data.isFemale  = SafeBool(row, "isFemale", false);
-        data.statDebuffWeeksLeft  = SafeInt(row, "statDebuffWeeksLeft",  0);
-        data.statBuffWeeksLeft    = SafeInt(row, "statBuffWeeksLeft",    0);
-        data.romanceBuffWeeksLeft = SafeInt(row, "romanceBuffWeeksLeft", 0);
+        data.statDebuffWeeksLeft       = SafeInt(row, "statDebuffWeeksLeft",       0);
+        data.statBuffWeeksLeft         = SafeInt(row, "statBuffWeeksLeft",         0);
+        data.romanceBuffWeeksLeft      = SafeInt(row, "romanceBuffWeeksLeft",      0);
+        data.consecutiveLeaderCount    = SafeInt(row, "consecutiveLeaderCount",    0);
+        data.consecutiveNonLeaderCount = SafeInt(row, "consecutiveNonLeaderCount", 0);
+        data.isOvertimeWorker          = SafeBool(row, "isOvertimeWorker",          false);
         return data;
     }
 
@@ -178,9 +184,12 @@ public class EmployeeData
         param.Add("enhancementRecordsJson", enhancementRecordsJson);
         param.Add("hiredYear", hiredYear);
         param.Add("isFemale",  isFemale);
-        param.Add("statDebuffWeeksLeft",  statDebuffWeeksLeft);
-        param.Add("statBuffWeeksLeft",    statBuffWeeksLeft);
-        param.Add("romanceBuffWeeksLeft", romanceBuffWeeksLeft);
+        param.Add("statDebuffWeeksLeft",    statDebuffWeeksLeft);
+        param.Add("statBuffWeeksLeft",      statBuffWeeksLeft);
+        param.Add("romanceBuffWeeksLeft",   romanceBuffWeeksLeft);
+        param.Add("consecutiveLeaderCount",    consecutiveLeaderCount);
+        param.Add("consecutiveNonLeaderCount", consecutiveNonLeaderCount);
+        param.Add("isOvertimeWorker",          isOvertimeWorker);
         return param;
     }
 

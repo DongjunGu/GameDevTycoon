@@ -18,6 +18,7 @@ public class RandomEventChoiceChartRow
 {
     public string title;
     public string description;
+    public string description2; // 역할/상태 분기용 2번째 설명 (e.g. Artist 전용)
     public string portraitId;
     public string portraitId2;
     public float  weight;
@@ -141,6 +142,7 @@ public static class RandomEventChoiceChartLoader
             {
                 title                 = S(row, "title"),
                 description           = S(row, "description"),
+                description2          = S(row, "description2"),
                 portraitId            = S(row, "portraitId"),
                 portraitId2           = S(row, "portraitId2"),
                 weight                = F(row, "weight"),
