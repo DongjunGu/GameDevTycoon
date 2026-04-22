@@ -128,13 +128,17 @@ public static class RandomEvents_Choice
             };
             Apply(equipEvt, chart);
 
+            // [CDN fallback] "그래.. 알겠어 바꿔줘야지(-{N}G)"
             string equipLabel0Template  = equipEvt.choices[0].buttonLabel ?? "";
+            // [CDN fallback] "{해당직원이름} 능력치 {주수}주 동안 +20%"
             string equipSystem0Template = equipEvt.choices[0].resultSystemMessage ?? "";
 
             // description2는 아티스트 전용 (chart row에서 직접 참조)
             RandomEventChoiceChartRow eqChartRow = null;
             chart?.TryGetValue("EquipmentUpgrade", out eqChartRow);
+            // [CDN fallback] "사장님 컴퓨터 새로 하나 바꿔주시죠"
             string equipDescDefaultTemplate = equipEvt.description ?? "";
+            // [CDN fallback] "사장님 태블릿 하나 새로 사주시죠"
             string equipDescArtistTemplate  = !string.IsNullOrEmpty(eqChartRow?.description2)
                 ? eqChartRow.description2 : "";
 
@@ -150,7 +154,7 @@ public static class RandomEvents_Choice
                 equipEvt.portraitId       = equipEmp.portraitId;
                 equipEvt.targetEmployeeId = equipEmp.id;
 
-                equipEvt.description = equipEmp.role == EmployeeRole.Artist
+                equipEvt.description = (equipEmp.role == EmployeeRole.Artist && !string.IsNullOrEmpty(equipDescArtistTemplate))
                     ? equipDescArtistTemplate
                     : equipDescDefaultTemplate;
 
@@ -235,11 +239,16 @@ public static class RandomEvents_Choice
             };
             Apply(dinnerEvt, chart);
 
+            // [CDN fallback] "오늘은 삼겹살로 가자!(-{N}G)"
             string dinnerLabel1Template  = dinnerEvt.choices[1].buttonLabel ?? "";
+            // [CDN fallback] "고생하는데 무리좀 해야지… 오늘은 소고기다(-{N}G)"
             string dinnerLabel2Template  = dinnerEvt.choices[2].buttonLabel ?? "";
+            // [CDN fallback] "전 직원 만족도 +10 / -{비용}G"
             string dinnerSystem2Template = dinnerEvt.choices[2].resultSystemMessage ?? "";
+            // [CDN fallback] "와아! 삼겹살에 소주! 오늘 스트레스 다 날려버려요!"
             dinnerDesc2Happy = dinnerEvt.choices[1].resultDescriptions.Count > 0
                 ? dinnerEvt.choices[1].resultDescriptions[0] : "";
+            // [CDN fallback] "소고기도 아니고 삼겹살이라니... 뭐 안 먹는 것보단 낫겠네요."
             dinnerDesc2Meh   = dinnerEvt.choices[1].resultDescriptions.Count > 1
                 ? dinnerEvt.choices[1].resultDescriptions[1] : "";
 
@@ -252,8 +261,8 @@ public static class RandomEvents_Choice
                 dinnerEvt.choices[1].buttonLabel = dinnerLabel1Template.Replace("{N}", dinnerCost5.ToString());
                 dinnerEvt.choices[2].buttonLabel = dinnerLabel2Template.Replace("{N}", dinnerCost10.ToString());
                 dinnerEvt.choices[1].resultDescriptions.Clear();
-                dinnerEvt.choices[1].resultDescriptions.Add(dinnerDesc2Happy);
-                dinnerEvt.choices[1].resultDescriptions.Add(dinnerDesc2Meh);
+                if (!string.IsNullOrEmpty(dinnerDesc2Happy)) dinnerEvt.choices[1].resultDescriptions.Add(dinnerDesc2Happy);
+                if (!string.IsNullOrEmpty(dinnerDesc2Meh))   dinnerEvt.choices[1].resultDescriptions.Add(dinnerDesc2Meh);
                 dinnerEvt.choices[2].resultSystemMessage = dinnerSystem2Template.Replace("{비용}", dinnerCost10.ToString());
             };
             pool.Add(dinnerEvt);
@@ -301,7 +310,9 @@ public static class RandomEvents_Choice
             };
             Apply(bossGossipEvt, chart);
 
+            // [CDN fallback] "사장님 {직원이름}이 사장님 뒷담을 하는걸 제가 들었어요 어떻게 할까요?"
             string gossipDescTemplate    = bossGossipEvt.description ?? "";
+            // [CDN fallback] "{직원이름} 만족도 -10"
             string gossipSystem1Template = bossGossipEvt.choices[1].resultSystemMessage ?? "";
 
             bossGossipEvt.onSetup = () =>
@@ -373,20 +384,20 @@ public static class RandomEvents_Choice
                 if (pop >= 3)
                 {
                     mgr.YoutuberSalesBonus = 1.05f;
-                    youtuberEvt.choices[0].resultDescriptions.Add(ytDescHigh);
-                    youtuberEvt.choices[0].resultSystemMessage = ytSysHigh;
+                    if (!string.IsNullOrEmpty(ytDescHigh)) youtuberEvt.choices[0].resultDescriptions.Add(ytDescHigh);
+                    if (!string.IsNullOrEmpty(ytSysHigh))  youtuberEvt.choices[0].resultSystemMessage = ytSysHigh;
                 }
                 else if (pop == 2)
                 {
                     mgr.YoutuberSalesBonus = 1.0f;
-                    youtuberEvt.choices[0].resultDescriptions.Add(ytDescMid);
-                    youtuberEvt.choices[0].resultSystemMessage = ytSysMid;
+                    if (!string.IsNullOrEmpty(ytDescMid)) youtuberEvt.choices[0].resultDescriptions.Add(ytDescMid);
+                    if (!string.IsNullOrEmpty(ytSysMid))  youtuberEvt.choices[0].resultSystemMessage = ytSysMid;
                 }
                 else
                 {
                     mgr.YoutuberSalesBonus = 0.95f;
-                    youtuberEvt.choices[0].resultDescriptions.Add(ytDescLow);
-                    youtuberEvt.choices[0].resultSystemMessage = ytSysLow;
+                    if (!string.IsNullOrEmpty(ytDescLow)) youtuberEvt.choices[0].resultDescriptions.Add(ytDescLow);
+                    if (!string.IsNullOrEmpty(ytSysLow))  youtuberEvt.choices[0].resultSystemMessage = ytSysLow;
                 }
             };
 
@@ -521,6 +532,7 @@ public static class RandomEvents_Choice
             };
             Apply(earlyLeaveEvt, chart);
 
+            // [CDN fallback] "해당직원 만족도 +5 / 개발 기간 +{주수}주"
             string earlyLeaveSystem2Template = earlyLeaveEvt.choices[1].resultSystemMessage ?? "";
 
             earlyLeaveEvt.onSetup = () =>
@@ -607,8 +619,10 @@ public static class RandomEvents_Choice
             };
             Apply(hackyEvt, chart);
 
+            // [CDN fallback] "후… 일단 {주수}주는 더 걸릴 것 같네요"
             string hackyDesc2Template   = hackyEvt.choices[1].resultDescriptions.Count > 0
                 ? hackyEvt.choices[1].resultDescriptions[0] : "";
+            // [CDN fallback] "개발 기간 +{주수}주 연장"
             string hackySystem2Template = hackyEvt.choices[1].resultSystemMessage ?? "";
 
             hackyEvt.onSetup = () =>
@@ -693,12 +707,19 @@ public static class RandomEvents_Choice
         };
         Apply(evt, chart);
 
+        // [CDN fallback] "{해당직원이름} 편 들어주기"
         string label0Template  = evt.choices[0].buttonLabel ?? "";
+        // [CDN fallback] "{해당직원이름} 편 들어주기" (반대 직원)
         string label1Template  = evt.choices[1].buttonLabel ?? "";
+        // [CDN fallback] "{직원1파트} 팀장점수 10% 증가 / {직원1이름} 만족도 +10 / {직원2파트} 팀장점수 10% 감소 / {직원2이름} 만족도 -10"
         string system0Template = evt.choices[0].resultSystemMessage ?? "";
+        // [CDN fallback] "{직원2파트} 팀장점수 10% 증가 / {직원2이름} 만족도 +10 / {직원1파트} 팀장점수 10% 감소 / {직원1이름} 만족도 -10"
         string system1Template = evt.choices[1].resultSystemMessage ?? "";
+        // [CDN fallback] ["사장님! 진짜 제 마음을 어쩜 그렇게 잘 알아주세요?...", "사장님이 제 편 안 들어주셨으면 저 오늘 진짜 사직서 쓸 뻔했잖아요...", "거봐요! 내가 맞다니까!"]
         var    happyDescs      = new List<string>(evt.choices[0].resultDescriptions);
+        // [CDN fallback] ["말 걸지 마세요", "평생 기억하겠습니다…"]
         var    angryDescs      = new List<string>(evt.choices[1].resultDescriptions);
+        // [CDN fallback] "이건 육아일까 회사일까"
         string happyTitle      = evt.choices[0].resultTitle ?? "";
         string angryTitle      = evt.choices[1].resultTitle ?? "";
 

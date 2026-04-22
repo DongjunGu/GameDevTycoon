@@ -50,4 +50,7 @@ public class RandomEventChoiceData
 
     // Show() 직전 호출 — 동적 내용 세팅용
     public Action onSetup;
+
+    // confirm 클릭 시 DevelopmentManager.ResumeFromEvent() 대신 호출할 콜백 (null이면 기본 동작)
+    public Action onConfirm;
 }

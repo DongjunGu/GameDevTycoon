@@ -106,6 +106,12 @@ public class GameTimeManager : MonoBehaviour
                     RandomEventManager.Instance?.LoadUnstableCompanyWeeksLeft(
                         SafeInt(row, "unstableCompanyWeeksLeft", -1)
                     );
+                    RandomEventManager.Instance?.LoadCoffeeRequestWeeksLeft(
+                        SafeInt(row, "coffeeRequestWeeksLeft", -1)
+                    );
+                    RandomEventManager.Instance?.LoadEnergyDrinkRequestWeeksLeft(
+                        SafeInt(row, "energyDrinkRequestWeeksLeft", -1)
+                    );
 
                     Debug.Log($"로드 완료: {Year}년 {Month}월 {Week}주 / rowInDate: {_rowInDate}");
                     SaveGameTime(); // 신규 컬럼 자동 추가
@@ -193,6 +199,8 @@ public class GameTimeManager : MonoBehaviour
         param.Add("activeCoupleIds",            RandomEventManager.Instance?.GetActiveCoupleString()           ?? "");
         param.Add("pendingRomance",             RandomEventManager.Instance?.GetPendingRomanceString()          ?? "");
         param.Add("unstableCompanyWeeksLeft",   RandomEventManager.Instance?.GetUnstableCompanyWeeksLeft()     ?? -1);
+        param.Add("coffeeRequestWeeksLeft",       RandomEventManager.Instance?.GetCoffeeRequestWeeksLeft()         ?? -1);
+        param.Add("energyDrinkRequestWeeksLeft",  RandomEventManager.Instance?.GetEnergyDrinkRequestWeeksLeft()    ?? -1);
 
         if (!string.IsNullOrEmpty(_rowInDate))
         {

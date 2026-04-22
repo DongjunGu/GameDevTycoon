@@ -33,8 +33,10 @@ public class DevelopmentManager : MonoBehaviour
     public bool IsStarted { get; private set; } = false;
     public bool IsTriggered25 => _triggered25;
     public bool IsTriggered75 => _triggered75;
-    public bool IsPendingLeaderScore25 => _pendingLeaderScore25;
-    public bool IsPendingLeaderScore75 => _pendingLeaderScore75;
+    public bool IsPendingLeaderScore25    => _pendingLeaderScore25;
+    public bool IsPendingLeaderScore75    => _pendingLeaderScore75;
+    public bool IsPendingLeaderSelect      { get; set; }
+    public bool PendingInvestmentUIRestore { get; private set; }
     public float LeaderDevelopBonusTotal  => _leaderDevelopBonusTotal;
     public float LeaderPlanningBonusTotal => _leaderPlanningBonusTotal;
     public float LeaderArtBonusTotal      => _leaderArtBonusTotal;
@@ -128,8 +130,12 @@ public class DevelopmentManager : MonoBehaviour
             InitTickMap(); // 야근 선택 완료 후 시드 확정
             RandomEventManager.Instance.TriggerInvestmentEvent(() => //투자 이벤트
             {
+                IsPendingLeaderSelect = true;
+                ProjectSaveManager.Instance.SaveProject();
+
                 LeaderSelectUI.Instance.Open(LeaderType.Planner, () =>
                 {
+                    IsPendingLeaderSelect = false;
                     GameTimeManager.Instance.ForceStartTime();
                     _isRunning = true;
                     StartCoroutine(DevelopmentCoroutine());
@@ -635,7 +641,8 @@ public class DevelopmentManager : MonoBehaviour
         int tickSeed = 0, string tickIndices = "", string midDevData = "",
         float savedDuration = 0f, float networkSlowEndElapsed = 0f,
         float progOffsetElapsedAtEvent = 0f, float progOffsetExtension = 0f, float progVisualOffset = 0f,
-        bool pendingLeaderScore25 = false, bool pendingLeaderScore75 = false)
+        bool pendingLeaderScore25 = false, bool pendingLeaderScore75 = false,
+        bool pendingLeaderSelect = false, bool pendingInvestmentUI = false)
     {
         float baseDuration = ProjectSetupUI.SelectedScale switch
         {
@@ -719,8 +726,25 @@ public class DevelopmentManager : MonoBehaviour
 
                 RestoreTickIndices(tickIndices);
 
+                // 저장 시점에 투자 이벤트 UI가 표시 중이었으면 복원은 RestoreIfNeeded에서 처리
+                if (pendingInvestmentUI)
+                {
+                    PendingInvestmentUIRestore = true;
+                    GameTimeManager.Instance.StopTime(); // GameSceneInitializer.StartTime() 상쇄
+                }
                 // 저장 시점에 팀장 점수가 미뤄진 상태였으면 LeaderSelectUI부터 표시
-                if (pendingLeaderScore75)
+                else if (pendingLeaderSelect)
+                {
+                    IsPendingLeaderSelect = false;
+                    GameTimeManager.Instance.StopTime(); // GameSceneInitializer.StartTime() 상쇄
+                    LeaderSelectUI.Instance.Open(LeaderType.Planner, () =>
+                    {
+                        _isRunning = true;
+                        GameTimeManager.Instance.ForceStartTime();
+                        StartCoroutine(DevelopmentCoroutine());
+                    });
+                }
+                else if (pendingLeaderScore75)
                 {
                     _pendingLeaderScore75 = false;
                     GameTimeManager.Instance.StopTime(); // GameSceneInitializer.StartTime() 상쇄
@@ -1020,8 +1044,10 @@ public class DevelopmentManager : MonoBehaviour
         _isRunning = false;
         _triggered25 = false;
         _triggered75 = false;
-        _pendingLeaderScore25 = false;
-        _pendingLeaderScore75 = false;
+        _pendingLeaderScore25      = false;
+        _pendingLeaderScore75      = false;
+        IsPendingLeaderSelect      = false;
+        PendingInvestmentUIRestore = false;
         _pendingDevelopmentComplete = false;
         _leaderDevelopBonusTotal  = 0f;
         _leaderPlanningBonusTotal = 0f;
@@ -1114,6 +1140,12 @@ public class DevelopmentManager : MonoBehaviour
         _isRunning = false;
         GameTimeManager.Instance.StopTime();
     }
+    public void BeginDevelopmentCoroutine()
+    {
+        _isRunning = true;
+        StartCoroutine(DevelopmentCoroutine());
+    }
+
     public void ResumeFromEvent()
     {
         RandomEventManager.Instance.ClearEventInProgress();
@@ -1174,7 +1206,7 @@ public class DevelopmentManager : MonoBehaviour
         InvestmentProgressUI.Instance?.UpdateProgress(
             current,
             RandomEventManager.Instance.InvestmentStatName,
-            RandomEventManager.Instance.investmentThreshold
+            RandomEventManager.Instance.InvestmentThreshold
         );
     }
 }

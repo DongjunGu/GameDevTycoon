@@ -88,9 +88,24 @@ public class ItemManager : MonoBehaviour
         _inventory[itemId] = cur + count;
         Save();
         ItemPanelUI.Instance?.Refresh();
+
+        if (itemId == "coffee")
+            RandomEventManager.Instance?.ScheduleCoffeeRequestEvent();
+        else if (itemId == "energyDrink")
+            RandomEventManager.Instance?.ScheduleEnergyDrinkRequestEvent();
     }
 
     // ── 사용 ──────────────────────────────────────────────────
+
+    // 아이템만 차감 (효과는 호출부에서 직접 처리)
+    public bool UseItemDirect(string itemId)
+    {
+        if (GetCount(itemId) <= 0) return false;
+        _inventory[itemId]--;
+        Save();
+        return true;
+    }
+
     public bool UseItem(string itemId, EmployeeData target)
     {
         if (GetCount(itemId) <= 0) return false;

@@ -50,6 +50,10 @@ public enum RandomEventType
     OfficeRomance,          // 사내 연애 (채용 2주 후 20%)
     RomanceBrokeUp,         // 사내 연애 이별 (커플 성사 후 8~16주, 60% 확률)
     CoupleResignation,      // 동반퇴사 (커플 중 한 명 퇴사/해고 시)
+
+    // ── 조건 선택지 이벤트 ───────────────────────────────────
+    CoffeeRequest,          // 커피 아이템 획득 시 2~4주 후 1회 발동
+    EnergyDrinkRequest,     // 에너지드링크 아이템 획득 시 2~4주 후 1회 발동
 }
 
 [Serializable]

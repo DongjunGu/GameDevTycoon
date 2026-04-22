@@ -18,7 +18,9 @@ public class RandomEventManager : MonoBehaviour
     }
     private List<RunEventPayload> _pendingRunAlerts = new();
 
-    private int _unstableCompanyWeeksLeft = -1; // -1이면 예약 없음
+    private int _unstableCompanyWeeksLeft  = -1; // -1이면 예약 없음
+    private int _coffeeRequestWeeksLeft      = -1; // -1이면 예약 없음
+    private int _energyDrinkRequestWeeksLeft = -1; // -1이면 예약 없음
 
     private struct PendingRomancePayload
     {
@@ -122,8 +124,6 @@ public class RandomEventManager : MonoBehaviour
     // ── 투자 이벤트 ───────────────────────────────────────────
     [Header("투자 이벤트")]
     [Range(0f, 1f)] public float investmentTriggerChance = 0.5f;
-    public float investmentThreshold = 80f;
-    public int   investmentReward    = 1000;
 
     public int    HiringPenalty         { get; set; } = 0;    // 채용 지원 인원 감소량
     public int    HiringPenaltyEndYear  { get; set; } = -1;   // 패널티 만료 연도 (-1이면 없음)
@@ -138,6 +138,9 @@ public class RandomEventManager : MonoBehaviour
     public bool   InvestmentAccepted    { get; set; } = false;
     public string InvestmentStat        { get; set; } = "";
     public string InvestmentStatName    { get; set; } = "";
+    public float  InvestmentThreshold   { get; set; } = 0f;
+    public int    InvestmentReward      { get; set; } = 0;
+    public bool   PendingInvestmentUI   { get; set; } = false;
     public float  PendingHackyCodePenalty    { get; set; } = 0f;
     public string PendingHackyCodePortraitId { get; set; } = "";
     public int    PendingHackyCodeWeeksLeft  { get; set; } = 0;
@@ -195,6 +198,26 @@ public class RandomEventManager : MonoBehaviour
             {
                 _unstableCompanyWeeksLeft = -1;
                 RandomEvents_Condition.TriggerUnstableCompanyEvent(this, GameTimeManager.Instance?.Year ?? 2000);
+            }
+        }
+
+        if (_coffeeRequestWeeksLeft > 0)
+        {
+            _coffeeRequestWeeksLeft--;
+            if (_coffeeRequestWeeksLeft == 0)
+            {
+                _coffeeRequestWeeksLeft = -1;
+                RandomEvents_Condition_Choice.TriggerCoffeeRequestEvent();
+            }
+        }
+
+        if (_energyDrinkRequestWeeksLeft > 0)
+        {
+            _energyDrinkRequestWeeksLeft--;
+            if (_energyDrinkRequestWeeksLeft == 0)
+            {
+                _energyDrinkRequestWeeksLeft = -1;
+                RandomEvents_Condition_Choice.TriggerEnergyDrinkRequestEvent();
             }
         }
 
@@ -271,9 +294,11 @@ public class RandomEventManager : MonoBehaviour
     // ── 풀 구성만 (StartDevelopment/RestoreState 양쪽에서 호출) ──
     public void InitEvents()
     {
-        InvestmentAccepted = false;
-        InvestmentStat     = "";
-        InvestmentStatName = "";
+        InvestmentAccepted  = false;
+        InvestmentStat      = "";
+        InvestmentStatName  = "";
+        InvestmentReward    = 0;
+        PendingInvestmentUI = false;
         _scheduledEvents.Clear();
         _nextScheduledIndex = 0;
         _eventPool.Clear();
@@ -628,6 +653,53 @@ public class RandomEventManager : MonoBehaviour
         Debug.Log($"[UnstableCompany] {_unstableCompanyWeeksLeft}주 후 발동 예약");
     }
 
+    public int  GetCoffeeRequestWeeksLeft()           => _coffeeRequestWeeksLeft;
+    public void LoadCoffeeRequestWeeksLeft(int w)     => _coffeeRequestWeeksLeft = w;
+
+    public int  GetEnergyDrinkRequestWeeksLeft()      => _energyDrinkRequestWeeksLeft;
+    public void LoadEnergyDrinkRequestWeeksLeft(int w)=> _energyDrinkRequestWeeksLeft = w;
+
+    public void ScheduleEnergyDrinkRequestEvent()
+    {
+        if (_energyDrinkRequestWeeksLeft > 0) return;
+        _energyDrinkRequestWeeksLeft = UnityEngine.Random.Range(2, 5);
+        Debug.Log($"[EnergyDrinkRequest] {_energyDrinkRequestWeeksLeft}주 후 발동 예약");
+    }
+
+    // 조건 선택지 이벤트 트리거 (patrol 지원)
+    public void TriggerConditionChoiceEvent(RandomEventChoiceData choiceData)
+    {
+        if (HasPendingEvent) return;
+
+        choiceData.cancelled = false;
+        choiceData.onSetup?.Invoke();
+        if (choiceData.cancelled) return;
+
+        if (choiceData.requiresPatrol)
+        {
+            _pendingChoiceEvent = choiceData;
+            if (!string.IsNullOrEmpty(choiceData.targetEmployeeId) &&
+                !string.IsNullOrEmpty(choiceData.requiredPatrolPointId))
+            {
+                OfficeManager.Instance?.ForceCharacterToPatrolPoint(
+                    choiceData.targetEmployeeId, choiceData.requiredPatrolPointId, stayDuration: 1f);
+            }
+        }
+        else
+        {
+            GameTimeManager.Instance?.StopTime();
+            RandomEventChoiceUI.Instance?.Show(choiceData);
+        }
+    }
+
+    public void ScheduleCoffeeRequestEvent()
+    {
+        // 커피 획득마다 1회 예약 (이미 예약 중이면 덮어쓰지 않음)
+        if (_coffeeRequestWeeksLeft > 0) return;
+        _coffeeRequestWeeksLeft = UnityEngine.Random.Range(2, 5); // 2~4주
+        Debug.Log($"[CoffeeRequest] {_coffeeRequestWeeksLeft}주 후 발동 예약");
+    }
+
     public void RestorePendingRunAlerts(string data)
     {
         _pendingRunAlerts.Clear();
@@ -730,6 +802,8 @@ public class RandomEventManager : MonoBehaviour
         InvestmentAccepted       = false;
         InvestmentStat           = "";
         InvestmentStatName       = "";
+        InvestmentReward         = 0;
+        PendingInvestmentUI      = false;
         PendingHackyCodePenalty    = 0f;
         PendingHackyCodePortraitId = "";
         PendingHackyCodeWeeksLeft  = 0;
@@ -749,26 +823,7 @@ public class RandomEventManager : MonoBehaviour
             onComplete?.Invoke();
             return;
         }
-
-        string[] stats     = { "planning", "develop", "art", "creativity" };
-        string[] statNames = { "기획", "개발", "아트", "창의성" };
-        int idx = UnityEngine.Random.Range(0, stats.Length);
-
-        InvestmentStat     = stats[idx];
-        InvestmentStatName = statNames[idx];
-
-        ConfirmUI.Instance.Show(
-            $"투자자가 찾아왔습니다!\n{statNames[idx]} 수치가 {investmentThreshold}점 이상이면\n{investmentReward:N0}G 지급\n달성 실패 시 {investmentReward:N0}G 차감",
-            onConfirm: () =>
-            {
-                InvestmentAccepted = true;
-                InvestmentProgressUI.Instance?.Show(InvestmentStatName, investmentThreshold);
-                onComplete?.Invoke();
-            },
-            onCancel: () => onComplete?.Invoke(),
-            confirmText: "수락",
-            cancelText:  "거절"
-        );
+        RandomEvents_Condition_Choice.TriggerInvestmentEvent(onComplete);
     }
 
     public void CheckInvestmentResult(float planning, float develop, float art, float creativity,
@@ -792,18 +847,21 @@ public class RandomEventManager : MonoBehaviour
         InvestmentAccepted = false;
         InvestmentProgressUI.Instance?.Hide();
 
-        if (value >= investmentThreshold)
+        int reward  = InvestmentReward;
+        int penalty = UnityEngine.Mathf.RoundToInt(reward * 1.5f);
+
+        if (value >= InvestmentThreshold)
         {
-            MoneyManager.Instance.AddGold(investmentReward);
+            MoneyManager.Instance.AddGold(reward);
             AlertUI.Instance.Show(
-                $"투자 성공!\n{InvestmentStatName} 수치: {value:F0}점\n{investmentReward:N0}G를 받았습니다!",
+                $"돈 {reward:N0}G를 얻었습니다",
                 () => onComplete?.Invoke());
         }
         else
         {
-            MoneyManager.Instance.ForceSpendGold(investmentReward);
+            MoneyManager.Instance.ForceSpendGold(penalty);
             AlertUI.Instance.Show(
-                $"투자 실패...\n{InvestmentStatName} 수치: {value:F0}점\n{investmentReward:N0}G를 잃었습니다.",
+                $"돈 {penalty:N0}G를 잃었습니다",
                 () => onComplete?.Invoke());
         }
     }
