@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public static class RandomEvent_Condition
+public static class RandomEvents_Condition
 {
     static Dictionary<string, RandomEventConditionChartRow> Chart =>
         RandomEventConditionChartLoader.Cache;
@@ -67,7 +67,7 @@ public static class RandomEvent_Condition
         {
             mgr.HiringPenalty        = 0;
             mgr.HiringPenaltyEndYear = -1;
-            Debug.Log("[RandomEvent_Condition] 채용 패널티 만료");
+            Debug.Log("[RandomEvents_Condition] 채용 패널티 만료");
         }
 
         int exitCount = EmployeeManager.Instance?.YearlyExitCount ?? 0;
@@ -276,6 +276,88 @@ public static class RandomEvent_Condition
                 EmployeeManager.Instance.UpdateEmployee(emp2);
                 AlertUI.Instance.Show(sysMsg, () => GameTimeManager.Instance?.SaveGameTime());
             }
+        );
+    }
+
+    // ── 자발적 야근 ──────────────────────────────────────────────
+    // [CDN fallback]
+    // title: "자발적 야근"
+    // desc1: "이렇게 좋은 회사는 살면서 처음이네요! 목숨을 바쳐서 일하겠습니다"
+    // desc2: "이대로는 잠이 안올 것 같아요 전 오늘 야근하겠습니다"
+    // sys:   "{직원이름}이 자발적으로 야근합니다. 만족도 하락 없이 야근 모드가 활성화됩니다"
+    public static void TriggerVoluntaryOvertimeEvent(EmployeeData emp)
+    {
+        RandomEventConditionChartRow row = null;
+        Chart?.TryGetValue("VoluntaryOvertime", out row);
+
+        string[] descs = row?.descriptions;
+        string desc   = descs != null && descs.Length > 0 ? descs[Random.Range(0, Mathf.Min(descs.Length, 2))] : "";
+        string sysMsg = (row?.systemMessage ?? "").Replace("{직원이름}", emp.employeeName);
+
+        DevelopmentManager.Instance.SetVoluntaryOvertime(true);
+
+        EventUI.Instance.Show(
+            row?.title ?? "자발적 야근",
+            emp.portraitId,
+            desc,
+            () => AlertUI.Instance.Show(sysMsg, () =>
+            {
+                GameTimeManager.Instance?.ForceStartTime();
+                GameTimeManager.Instance?.SaveGameTime();
+            })
+        );
+    }
+
+    // ── 팀장 번아웃 ──────────────────────────────────────────────
+    // [CDN fallback]
+    // title: "팀장 멈춰!"
+    // desc1: "저 지금 팀장 {n}번 연속 하고 있어요…\n저 이제 그만 좀 시켜주세요…"
+    // desc2: "저희 팀은 왜 맨날 저만 일하나요…\n저 말고 다른 사람 시켜주세요..."
+    // sys:   "{직원이름} 능력치가 20% 하락합니다"
+    public static void TriggerLeaderBurnoutEvent(EmployeeData emp, int consecutiveCount, System.Action onDone)
+    {
+        RandomEventConditionChartRow row = null;
+        Chart?.TryGetValue("LeaderBurnout", out row);
+
+        string[] descs = row?.descriptions;
+        string rawDesc = descs != null && descs.Length > 0
+            ? descs[Random.Range(0, Mathf.Min(descs.Length, 2))]
+            : "";
+        string desc = rawDesc.Replace("{n}", consecutiveCount.ToString());
+        string sysMsg = (row?.systemMessage ?? "").Replace("{직원이름}", emp.employeeName);
+
+        emp.ApplyStatDebuff(8);
+        EmployeeManager.Instance.UpdateEmployee(emp);
+
+        EventUI.Instance.Show(
+            row?.title ?? "팀장 멈춰!",
+            emp.portraitId,
+            desc,
+            () => AlertUI.Instance.Show(sysMsg, () => onDone?.Invoke())
+        );
+    }
+
+    // ── 팀장 질투 ─────────────────────────────────────────────────
+    // [CDN fallback]
+    // title: "나도 팀장..."
+    // desc:  "뭐 이번에도 팀장은 아니네요. 이제는 기대도 안 하고 그냥 시키는 일이나 하다가 조용히 퇴근하렵니다."
+    // sys:   "{직원이름} 만족도 -20"
+    public static void TriggerLeaderJealousyEvent(EmployeeData emp, System.Action onDone)
+    {
+        RandomEventConditionChartRow row = null;
+        Chart?.TryGetValue("LeaderJealousy", out row);
+
+        string desc   = row?.descriptions?.Length > 0 ? row.descriptions[0] : "";
+        string sysMsg = (row?.systemMessage ?? "").Replace("{직원이름}", emp.employeeName);
+
+        emp.ChangeSatisfaction(-20);
+        EmployeeManager.Instance.UpdateEmployee(emp);
+
+        EventUI.Instance.Show(
+            row?.title ?? "나도 팀장...",
+            emp.portraitId,
+            desc,
+            () => AlertUI.Instance.Show(sysMsg, () => onDone?.Invoke())
         );
     }
 

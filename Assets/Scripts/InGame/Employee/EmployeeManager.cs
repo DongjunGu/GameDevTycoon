@@ -436,11 +436,14 @@ public class EmployeeManager : MonoBehaviour
         if (shouldDrop)
         {
             _satisfactionDroppedThisCycle = true;
-            bool isOvertime = DevelopmentManager.Instance != null && DevelopmentManager.Instance.IsOvertimeActive;
-            int dropAmount = isOvertime ? 10 : 5;
+            if (DevelopmentManager.Instance != null && DevelopmentManager.Instance.IsVoluntaryOvertimeActive) return;
+            bool globalOvertime = DevelopmentManager.Instance != null && DevelopmentManager.Instance.IsOvertimeMode;
 
             foreach (var emp in ownedEmployees)
+            {
+                int dropAmount = (globalOvertime || emp.isOvertimeWorker) ? 10 : 5;
                 emp.satisfaction = Mathf.Clamp(emp.satisfaction - dropAmount, 0, 100);
+            }
         }
 
         foreach (var emp in ownedEmployees)

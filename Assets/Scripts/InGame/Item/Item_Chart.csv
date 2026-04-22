@@ -1,0 +1,3 @@
+itemId,name,description,effectType,effectValue,imageId
+coffee,커피,직원의 만족도를 회복시킵니다.,satisfaction,15,item_coffee
+energyDrink,에너지드링크,직원의 만족도를 크게 회복시킵니다.,satisfaction,30,item_energydrink

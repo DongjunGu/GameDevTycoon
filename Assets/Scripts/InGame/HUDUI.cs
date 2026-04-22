@@ -9,11 +9,8 @@ public class HUDUI : MonoBehaviour
     public TextMeshProUGUI totalSalaryText;
     [Header("Money")]
     public TextMeshProUGUI moneyText;
-    // public TextMeshProUGUI reputationText;
-    // public TextMeshProUGUI officeText;
     [Header("Time")]
     public TextMeshProUGUI timeText;
-
     void Awake()
     {
         if (Instance != null) { Destroy(gameObject); return; }
@@ -25,9 +22,6 @@ public class HUDUI : MonoBehaviour
         RefreshSalary();
         RefreshMoney();
         RefreshTime();
-        // 추후 추가
-        
-        // RefreshReputation();
     }
 
     void RefreshSalary()
@@ -45,4 +39,5 @@ public class HUDUI : MonoBehaviour
         if (timeText != null)
             timeText.text = GameTimeManager.Instance.GetTimeString();
     }
+
 }
