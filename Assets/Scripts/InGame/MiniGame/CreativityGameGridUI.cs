@@ -1,10 +1,11 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.EventSystems;
 
 [ExecuteAlways]
 [RequireComponent(typeof(RectTransform))]
-public class CreativityGameGridUI : MonoBehaviour
+public class CreativityGameGridUI : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler
 {
     public const int MaxSize = 7;
 
@@ -21,8 +22,10 @@ public class CreativityGameGridUI : MonoBehaviour
     // ── 런타임 상태 ──────────────────────────────────────────────────────────
     private HashSet<(int, int)> _validCells;
     private bool[,]             _filled = new bool[MaxSize, MaxSize];
-    private Dictionary<(int, int), Image> _cellImages = new();
-    private List<GameObject>    _ghostObjs = new();
+    private Dictionary<(int, int), Image>              _cellImages  = new();
+    private Dictionary<(int, int), CreativityGameBlockUI> _cellToBlock = new();
+    private List<GameObject> _ghostObjs = new();
+    private CreativityGameBlockUI _liftedBlock;
 
     private RectTransform _rt;
     private Canvas        _canvas;
@@ -64,6 +67,7 @@ public class CreativityGameGridUI : MonoBehaviour
             else DestroyImmediate(child);
         }
         _cellImages.Clear();
+        _cellToBlock.Clear();
         HideGhost();
         _filled = new bool[MaxSize, MaxSize];
 
@@ -83,6 +87,11 @@ public class CreativityGameGridUI : MonoBehaviour
 
         // Grid RT를 정확히 셀 영역 크기로 고정 (Layout 좌표계 일치)
         _rt.sizeDelta = new Vector2(_totalW, _totalH);
+
+        var bg = GetComponent<Image>();
+        if (bg == null) bg = gameObject.AddComponent<Image>();
+        bg.color         = Color.white;
+        bg.raycastTarget = true;
         var le = GetComponent<LayoutElement>();
         if (le != null)
         {
@@ -188,6 +197,7 @@ public class CreativityGameGridUI : MonoBehaviour
             int r = anchor.x + cell[0];
             int c = anchor.y + cell[1];
             if (r < 0 || r >= MaxSize || c < 0 || c >= MaxSize) continue;
+            if (!_validCells.Contains((r, c))) continue;
 
             var go = new GameObject("Ghost");
             var rt = go.AddComponent<RectTransform>();
@@ -216,20 +226,83 @@ public class CreativityGameGridUI : MonoBehaviour
     }
 
     // ── 블록 배치 ─────────────────────────────────────────────────────────────
-    public bool TryPlaceBlock(int[][] shape, Vector2Int anchor, Color color)
+    public bool TryPlaceBlock(int[][] shape, Vector2Int anchor, Color color, CreativityGameBlockUI block)
     {
         if (!IsPlacementValid(shape, anchor)) return false;
         foreach (var cell in shape)
         {
             int r = anchor.x + cell[0];
             int c = anchor.y + cell[1];
-            _filled[r, c] = true;
+            _filled[r, c]    = true;
+            _cellToBlock[(r, c)] = block;
             if (_cellImages.TryGetValue((r, c), out var img))
                 img.color = color;
         }
         return true;
     }
 
+    // ── 그리드에서 블록 들어올리기 ────────────────────────────────────────────
+    bool TryLiftBlock(Vector2 screenPos, out CreativityGameBlockUI block)
+    {
+        block = null;
+        if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(_rt, screenPos, _eventCam, out var local))
+            return false;
+
+        float relX = local.x - _rt.rect.xMin;
+        float relY = _rt.rect.yMax - local.y;
+        int col = Mathf.FloorToInt(relX / CellStep);
+        int row = Mathf.FloorToInt(relY / CellStep);
+
+        if (row < 0 || row >= MaxSize || col < 0 || col >= MaxSize) return false;
+        if (!_cellToBlock.TryGetValue((row, col), out block)) return false;
+
+        var toRemove = new List<(int, int)>();
+        foreach (var kv in _cellToBlock)
+            if (kv.Value == block) toRemove.Add(kv.Key);
+
+        foreach (var (r, c) in toRemove)
+        {
+            _filled[r, c] = false;
+            if (_cellImages.TryGetValue((r, c), out var img))
+                img.color = _emptyColor;
+            _cellToBlock.Remove((r, c));
+        }
+        return true;
+    }
+
+    // ── 그리드 드래그 (배치된 블록 들어올리기용) ─────────────────────────────
+    public void OnBeginDrag(PointerEventData e)
+    {
+        if (!TryLiftBlock(e.pressPosition, out _liftedBlock)) return;
+        _liftedBlock.LiftFromGrid(e);
+    }
+
+    public void OnDrag(PointerEventData e)
+    {
+        _liftedBlock?.OnDrag(e);
+    }
+
+    public void OnEndDrag(PointerEventData e)
+    {
+        if (_liftedBlock == null) return;
+        _liftedBlock.OnEndDrag(e);
+        _liftedBlock = null;
+    }
+
+
+    public void ResetPlacedBlocks()
+    {
+        var placed = new HashSet<CreativityGameBlockUI>(_cellToBlock.Values);
+        foreach (var (r, c) in new List<(int, int)>(_cellToBlock.Keys))
+        {
+            _filled[r, c] = false;
+            if (_cellImages.TryGetValue((r, c), out var img))
+                img.color = _emptyColor;
+        }
+        _cellToBlock.Clear();
+        foreach (var block in placed)
+            block.ResetToSlot();
+    }
 
     public int CountFilledCells()
     {

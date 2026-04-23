@@ -181,10 +181,24 @@ public class CreativityGameUI : MonoBehaviour
         UpdateScore();
     }
 
+    // CreativityGameBlockUI.LiftFromGrid 에서 호출
+    public void OnBlockLifted(CreativityGameBlockUI block)
+    {
+        _score = _gridUI.CountFilledCells();
+        UpdateScore();
+    }
+
     void UpdateScore()
     {
         if (_scoreText != null)
             _scoreText.text = $"창의성 +{_score}";
+    }
+
+    public void ResetBlocks()
+    {
+        _gridUI.ResetPlacedBlocks();
+        _score = 0;
+        UpdateScore();
     }
 
     // 확인 버튼 (항상 활성 — Inspector에서 Button.onClick 에 연결)
