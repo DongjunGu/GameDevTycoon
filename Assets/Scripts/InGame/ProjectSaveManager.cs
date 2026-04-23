@@ -72,6 +72,10 @@ public class ProjectSaveManager : MonoBehaviour
     private int    _loadedPendingHackyCodeWeeksLeft;
     private float  _loadedYoutuberSalesBonus = 1.0f;
     private string _loadedPendingRunAlerts = "";
+    private string _loadedEarnedBlocks = "";
+    private string _loadedFixedGridName = "";
+    private bool   _loadedPendingCreativityGame;
+    private bool   _loadedPendingDebuggingAlert;
 
     private string _loadedProjectName = "프로젝트명";
     public string GetLoadedProjectName() => _loadedProjectName;
@@ -151,6 +155,10 @@ public class ProjectSaveManager : MonoBehaviour
         param.Add("pendingHackyCodeWeeksLeft", RandomEventManager.Instance.PendingHackyCodeWeeksLeft);
         param.Add("youtuberSalesBonus", RandomEventManager.Instance.YoutuberSalesBonus);
         param.Add("pendingRunAlerts", RandomEventManager.Instance.GetPendingRunAlertsString());
+        param.Add("earnedBlocks", CreativityGameUI.Instance != null ? CreativityGameUI.Instance.GetEarnedBlocksString() : "");
+        param.Add("fixedGridName", CreativityGameUI.Instance != null ? CreativityGameUI.Instance.GetFixedGridName() : "");
+        param.Add("pendingCreativityGame", dm.IsPendingCreativityGame);
+        param.Add("pendingDebuggingAlert", dm.IsPendingDebuggingAlert);
 
         if (!string.IsNullOrEmpty(_rowInDate))
         {
@@ -264,6 +272,10 @@ public class ProjectSaveManager : MonoBehaviour
             _loadedPendingHackyCodeWeeksLeft     = SafeInt(row, "pendingHackyCodeWeeksLeft", 0);
             _loadedYoutuberSalesBonus            = SafeFloat(row, "youtuberSalesBonus", 1.0f);
             _loadedPendingRunAlerts              = SafeString(row, "pendingRunAlerts", "");
+            _loadedEarnedBlocks                  = SafeString(row, "earnedBlocks", "");
+            _loadedFixedGridName                 = SafeString(row, "fixedGridName", "");
+            _loadedPendingCreativityGame         = SafeBool(row, "pendingCreativityGame", false);
+            _loadedPendingDebuggingAlert         = SafeBool(row, "pendingDebuggingAlert", false);
 
             Debug.Log($"프로젝트 로드 완료: stage={_loadedStage} elapsed={_loadedElapsed:F1}");
             onComplete?.Invoke();
@@ -293,7 +305,8 @@ public class ProjectSaveManager : MonoBehaviour
             _loadedDevDuration, _loadedNetworkSlowEndElapsed,
             _loadedProgOffsetElapsedAtEvent, _loadedProgOffsetExtension, _loadedProgVisualOffset,
             _loadedPendingLeaderScore25, _loadedPendingLeaderScore75,
-            _loadedPendingLeaderSelect, _loadedPendingInvestmentUI
+            _loadedPendingLeaderSelect, _loadedPendingInvestmentUI,
+            _loadedPendingCreativityGame, _loadedPendingDebuggingAlert
         );
 
         // ── RandomEvent 상태 복원 ──
@@ -308,6 +321,8 @@ public class ProjectSaveManager : MonoBehaviour
         RandomEventManager.Instance.PendingHackyCodeWeeksLeft  = _loadedPendingHackyCodeWeeksLeft;
         RandomEventManager.Instance.YoutuberSalesBonus         = _loadedYoutuberSalesBonus;
         RandomEventManager.Instance.RestorePendingRunAlerts(_loadedPendingRunAlerts);
+        CreativityGameUI.Instance?.RestoreEarnedBlocks(_loadedEarnedBlocks);
+        CreativityGameUI.Instance?.RestoreFixedGrid(_loadedFixedGridName);
         RandomEventManager.Instance.InvestmentAccepted  = _loadedInvestmentAccepted;
         RandomEventManager.Instance.InvestmentStat      = _loadedInvestmentStat;
         RandomEventManager.Instance.InvestmentStatName  = _loadedInvestmentStatName;

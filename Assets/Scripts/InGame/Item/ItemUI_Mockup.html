@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>아이템 패널 목업</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #1a1a2e; font-family: 'Malgun Gothic', sans-serif; color: #fff; display: flex; gap: 40px; padding: 40px; align-items: flex-start; }
+
+  .panel {
+    background: #16213e;
+    border: 2px solid #0f3460;
+    border-radius: 12px;
+    padding: 16px;
+    width: 300px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  }
+
+  .panel-title {
+    text-align: center;
+    font-size: 18px;
+    font-weight: bold;
+    color: #e2b96f;
+    border-bottom: 1px solid #0f3460;
+    padding-bottom: 10px;
+    margin-bottom: 14px;
+  }
+
+  /* ── 아이템 목록 패널 ── */
+  .item-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+
+  .item-slot {
+    background: #0f3460;
+    border: 2px solid #1a4a8a;
+    border-radius: 8px;
+    width: 60px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: border-color 0.2s;
+    font-size: 28px;
+  }
+
+  .item-slot:hover { border-color: #e2b96f; }
+  .item-slot.empty { opacity: 0.3; }
+
+  /* ── 아이템 디테일 패널 ── */
+  .detail-image {
+    width: 80px;
+    height: 80px;
+    background: #0f3460;
+    border: 2px solid #1a4a8a;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 44px;
+    margin: 0 auto 14px;
+  }
+
+  .detail-name {
+    text-align: center;
+    font-size: 16px;
+    font-weight: bold;
+    color: #e2b96f;
+    margin-bottom: 8px;
+  }
+
+  .detail-desc {
+    font-size: 12px;
+    color: #aaa;
+    text-align: center;
+    margin-bottom: 10px;
+    line-height: 1.5;
+  }
+
+  .detail-effect {
+    background: #0f3460;
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: 13px;
+    color: #6ef06e;
+    text-align: center;
+    margin-bottom: 8px;
+  }
+
+  .detail-count {
+    text-align: center;
+    font-size: 13px;
+    color: #ccc;
+    margin-bottom: 14px;
+  }
+
+  /* ── 직원 선택 패널 ── */
+  .emp-slot {
+    background: #0f3460;
+    border: 2px solid #1a4a8a;
+    border-radius: 8px;
+    padding: 8px 10px;
+    margin-bottom: 6px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    transition: border-color 0.2s;
+  }
+
+  .emp-slot:hover { border-color: #e2b96f; }
+
+  .emp-name { font-size: 14px; font-weight: bold; }
+  .emp-role { font-size: 11px; color: #aaa; }
+  .emp-sat  { font-size: 12px; color: #6ef06e; }
+
+  /* ── 버튼 ── */
+  .btn {
+    width: 100%;
+    padding: 8px;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: bold;
+    cursor: pointer;
+    margin-top: 6px;
+  }
+
+  .btn-use    { background: #e2b96f; color: #1a1a2e; }
+  .btn-back   { background: #333; color: #ccc; }
+  .btn-close  { background: #333; color: #ccc; }
+
+  .arrow {
+    font-size: 32px;
+    color: #555;
+    align-self: center;
+    padding-top: 60px;
+  }
+
+  .label {
+    font-size: 11px;
+    color: #555;
+    text-align: center;
+    margin-bottom: 8px;
+  }
+</style>
+</head>
+<body>
+
+<!-- ① 아이템 목록 패널 -->
+<div>
+  <div class="label">① 아이템 버튼 클릭</div>
+  <div class="panel">
+    <div class="panel-title">🎒 아이템</div>
+    <div class="item-grid">
+      <div class="item-slot" title="커피 (클릭 시 디테일)">☕</div>
+      <div class="item-slot" title="에너지드링크">⚡</div>
+      <div class="item-slot empty">＋</div>
+      <div class="item-slot empty">＋</div>
+    </div>
+    <button class="btn btn-close">닫기</button>
+  </div>
+</div>
+
+<div class="arrow">→</div>
+
+<!-- ② 아이템 디테일 패널 -->
+<div>
+  <div class="label">② 아이템 슬롯 클릭</div>
+  <div class="panel">
+    <div class="panel-title">아이템 정보</div>
+    <div class="detail-image">☕</div>
+    <div class="detail-name">커피</div>
+    <div class="detail-desc">직원의 만족도를 회복시킵니다.</div>
+    <div class="detail-effect">만족도 +15</div>
+    <div class="detail-count">보유: 3개</div>
+    <button class="btn btn-use">사용하기</button>
+    <button class="btn btn-back">뒤로</button>
+  </div>
+</div>
+
+<div class="arrow">→</div>
+
+<!-- ③ 직원 선택 패널 -->
+<div>
+  <div class="label">③ 사용하기 클릭</div>
+  <div class="panel">
+    <div class="panel-title">직원 선택</div>
+
+    <div class="emp-slot">
+      <div>
+        <div class="emp-name">홍길동</div>
+        <div class="emp-role">기획자 · Rare</div>
+      </div>
+      <div class="emp-sat">만족도 62</div>
+    </div>
+
+    <div class="emp-slot">
+      <div>
+        <div class="emp-name">김철수</div>
+        <div class="emp-role">개발자 · Normal</div>
+      </div>
+      <div class="emp-sat">만족도 55</div>
+    </div>
+
+    <div class="emp-slot">
+      <div>
+        <div class="emp-name">이영희</div>
+        <div class="emp-role">아티스트 · Epic</div>
+      </div>
+      <div class="emp-sat">만족도 70</div>
+    </div>
+
+    <button class="btn btn-back">뒤로</button>
+  </div>
+</div>
+
+</body>
+</html>

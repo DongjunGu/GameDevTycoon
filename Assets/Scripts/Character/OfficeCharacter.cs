@@ -245,4 +245,13 @@ public class OfficeCharacter : MonoBehaviour
 
         StatFloatingTextPool.Instance.Get(pos)?.Show(text, color);
     }
+
+    public void ShowBlockPopup(int[][] cells, Color color)
+    {
+        Vector3 pos = statPopupAnchor != null
+            ? statPopupAnchor.position
+            : transform.position + Vector3.up * 0.6f;
+
+        BlockFloatingVisual.Spawn(pos, cells, color);
+    }
 }

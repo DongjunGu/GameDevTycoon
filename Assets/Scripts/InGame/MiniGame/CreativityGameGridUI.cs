@@ -3,7 +3,6 @@ using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
 
-[ExecuteAlways]
 [RequireComponent(typeof(RectTransform))]
 public class CreativityGameGridUI : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler
 {
@@ -44,18 +43,6 @@ public class CreativityGameGridUI : MonoBehaviour, IBeginDragHandler, IDragHandl
         if (_canvas != null)
             _eventCam = _canvas.renderMode == RenderMode.ScreenSpaceOverlay
                       ? null : _canvas.worldCamera;
-    }
-
-    void OnEnable()
-    {
-#if UNITY_EDITOR
-        if (!Application.isPlaying && CreativityGameData.Grids != null && CreativityGameData.Grids.Length > 0)
-        {
-            _rt     = GetComponent<RectTransform>();
-            _canvas = GetComponentInParent<Canvas>();
-            BuildGrid(CreativityGameData.Grids[0]);
-        }
-#endif
     }
 
     public void BuildGrid(CreativityGameData.GridShape shape)

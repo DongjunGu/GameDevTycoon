@@ -75,6 +75,12 @@ public class OfficeManager : MonoBehaviour
             oc.ShowStatPopup(text, color);
     }
 
+    public void ShowBlockPopup(string employeeId, int[][] cells, Color color)
+    {
+        if (_characters.TryGetValue(employeeId, out var oc))
+            oc.ShowBlockPopup(cells, color);
+    }
+
     // 해고 시 — 데이터 즉시 제거, 캐릭터는 SpawnPoint까지 걸어간 뒤 소멸
     public void OnEmployeeFired(EmployeeData employee)
     {

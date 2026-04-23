@@ -60,6 +60,10 @@ public class DevelopmentManager : MonoBehaviour
     private bool _pendingLeaderScore25;
     private bool _pendingLeaderScore75;
     private bool _pendingDevelopmentComplete;
+    private bool _pendingCreativityGame;
+    public bool IsPendingCreativityGame => _pendingCreativityGame;
+    private bool _pendingDebuggingAlert;
+    public bool IsPendingDebuggingAlert => _pendingDebuggingAlert;
     private float _leaderDevelopBonusTotal;
     private float _leaderPlanningBonusTotal;
     private float _leaderArtBonusTotal;
@@ -128,6 +132,8 @@ public class DevelopmentManager : MonoBehaviour
         void ProceedToInvestment()
         {
             InitTickMap(); // 야근 선택 완료 후 시드 확정
+            var grid = CreativityGameData.Grids[UnityEngine.Random.Range(0, CreativityGameData.Grids.Length)];
+            CreativityGameUI.Instance?.SetFixedGrid(grid);
             RandomEventManager.Instance.TriggerInvestmentEvent(() => //투자 이벤트
             {
                 IsPendingLeaderSelect = true;
@@ -392,17 +398,40 @@ public class DevelopmentManager : MonoBehaviour
         _isRunning = false;
         OfficeManager.Instance?.StopDevelopmentPatrol();
         GameTimeManager.Instance.StopTime();
-        AlertUI.Instance.Show(
-            "개발 완료!\n디버깅 작업을 시작합니다.",
-            () =>
+        AlertUI.Instance.Show("개발 완료!", () =>
+        {
+            _pendingCreativityGame = true;
+            ProjectSaveManager.Instance.SaveProject();
+            GameTimeManager.Instance.SaveGameTime();
+            MoneyManager.Instance?.SaveMoney();
+            EmployeeManager.Instance?.SaveAllEmployees();
+            ShowCreativityGame();
+        });
+    }
+
+    public void ShowCreativityGame()
+    {
+        AlertUI.Instance.Show("창의성을 올리세요!", () =>
+        {
+            CreativityGameUI.Instance.Open(() =>
             {
+                _pendingCreativityGame = false;
+                _pendingDebuggingAlert = true;
+                CurrentStage = ProjectStage.BugFixing;
+                CreativityGameUI.Instance?.ClearEarnedBlocks();
                 ProjectSaveManager.Instance.SaveProject();
                 GameTimeManager.Instance.SaveGameTime();
                 MoneyManager.Instance?.SaveMoney();
-                _bugFixReleased = false;
-                _bugFixCoroutine = StartCoroutine(BugFixCoroutine());
-            }
-        );
+                EmployeeManager.Instance?.SaveAllEmployees();
+                AlertUI.Instance.Show("디버깅 작업을 시작합니다.", () =>
+                {
+                    _pendingDebuggingAlert = false;
+                    ProjectSaveManager.Instance.SaveProject();
+                    _bugFixReleased = false;
+                    _bugFixCoroutine = StartCoroutine(BugFixCoroutine());
+                });
+            });
+        });
     }
 
     IEnumerator BugFixCoroutine()
@@ -642,7 +671,8 @@ public class DevelopmentManager : MonoBehaviour
         float savedDuration = 0f, float networkSlowEndElapsed = 0f,
         float progOffsetElapsedAtEvent = 0f, float progOffsetExtension = 0f, float progVisualOffset = 0f,
         bool pendingLeaderScore25 = false, bool pendingLeaderScore75 = false,
-        bool pendingLeaderSelect = false, bool pendingInvestmentUI = false)
+        bool pendingLeaderSelect = false, bool pendingInvestmentUI = false,
+        bool pendingCreativityGame = false, bool pendingDebuggingAlert = false)
     {
         float baseDuration = ProjectSetupUI.SelectedScale switch
         {
@@ -756,6 +786,12 @@ public class DevelopmentManager : MonoBehaviour
                     GameTimeManager.Instance.StopTime(); // GameSceneInitializer.StartTime() 상쇄
                     LeaderSelectUI.Instance.Open(LeaderType.Programmer, null);
                 }
+                else if (pendingCreativityGame)
+                {
+                    _pendingCreativityGame = false;
+                    GameTimeManager.Instance.StopTime(); // GameSceneInitializer.StartTime() 상쇄
+                    ShowCreativityGame();
+                }
                 else
                 {
                     _isRunning = true;
@@ -765,10 +801,23 @@ public class DevelopmentManager : MonoBehaviour
                 break;
 
             case ProjectStage.BugFixing:
-                _isRunning = true;
                 _bugFixReleased = false;
-                GameTimeManager.Instance.ForceStartTime();
-                _bugFixCoroutine = StartCoroutine(BugFixCoroutine());
+                if (pendingDebuggingAlert)
+                {
+                    GameTimeManager.Instance.StopTime(); // GameSceneInitializer.StartTime() 상쇄
+                    AlertUI.Instance.Show("디버깅 작업을 시작합니다.", () =>
+                    {
+                        _pendingDebuggingAlert = false;
+                        ProjectSaveManager.Instance.SaveProject();
+                        _bugFixCoroutine = StartCoroutine(BugFixCoroutine());
+                    });
+                }
+                else
+                {
+                    _isRunning = true;
+                    GameTimeManager.Instance.ForceStartTime();
+                    _bugFixCoroutine = StartCoroutine(BugFixCoroutine());
+                }
                 break;
         }
 
@@ -1009,9 +1058,12 @@ public class DevelopmentManager : MonoBehaviour
                 break;
 
             case 2: // 창의성
-                creativity = 10f;
-                OfficeManager.Instance?.ShowStatPopup(employee.id, $"[창의성] +창의 {creativity:F1}", new Color(0.5f, 1f, 0.9f));
+            {
+                var earnedBlock = CreativityGameData.Blocks[UnityEngine.Random.Range(0, CreativityGameData.Blocks.Length)];
+                CreativityGameUI.Instance?.AddEarnedBlock(earnedBlock);
+                OfficeManager.Instance?.ShowBlockPopup(employee.id, earnedBlock.cells, earnedBlock.color);
                 break;
+            }
 
             case 3: // 버그
                 int perfReduction = (int)(effectivePerfection / 100);
@@ -1049,6 +1101,8 @@ public class DevelopmentManager : MonoBehaviour
         IsPendingLeaderSelect      = false;
         PendingInvestmentUIRestore = false;
         _pendingDevelopmentComplete = false;
+        _pendingCreativityGame = false;
+        _pendingDebuggingAlert = false;
         _leaderDevelopBonusTotal  = 0f;
         _leaderPlanningBonusTotal = 0f;
         _leaderArtBonusTotal      = 0f;
@@ -1080,6 +1134,7 @@ public class DevelopmentManager : MonoBehaviour
         DevelopmentPanelUI.Instance.ResetValues();
         DevelopmentTimerUI.Instance.ResetTimer();
         RandomEventManager.Instance.Reset();
+        CreativityGameUI.Instance?.ClearEarnedBlocks();
 
         ProjectSetupUI.SelectedScale = default;
         ProjectSetupUI.SelectedGenre = default;
