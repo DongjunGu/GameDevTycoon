@@ -77,6 +77,7 @@ public static class CreativityGameData
             G("4x4-A", 4, 4, Full(4, 4, (0,3))),
             // 5×5 오른쪽 상단 2×2 제거
             G("5x5-TR",5, 5, Full(5, 5, (0,3),(0,4),(1,3),(1,4))),
+            G("7x7",   7, 7, Full(7, 7)),
         };
     }
 

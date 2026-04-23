@@ -33,6 +33,7 @@ public class CreativityGameBlockUI : MonoBehaviour,
     private bool       _lastValid;
     private bool       _ghostShown;
     private bool       _isPlaced;   // 배치 완료 → 드래그 비활성
+    private Vector2    _dragOffset; // 포인터와 블록 센터 사이의 오프셋
 
     // ── 생명주기 ─────────────────────────────────────────────────────────────
     void Awake()
@@ -88,39 +89,6 @@ public class CreativityGameBlockUI : MonoBehaviour,
         float totalH = (maxR - minR + 1) * step - _cellGap;
         _rt.sizeDelta = new Vector2(totalW, totalH);
 
-        // 테두리 두께
-        float b = Mathf.Max(3f, _cellGap - 1f);
-
-        // ─ Phase 1: 검은 배경 (step×step, 오프셋 -b) ─────────────────────
-        foreach (var cell in _shape)
-        {
-            float cx = (cell[1] - minC) * step;
-            float cy = -((cell[0] - minR) * step);
-            MakeCell("Border", cx - b, cy + b, _cellSize + b * 2f, _cellSize + b * 2f, Color.black);
-        }
-
-        // ─ Phase 2: 인접 셀 gap 채우기 (블록 내부 검은색 제거) ───────────
-        var shapeSet = new HashSet<(int, int)>();
-        foreach (var cell in _shape) shapeSet.Add((cell[0], cell[1]));
-
-        foreach (var cell in _shape)
-        {
-            int r = cell[0], c = cell[1];
-            float cx = (c - minC) * step;
-            float cy = -((r - minR) * step);
-
-            // 오른쪽 gap
-            if (shapeSet.Contains((r, c + 1)))
-                MakeCell("GapH", cx + _cellSize, cy, _cellGap, _cellSize, _color);
-            // 아래 gap
-            if (shapeSet.Contains((r + 1, c)))
-                MakeCell("GapV", cx, cy - _cellSize, _cellSize, _cellGap, _color);
-            // 코너 (4셀이 모두 있을 때만)
-            if (shapeSet.Contains((r, c + 1)) && shapeSet.Contains((r + 1, c)) && shapeSet.Contains((r + 1, c + 1)))
-                MakeCell("GapC", cx + _cellSize, cy - _cellSize, _cellGap, _cellGap, _color);
-        }
-
-        // ─ Phase 3: 색상 셀 ───────────────────────────────────────────────
         foreach (var cell in _shape)
         {
             float cx = (cell[1] - minC) * step;
@@ -158,7 +126,14 @@ public class CreativityGameBlockUI : MonoBehaviour,
         _cellSize = _gridCellSize;
         _cellGap  = _gridCellGap;
         BuildVisual();
-        SetAlpha(0.88f);
+
+        // 클릭 지점과 블록 센터 사이 오프셋 기록 (위치 점프 방지)
+        if (RectTransformUtility.ScreenPointToLocalPointInRectangle(
+                _canvas.transform as RectTransform, e.pressPosition,
+                e.pressEventCamera, out var pressLP))
+            _dragOffset = pressLP - _rt.anchoredPosition;
+        else
+            _dragOffset = Vector2.zero;
     }
 
     public void OnDrag(PointerEventData e)
@@ -169,10 +144,14 @@ public class CreativityGameBlockUI : MonoBehaviour,
                 _canvas.transform as RectTransform, e.position,
                 e.pressEventCamera, out var lp))
         {
-            _rt.anchoredPosition = lp + new Vector2(0f, _rt.sizeDelta.y * 0.5f + 14f);
+            _rt.anchoredPosition = lp - _dragOffset;
         }
 
-        bool valid = _grid.TryGetSnapAnchor(e.position, _shape, out var anchor);
+        // 스냅 기준: 블록 센터 스크린 좌표
+        Vector2 snapOrigin = _eventCam != null
+            ? (Vector2)_eventCam.WorldToScreenPoint(_rt.position)
+            : (Vector2)_rt.position;
+        bool valid = _grid.TryGetSnapAnchor(snapOrigin, _shape, out var anchor);
         if (!_ghostShown || anchor != _lastAnchor || valid != _lastValid)
         {
             _lastAnchor = anchor;
@@ -189,10 +168,15 @@ public class CreativityGameBlockUI : MonoBehaviour,
         _ghostShown = false;
         _grid.HideGhost();
 
-        if (_lastValid && _grid.TryPlaceBlock(_shape, _lastAnchor, _color))
+        if (_lastValid && _grid.TryPlaceBlock(_shape, _lastAnchor, _color, this))
         {
+            _isPlaced = true;
             _miniGame.OnBlockPlaced(this);
-            PlaceVisualOnGrid(_lastAnchor);
+            // 슬롯으로 복귀 후 비주얼 숨김 (재사용 가능하도록 Destroy 안 함)
+            _rt.SetParent(_origParent, true);
+            _rt.SetSiblingIndex(_origSiblingIdx);
+            _rt.anchoredPosition = Vector2.zero;
+            foreach (Transform child in transform) Destroy(child.gameObject);
         }
         else
         {
@@ -206,33 +190,40 @@ public class CreativityGameBlockUI : MonoBehaviour,
         }
     }
 
-    // ── 그리드에 비주얼 고정 (드래그 불가) ──────────────────────────────────
-    void PlaceVisualOnGrid(Vector2Int anchor)
+    // ── 슬롯으로 리셋 ───────────────────────────────────────────────────────
+    public void ResetToSlot()
     {
-        _isPlaced = true;
-        _rt.SetParent(_grid.transform, false);
+        _isPlaced = false;
+        _cellSize = _previewCellSize;
+        _cellGap  = _previewCellGap;
+        BuildVisual();
+        _rt.anchoredPosition = Vector2.zero;
+    }
 
-        _rt.anchorMin = _rt.anchorMax = new Vector2(0f, 1f);
-        _rt.pivot     = new Vector2(0f, 1f);
+    // ── 그리드에서 들어올리기 ────────────────────────────────────────────────
+    public void LiftFromGrid(PointerEventData e)
+    {
+        _isPlaced       = false;
+        _isDragging     = true;
+        _ghostShown     = false;
+        _lastValid      = false;
+        _origParent     = _rt.parent;
+        _origSiblingIdx = _rt.GetSiblingIndex();
 
         _cellSize = _gridCellSize;
         _cellGap  = _gridCellGap;
         BuildVisual();
-        SetAlpha(1f);
+
+        _rt.SetParent(_canvas.transform, true);
         _rt.SetAsLastSibling();
 
-        int minR = int.MaxValue, minC = int.MaxValue;
-        foreach (var cell in _shape)
-        {
-            if (cell[0] < minR) minR = cell[0];
-            if (cell[1] < minC) minC = cell[1];
-        }
+        if (RectTransformUtility.ScreenPointToLocalPointInRectangle(
+                _canvas.transform as RectTransform, e.position,
+                e.pressEventCamera, out var lp))
+            _rt.anchoredPosition = lp;
+        _dragOffset = Vector2.zero;
 
-        float step = _gridCellSize + _gridCellGap;
-        _rt.anchoredPosition = new Vector2(
-            (anchor.y + minC) * step,
-            -((anchor.x + minR) * step)
-        );
+        _miniGame.OnBlockLifted(this);
     }
 
     // ── 헬퍼 ─────────────────────────────────────────────────────────────────
