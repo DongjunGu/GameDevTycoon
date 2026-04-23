@@ -24,7 +24,6 @@ using TMPro;
 // BlockTray: VerticalLayoutGroup / spacing 12 / ChildAlignment MiddleCenter
 //            ChildControlWidth OFF, ChildControlHeight OFF
 // ═════════════════════════════════════════════════════════════════════════════
-[ExecuteAlways]
 public class CreativityGameUI : MonoBehaviour
 {
     public static CreativityGameUI Instance { get; private set; }
@@ -46,6 +45,8 @@ public class CreativityGameUI : MonoBehaviour
     // ── 런타임 ───────────────────────────────────────────────────────────────
     private int _score;
     private readonly List<CreativityGameBlockUI> _activeBlocks = new();
+    private readonly List<CreativityGameData.BlockShape> _earnedBlocks = new();
+    private CreativityGameData.GridShape _fixedGrid;
     private System.Action _onClose;
 
     // ── 생명주기 ─────────────────────────────────────────────────────────────
@@ -60,41 +61,23 @@ public class CreativityGameUI : MonoBehaviour
         }
     }
 
-    void OnEnable()
-    {
-#if UNITY_EDITOR
-        if (!Application.isPlaying && _panel != null)
-        {
-            _panel.SetActive(true);
-            if (_blockTray != null) SpawnPreviewSlots();
-        }
-#endif
-    }
-
-    void OnDisable()
-    {
-#if UNITY_EDITOR
-        if (!Application.isPlaying && _panel != null)
-            _panel.SetActive(false);
-#endif
-    }
-
     // ── 공개 API ─────────────────────────────────────────────────────────────
+    public void OpenPanel() => Open();
+
     public void Open(System.Action onClose = null)
     {
         _onClose = onClose;
         _score   = 0;
+        _panel.SetActive(true);
 
-        // 랜덤 그리드 선택
-        var gridShape = CreativityGameData.Grids[Random.Range(0, CreativityGameData.Grids.Length)];
+        var gridShape = _fixedGrid ?? CreativityGameData.Grids[Random.Range(0, CreativityGameData.Grids.Length)];
         _gridUI.BuildGrid(gridShape);
 
         if (_gridNameText != null)
             _gridNameText.text = $"그리드: {gridShape.name}";
 
         UpdateScore();
-        SpawnBlocks(10);
-        _panel.SetActive(true);
+        SpawnEarnedBlocks();
     }
 
     void SpawnPreviewSlots()
@@ -174,6 +157,90 @@ public class CreativityGameUI : MonoBehaviour
         }
     }
 
+    void SpawnEarnedBlocks()
+    {
+        foreach (var b in _activeBlocks)
+            if (b != null) Destroy(b.gameObject);
+        _activeBlocks.Clear();
+
+        foreach (Transform child in _blockTray) Destroy(child.gameObject);
+
+        int count = _earnedBlocks.Count;
+        if (count == 0) return;
+
+        Canvas.ForceUpdateCanvases();
+        var (slotSz, previewCell) = CalcSlotAndPreviewCell(count);
+
+        var glg = _blockTray.GetComponent<GridLayoutGroup>();
+        if (glg == null) glg = _blockTray.gameObject.AddComponent<GridLayoutGroup>();
+        glg.constraint      = GridLayoutGroup.Constraint.FixedColumnCount;
+        glg.constraintCount = 5;
+        glg.cellSize        = new Vector2(slotSz, slotSz);
+        glg.spacing         = new Vector2(20f, 20f);
+        glg.childAlignment  = TextAnchor.MiddleCenter;
+
+        for (int i = 0; i < count; i++)
+        {
+            var def = _earnedBlocks[i];
+
+            var slotGO = new GameObject($"Slot_{i}");
+            slotGO.AddComponent<RectTransform>().SetParent(_blockTray, false);
+            slotGO.AddComponent<Image>().color = new Color(0.9f, 0.93f, 1f, 0.4f);
+
+            var blockGO = new GameObject("Block");
+            var blockRT = blockGO.AddComponent<RectTransform>();
+            blockRT.SetParent(slotGO.transform, false);
+            blockRT.anchorMin        = blockRT.anchorMax = new Vector2(0.5f, 0.5f);
+            blockRT.pivot            = new Vector2(0.5f, 0.5f);
+            blockRT.anchoredPosition = Vector2.zero;
+
+            var block = blockGO.AddComponent<CreativityGameBlockUI>();
+            block.Init(def.cells, def.color, _gridUI, this, previewCell, 2f);
+            _activeBlocks.Add(block);
+        }
+    }
+
+    public void AddEarnedBlock(CreativityGameData.BlockShape block)
+    {
+        _earnedBlocks.Add(block);
+    }
+
+    public void ClearEarnedBlocks()
+    {
+        _earnedBlocks.Clear();
+        _fixedGrid = null;
+    }
+
+    public void SetFixedGrid(CreativityGameData.GridShape grid)
+    {
+        _fixedGrid = grid;
+    }
+
+    public string GetFixedGridName() => _fixedGrid?.name ?? "";
+
+    public void RestoreFixedGrid(string gridName)
+    {
+        _fixedGrid = System.Array.Find(CreativityGameData.Grids, g => g.name == gridName);
+    }
+
+    public string GetEarnedBlocksString()
+    {
+        return string.Join(",", _earnedBlocks.ConvertAll(b => b.name));
+    }
+
+    public void RestoreEarnedBlocks(string serialized)
+    {
+        _earnedBlocks.Clear();
+        if (string.IsNullOrEmpty(serialized)) return;
+        foreach (var name in serialized.Split(','))
+        {
+            var found = System.Array.Find(CreativityGameData.Blocks, b => b.name == name);
+            if (found != null) _earnedBlocks.Add(found);
+        }
+    }
+
+    public int GetFinalScore() => _score;
+
     // CreativityGameBlockUI.OnEndDrag 에서 호출
     public void OnBlockPlaced(CreativityGameBlockUI block)
     {
@@ -204,6 +271,10 @@ public class CreativityGameUI : MonoBehaviour
     // 확인 버튼 (항상 활성 — Inspector에서 Button.onClick 에 연결)
     public void OnClickConfirm()
     {
+        float score = GetFinalScore();
+        if (score > 0f)
+            DevelopmentPanelUI.Instance.AddValues(0f, 0f, 0f, 0f, score);
+
         _panel.SetActive(false);
         var cb = _onClose;
         _onClose = null;
@@ -211,12 +282,3 @@ public class CreativityGameUI : MonoBehaviour
     }
 }
 
-// 테스트용 — 사용 후 삭제
-public class TestCreativityGame : MonoBehaviour
-{
-    void Update()
-    {
-        if (UnityEngine.InputSystem.Keyboard.current.tKey.wasPressedThisFrame)
-            CreativityGameUI.Instance.Open(() => Debug.Log("닫힘"));
-    }
-}
