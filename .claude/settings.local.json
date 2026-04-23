@@ -23,7 +23,11 @@
       "Bash(sed -i '37s/m_LocalPosition: {x: 0, y: 0, z: 0}/m_LocalPosition: {x: 0, y: 0, z: -0.1}/' \"C:\\\\Users\\\\PC\\\\Documents\\\\GitHub\\\\GameDevTycoon\\\\GameDevTycoon\\\\Assets\\\\Resources\\\\Characters\\\\portrait_secretary.prefab\")",
       "Bash(git:*)",
       "Bash(python3 *)",
-      "Bash(xargs grep *)"
+      "Bash(xargs grep *)",
+      "mcp__UnityMCP__batch_execute",
+      "mcp__UnityMCP__refresh_unity",
+      "mcp__UnityMCP__manage_editor",
+      "mcp__UnityMCP__validate_script"
     ]
   }
 }
