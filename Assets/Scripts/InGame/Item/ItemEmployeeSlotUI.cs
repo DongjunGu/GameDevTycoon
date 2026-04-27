@@ -14,7 +14,7 @@ public class ItemEmployeeSlotUI : MonoBehaviour
     public TextMeshProUGUI developSkillText;
     public TextMeshProUGUI planningSkillText;
     public TextMeshProUGUI artSkillText;
-    public TextMeshProUGUI perfectionSkillText;
+    public TextMeshProUGUI creativitySkillText;
     public TextMeshProUGUI satisfactionText;
     public Button selectButton;
     public Image bgImage;
@@ -34,14 +34,14 @@ public class ItemEmployeeSlotUI : MonoBehaviour
         developSkillText.text    = data.DevelopText();
         planningSkillText.text   = data.PlanningText();
         artSkillText.text        = data.ArtText();
-        perfectionSkillText.text = data.PerfectionText();
+        creativitySkillText.text = data.CreativityText();
         satisfactionText.text    = data.SatisfactionText();
         enhancementText.text     = $"+{data.enhancementLevel}";
 
         developSkillText.color    = EmployeeData.GetStatColor(data.developSkill,    data.EffectiveDevelopSkill);
         planningSkillText.color   = EmployeeData.GetStatColor(data.planningSkill,   data.EffectivePlanningSkill);
         artSkillText.color        = EmployeeData.GetStatColor(data.artSkill,        data.EffectiveArtSkill);
-        perfectionSkillText.color = EmployeeData.GetStatColor(data.perfectionSkill, data.EffectivePerfectionSkill);
+        creativitySkillText.color = EmployeeData.GetStatColor(data.creativitySkill, data.EffectiveCreativitySkill);
 
         float sat = data.GetSatisfactionMultiplier();
         satisfactionText.color = sat > 1f ? Color.red : sat < 1f ? Color.blue : Color.white;

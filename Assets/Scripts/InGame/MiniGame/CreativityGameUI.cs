@@ -42,6 +42,14 @@ public class CreativityGameUI : MonoBehaviour
     [SerializeField] TextMeshProUGUI _gridNameText;
     [SerializeField] Button          _confirmBtn;
 
+    [Header("창의성 레벨 (테크트리 연동 예정)")]
+    [SerializeField, Range(1, 3)] int _creativityLevel = 1;
+    public int CreativityLevel
+    {
+        get => _creativityLevel;
+        set => _creativityLevel = value;
+    }
+
     // ── 런타임 ───────────────────────────────────────────────────────────────
     private int _score;
     private readonly List<CreativityGameBlockUI> _activeBlocks = new();

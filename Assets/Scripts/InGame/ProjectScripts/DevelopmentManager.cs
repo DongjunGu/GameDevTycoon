@@ -132,7 +132,9 @@ public class DevelopmentManager : MonoBehaviour
         void ProceedToInvestment()
         {
             InitTickMap(); // 야근 선택 완료 후 시드 확정
-            var grid = CreativityGameData.Grids[UnityEngine.Random.Range(0, CreativityGameData.Grids.Length)];
+            int level = CreativityGameUI.Instance != null ? CreativityGameUI.Instance.CreativityLevel : 1;
+            var pool = CreativityGameData.GetGridsForLevel(level);
+            var grid = pool[UnityEngine.Random.Range(0, pool.Length)];
             CreativityGameUI.Instance?.SetFixedGrid(grid);
             RandomEventManager.Instance.TriggerInvestmentEvent(() => //투자 이벤트
             {
@@ -200,7 +202,7 @@ public class DevelopmentManager : MonoBehaviour
             _tickTimesMap[employee.id] = times;
             _tickIndexMap[employee.id] = 0;
             bool empOvertime = employee.isOvertimeWorker || IsOvertimeMode || IsVoluntaryOvertimeActive;
-            int[] order = BuildTickOrder(tickCount, empOvertime, rng);
+            int[] order = BuildTickOrder(tickCount, empOvertime, employee.EffectiveCreativitySkill, rng);
             _tickOrderMap[employee.id] = order;
 
             var sb = new System.Text.StringBuilder();
@@ -241,20 +243,24 @@ public class DevelopmentManager : MonoBehaviour
         return parts.ToString();
     }
 
-    int[] BuildTickOrder(int total, bool overtime, System.Random rng = null)
+    int[] BuildTickOrder(int total, bool overtime, int stat, System.Random rng = null)
     {
         // 0:잭팟, 1:성공, 2:창의성, 3:버그, 4:꽝
-        // 일반: 10%, 35%, 15%, 10%, 30%
-        // 야근: 15%, 30%, 15%, 15%, 25%
-        float[] probs = overtime
-            ? new float[] { 0.15f, 0.30f, 0.15f, 0.15f, 0f }
-            : new float[] { 0.10f, 0.35f, 0.15f, 0.10f, 0f };
+        // 일반: 잭팟 10%, 성공 35%, 버그 10%, 창의성 = 10 + stat/50, 꽝 = 나머지
+        // 야근: 잭팟 15%, 성공 30%, 버그 15%, 창의성 = 10 + stat/50, 꽝 = 나머지
+        float jackpotP    = overtime ? 0.15f : 0.10f;
+        float successP    = overtime ? 0.30f : 0.35f;
+        float bugP        = overtime ? 0.15f : 0.10f;
+        // creativity 상한: 다른 카테고리 합이 음수 안 되게 캡 (일반 45%, 야근 40%)
+        float creativityCap = overtime ? 0.40f : 0.45f;
+        float creativityP = Mathf.Clamp((10f + stat / 50f) / 100f, 0.10f, creativityCap);
 
-        int jackpot    = Mathf.Max(1, Mathf.RoundToInt(total * probs[0]));
-        int success    = Mathf.RoundToInt(total * probs[1]);
-        int creativity = Mathf.RoundToInt(total * probs[2]);
-        int bug        = Mathf.Max(1, Mathf.RoundToInt(total * probs[3]));
+        int jackpot    = Mathf.Max(1, Mathf.RoundToInt(total * jackpotP));
+        int success    = Mathf.RoundToInt(total * successP);
+        int creativity = Mathf.RoundToInt(total * creativityP);
+        int bug        = Mathf.Max(1, Mathf.RoundToInt(total * bugP));
         int blank      = total - jackpot - success - creativity - bug;
+        if (blank < 0) { creativity = Mathf.Max(0, creativity + blank); blank = 0; }
 
         var list = new List<int>();
         for (int i = 0; i < jackpot;    i++) list.Add(0);
@@ -483,12 +489,12 @@ public class DevelopmentManager : MonoBehaviour
                 }
 
                 float remainingBug = DevelopmentPanelUI.Instance.GetBug();
-                float perfSum = 0f;
-                foreach (var e in workers) perfSum += e.perfectionSkill;
-                float avgPerfection = perfSum / workers.Count;
+                float creativitySum = 0f;
+                foreach (var e in workers) creativitySum += e.EffectiveCreativitySkill;
+                float avgCreativity = creativitySum / workers.Count;
 
                 float fixAmount = Mathf.Max(1f,
-                    Mathf.Ceil((avgPerfection / 80f) * Mathf.Sqrt(remainingBug / initialBug)));
+                    Mathf.Ceil((avgCreativity / 80f) * Mathf.Sqrt(remainingBug / initialBug)));
 
                 DevelopmentPanelUI.Instance.SetBug(Mathf.Max(0f, remainingBug - fixAmount));
 
@@ -633,6 +639,7 @@ public class DevelopmentManager : MonoBehaviour
         {
             void StartDeveloping()
             {
+                IsPendingLeaderSelect = false; // 저장 직전에 펜딩 해제 (재시작 시 재선택 방지)
                 _isRunning = true;
                 CurrentStage = ProjectStage.Developing;
                 GameTimeManager.Instance.ForceStartTime();
@@ -914,7 +921,8 @@ public class DevelopmentManager : MonoBehaviour
         _tickIndexMap[empId] = 0;
         var empData = EmployeeManager.Instance.ownedEmployees.Find(e => e.id == empId);
         bool empOvertime = (empData?.isOvertimeWorker ?? false) || IsOvertimeMode || IsVoluntaryOvertimeActive;
-        _tickOrderMap[empId] = BuildTickOrder(tickCount, empOvertime, rng);
+        int empCreativity = empData?.EffectiveCreativitySkill ?? 0;
+        _tickOrderMap[empId] = BuildTickOrder(tickCount, empOvertime, empCreativity, rng);
     }
 
     public string GetMidDevData()
@@ -980,9 +988,9 @@ public class DevelopmentManager : MonoBehaviour
         return (float)val;
     }
 
-    float CalcBug(int perfection)
+    float CalcBug(int creativity)
     {
-        double val = 76.5 / System.Math.Pow(1 + perfection, 0.76);
+        double val = 76.5 / System.Math.Pow(1 + creativity, 0.76);
         return (float)val;
     }
 
@@ -1007,7 +1015,7 @@ public class DevelopmentManager : MonoBehaviour
             _ => 0
         } * satisfactionMultiplier);
 
-        int effectivePerfection = (int)(employee.perfectionSkill * satisfactionMultiplier);
+        int effectiveCreativity = employee.EffectiveCreativitySkill;
 
         float planning = 0f, develop = 0f, art = 0f, bug = 0f, creativity = 0f;
 
@@ -1018,20 +1026,23 @@ public class DevelopmentManager : MonoBehaviour
                     + (int)(skill / 50)
                     + (int)System.Math.Pow(skill / 300.0, 2);
                 float jackpot = Mathf.Max(1, jackpotVal);
-                switch (employee.role)
                 {
-                    case EmployeeRole.Planner:
-                        planning = jackpot;
-                        OfficeManager.Instance?.ShowStatPopup(employee.id, $"[잭팟] +기획 {planning:F0}", new Color(1f, 0.85f, 0f));
-                        break;
-                    case EmployeeRole.Programmer:
-                        develop = jackpot;
-                        OfficeManager.Instance?.ShowStatPopup(employee.id, $"[잭팟] +개발 {develop:F0}", new Color(1f, 0.85f, 0f));
-                        break;
-                    case EmployeeRole.Artist:
-                        art = jackpot;
-                        OfficeManager.Instance?.ShowStatPopup(employee.id, $"[잭팟] +아트 {art:F0}", new Color(1f, 0.85f, 0f));
-                        break;
+                    Color jackpotColor = new Color(1f, 0.85f, 0f);
+                    switch (employee.role)
+                    {
+                        case EmployeeRole.Planner:
+                            planning = jackpot;
+                            OfficeManager.Instance?.ShowStatTickPopup(employee.id, "planning", (int)planning, jackpotColor, true);
+                            break;
+                        case EmployeeRole.Programmer:
+                            develop = jackpot;
+                            OfficeManager.Instance?.ShowStatTickPopup(employee.id, "develop", (int)develop, jackpotColor, true);
+                            break;
+                        case EmployeeRole.Artist:
+                            art = jackpot;
+                            OfficeManager.Instance?.ShowStatTickPopup(employee.id, "art", (int)art, jackpotColor, true);
+                            break;
+                    }
                 }
                 break;
 
@@ -1044,44 +1055,44 @@ public class DevelopmentManager : MonoBehaviour
                 {
                     case EmployeeRole.Planner:
                         planning = success;
-                        if (planning > 0f) OfficeManager.Instance?.ShowStatPopup(employee.id, $"[성공] +기획 {planning:F0}", new Color(0.4f, 0.6f, 1f));
+                        if (planning > 0f) OfficeManager.Instance?.ShowStatTickPopup(employee.id, "planning", (int)planning, new Color(0.4f, 0.6f, 1f), false);
                         break;
                     case EmployeeRole.Programmer:
                         develop = success;
-                        if (develop > 0f) OfficeManager.Instance?.ShowStatPopup(employee.id, $"[성공] +개발 {develop:F0}", new Color(0.4f, 1f, 0.5f));
+                        if (develop > 0f) OfficeManager.Instance?.ShowStatTickPopup(employee.id, "develop", (int)develop, new Color(0.4f, 1f, 0.5f), false);
                         break;
                     case EmployeeRole.Artist:
                         art = success;
-                        if (art > 0f) OfficeManager.Instance?.ShowStatPopup(employee.id, $"[성공] +아트 {art:F0}", new Color(1f, 0.7f, 0.3f));
+                        if (art > 0f) OfficeManager.Instance?.ShowStatTickPopup(employee.id, "art", (int)art, new Color(1f, 0.7f, 0.3f), false);
                         break;
                 }
                 break;
 
             case 2: // 창의성
             {
-                var earnedBlock = CreativityGameData.Blocks[UnityEngine.Random.Range(0, CreativityGameData.Blocks.Length)];
+                var earnedBlock = CreativityGameData.DrawRandomBlock();
                 CreativityGameUI.Instance?.AddEarnedBlock(earnedBlock);
                 OfficeManager.Instance?.ShowBlockPopup(employee.id, earnedBlock.cells, earnedBlock.color);
                 break;
             }
 
             case 3: // 버그
-                int perfReduction = (int)(effectivePerfection / 100);
+                int creativityReduction = (int)(effectiveCreativity / 100);
                 int bugRaw = ProjectSetupUI.SelectedScale switch
                 {
-                    ProjectScale.Small  => UnityEngine.Random.Range(3, 7)  - perfReduction,
-                    ProjectScale.Medium => UnityEngine.Random.Range(6, 10) - perfReduction,
+                    ProjectScale.Small  => UnityEngine.Random.Range(3, 7)  - creativityReduction,
+                    ProjectScale.Medium => UnityEngine.Random.Range(6, 10) - creativityReduction,
                     ProjectScale.Large  => (IsOvertimeMode || employee.isOvertimeWorker)
-                        ? UnityEngine.Random.Range(10, 21) - perfReduction
-                        : UnityEngine.Random.Range(10, 16) - perfReduction,
+                        ? UnityEngine.Random.Range(10, 21) - creativityReduction
+                        : UnityEngine.Random.Range(10, 16) - creativityReduction,
                     _ => 1
                 };
                 bug = Mathf.Max(1, bugRaw);
-                OfficeManager.Instance?.ShowStatPopup(employee.id, $"[버그] +버그 {bug:F0}", new Color(1f, 0.3f, 0.3f));
+                OfficeManager.Instance?.ShowStatTickPopup(employee.id, "bug", (int)bug, new Color(1f, 0.3f, 0.3f), false);
                 break;
 
-            case 4: // 꽝
-                OfficeManager.Instance?.ShowStatPopup(employee.id, "[꽝]", new Color(0.6f, 0.6f, 0.6f));
+            case 4: // 꽝 — 스프라이트만 표시 (숫자/파티클 없음)
+                OfficeManager.Instance?.ShowStatTickPopup(employee.id, "blank", 0, new Color(0.6f, 0.6f, 0.6f), false);
                 break;
         }
 

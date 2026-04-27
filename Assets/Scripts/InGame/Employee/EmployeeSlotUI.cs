@@ -14,7 +14,7 @@ public class EmployeeSlotUI : MonoBehaviour
     public TextMeshProUGUI developSkillText;
     public TextMeshProUGUI planningSkillText;
     public TextMeshProUGUI artSkillText;
-    public TextMeshProUGUI perfectionSkillText;
+    public TextMeshProUGUI creativitySkillText;
     public TextMeshProUGUI salaryText;
     public TextMeshProUGUI satisfactionText;
     public Button selectButton;
@@ -33,7 +33,7 @@ public class EmployeeSlotUI : MonoBehaviour
         developSkillText.text = data.DevelopDisplayText();
         planningSkillText.text = data.PlanningDisplayText();
         artSkillText.text = data.ArtDisplayText();
-        perfectionSkillText.text = data.PerfectionRangeText();
+        creativitySkillText.text = data.CreativityText();
         salaryText.text = data.SalaryRangeText();
         enhancementText.text     = $"+{data.enhancementLevel}";
         satisfactionText.text = data.SatisfactionText();

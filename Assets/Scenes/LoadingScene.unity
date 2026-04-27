@@ -1703,8 +1703,6 @@ MonoBehaviour:
   employeeFightChance: 1
   badCompanyChance: 1
   investmentTriggerChance: 1
-  investmentThreshold: 80
-  investmentReward: 1000
 --- !u!114 &2062941527
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1823,8 +1821,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d8ff09acb4c98a8409041fef47b5ece3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::StageManager
-  currentStage: 2
-  maxEmployeePerStage: 03000000
+  currentStage: 1
+  maxEmployeePerStage: 04000000
 --- !u!114 &2062941536
 MonoBehaviour:
   m_ObjectHideFlags: 0

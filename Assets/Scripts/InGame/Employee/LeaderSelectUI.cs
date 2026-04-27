@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using TMPro;
@@ -11,7 +12,7 @@ public class LeaderSelectUI : MonoBehaviour
     public GameObject leaderscorePanel;
     public TextMeshProUGUI titleText;
     public Transform slotParent;
-    
+
     public GameObject leaderSlotPrefab;
 
     private LeaderType _currentType;
@@ -24,6 +25,30 @@ public class LeaderSelectUI : MonoBehaviour
     }
 
     public void Open(LeaderType type, System.Action onComplete)
+    {
+        // 상시 개발틱 카운트업 진행 중이면 끝날 때까지 대기 후 표시
+        if (StatTickPopup.ActiveCount > 0)
+        {
+            StartCoroutine(OpenAfterPopups(type, onComplete));
+            return;
+        }
+        OpenInternal(type, onComplete);
+    }
+
+    IEnumerator OpenAfterPopups(LeaderType type, System.Action onComplete)
+    {
+        // 호출자가 미리 StopTime 했어도 카운트업 끝까지 시간을 풀어줌 (deadlock 방지)
+        bool wasStopped = GameTimeManager.Instance != null && !GameTimeManager.Instance.IsRunning;
+        if (wasStopped) GameTimeManager.Instance.StartTime();
+
+        while (StatTickPopup.ActiveCount > 0)
+            yield return null;
+
+        if (wasStopped) GameTimeManager.Instance?.StopTime();
+        OpenInternal(type, onComplete);
+    }
+
+    void OpenInternal(LeaderType type, System.Action onComplete)
     {
         _currentType = type;
         _onComplete  = onComplete;

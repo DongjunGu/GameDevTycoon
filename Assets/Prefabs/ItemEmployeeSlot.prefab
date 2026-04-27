@@ -286,7 +286,7 @@ GameObject:
   - component: {fileID: 6583629653239416427}
   - component: {fileID: 2700026896277142464}
   m_Layer: 5
-  m_Name: perfectionSkill
+  m_Name: creativitySkill
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -589,7 +589,7 @@ MonoBehaviour:
   developSkillText: {fileID: 2473659124256329228}
   planningSkillText: {fileID: 3200588713148940584}
   artSkillText: {fileID: 5431162266352927231}
-  perfectionSkillText: {fileID: 2700026896277142464}
+  creativitySkillText: {fileID: 2700026896277142464}
   satisfactionText: {fileID: 8863056750760715874}
   selectButton: {fileID: 6617968895310513957}
   bgImage: {fileID: 7895015329853896646}
