@@ -81,6 +81,14 @@ public class OfficeManager : MonoBehaviour
             oc.ShowBlockPopup(cells, color);
     }
 
+    // 상시 개발틱 팝업: statKey는 StatPopupSprites 키 (planning/develop/art/bug)
+    public void ShowStatTickPopup(string employeeId, string statKey, int amount, Color color, bool isJackpot)
+    {
+        if (!_characters.TryGetValue(employeeId, out var oc)) return;
+        var statSprite = StatPopupSprites.Instance != null ? StatPopupSprites.Instance.GetStatIcon(statKey) : null;
+        oc.ShowStatTickPopup(statSprite, amount, color, isJackpot);
+    }
+
     // 해고 시 — 데이터 즉시 제거, 캐릭터는 SpawnPoint까지 걸어간 뒤 소멸
     public void OnEmployeeFired(EmployeeData employee)
     {

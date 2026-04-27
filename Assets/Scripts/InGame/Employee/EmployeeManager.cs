@@ -129,8 +129,8 @@ public class EmployeeManager : MonoBehaviour
                     planningMax:   int.Parse(row["planningMax"].ToString()),
                     artMin:        int.Parse(row["artMin"].ToString()),
                     artMax:        int.Parse(row["artMax"].ToString()),
-                    perfectionMin: int.Parse(row["perfectionMin"].ToString()),
-                    perfectionMax: int.Parse(row["perfectionMax"].ToString()),
+                    creativityMin: int.Parse(row["creativityMin"].ToString()),
+                    creativityMax: int.Parse(row["creativityMax"].ToString()),
                     salaryMin:     int.Parse(row["salaryMin"].ToString()),
                     salaryMax:     int.Parse(row["salaryMax"].ToString()),
                     maxGrade:      (EmployeeGrade)int.Parse(row["maxGrade"].ToString())
@@ -231,7 +231,7 @@ public class EmployeeManager : MonoBehaviour
             employee.developSkill = UnityEngine.Random.Range(employee.developMin, employee.developMax + 1);
             employee.planningSkill = UnityEngine.Random.Range(employee.planningMin, employee.planningMax + 1);
             employee.artSkill = UnityEngine.Random.Range(employee.artMin, employee.artMax + 1);
-            employee.perfectionSkill = UnityEngine.Random.Range(employee.perfectionMin, employee.perfectionMax + 1);
+            employee.creativitySkill = UnityEngine.Random.Range(employee.creativityMin, employee.creativityMax + 1);
 
             // 연봉 재랜덤
             int steps = (employee.salaryMax - employee.salaryMin) / 50;
@@ -265,8 +265,8 @@ public class EmployeeManager : MonoBehaviour
             planningMax: poolEmployee.planningMax,
             artMin: poolEmployee.artMin,
             artMax: poolEmployee.artMax,
-            perfectionMin: poolEmployee.perfectionMin,
-            perfectionMax: poolEmployee.perfectionMax,
+            creativityMin: poolEmployee.creativityMin,
+            creativityMax: poolEmployee.creativityMax,
             salaryMin: poolEmployee.salaryMin,
             salaryMax: poolEmployee.salaryMax,
             maxGrade: poolEmployee.maxGrade
@@ -278,7 +278,7 @@ public class EmployeeManager : MonoBehaviour
         inGameEmployee.developSkill = poolEmployee.developSkill;
         inGameEmployee.planningSkill = poolEmployee.planningSkill;
         inGameEmployee.artSkill = poolEmployee.artSkill;
-        inGameEmployee.perfectionSkill = poolEmployee.perfectionSkill;
+        inGameEmployee.creativitySkill = poolEmployee.creativitySkill;
         inGameEmployee.salary = poolEmployee.salary;
         inGameEmployee.enhancementLevel = poolEmployee.enhancementLevel;
         inGameEmployee.portraitId       = poolEmployee.portraitId;
@@ -470,7 +470,7 @@ public class EmployeeManager : MonoBehaviour
             emp.developSkill    = Mathf.Max(1, Mathf.RoundToInt(emp.developSkill    * 0.8f));
             emp.planningSkill   = Mathf.Max(1, Mathf.RoundToInt(emp.planningSkill   * 0.8f));
             emp.artSkill        = Mathf.Max(1, Mathf.RoundToInt(emp.artSkill        * 0.8f));
-            emp.perfectionSkill = Mathf.Max(1, Mathf.RoundToInt(emp.perfectionSkill * 0.8f));
+            emp.creativitySkill = Mathf.Max(1, Mathf.RoundToInt(emp.creativitySkill * 0.8f));
         }
     }
 
@@ -625,6 +625,8 @@ public class EmployeeManager : MonoBehaviour
         public int sub0Gain;
         public string sub1Stat;
         public int sub1Gain;
+        public string sub2Stat;
+        public int sub2Gain;
     }
 
     [System.Serializable]
@@ -679,11 +681,13 @@ public class EmployeeManager : MonoBehaviour
         Shuffle(subStats);
         int subGain0 = Mathf.RoundToInt(totalMainGain * UnityEngine.Random.Range(0.3f, 0.5f));
         int subGain1 = Mathf.RoundToInt(totalMainGain * UnityEngine.Random.Range(0.3f, 0.5f));
+        int subGain2 = Mathf.RoundToInt(totalMainGain * UnityEngine.Random.Range(0.3f, 0.5f));
         int salaryGain = EnhanceSalaryTable[tableIndex];
 
         ApplyStat(employee, mainStat, totalMainGain);
         ApplyStat(employee, subStats[0], subGain0);
         ApplyStat(employee, subStats[1], subGain1);
+        ApplyStat(employee, subStats[2], subGain2);
         employee.salary += EnhanceSalaryTable[tableIndex];
 
         // 부스탯 배정 기록 저장 (하락 시 롤백용, 주스탯/연봉은 테이블로 계산 가능)
@@ -696,6 +700,8 @@ public class EmployeeManager : MonoBehaviour
             sub0Gain = subGain0,
             sub1Stat = subStats[1],
             sub1Gain = subGain1,
+            sub2Stat = subStats[2],
+            sub2Gain = subGain2,
         });
         employee.enhancementRecordsJson = SerializeRecords(records);
     }
@@ -726,6 +732,8 @@ public class EmployeeManager : MonoBehaviour
         {
             ApplyStat(employee, record.sub0Stat, -record.sub0Gain);
             ApplyStat(employee, record.sub1Stat, -record.sub1Gain);
+            if (!string.IsNullOrEmpty(record.sub2Stat))
+                ApplyStat(employee, record.sub2Stat, -record.sub2Gain);
             records.Remove(record);
             employee.enhancementRecordsJson = SerializeRecords(records);
         }
@@ -808,6 +816,7 @@ public class EmployeeManager : MonoBehaviour
         ApplyStat(employee, mainStat,    mainGainTotal);
         ApplyStat(employee, subStats[0], subGainTotal);
         ApplyStat(employee, subStats[1], subGainTotal);
+        ApplyStat(employee, subStats[2], subGainTotal);
 
         employee.salary += salaryGain;
     }
@@ -824,6 +833,7 @@ public class EmployeeManager : MonoBehaviour
     {
         var all = new List<string> { "develop", "planning", "art" };
         all.Remove(GetMainStatKey(role));
+        all.Add("creativity");   // 창의성도 부스탯
         return all;
     }
 
@@ -834,7 +844,7 @@ public class EmployeeManager : MonoBehaviour
             case "develop": e.developSkill += gain; break;
             case "planning": e.planningSkill += gain; break;
             case "art": e.artSkill += gain; break;
-            case "perfection": e.perfectionSkill += gain; break;
+            case "creativity": e.creativitySkill += gain; break;
         }
     }
 

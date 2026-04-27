@@ -32,7 +32,7 @@ public class EmployeeData
     public int developSkill;
     public int planningSkill;
     public int artSkill;
-    public int perfectionSkill;
+    public int creativitySkill;
     public int salary;
     public int enhancementLevel;
     public int satisfaction = 80;
@@ -47,7 +47,7 @@ public class EmployeeData
     public int developMin, developMax;
     public int planningMin, planningMax;
     public int artMin, artMax;
-    public int perfectionMin, perfectionMax;
+    public int creativityMin, creativityMax;
     public int salaryMin, salaryMax;
 
     // 강화로 인한 주스탯/부스탯 증가 (표시용)
@@ -74,7 +74,7 @@ public class EmployeeData
         developMin, developMax,
         planningMin, planningMax,
         artMin, artMax,
-        perfectionMin, perfectionMax,
+        creativityMin, creativityMax,
         salaryMin, salaryMax,
         maxGrade
     ) { portraitId = this.portraitId, isDefault = this.isDefault, isFemale = this.isFemale };
@@ -84,7 +84,7 @@ public class EmployeeData
         int developMin, int developMax,
         int planningMin, int planningMax,
         int artMin, int artMax,
-        int perfectionMin, int perfectionMax,
+        int creativityMin, int creativityMax,
         int salaryMin, int salaryMax,
         EmployeeGrade maxGrade)
     {
@@ -96,7 +96,7 @@ public class EmployeeData
         this.developMin = developMin; this.developMax = developMax;
         this.planningMin = planningMin; this.planningMax = planningMax;
         this.artMin = artMin; this.artMax = artMax;
-        this.perfectionMin = perfectionMin; this.perfectionMax = perfectionMax;
+        this.creativityMin = creativityMin; this.creativityMax = creativityMax;
         this.salaryMin = salaryMin; this.salaryMax = salaryMax;
 
         this.state = EmployeeState.Idle;
@@ -115,8 +115,8 @@ public class EmployeeData
             planningMax: SafeInt(row, "planningMax", 0),
             artMin: SafeInt(row, "artMin", 0),
             artMax: SafeInt(row, "artMax", 0),
-            perfectionMin: SafeInt(row, "perfectionMin", 0),
-            perfectionMax: SafeInt(row, "perfectionMax", 0),
+            creativityMin: SafeInt(row, "creativityMin", 0),
+            creativityMax: SafeInt(row, "creativityMax", 0),
             salaryMin: SafeInt(row, "salaryMin", 400),
             salaryMax: SafeInt(row, "salaryMax", 500),
             maxGrade: (EmployeeGrade)SafeInt(row, "maxGrade", 0)
@@ -130,7 +130,7 @@ public class EmployeeData
         data.developSkill = SafeInt(row, "developSkill", 0);
         data.planningSkill = SafeInt(row, "planningSkill", 0);
         data.artSkill = SafeInt(row, "artSkill", 0);
-        data.perfectionSkill = SafeInt(row, "perfectionSkill", 0);
+        data.creativitySkill = SafeInt(row, "creativitySkill", 0);
         data.salary = SafeInt(row, "salary", 0);
         data.state = (EmployeeState)SafeInt(row, "state", 0);
         data.assignedProjectId = SafeString(row, "assignedProjectId", "");
@@ -163,7 +163,7 @@ public class EmployeeData
         param.Add("developSkill", developSkill);
         param.Add("planningSkill", planningSkill);
         param.Add("artSkill", artSkill);
-        param.Add("perfectionSkill", perfectionSkill);
+        param.Add("creativitySkill", creativitySkill);
         param.Add("salary", salary);
         param.Add("developMin", developMin);
         param.Add("developMax", developMax);
@@ -171,8 +171,8 @@ public class EmployeeData
         param.Add("planningMax", planningMax);
         param.Add("artMin", artMin);
         param.Add("artMax", artMax);
-        param.Add("perfectionMin", perfectionMin);
-        param.Add("perfectionMax", perfectionMax);
+        param.Add("creativityMin", creativityMin);
+        param.Add("creativityMax", creativityMax);
         param.Add("salaryMin", salaryMin);
         param.Add("salaryMax", salaryMax);
         param.Add("state", (int)state);
@@ -197,7 +197,6 @@ public class EmployeeData
     public string DevelopRangeText() => $"개발: {developMin}~{developMax}";
     public string PlanningRangeText() => $"기획: {planningMin}~{planningMax}";
     public string ArtRangeText() => $"아트: {artMin}~{artMax}";
-    public string PerfectionRangeText() => $"완성도: {perfectionMin}~{perfectionMax}";
     public string SalaryRangeText() => $"연봉: {salary:N0}G";
     public string SalaryText() => $"연봉: {salary:N0}G";
 
@@ -227,12 +226,12 @@ public class EmployeeData
     public int EffectivePlanningSkill   => (int)(planningSkill   * GetSatisfactionMultiplier()) - (role == EmployeeRole.Planner    ? GetStatDebuffAmount() : 0) + (role == EmployeeRole.Planner    ? GetStatBuffAmount() : 0) + (role == EmployeeRole.Planner    ? GetRomanceBuffAmount() : 0);
     public int EffectiveDevelopSkill    => (int)(developSkill    * GetSatisfactionMultiplier()) - (role == EmployeeRole.Programmer ? GetStatDebuffAmount() : 0) + (role == EmployeeRole.Programmer ? GetStatBuffAmount() : 0) + (role == EmployeeRole.Programmer ? GetRomanceBuffAmount() : 0);
     public int EffectiveArtSkill        => (int)(artSkill        * GetSatisfactionMultiplier()) - (role == EmployeeRole.Artist     ? GetStatDebuffAmount() : 0) + (role == EmployeeRole.Artist     ? GetStatBuffAmount() : 0) + (role == EmployeeRole.Artist     ? GetRomanceBuffAmount() : 0);
-    public int EffectivePerfectionSkill => (int)(perfectionSkill * GetSatisfactionMultiplier());
+    public int EffectiveCreativitySkill => (int)(creativitySkill * GetSatisfactionMultiplier());
 
     public string DevelopText()    => $"개발: {EffectiveDevelopSkill}";
     public string PlanningText()   => $"기획: {EffectivePlanningSkill}";
     public string ArtText()        => $"아트: {EffectiveArtSkill}";
-    public string PerfectionText() => $"완성도: {EffectivePerfectionSkill}";
+    public string CreativityText() => $"창의성: {EffectiveCreativitySkill}";
 
     // 주스탯은 강화 반영 범위, 부스탯은 확정 수치로 표시
     public string DevelopDisplayText()  => role == EmployeeRole.Programmer

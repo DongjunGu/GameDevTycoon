@@ -23,7 +23,7 @@ public class EmployeeListUI : MonoBehaviour
     public TextMeshProUGUI confirmDevelopText;
     public TextMeshProUGUI confirmPlanningText;
     public TextMeshProUGUI confirmArtText;
-    public TextMeshProUGUI confirmPerfectionText;
+    public TextMeshProUGUI confirmCreativityText;
     public TextMeshProUGUI confirmDescText;
     public TextMeshProUGUI confirmSatisfactionText;
 
@@ -70,7 +70,7 @@ public class EmployeeListUI : MonoBehaviour
         confirmDevelopText.text = employee.DevelopText();
         confirmPlanningText.text = employee.PlanningText();
         confirmArtText.text = employee.ArtText();
-        confirmPerfectionText.text = employee.PerfectionText();
+        confirmCreativityText.text = employee.CreativityText();
         confirmSatisfactionText.text = employee.SatisfactionText();
         enhancementText.text = $"+{employee.enhancementLevel}";
         listPanel.SetActive(false);

@@ -25,7 +25,7 @@ public class TrainingUI : MonoBehaviour
     public TextMeshProUGUI selectedDevelopText;
     public TextMeshProUGUI selectedPlanningText;
     public TextMeshProUGUI selectedArtText;
-    public TextMeshProUGUI selectedPerfectionText;
+    public TextMeshProUGUI selectedCreativityText;
     public TextMeshProUGUI selectedEnhancementText;
     public TextMeshProUGUI selectedCostText;
     public TextMeshProUGUI selectedSatisfactionText;
@@ -42,7 +42,7 @@ public class TrainingUI : MonoBehaviour
     public TextMeshProUGUI resultDevelopText;
     public TextMeshProUGUI resultPlanningText;
     public TextMeshProUGUI resultArtText;
-    public TextMeshProUGUI resultPerfectionText;
+    public TextMeshProUGUI resultCreativityText;
     public TextMeshProUGUI resultEnhancementText; // 강화 결과 텍스트
     public TextMeshProUGUI resultOutcomeText;
     public TextMeshProUGUI resultSatisfactionText;
@@ -163,7 +163,7 @@ public class TrainingUI : MonoBehaviour
         selectedDevelopText.text = employee.DevelopText();
         selectedPlanningText.text = employee.PlanningText();
         selectedArtText.text = employee.ArtText();
-        selectedPerfectionText.text = employee.PerfectionText();
+        selectedCreativityText.text = employee.CreativityText();
         selectedEnhancementText.text = $"강화 수치: +{employee.enhancementLevel}";
 
         int nextLevel = employee.enhancementLevel;
@@ -222,7 +222,7 @@ public class TrainingUI : MonoBehaviour
         int beforeDev = _selectedEmployee.developSkill;
         int beforePlanning = _selectedEmployee.planningSkill;
         int beforeArt = _selectedEmployee.artSkill;
-        int beforePerfection = _selectedEmployee.perfectionSkill;
+        int beforeCreativity = _selectedEmployee.creativitySkill;
         int beforeLevel = _selectedEmployee.enhancementLevel;
 
         int cost = EnhanceCostTable[level];
@@ -252,18 +252,18 @@ public class TrainingUI : MonoBehaviour
         }
 
         EmployeeManager.Instance.UpdateEmployee(_selectedEmployee);
-        ShowResult(outcome, results, beforeDev, beforePlanning, beforeArt, beforePerfection, beforeLevel);
+        ShowResult(outcome, results, beforeDev, beforePlanning, beforeArt, beforeCreativity, beforeLevel);
     }
     string StatDisplayName(string key) => key switch
     {
         "develop" => "개발",
         "planning" => "기획",
         "art" => "아트",
-        "perfection" => "완성도",
+        "creativity" => "창의성",
         _ => key
     };
     void ShowResult(string outcome, List<EnhanceResult> results,
-                int beforeDev, int beforePlanning, int beforeArt, int beforePerfection, int beforeLevel)
+                int beforeDev, int beforePlanning, int beforeArt, int beforeCreativity, int beforeLevel)
     {
         resultNameText.text = _selectedEmployee.employeeName;
         resultRoleText.text = _selectedEmployee.RoleToString();
@@ -285,9 +285,9 @@ public class TrainingUI : MonoBehaviour
             ? $"아트: {beforeArt} → {_selectedEmployee.artSkill}"
             : $"아트: {_selectedEmployee.artSkill}";
 
-        resultPerfectionText.text = beforePerfection != _selectedEmployee.perfectionSkill
-            ? $"완성도: {beforePerfection} → {_selectedEmployee.perfectionSkill}"
-            : $"완성도: {_selectedEmployee.perfectionSkill}";
+        resultCreativityText.text = beforeCreativity != _selectedEmployee.creativitySkill
+            ? $"창의성: {beforeCreativity} → {_selectedEmployee.creativitySkill}"
+            : $"창의성: {_selectedEmployee.creativitySkill}";
 
         trainingPanel.SetActive(false);
         resultPanel.SetActive(true);

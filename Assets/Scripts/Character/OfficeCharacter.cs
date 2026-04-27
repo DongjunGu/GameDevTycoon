@@ -1,11 +1,27 @@
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 
 public class OfficeCharacter : MonoBehaviour
 {
+    private struct PopupRequest
+    {
+        public bool    isBlock;
+        // stat tick
+        public Sprite  stat;
+        public int     amount;
+        public Color   color;
+        public bool    isJackpot;
+        // block
+        public int[][] cells;
+    }
+    private readonly Queue<PopupRequest> _popupQueue = new();
+    private bool _popupActive;
+
     public string employeeId;
     public WorkStation assignedDesk;
     public Transform statPopupAnchor; // 머리 위 위치 (Inspector에서 설정)
+    public Vector2 statTickPopupOffset = new Vector2(1.2f, 0.7f); // StatTickPopup 위치 (캐릭터 기준 오프셋)
 
     [SerializeField] private CharacterState _state = CharacterState.Idle;
     public CharacterState State => _state;
@@ -246,12 +262,71 @@ public class OfficeCharacter : MonoBehaviour
         StatFloatingTextPool.Instance.Get(pos)?.Show(text, color);
     }
 
+    // 창의성 블록 팝업도 같은 큐로 — 다른 stat tick과 겹치지 않게
     public void ShowBlockPopup(int[][] cells, Color color)
     {
-        Vector3 pos = statPopupAnchor != null
-            ? statPopupAnchor.position
-            : transform.position + Vector3.up * 0.6f;
+        EnqueuePopup(new PopupRequest { isBlock = true, cells = cells, color = color });
+    }
 
-        BlockFloatingVisual.Spawn(pos, cells, color);
+    // 상시 개발틱 팝업
+    public void ShowStatTickPopup(Sprite statSprite, int amount, Color color, bool isJackpot)
+    {
+        if (StatTickPopupPool.Instance == null) return;
+        EnqueuePopup(new PopupRequest
+        {
+            isBlock = false,
+            stat = statSprite, amount = amount, color = color, isJackpot = isJackpot
+        });
+    }
+
+    void EnqueuePopup(PopupRequest req)
+    {
+        StatTickPopup.ActiveCount++;   // 대기 + 표시 합계
+        if (_popupActive)
+            _popupQueue.Enqueue(req);
+        else
+            SpawnPopup(req);
+    }
+
+    void SpawnPopup(PopupRequest req)
+    {
+        _popupActive = true;
+
+        if (req.isBlock)
+        {
+            Vector3 pos = statPopupAnchor != null
+                ? statPopupAnchor.position
+                : transform.position + Vector3.up * 0.6f;
+            BlockFloatingVisual.Spawn(pos, req.cells, req.color, OnPopupFinished);
+        }
+        else
+        {
+            Vector3 pos = transform.position
+                        + new Vector3(statTickPopupOffset.x, statTickPopupOffset.y, 0f);
+            var p = StatTickPopupPool.Instance.Get(pos);
+            if (p == null)
+            {
+                // 풀 실패 — 즉시 콜백
+                OnPopupFinished();
+                return;
+            }
+            p.Show(req.stat, req.amount, req.color, req.isJackpot, OnPopupFinished);
+        }
+    }
+
+    void OnPopupFinished()
+    {
+        _popupActive = false;
+        StatTickPopup.ActiveCount = Mathf.Max(0, StatTickPopup.ActiveCount - 1);
+        if (_popupQueue.Count > 0)
+            SpawnPopup(_popupQueue.Dequeue());
+    }
+
+    void OnDestroy()
+    {
+        // 큐+활성 카운터 누수 방지
+        int leftover = _popupQueue.Count + (_popupActive ? 1 : 0);
+        if (leftover > 0)
+            StatTickPopup.ActiveCount = Mathf.Max(0, StatTickPopup.ActiveCount - leftover);
     }
 }

@@ -27,7 +27,7 @@ public class HiringUI : MonoBehaviour
     public TextMeshProUGUI confirmDevelopText;
     public TextMeshProUGUI confirmPlanningText;
     public TextMeshProUGUI confirmArtText;
-    public TextMeshProUGUI confirmPerfectionText;
+    public TextMeshProUGUI confirmCreativityText;
     public TextMeshProUGUI confirmSalaryText;
     public TextMeshProUGUI confirmSatisfactionText;
     public TextMeshProUGUI confirmHireCostText;
@@ -40,7 +40,7 @@ public class HiringUI : MonoBehaviour
     public TextMeshProUGUI ownedDevelopText;
     public TextMeshProUGUI ownedPlanningText;
     public TextMeshProUGUI ownedArtText;
-    public TextMeshProUGUI ownedPerfectionText;
+    public TextMeshProUGUI ownedCreativityText;
     public TextMeshProUGUI ownedSalaryText;
     public TextMeshProUGUI ownedEnhancementText;
     public Button confirmButton;                // 채용하기 버튼
@@ -177,7 +177,7 @@ public class HiringUI : MonoBehaviour
         confirmDevelopText.text = employee.DevelopDisplayText();
         confirmPlanningText.text = employee.PlanningDisplayText();
         confirmArtText.text = employee.ArtDisplayText();
-        confirmPerfectionText.text = employee.PerfectionRangeText();
+        confirmCreativityText.text = employee.CreativityText();
         confirmSalaryText.text = employee.SalaryRangeText();
         enhancementText.text = $"+{employee.enhancementLevel}";
         if (confirmHireCostText != null)
@@ -205,7 +205,7 @@ public class HiringUI : MonoBehaviour
             if (ownedDevelopText != null)    ownedDevelopText.text    = owned.DevelopText();
             if (ownedPlanningText != null)   ownedPlanningText.text   = owned.PlanningText();
             if (ownedArtText != null)        ownedArtText.text        = owned.ArtText();
-            if (ownedPerfectionText != null) ownedPerfectionText.text = owned.PerfectionText();
+            if (ownedCreativityText != null) ownedCreativityText.text = owned.CreativityText();
             if (ownedSalaryText != null)     ownedSalaryText.text     = owned.SalaryText();
             if (ownedEnhancementText != null)ownedEnhancementText.text= $"+{owned.enhancementLevel}";
         }

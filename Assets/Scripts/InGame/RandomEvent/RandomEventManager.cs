@@ -531,7 +531,7 @@ public class RandomEventManager : MonoBehaviour
     public void CheckOfficeRomanceOnHire(EmployeeData newEmp)
     {
         if (_activeCouple.HasValue) return;
-        if (UnityEngine.Random.value >= 1f) return;
+        if (UnityEngine.Random.value >= 0.2f) return;
 
         var employees = EmployeeManager.Instance?.ownedEmployees;
         if (employees == null) return;
@@ -551,7 +551,7 @@ public class RandomEventManager : MonoBehaviour
 
     public void SetActiveCouple(string empId1, string empId2)
     {
-        int breakUp = UnityEngine.Random.value < 1.0f
+        int breakUp = UnityEngine.Random.value < 0.6f
             ? UnityEngine.Random.Range(8, 17)
             : -1;
         _activeCouple = new ActiveCouple { empId1 = empId1, empId2 = empId2, breakUpWeeksLeft = breakUp };

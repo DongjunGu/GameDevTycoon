@@ -13,11 +13,16 @@ public class BlockFloatingVisual : MonoBehaviour
     private SpriteRenderer   _bgRenderer;
     private Color _baseColor;
 
-    public static void Spawn(Vector3 worldPos, int[][] shape, Color color)
+    public System.Action OnFinish;
+
+    public static BlockFloatingVisual Spawn(Vector3 worldPos, int[][] shape, Color color, System.Action onFinish = null)
     {
         var go = new GameObject("BlockFloatingVisual");
         go.transform.position = worldPos;
-        go.AddComponent<BlockFloatingVisual>().Play(shape, color);
+        var bfv = go.AddComponent<BlockFloatingVisual>();
+        bfv.OnFinish = onFinish;
+        bfv.Play(shape, color);
+        return bfv;
     }
 
     void Play(int[][] shape, Color color)
@@ -84,20 +89,24 @@ public class BlockFloatingVisual : MonoBehaviour
             if (GameTimeManager.Instance == null || GameTimeManager.Instance.IsRunning)
             {
                 elapsed += Time.deltaTime;
-                float t     = elapsed / Duration;
-                float alpha = 1f - t;
+                float t = elapsed / Duration;
                 transform.position = startPos + Vector3.up * FloatSpeed * t;
-
-                if (_bgRenderer != null)
-                    _bgRenderer.color = new Color(1f, 1f, 1f, alpha);
-                foreach (var sr in _cellRenderers)
-                    if (sr != null) sr.color = new Color(_baseColor.r, _baseColor.g, _baseColor.b, alpha);
             }
             yield return null;
         }
 
+        InvokeFinish();
         Destroy(gameObject);
     }
+
+    void InvokeFinish()
+    {
+        var cb = OnFinish;
+        OnFinish = null;
+        cb?.Invoke();
+    }
+
+    void OnDestroy() => InvokeFinish();
 
     static Sprite _whiteSprite;
     static Sprite GetWhiteSprite()
