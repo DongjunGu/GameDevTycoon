@@ -11,6 +11,10 @@ public class ItemPanelUI : MonoBehaviour
     public Transform  slotParent;
     public GameObject itemSlotPrefab;
 
+    // 카드 컨텍스트로 열렸을 때 사용 대상 직원 (null이면 일반 플로우)
+    public string TargetEmployeeId { get; private set; }
+    private System.Action _onClosedCallback;
+
     void Awake()
     {
         if (Instance != null) { Destroy(gameObject); return; }
@@ -23,6 +27,14 @@ public class ItemPanelUI : MonoBehaviour
         GameTimeManager.Instance?.StopTime();
         itemListPanel.SetActive(true);
         Refresh();
+    }
+
+    // EmployeeCardUI 등에서 특정 직원에게 사용할 목적으로 호출 — 직원 선택 단계 자동 스킵
+    public void OpenForEmployee(string employeeId, System.Action onClosed = null)
+    {
+        TargetEmployeeId = employeeId;
+        _onClosedCallback = onClosed;
+        Open();
     }
 
     public void Refresh()
@@ -45,6 +57,12 @@ public class ItemPanelUI : MonoBehaviour
     {
         itemListPanel.SetActive(false);
         GameTimeManager.Instance?.StartTime();
+
+        // 카드 컨텍스트 정리 + 콜백 호출 (있으면)
+        TargetEmployeeId = null;
+        var cb = _onClosedCallback;
+        _onClosedCallback = null;
+        cb?.Invoke();
     }
     public void OnClickAddTestItems()
   {

@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>직원 카드 예상도</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #1a1d29 0%, #2a2f45 100%);
+    font-family: 'Pretendard', 'Noto Sans KR', sans-serif;
+    color: #e8eaf0;
+  }
+
+  /* ─────────── 카드 본체 ─────────── */
+  .card {
+    width: 360px;
+    background: linear-gradient(180deg, #2c3252 0%, #1f2338 100%);
+    border: 2px solid #4a5180;
+    border-radius: 14px;
+    box-shadow: 0 18px 50px rgba(0, 0, 0, 0.6);
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* 닫기 버튼 */
+  .close-btn {
+    position: absolute;
+    top: 10px;
+    right: 12px;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.08);
+    border: none;
+    color: #c9cce0;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .close-btn:hover { background: rgba(255, 255, 255, 0.18); }
+
+  /* ─────────── 상단 (초상화 + 이름) ─────────── */
+  .header {
+    padding: 22px 20px 16px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    background: linear-gradient(180deg, rgba(74, 81, 128, 0.35) 0%, rgba(0,0,0,0) 100%);
+  }
+  .portrait {
+    width: 80px;
+    height: 80px;
+    border-radius: 12px;
+    background: #3a4068;
+    border: 2px solid #5b6394;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 38px;
+    color: #aab0d0;
+    flex-shrink: 0;
+    overflow: hidden;
+  }
+  .name-block { flex: 1; min-width: 0; }
+  .name {
+    font-size: 22px;
+    font-weight: 700;
+    color: #ffffff;
+    letter-spacing: 0.3px;
+    margin-bottom: 6px;
+  }
+  .satisfaction-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .satisfaction-label {
+    font-size: 12px;
+    color: #a4abc7;
+    font-weight: 600;
+    min-width: 44px;
+  }
+  .satisfaction-bar {
+    flex: 1;
+    height: 10px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 999px;
+    overflow: hidden;
+    position: relative;
+  }
+  .satisfaction-fill {
+    height: 100%;
+    border-radius: 999px;
+    transition: width 0.3s ease, background 0.3s ease;
+  }
+  /* 만족도 능력치 보정 구간별 색상 */
+  .satisfaction-fill.tier-boost  { background: #52d486; } /* 81~100  ×1.1  강화 */
+  .satisfaction-fill.tier-normal { background: #5b9eff; } /* 61~80   ×1.0  보통 */
+  .satisfaction-fill.tier-low    { background: #f0b040; } /* 41~60   ×0.9  약 디버프 */
+  .satisfaction-fill.tier-poor   { background: #e85a5a; } /*  0~40   ×0.8  강 디버프 */
+  .satisfaction-value {
+    font-size: 12px;
+    color: #c9cce0;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    min-width: 56px;
+    text-align: right;
+  }
+
+  /* ─────────── 능력치 영역 ─────────── */
+  .stats {
+    padding: 6px 20px 22px;
+  }
+  .stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .stat-cell {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 10px;
+    padding: 12px 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .stat-label {
+    font-size: 13px;
+    color: #a4abc7;
+    font-weight: 500;
+  }
+  .stat-value {
+    font-size: 18px;
+    font-weight: 700;
+    color: #ffffff;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* 스탯별 강조 색 (역할에 따라 변경 가능) */
+  .stat-cell.planning .stat-label::before { content: '📋 '; }
+  .stat-cell.develop  .stat-label::before { content: '💻 '; }
+  .stat-cell.art      .stat-label::before { content: '🎨 '; }
+  .stat-cell.creativity .stat-label::before { content: '✨ '; }
+
+  /* ─────────── 안내 영역 ─────────── */
+  .note {
+    margin-top: 26px;
+    text-align: center;
+    color: #6c7395;
+    font-size: 12px;
+    line-height: 1.6;
+  }
+  .note code {
+    background: rgba(255, 255, 255, 0.06);
+    padding: 2px 6px;
+    border-radius: 4px;
+    color: #a4abc7;
+  }
+</style>
+</head>
+<body>
+  <div>
+    <div class="card">
+      <button class="close-btn" title="닫기">✕</button>
+
+      <div class="header">
+        <div class="portrait">👤</div>
+        <div class="name-block">
+          <div class="name">김기획</div>
+          <div class="satisfaction-row">
+            <span class="satisfaction-label">만족도</span>
+            <div class="satisfaction-bar">
+              <div class="satisfaction-fill tier-boost" style="width: 85%;"></div>
+            </div>
+            <span class="satisfaction-value">85 / 100</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="stats">
+        <div class="stats-grid">
+          <div class="stat-cell planning">
+            <span class="stat-label">기획</span>
+            <span class="stat-value">72</span>
+          </div>
+          <div class="stat-cell develop">
+            <span class="stat-label">개발</span>
+            <span class="stat-value">45</span>
+          </div>
+          <div class="stat-cell art">
+            <span class="stat-label">아트</span>
+            <span class="stat-value">38</span>
+          </div>
+          <div class="stat-cell creativity">
+            <span class="stat-label">창의성</span>
+            <span class="stat-value">61</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="note">
+      클릭 시 시간은 멈추지 않음 · <code>EmployeeCardUI.Show(employeeId)</code><br>
+      Effective(만족도/버프 반영) 수치 표시
+    </div>
+
+    <!-- 만족도 슬라이더 색상 가이드 -->
+    <div style="margin-top:30px; width:360px;">
+      <div style="font-size:12px; color:#a4abc7; margin-bottom:8px; font-weight:600;">만족도 구간별 슬라이더 색상</div>
+      <div style="display:flex; flex-direction:column; gap:6px;">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <div style="width:48px; height:8px; background:#52d486; border-radius:999px;"></div>
+          <span style="font-size:11px; color:#c9cce0;">81 ~ 100 · ×1.1 강화</span>
+        </div>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <div style="width:48px; height:8px; background:#5b9eff; border-radius:999px;"></div>
+          <span style="font-size:11px; color:#c9cce0;">61 ~ 80 · ×1.0 보통</span>
+        </div>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <div style="width:48px; height:8px; background:#f0b040; border-radius:999px;"></div>
+          <span style="font-size:11px; color:#c9cce0;">41 ~ 60 · ×0.9 약 디버프</span>
+        </div>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <div style="width:48px; height:8px; background:#e85a5a; border-radius:999px;"></div>
+          <span style="font-size:11px; color:#c9cce0;">0 ~ 40 · ×0.8 강 디버프</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
