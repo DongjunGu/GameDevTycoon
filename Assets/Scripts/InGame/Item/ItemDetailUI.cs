@@ -61,6 +61,21 @@ public class ItemDetailUI : MonoBehaviour
     public void OnClickUse()
     {
         if (_currentRow == null) return;
+
+        // 카드 컨텍스트(특정 직원 대상으로 열림): 직원 선택 단계 건너뛰고 즉시 사용
+        string targetId = ItemPanelUI.Instance != null ? ItemPanelUI.Instance.TargetEmployeeId : null;
+        if (!string.IsNullOrEmpty(targetId))
+        {
+            var emp = EmployeeManager.Instance?.GetEmployee(targetId);
+            if (emp != null && ItemManager.Instance.UseItem(_currentRow.itemId, emp))
+            {
+                detailPanel.SetActive(false);
+                ItemPanelUI.Instance.OnClickClose(); // 패널 닫기 + StartTime + 카드 콜백 호출
+            }
+            return;
+        }
+
+        // 일반 플로우: 직원 선택 패널로 이동
         ItemEmployeeSelectUI.Instance.Open(_currentRow);
     }
 

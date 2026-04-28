@@ -129,6 +129,10 @@ public class TrainingUI : MonoBehaviour
         Instance = this;
     }
 
+    // 카드 컨텍스트로 열렸을 때 닫힘 콜백 + 플래그 (true면 ListPanel 단계 스킵)
+    private System.Action _onClosedCallback;
+    private bool _isCardContext;
+
     public void OpenTraining()
     {
         GameTimeManager.Instance?.StopTime();
@@ -136,6 +140,20 @@ public class TrainingUI : MonoBehaviour
         trainingPanel.SetActive(false);
         resultPanel.SetActive(false);
         ShowList();
+    }
+
+    // EmployeeCardUI 등에서 특정 직원 강화 패널을 즉시 띄울 때 사용
+    public void OpenTrainingForEmployee(EmployeeData employee, System.Action onClosed = null)
+    {
+        if (employee == null) return;
+        _isCardContext = true;
+        _onClosedCallback = onClosed;
+
+        GameTimeManager.Instance?.StopTime();
+        gameObject.SetActive(true);
+        listPanel.SetActive(false);
+        resultPanel.SetActive(false);
+        OnSelectEmployee(employee); // 강화 패널 바로 표시
     }
 
     void ShowList()
@@ -252,6 +270,8 @@ public class TrainingUI : MonoBehaviour
         }
 
         EmployeeManager.Instance.UpdateEmployee(_selectedEmployee);
+        GameTimeManager.Instance?.SaveGameTime();
+        ProjectSaveManager.Instance?.SaveProject();
         ShowResult(outcome, results, beforeDev, beforePlanning, beforeArt, beforeCreativity, beforeLevel);
     }
     string StatDisplayName(string key) => key switch
@@ -302,6 +322,8 @@ public class TrainingUI : MonoBehaviour
 
     public void OnClickBack()
     {
+        // 카드 컨텍스트면 List 단계가 없으므로 뒤로가기 = 전체 닫기
+        if (_isCardContext) { OnClickClose(); return; }
         trainingPanel.SetActive(false);
         ShowList();
     }
@@ -311,5 +333,13 @@ public class TrainingUI : MonoBehaviour
         GameTimeManager.Instance?.StartTime();
         listPanel.SetActive(false);
         trainingPanel.SetActive(false);
+
+        if (_isCardContext)
+        {
+            _isCardContext = false;
+            var cb = _onClosedCallback;
+            _onClosedCallback = null;
+            cb?.Invoke();
+        }
     }
 }

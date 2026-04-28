@@ -1,8 +1,9 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.EventSystems;
 
-public class OfficeCharacter : MonoBehaviour
+public class OfficeCharacter : MonoBehaviour, IPointerClickHandler
 {
     private struct PopupRequest
     {
@@ -40,6 +41,15 @@ public class OfficeCharacter : MonoBehaviour
         _mover      = GetComponent<CharacterMover>();
         _animator   = GetComponent<CharacterAnimator>();
         _mover.OnMoveComplete += OnArrived;
+    }
+
+    // 캐릭터 클릭 → 직원 카드 UI 표시 (시간은 멈추지 않음)
+    // New Input System 모드에서는 OnMouseDown이 동작 안 하므로 IPointerClickHandler 사용
+    // 카메라에 Physics2DRaycaster 컴포넌트 + 씬에 EventSystem 필요
+    public void OnPointerClick(PointerEventData eventData)
+    {
+        if (string.IsNullOrEmpty(employeeId)) return;
+        EmployeeCardUI.Instance?.Show(employeeId);
     }
 
     // 이동 완료 시 — 데스크 타입 + 프로젝트 진행 여부로 애니메이션 결정
