@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__UnityMCP__find_gameobjects",
+      "mcp__UnityMCP__manage_prefabs",
+      "mcp__UnityMCP__manage_asset",
+      "mcp__UnityMCP__manage_gameobject",
+      "mcp__UnityMCP__read_console"
+    ]
+  }
+}

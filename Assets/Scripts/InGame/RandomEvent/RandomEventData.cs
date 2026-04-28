@@ -38,7 +38,6 @@ public enum RandomEventType
     Birthday,               // 생일                        1~99%
     EarlyLeaveRequest,      // 퇴근 요청                   1~99%
     EquipmentUpgrade,       // 장비 업그레이드 요청         1~99%
-    GameUpgradeRequest,     // 게임 업그레이드 요청         1~99%
     CompanyDinner,          // 오늘은 회식이다!             1~99%
     BossGossip,             // 사장님 뒷담까기              1~99%
     HackyCode,              // 야매코드                    26~99%
