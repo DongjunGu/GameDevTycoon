@@ -22,7 +22,12 @@ public class QuestUI : MonoBehaviour
     {
         if (Instance != null) { Destroy(gameObject); return; }
         Instance = this;
-        questPanel.SetActive(false);
+        //questPanel.SetActive(false);
+    }
+
+    void Start()
+    {
+        Show();
     }
 
     public void Show()
@@ -48,33 +53,14 @@ public class QuestUI : MonoBehaviour
             if (!quest.isVisible) continue;
             var item = Instantiate(questItemPrefab, questListContent);
 
-            // TopRow
-            var titleText = item.transform.Find("TopRow/QuestInfo/TitleText").GetComponent<TextMeshProUGUI>();
-            var descText = item.transform.Find("TopRow/QuestInfo/DescText").GetComponent<TextMeshProUGUI>();
-            var rewardText = item.transform.Find("TopRow/Reward/RewardText").GetComponent<TextMeshProUGUI>();
+            var descText = item.transform.Find("DescText").GetComponent<TextMeshProUGUI>();
+            var progressValue = item.transform.Find("ProgressRow/ProgressValueText").GetComponent<TextMeshProUGUI>();
 
-            // ProgressArea
-            var progressLabel = item.transform.Find("ProgressArea/ProgressRow/ProgressLabel").GetComponent<TextMeshProUGUI>();
-            var progressValue = item.transform.Find("ProgressArea/ProgressRow/ProgressValueText").GetComponent<TextMeshProUGUI>();
-            var progressSlider = item.transform.Find("ProgressArea/ProgressSlider").GetComponent<Slider>();
-
-            // 값 세팅
-            titleText.text = quest.title;
-            descText.text = quest.description;
-            rewardText.text = $"{quest.rewardGold:N0}G";
-
-            progressLabel.text = "진행도";
+            descText.text = quest.isMainQuest ? $"[메인] {quest.description}" : quest.description;
             progressValue.text = $"{quest.currentValue:N0} / {quest.targetValue:N0}";
-            progressSlider.minValue = 0f;
-            progressSlider.maxValue = 1f;
-            progressSlider.value = quest.Progress;
 
             // 배경 이미지
             var itemImage = item.GetComponent<Image>();
-
-            // 메인퀘스트 특별 표시
-            if (quest.isMainQuest)
-                titleText.text = $"[메인] {quest.title}";
 
             // 상태별 색상
             if (quest.isRewarded)

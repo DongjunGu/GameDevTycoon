@@ -11,7 +11,6 @@ public class DevelopmentPanelUI : MonoBehaviour
     public TextMeshProUGUI artText;
     public TextMeshProUGUI bugText;
     public TextMeshProUGUI creativityText;
-    public TextMeshProUGUI marketFitText;
     public float GetPlanning() => _planning;
     public float GetDevelop() => _develop;
     public float GetArt() => _art;
@@ -53,10 +52,6 @@ public class DevelopmentPanelUI : MonoBehaviour
         bugText.text = "";
         creativityText.text = "";
     }
-    public void ResetMarketFit()
-    {
-        marketFitText.text = "";
-    }
 
     public void AddValues(float planning, float develop, float art, float bug, float creativity = 0f)
     {
@@ -80,24 +75,6 @@ public class DevelopmentPanelUI : MonoBehaviour
     {
         _bug = value;
         bugText.text = $"버그: {Mathf.RoundToInt(_bug)}";
-    }
-    public void UpdateMarketFit(ProjectGenre genre)
-    {
-        string genreName = genre switch
-        {
-            ProjectGenre.RPG              => "RPG",
-            ProjectGenre.FPS              => "FPS",
-            ProjectGenre.Arcade           => "아케이드",
-            ProjectGenre.HealingSimulation => "힐링시뮬레이션",
-            ProjectGenre.Horror           => "공포",
-            ProjectGenre.Idle             => "방치형",
-            ProjectGenre.RTS              => "실시간전략",
-            ProjectGenre.VisualNovel      => "미연시",
-            ProjectGenre.Sports           => "스포츠",
-            _ => ""
-        };
-
-        marketFitText.text = $"인기 장르: {genreName}";
     }
     public void MultiplyValues(float multiplier)
     {

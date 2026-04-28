@@ -17,7 +17,6 @@ using UnityEngine;
 //   Birthday          1~99%  (min=1, max=4)
 //   EarlyLeaveRequest 1~99%  (min=1, max=4)
 //   EquipmentUpgrade  1~99%  (min=1, max=4)
-//   GameUpgradeRequest1~99%  (min=1, max=4)
 //   CompanyDinner     1~99%  (min=1, max=4)
 //   BossGossip        1~99%  (min=1, max=4)
 //   HackyCode        26~99%  (min=2, max=4)
@@ -151,18 +150,6 @@ public static class RandomEvents_Dev
         }
 
 
-        // ── 게임 업그레이드 요청 ─────────────────────────────────
-        // CDN 로드 실패 시 차트 기본값 (RandomEvent_Chart.csv > GameUpgradeRequest):
-        //   title       = "게임 업그레이드 요청"
-        //   description = "TODO"
-        //   weight=1, categoryMin=1, categoryMax=4
-        Add(pool, chart, new RandomEventData
-        {
-            type    = RandomEventType.GameUpgradeRequest,
-            onApply = () => { /* TODO */ }
-        });
-
-
         // ── 1~74% ───────────────────────────────────────────────
 
         // ── 네트워크 끊김 ────────────────────────────────────────
@@ -275,17 +262,6 @@ public static class RandomEvents_Dev
         // ── 26~99% ──────────────────────────────────────────────
 
         // ── 51~99% ──────────────────────────────────────────────
-
-        // ── 유튜버 선공개 요청 ───────────────────────────────────
-        // CDN 로드 실패 시 차트 기본값 (RandomEvent_Chart.csv > YoutuberRequest):
-        //   title       = "유튜버 선공개 요청"
-        //   description = "TODO"
-        //   weight=1, categoryMin=3, categoryMax=4
-        Add(pool, chart, new RandomEventData
-        {
-            type    = RandomEventType.YoutuberRequest,
-            onApply = () => { /* TODO */ }
-        });
     }
 
     static void Add(List<RandomEventData> pool,

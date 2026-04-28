@@ -133,7 +133,6 @@ public class SalesUI : MonoBehaviour
         if (!_newProjectStartedDuringSales)
         {
             DevelopmentPanelUI.Instance.ResetValues();
-            DevelopmentPanelUI.Instance.ResetMarketFit();
             DevelopmentTimerUI.Instance.ResetTimer();
         }
 
