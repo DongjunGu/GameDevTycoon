@@ -46,7 +46,7 @@ public class ProjectSetupUI : MonoBehaviour
 
     void Start()
     {
-        ShowPanel(startPanel);
+        //ShowPanel(startPanel);
     }
 
     // ── 패널 전환 ─────────────────────────────
@@ -273,7 +273,7 @@ public class ProjectSetupUI : MonoBehaviour
         platformPanel.SetActive(false);
         summaryPanel.SetActive(false);
         confirmPanel.SetActive(false);
-        startPanel.SetActive(true);
+        startPanel.SetActive(false);
         GameTimeManager.Instance.StartTime();
     }
 

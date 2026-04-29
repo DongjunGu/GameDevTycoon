@@ -26,7 +26,28 @@ using TMPro;
 // ═════════════════════════════════════════════════════════════════════════════
 public class CreativityGameUI : MonoBehaviour
 {
-    public static CreativityGameUI Instance { get; private set; }
+    // 패널 GameObject가 비활성 상태로 시작하면 Awake가 안 돌아 _instance가 null인 채로 남는다.
+    // 게임플레이에서 Instance 호출 시 비활성 인스턴스도 검색해 가져와 EnsureInit 호출.
+    private static CreativityGameUI _instance;
+    public static CreativityGameUI Instance
+    {
+        get
+        {
+            if (_instance == null)
+            {
+                var found = Resources.FindObjectsOfTypeAll<CreativityGameUI>();
+                foreach (var inst in found)
+                {
+                    if (inst == null || inst.gameObject.scene.IsValid() == false) continue;
+                    _instance = inst;
+                    inst.EnsureInit();
+                    break;
+                }
+            }
+            return _instance;
+        }
+        private set => _instance = value;
+    }
 
     [Header("패널")]
     [SerializeField] GameObject _panel;
@@ -42,12 +63,40 @@ public class CreativityGameUI : MonoBehaviour
     [SerializeField] TextMeshProUGUI _gridNameText;
     [SerializeField] Button          _confirmBtn;
 
-    [Header("창의성 레벨 (테크트리 연동 예정)")]
+    [Header("퍼펙트 보너스")]
+    [Tooltip("그리드를 전부 채우면 활성화되는 텍스트 (씬에서 비활성 상태로 배치)")]
+    [SerializeField] GameObject _perfectBonusText;
+
+    [Header("디버그")]
+    [Tooltip("그리드 전부 채움 시뮬레이션 (퍼펙트 보너스 테스트용)")]
+    [SerializeField] Button _debugFillBtn;
+
+    [Header("창의성 레벨 (테크트리 미해금시 fallback)")]
     [SerializeField, Range(1, 3)] int _creativityLevel = 1;
+    // 테크트리 해금 상태에 따라 1~3단계로 결정 (creativity_grid_1/2)
+    // 테크트리가 없는 환경(에디터 직접 테스트 등)에서는 인스펙터 값 사용
     public int CreativityLevel
     {
-        get => _creativityLevel;
+        get
+        {
+            if (TechTreeManager.Instance == null) return _creativityLevel;
+            if (TechTreeManager.Instance.IsUnlocked("creativity_grid_2")) return 3;
+            if (TechTreeManager.Instance.IsUnlocked("creativity_grid_1")) return 2;
+            return 1;
+        }
         set => _creativityLevel = value;
+    }
+
+    // 한 칸당 가산 점수: 기본 5, 테크트리 해금에 따라 10/15
+    public int BaseScorePerCell
+    {
+        get
+        {
+            if (TechTreeManager.Instance == null) return 5;
+            if (TechTreeManager.Instance.IsUnlocked("creativity_score_2")) return 15;
+            if (TechTreeManager.Instance.IsUnlocked("creativity_score_1")) return 10;
+            return 5;
+        }
     }
 
     // ── 런타임 ───────────────────────────────────────────────────────────────
@@ -58,15 +107,22 @@ public class CreativityGameUI : MonoBehaviour
     private System.Action _onClose;
 
     // ── 생명주기 ─────────────────────────────────────────────────────────────
+    private bool _initialized;
+
     void Awake()
     {
-        if (Application.isPlaying)
-        {
-            if (Instance != null) { Destroy(gameObject); return; }
-            Instance = this;
-            _panel.SetActive(false);
-            _confirmBtn.onClick.AddListener(OnClickConfirm);
-        }
+        if (Application.isPlaying) EnsureInit();
+    }
+
+    void EnsureInit()
+    {
+        if (_initialized) return;
+        if (_instance != null && _instance != this) { Destroy(gameObject); return; }
+        _instance = this;
+        if (_panel != null) _panel.SetActive(false);
+        if (_confirmBtn != null) _confirmBtn.onClick.AddListener(OnClickConfirm);
+        if (_debugFillBtn != null) _debugFillBtn.onClick.AddListener(OnClickDebugFill);
+        _initialized = true;
     }
 
     // ── 공개 API ─────────────────────────────────────────────────────────────
@@ -247,26 +303,49 @@ public class CreativityGameUI : MonoBehaviour
         }
     }
 
-    public int GetFinalScore() => _score;
+    // 그리드를 전부 채웠을 때 보너스 활성 — 현재 점수의 10% (소수점 버림)
+    bool IsGridFullyFilled => _gridUI != null
+                              && _gridUI.ValidCellCount > 0
+                              && _gridUI.CountFilledCells() >= _gridUI.ValidCellCount;
+    int GetBonusScore() => IsGridFullyFilled ? _score / 10 : 0;
+
+    // 최종 적용 점수 = 기본 점수 + 보너스
+    public int GetFinalScore() => _score + GetBonusScore();
 
     // CreativityGameBlockUI.OnEndDrag 에서 호출
     public void OnBlockPlaced(CreativityGameBlockUI block)
     {
-        _score = _gridUI.CountFilledCells();
+        _score = _gridUI.CountFilledCells() * BaseScorePerCell;
         UpdateScore();
     }
 
     // CreativityGameBlockUI.LiftFromGrid 에서 호출
     public void OnBlockLifted(CreativityGameBlockUI block)
     {
-        _score = _gridUI.CountFilledCells();
+        _score = _gridUI.CountFilledCells() * BaseScorePerCell;
         UpdateScore();
     }
 
     void UpdateScore()
     {
+        int bonus = GetBonusScore();
         if (_scoreText != null)
-            _scoreText.text = $"창의성 +{_score}";
+        {
+            _scoreText.text = bonus > 0
+                ? $"창의성 +{_score} (+Bonus {bonus})"
+                : $"창의성 +{_score}";
+        }
+        if (_perfectBonusText != null)
+            _perfectBonusText.SetActive(bonus > 0);
+    }
+
+    // 디버그: 그리드 전부 강제 채움 → 퍼펙트 보너스 표시 테스트
+    public void OnClickDebugFill()
+    {
+        if (_gridUI == null) return;
+        _gridUI.DebugFillAllCells(new Color(0.7f, 0.7f, 0.7f));
+        _score = _gridUI.CountFilledCells() * BaseScorePerCell;
+        UpdateScore();
     }
 
     public void ResetBlocks()

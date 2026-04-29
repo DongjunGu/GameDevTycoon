@@ -36,7 +36,9 @@ public class CreativityGameGridUI : MonoBehaviour, IBeginDragHandler, IDragHandl
     public float CellStep => _cellSize + _cellGap;
 
     // ── 초기화 ───────────────────────────────────────────────────────────────
-    void Awake()
+    void Awake() => EnsureInit();
+
+    void EnsureInit()
     {
         _rt     = GetComponent<RectTransform>();
         _canvas = GetComponentInParent<Canvas>();
@@ -47,6 +49,9 @@ public class CreativityGameGridUI : MonoBehaviour, IBeginDragHandler, IDragHandl
 
     public void BuildGrid(CreativityGameData.GridShape shape)
     {
+        // Awake가 아직 안 돈 경우(부모 비활성 등)에 대비한 lazy init
+        if (_rt == null) EnsureInit();
+
         for (int i = transform.childCount - 1; i >= 0; i--)
         {
             var child = transform.GetChild(i).gameObject;
@@ -298,5 +303,19 @@ public class CreativityGameGridUI : MonoBehaviour, IBeginDragHandler, IDragHandl
         foreach (var (r, c) in _validCells)
             if (_filled[r, c]) count++;
         return count;
+    }
+
+    public int ValidCellCount => _validCells?.Count ?? 0;
+
+    // 디버그/테스트: 유효 셀 전체를 강제 채움 (블록 인스턴스와 무관 → 리프트 불가)
+    public void DebugFillAllCells(Color color)
+    {
+        if (_filled == null || _validCells == null) return;
+        foreach (var (r, c) in _validCells)
+        {
+            _filled[r, c] = true;
+            if (_cellImages.TryGetValue((r, c), out var img))
+                img.color = color;
+        }
     }
 }

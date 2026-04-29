@@ -14,47 +14,32 @@ public class TechTreeManager : MonoBehaviour
         if (Instance != null) { Destroy(gameObject); return; }
         Instance = this;
         DontDestroyOnLoad(gameObject);
-        InitNodes();
+        BuildNodesFromChart();
     }
 
-    void InitNodes()
+    // 차트 캐시(`TechTreeChartLoader.Cache`)에서 노드 정의를 다시 만든다.
+    // - Awake 시점: 아직 차트 로드 전이라 fallback(코드 내 기본값) 사용 가능
+    // - LoadTechTree 진입 직전: BackendManager가 차트 로드 완료한 뒤이므로 서버 정의 반영
+    public void BuildNodesFromChart()
     {
-        allNodes = new List<TechNodeData>
+        var prevUnlocked = new HashSet<string>();
+        foreach (var n in allNodes)
+            if (n.isUnlocked) prevUnlocked.Add(n.id);
+
+        allNodes = new List<TechNodeData>();
+        foreach (var row in TechTreeChartLoader.Cache)
         {
-            // ── 직원관리 - 만족도 유지 ──────────────
-            new TechNodeData { id="emp_sat_1", name="협상의 기술",       category=TechCategory.EmployeeSatisfaction, order=1, prerequisiteId="",          cost=100 },
-            new TechNodeData { id="emp_sat_2", name="기초 복지 인프라",   category=TechCategory.EmployeeSatisfaction, order=2, prerequisiteId="emp_sat_1", cost=100 },
-            new TechNodeData { id="emp_sat_3", name="전문 멘탈 케어",     category=TechCategory.EmployeeSatisfaction, order=3, prerequisiteId="emp_sat_2", cost=100 },
-            new TechNodeData { id="emp_sat_4", name="고급 테마 라운지",   category=TechCategory.EmployeeSatisfaction, order=4, prerequisiteId="emp_sat_3", cost=100 },
-            new TechNodeData { id="emp_sat_5", name="성과급 체계 도입",   category=TechCategory.EmployeeSatisfaction, order=5, prerequisiteId="emp_sat_4", cost=100 },
-
-            // ── 직원관리 - 효율성 극대화 ────────────
-            new TechNodeData { id="emp_eff_1", name="야근 및 주말 근무",     category=TechCategory.EmployeeEfficiency, order=1, prerequisiteId="",          cost=100 },
-            new TechNodeData { id="emp_eff_2", name="직군 이동 최적화",      category=TechCategory.EmployeeEfficiency, order=2, prerequisiteId="emp_eff_1", cost=100 },
-            new TechNodeData { id="emp_eff_3", name="전략적 인재 영입",      category=TechCategory.EmployeeEfficiency, order=3, prerequisiteId="emp_eff_2", cost=100 },
-            new TechNodeData { id="emp_eff_4", name="한계 돌파 훈련",        category=TechCategory.EmployeeEfficiency, order=4, prerequisiteId="emp_eff_3", cost=100 },
-            new TechNodeData { id="emp_eff_5", name="성장 확률 증가",        category=TechCategory.EmployeeEfficiency, order=5, prerequisiteId="emp_eff_4", cost=100 },
-
-            // ── 기술연구 - 장르/플랫폼 ──────────────
-            new TechNodeData { id="tech_gp_1", name="장르 마스터리 1단계",  category=TechCategory.GenrePlatform, order=1, prerequisiteId="",          cost=100 },
-            new TechNodeData { id="tech_gp_2", name="장르 마스터리 2단계",  category=TechCategory.GenrePlatform, order=2, prerequisiteId="tech_gp_1", cost=100 },
-            new TechNodeData { id="tech_gp_3", name="플랫폼 라이선스",      category=TechCategory.GenrePlatform, order=3, prerequisiteId="tech_gp_2", cost=100 },
-            new TechNodeData { id="tech_gp_4", name="플랫폼 최적화",        category=TechCategory.GenrePlatform, order=4, prerequisiteId="tech_gp_3", cost=100 },
-
-            // ── 기술연구 - 참신함 ────────────────────
-            new TechNodeData { id="tech_nov_1", name="참신함 연구 1단계",   category=TechCategory.Novelty, order=1, prerequisiteId="",            cost=100 },
-            new TechNodeData { id="tech_nov_2", name="참신함 연구 2단계",   category=TechCategory.Novelty, order=2, prerequisiteId="tech_nov_1",  cost=100 },
-            new TechNodeData { id="tech_nov_3", name="이스터에그 설계",     category=TechCategory.Novelty, order=3, prerequisiteId="tech_nov_2",  cost=100 },
-            new TechNodeData { id="tech_nov_4", name="실시간 상호작용",     category=TechCategory.Novelty, order=4, prerequisiteId="tech_nov_3",  cost=100 },
-
-            // ── 유틸리티 ────────────────────────────
-            new TechNodeData { id="util_1", name="트렌드 레이더",          category=TechCategory.Utility, order=1, prerequisiteId="",        cost=100 },
-            new TechNodeData { id="util_2", name="장르 블렌더",            category=TechCategory.Utility, order=2, prerequisiteId="util_1",  cost=100 },
-            new TechNodeData { id="util_3", name="프랜차이즈 빌더",        category=TechCategory.Utility, order=3, prerequisiteId="util_2",  cost=100 },
-            new TechNodeData { id="util_4", name="하이퍼 프로세스",        category=TechCategory.Utility, order=4, prerequisiteId="util_3",  cost=100 },
-            new TechNodeData { id="util_5", name="신용 분석 알고리즘",     category=TechCategory.Utility, order=5, prerequisiteId="util_4",  cost=100 },
-            new TechNodeData { id="util_6", name="금융권 네트워킹",        category=TechCategory.Utility, order=6, prerequisiteId="util_5",  cost=100 },
-        };
+            allNodes.Add(new TechNodeData
+            {
+                id             = row.id,
+                name           = row.name,
+                category       = row.category,
+                order          = row.order,
+                prerequisiteId = row.prerequisiteId,
+                cost           = row.cost,
+                isUnlocked     = prevUnlocked.Contains(row.id),
+            });
+        }
     }
 
     // ── 해금 가능 여부 ────────────────────────
@@ -124,6 +109,9 @@ public class TechTreeManager : MonoBehaviour
     // ── 로드 ─────────────────────────────────
     public void LoadTechTree(System.Action onComplete = null)
     {
+        // 서버 차트가 이번 로그인 시점에 갱신됐을 수 있으니 노드 정의 재빌드 후 unlock 적용
+        BuildNodesFromChart();
+
         Backend.GameData.GetMyData("UserTechTree", new Where(), bro =>
         {
             if (!bro.IsSuccess())
