@@ -36,8 +36,12 @@ public class CreativityGameBlockUI : MonoBehaviour,
     private Vector2    _dragOffset; // 포인터와 블록 센터 사이의 오프셋
 
     // ── 생명주기 ─────────────────────────────────────────────────────────────
-    void Awake()
+    void Awake() => EnsureInit();
+
+    // 비활성 hierarchy에 AddComponent된 직후엔 Awake가 미실행 상태라 _rt가 null일 수 있음
+    void EnsureInit()
     {
+        if (_rt != null) return;
         _rt = GetComponent<RectTransform>();
         if (!TryGetComponent<Image>(out _))
         {
@@ -62,9 +66,10 @@ public class CreativityGameBlockUI : MonoBehaviour,
         _cellSize        = previewCellSize;
         _cellGap         = previewCellGap;
 
-        _canvas   = GetComponentInParent<Canvas>();
-        _eventCam = _canvas.renderMode == RenderMode.ScreenSpaceOverlay
-                  ? null : _canvas.worldCamera;
+        // 비활성 hierarchy에서도 캔버스 찾도록 includeInactive=true
+        _canvas   = GetComponentInParent<Canvas>(true);
+        _eventCam = _canvas != null && _canvas.renderMode != RenderMode.ScreenSpaceOverlay
+                  ? _canvas.worldCamera : null;
 
         BuildVisual();
     }
@@ -72,6 +77,8 @@ public class CreativityGameBlockUI : MonoBehaviour,
     // ── 비주얼 빌드 ──────────────────────────────────────────────────────────
     void BuildVisual()
     {
+        if (_rt == null) EnsureInit();
+
         foreach (Transform child in transform) Destroy(child.gameObject);
 
         int minR = int.MaxValue, maxR = int.MinValue;

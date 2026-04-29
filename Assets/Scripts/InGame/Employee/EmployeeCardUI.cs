@@ -14,6 +14,7 @@ public class EmployeeCardUI : MonoBehaviour
     [Header("UI References")]
     public Image portraitImage;
     public TextMeshProUGUI nameText;
+    public TextMeshProUGUI enhancementText;
     public Slider satisfactionSlider;
     public TextMeshProUGUI satisfactionText;
     public TextMeshProUGUI planningText;
@@ -84,6 +85,7 @@ public class EmployeeCardUI : MonoBehaviour
             ApplySatisfactionColor(satisfactionSlider, displayedSatisfaction);
         }
         if (satisfactionText != null) satisfactionText.text = $"{displayedSatisfaction}";
+        if (enhancementText  != null) enhancementText.text  = $"{emp.enhancementLevel}성";
         if (planningText     != null) planningText.text     = $"{emp.EffectivePlanningSkill}";
         if (developText      != null) developText.text      = $"{emp.EffectiveDevelopSkill}";
         if (artText          != null) artText.text          = $"{emp.EffectiveArtSkill}";
@@ -164,11 +166,10 @@ public class EmployeeCardUI : MonoBehaviour
             if (emp != null) RefreshDynamic(emp);
         }
 
-        // ② 닫기 판정 (마우스/터치 둘 다 지원: Pointer.current 사용)
-        var pointer = Pointer.current;
-        if (pointer == null || !pointer.press.wasPressedThisFrame) return;
-
-        Vector2 mousePos = pointer.position.ReadValue();
+        // ② 닫기 판정 — Mouse / Touchscreen 명시적 체크
+        // (Pointer.current는 시뮬레이터에서 터치 전환 타이밍에 따라 wasPressedThisFrame을 놓치는 케이스가 있음)
+        Vector2 mousePos;
+        if (!TryGetPressedPointerPosition(out mousePos)) return;
 
         // 카드 패널 자체(또는 그 자식) 위 클릭만 닫지 않음. 다른 UI는 닫음.
         if (EventSystem.current != null)
@@ -195,5 +196,23 @@ public class EmployeeCardUI : MonoBehaviour
         }
 
         Hide();
+    }
+
+    static bool TryGetPressedPointerPosition(out Vector2 position)
+    {
+        var mouse = Mouse.current;
+        if (mouse != null && mouse.leftButton.wasPressedThisFrame)
+        {
+            position = mouse.position.ReadValue();
+            return true;
+        }
+        var touch = Touchscreen.current;
+        if (touch != null && touch.primaryTouch.press.wasPressedThisFrame)
+        {
+            position = touch.primaryTouch.position.ReadValue();
+            return true;
+        }
+        position = default;
+        return false;
     }
 }

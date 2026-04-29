@@ -37,6 +37,7 @@ public class BackendManager : MonoBehaviour
         RandomEventChoiceChartLoader.Load();
         RandomEventConditionChartLoader.Load();
         ItemChartLoader.Load();
+        TechTreeChartLoader.Load();
         RandomEventManager.Instance.InitConditionEvents();
 
         EmployeeManager.Instance.LoadAllData(() =>

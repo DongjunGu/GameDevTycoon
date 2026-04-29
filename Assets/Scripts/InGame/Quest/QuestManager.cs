@@ -172,6 +172,10 @@ public class QuestManager : MonoBehaviour
         }
         else
         {
+            // 자동 수령: 보상 지급 + isRewarded=true → UI에서 즉시 사라짐 (뒤끝 행은 유지)
+            MoneyManager.Instance.AddGold(quest.rewardGold);
+            quest.isRewarded = true;
+
             AlertUI.Instance.Show(
                 $"퀘스트 완료!\n{quest.title}\n보상: {quest.rewardGold:N0}G",
                 () => QuestUI.Instance?.Show()

@@ -1,0 +1,29 @@
+nodeId,name,category,order,prerequisiteId,cost
+emp_sat_1,협상의 기술,0,1,,100
+emp_sat_2,기초 복지 인프라,0,2,emp_sat_1,100
+emp_sat_3,전문 멘탈 케어,0,3,emp_sat_2,100
+emp_sat_4,고급 테마 라운지,0,4,emp_sat_3,100
+emp_sat_5,성과급 체계 도입,0,5,emp_sat_4,100
+emp_eff_1,야근 및 주말 근무,1,1,,100
+emp_eff_2,직군 이동 최적화,1,2,emp_eff_1,100
+emp_eff_3,전략적 인재 영입,1,3,emp_eff_2,100
+emp_eff_4,한계 돌파 훈련,1,4,emp_eff_3,100
+emp_eff_5,성장 확률 증가,1,5,emp_eff_4,100
+tech_gp_1,장르 마스터리 1단계,2,1,,100
+tech_gp_2,장르 마스터리 2단계,2,2,tech_gp_1,100
+tech_gp_3,플랫폼 라이선스,2,3,tech_gp_2,100
+tech_gp_4,플랫폼 최적화,2,4,tech_gp_3,100
+tech_nov_1,참신함 연구 1단계,3,1,,100
+tech_nov_2,참신함 연구 2단계,3,2,tech_nov_1,100
+tech_nov_3,이스터에그 설계,3,3,tech_nov_2,100
+tech_nov_4,실시간 상호작용,3,4,tech_nov_3,100
+util_1,트렌드 레이더,4,1,,100
+util_2,장르 블렌더,4,2,util_1,100
+util_3,프랜차이즈 빌더,4,3,util_2,100
+util_4,하이퍼 프로세스,4,4,util_3,100
+util_5,신용 분석 알고리즘,4,5,util_4,100
+util_6,금융권 네트워킹,4,6,util_5,100
+creativity_score_1,창의성 점수 강화 1단계,4,7,,100
+creativity_score_2,창의성 점수 강화 2단계,4,8,creativity_score_1,100
+creativity_grid_1,그리드 확장 1단계,4,9,,100
+creativity_grid_2,그리드 확장 2단계,4,10,creativity_grid_1,100

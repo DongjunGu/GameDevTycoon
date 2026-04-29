@@ -43,14 +43,14 @@ public class QuestUI : MonoBehaviour
 
 
         var quests = QuestManager.Instance.GetAllQuests()
-            .Where(q => q.isVisible)
+            .Where(q => q.isVisible && !q.isRewarded) // 수령 완료(=달성·자동수령 포함)는 UI에서 숨김 (뒤끝 행은 유지)
             .OrderBy(q => q.isMainQuest ? 0 : 1)                      // 메인퀘스트 상단 고정
-            .ThenBy(q => q.isRewarded ? 2 : q.isCompleted ? 1 : 0)   // 진행중→완료→수령완료 순
+            .ThenBy(q => q.isCompleted ? 1 : 0)                       // 진행중→완료 순
             .ToList();
 
         foreach (var quest in quests)
         {
-            if (!quest.isVisible) continue;
+            if (!quest.isVisible || quest.isRewarded) continue;
             var item = Instantiate(questItemPrefab, questListContent);
 
             var descText = item.transform.Find("DescText").GetComponent<TextMeshProUGUI>();
