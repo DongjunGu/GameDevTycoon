@@ -44323,12 +44323,12 @@ GameObject:
   - component: {fileID: 1055196681}
   - component: {fileID: 1055196682}
   m_Layer: 10
-  m_Name: Office (1)
+  m_Name: "\uC5EC\uAE30\uC694"
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!4 &1055196681
 Transform:
   m_ObjectHideFlags: 0
@@ -53268,6 +53268,7 @@ GameObject:
   - component: {fileID: 1246210060}
   - component: {fileID: 1246210063}
   - component: {fileID: 1246210064}
+  - component: {fileID: 1246210065}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -53409,6 +53410,33 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 4294967295
   m_MaxRayIntersections: 0
+--- !u!114 &1246210065
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1246210059}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f7b5d0f6440041148ad641e9f5005fb4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CameraZoomController
+  minSize: 2
+  maxSize: 5.5
+  pinchSensitivity: 0.01
+  wheelSensitivity: 0.4
+  smoothing: 0.12
+  ignoreOverUIForWheel: 1
+  ignoreOverUIForPinch: 0
+  ignoreOverUIForPan: 1
+  enablePan: 1
+  panMoveThreshold: 4
+  enableClamp: 1
+  worldMin: {x: -11, y: -3}
+  worldMax: {x: 10, y: 10}
+  drawGizmoAlways: 1
+  gizmoColor: {r: 0, g: 1, b: 1, a: 0.8}
 --- !u!1 &1246618967
 GameObject:
   m_ObjectHideFlags: 0
@@ -56935,7 +56963,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &1323115250
 Transform:
   m_ObjectHideFlags: 0
@@ -63346,7 +63374,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &1464485350
 Transform:
   m_ObjectHideFlags: 0
@@ -67431,7 +67459,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &1555226744
 Transform:
   m_ObjectHideFlags: 0
@@ -68301,7 +68329,7 @@ Tilemap:
     m_Data: {r: 1, g: 1, b: 1, a: 1}
   m_TileObjectToInstantiateArray: []
   m_AnimationFrameRate: 1
-  m_Color: {r: 1, g: 1, b: 1, a: 0}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_Origin: {x: -16, y: -8, z: 0}
   m_Size: {x: 18, y: 17, z: 1}
   m_TileAnchor: {x: 0.5, y: 0.5, z: 0}
@@ -90529,7 +90557,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &2065165580
 Transform:
   m_ObjectHideFlags: 0
@@ -91178,7 +91206,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &2085676063
 Transform:
   m_ObjectHideFlags: 0
