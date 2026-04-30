@@ -137,7 +137,7 @@ public class EmployeeCardUI : MonoBehaviour
     //   61~80   → x1.0  파랑 (보통)
     //   41~60   → x0.9  주황 (약 디버프)
     //   0~40    → x0.8  빨강 (강 디버프)
-    static void ApplySatisfactionColor(Slider slider, int satisfaction)
+    public static void ApplySatisfactionColor(Slider slider, int satisfaction)
     {
         if (slider == null || slider.fillRect == null) return;
         var fill = slider.fillRect.GetComponent<Image>();
@@ -145,7 +145,7 @@ public class EmployeeCardUI : MonoBehaviour
         fill.color = GetSatisfactionColor(satisfaction);
     }
 
-    static Color GetSatisfactionColor(int satisfaction)
+    public static Color GetSatisfactionColor(int satisfaction)
     {
         if (satisfaction >= 81) return new Color(0.32f, 0.83f, 0.52f); // #52d486 초록
         if (satisfaction >= 61) return new Color(0.36f, 0.62f, 1.00f); // #5b9eff 파랑

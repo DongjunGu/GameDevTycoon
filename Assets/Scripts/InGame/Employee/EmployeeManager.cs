@@ -302,10 +302,10 @@ public class EmployeeManager : MonoBehaviour
                 if (DevelopmentManager.Instance.IsStarted)
                     DevelopmentManager.Instance.OnEmployeeHired(inGameEmployee);
 
-                if (ownedEmployees.Count >= 2)
-                    QuestManager.Instance.UnlockQuest("quest_003");
-                if (ownedEmployees.Count >= 4)
-                    QuestManager.Instance.UnlockQuest("quest_004");
+                // if (ownedEmployees.Count >= 2)
+                //     QuestManager.Instance.UnlockQuest("quest_003");
+                // if (ownedEmployees.Count >= 4)
+                //     QuestManager.Instance.UnlockQuest("quest_004");
 
                 MoneyManager.Instance?.SaveMoney();
                 GameTimeManager.Instance?.SaveGameTime();

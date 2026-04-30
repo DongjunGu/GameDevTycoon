@@ -162,20 +162,29 @@ public class GameTimeManager : MonoBehaviour
     }
 
     // ── 타이머 제어 ───────────────────────────
+    // _isRunning이 변할 때만 발행 (true=정지로 전환, false=재개로 전환)
+    public event System.Action<bool> OnTimeStopChanged;
+
     public void StartTime()
     {
+        bool prevRunning = _isRunning;
         _stopCount = Mathf.Max(0, _stopCount - 1);
         if (_stopCount == 0) _isRunning = true;
+        if (!prevRunning && _isRunning) OnTimeStopChanged?.Invoke(false);
     }
     public void StopTime()
     {
+        bool prevRunning = _isRunning;
         _stopCount++;
         _isRunning = false;
+        if (prevRunning && !_isRunning) OnTimeStopChanged?.Invoke(true);
     }
     public void ForceStartTime() // 개발 시스템에서 강제 재개 시
     {
+        bool prevRunning = _isRunning;
         _stopCount = 0;
         _isRunning = true;
+        if (!prevRunning && _isRunning) OnTimeStopChanged?.Invoke(false);
     }
 
     // ── 저장 ──────────────────────────────────

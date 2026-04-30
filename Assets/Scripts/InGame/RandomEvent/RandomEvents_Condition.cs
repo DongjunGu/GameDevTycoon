@@ -50,14 +50,11 @@ public static class RandomEvents_Condition
     }
 
     // ── Register ─────────────────────────────────────────────────
+    // BadCompany는 빈 stub 호출이라 dead였음 — 등록 제거
+    // (실제 BadCompany 발동은 TriggerCompanyBadReviewEvent 등 별도 경로)
     public static void Register(List<RandomEventData> pool, RandomEventManager mgr,
                                 Dictionary<string, RandomEventChartRow> chart = null)
     {
-        Add(pool, chart, new RandomEventData
-        {
-            type    = RandomEventType.BadCompany,
-            onApply = () => mgr.TriggerBadCompanyEvent()
-        });
     }
 
     // ── 불안한 회사 (wrapper) ─────────────────────────────────────

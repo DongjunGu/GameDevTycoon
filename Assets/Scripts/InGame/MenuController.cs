@@ -107,6 +107,28 @@ public class MenuController : MonoBehaviour
             }
         }
         if (menuButton != null) menuButton.onClick.AddListener(ToggleTopMenu);
+
+        // 시간이 멈출 때 메뉴 버튼 비활성, 재개 시 활성
+        if (GameTimeManager.Instance != null)
+        {
+            GameTimeManager.Instance.OnTimeStopChanged += OnTimeStopChanged;
+            // 현재 상태 즉시 반영 (씬 진입 시 이미 정지 상태일 수 있음)
+            OnTimeStopChanged(!GameTimeManager.Instance.IsRunning);
+        }
+    }
+
+    void OnDestroy()
+    {
+        if (GameTimeManager.Instance != null)
+            GameTimeManager.Instance.OnTimeStopChanged -= OnTimeStopChanged;
+    }
+
+    void OnTimeStopChanged(bool stopped)
+    {
+        if (menuButton == null) return;
+        menuButton.gameObject.SetActive(!stopped);
+        // 정지 시 펼쳐진 메뉴도 같이 닫음 (버튼이 사라지니 뒷정리)
+        if (stopped && _topOpen) CloseTopMenu();
     }
 
     // ── 공개 API ─────────────────────────────────────────────────────────────

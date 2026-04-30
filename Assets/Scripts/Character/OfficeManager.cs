@@ -15,6 +15,14 @@ public class OfficeManager : MonoBehaviour
     [SerializeField] private int   patrolCountPerCycle = 1;    // 한 번에 patrol 보낼 최대 인원
     [SerializeField] private float patrolStayDuration = 5f;    // 목적지 도착 후 대기 시간
 
+    [Header("Block Popup Sorting")]
+    [SerializeField] private string blockPopupSortingLayer = "Default";
+    [SerializeField] private int    blockPopupBgOrder      = 9;
+    [SerializeField] private int    blockPopupCellOrder    = 10;
+    public string BlockPopupSortingLayer => blockPopupSortingLayer;
+    public int    BlockPopupBgOrder      => blockPopupBgOrder;
+    public int    BlockPopupCellOrder    => blockPopupCellOrder;
+
     // employeeId → OfficeCharacter
     private Dictionary<string, OfficeCharacter> _characters = new();
 
@@ -65,6 +73,8 @@ public class OfficeManager : MonoBehaviour
         oc.GoToDesk();
         EnsurePatrolScheduler();
 
+        EmployeeStatusBarUI.Instance?.AddSlot(employee.id);
+
         Debug.Log($"{employee.employeeName} 스폰 → {desk.deskId}로 이동");
     }
 
@@ -93,6 +103,8 @@ public class OfficeManager : MonoBehaviour
     public void OnEmployeeFired(EmployeeData employee)
     {
         DeskManager.Instance.UnassignDesk(employee.assignedDeskId);
+
+        EmployeeStatusBarUI.Instance?.RemoveSlot(employee.id);
 
         if (!_characters.TryGetValue(employee.id, out var oc)) return;
         _characters.Remove(employee.id);
@@ -147,6 +159,8 @@ public class OfficeManager : MonoBehaviour
 
             _characters[employee.id] = oc;
         }
+
+        EmployeeStatusBarUI.Instance?.Rebuild();
 
         EnsurePatrolScheduler();
         StartCoroutine(RefreshAnimationsNextFrame());
