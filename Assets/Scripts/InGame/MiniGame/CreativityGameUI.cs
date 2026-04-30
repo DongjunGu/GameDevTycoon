@@ -360,7 +360,7 @@ public class CreativityGameUI : MonoBehaviour
     {
         float score = GetFinalScore();
         if (score > 0f)
-            DevelopmentPanelUI.Instance.AddValues(0f, 0f, 0f, 0f, score);
+            DevelopmentPanelUI.Instance.AddValuesInstant(0f, 0f, 0f, 0f, score);
 
         _panel.SetActive(false);
         var cb = _onClose;

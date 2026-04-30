@@ -298,6 +298,7 @@ public class ProjectSetupUI : MonoBehaviour
 
         Debug.Log($"개발 시작! {_projectData.ScaleToString()} / {_projectData.GenreToString()} / {_projectData.PlatformToString()} / 개발금: -{cost:N0}G");
         DevelopmentManager.Instance.StartDevelopment();
+        InfoUI.Instance?.Show("개발 시작!");
         confirmPanel.SetActive(false);
     }
 }

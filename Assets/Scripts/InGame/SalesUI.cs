@@ -286,7 +286,12 @@ public class SalesUI : MonoBehaviour
             yield return null;
         }
 
-        AlertUI.Instance.Show("판매 완료!", () => OnSalesComplete(cumulativeUnits));
+        // 마이그레이션: AlertUI → InfoUI (슬라이드 아웃 종료 후 OnSalesComplete 호출)
+        // AlertUI.Instance.Show("판매 완료!", () => OnSalesComplete(cumulativeUnits));
+        if (InfoUI.Instance != null)
+            InfoUI.Instance.Show("판매 완료!", () => OnSalesComplete(cumulativeUnits));
+        else
+            OnSalesComplete(cumulativeUnits); // InfoUI 없으면 즉시 진행 (안전망)
     }
 
     void OnSalesComplete(int cumulativeUnits)

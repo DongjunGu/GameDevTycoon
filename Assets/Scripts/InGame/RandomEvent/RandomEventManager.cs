@@ -94,34 +94,9 @@ public class RandomEventManager : MonoBehaviour
         (0.76f, 0.99f),
     };
 
-    // ── 개발 이벤트 가중치 ────────────────────────────────────
-    [Header("개발 이벤트 가중치")]
-    // 1~99%
-    public float competitorGameWeight    = 1f; // 대형 게임사의 경쟁작 출시
-    public float tangsuYukFightWeight    = 1f; // 탕수육 부먹 찍먹 싸움
-    public float avoidingEmployeeWeight  = 1f; // 나를 피하는 직원
-    public float coldWeight              = 1f; // 감기
-    public float badReviewWeight         = 1f; // 이유 없는 별점 1점
-    public float birthdayWeight          = 1f; // 생일
-    public float earlyLeaveRequestWeight = 1f; // 퇴근 요청
-    public float equipmentUpgradeWeight  = 1f; // 장비 업그레이드 요청
-    public float gameUpgradeRequestWeight= 1f; // 게임 업그레이드 요청
-    public float companyDinnerWeight     = 1f; // 오늘은 회식이다!
-    public float bossGossipWeight        = 1f; // 사장님 뒷담까기
-    // 1~74%
-    public float networkIssueWeight      = 1.3f; // 네트워크 끊김
-    // 26~99%
-    public float hackyCodeWeight         = 1f; // 야매코드
-    // 51~99%
-    public float youtuberRequestWeight   = 1f; // 유튜버 선공개 요청
-
-    // ── 조건 이벤트 ───────────────────────────────────────────
-    [Header("조건 이벤트")]
-    [Range(0f, 1f)] public float employeeRunChance    = 0.5f;
-    [Range(0f, 1f)] public float employeeFightChance  = 0.5f;
-    [Range(0f, 1f)] public float badCompanyChance     = 0.3f;
-
     // ── 투자 이벤트 ───────────────────────────────────────────
+    // (개발 이벤트 가중치는 뒤끝 RandomEventChoice/RandomEvent 차트의 weight 컬럼이 적용됨 — 인스펙터 필드 사용 안 함)
+    // (조건 이벤트 employeeRun/employeeFight/badCompany 확률도 dead 였어서 제거됨 — 각 이벤트가 자체 트리거 로직 사용)
     [Header("투자 이벤트")]
     [Range(0f, 1f)] public float investmentTriggerChance = 0.5f;
 
@@ -904,10 +879,6 @@ public class RandomEventManager : MonoBehaviour
         RandomEvents_Condition.CheckUnstableCompanyOnNewYear(this, newYear);
 
     // ── stub ──────────────────────────────────────────────────
-    public void TriggerScoutEvent()      { }
-    public void TriggerBetaTestEvent()   { }
-    public void TriggerAlgorithmEvent()  { }
-    public void TriggerBadCompanyEvent() { }
 
     public void TriggerEmployeeResignationEvent(EmployeeData emp)
     {

@@ -44,6 +44,17 @@ public class BlockFloatingVisual : MonoBehaviour
 
         var sprite = GetWhiteSprite();
 
+        // OfficeManager 인스펙터에서 설정한 sorting 값 사용 (없으면 폴백)
+        string sortLayer = "Default";
+        int    bgOrder   = 9;
+        int    cellOrder = 10;
+        if (OfficeManager.Instance != null)
+        {
+            sortLayer = OfficeManager.Instance.BlockPopupSortingLayer;
+            bgOrder   = OfficeManager.Instance.BlockPopupBgOrder;
+            cellOrder = OfficeManager.Instance.BlockPopupCellOrder;
+        }
+
         // 흰색 배경 (전체 블록 바운딩박스 + 패딩)
         float bgW = (maxC - minC + 1) * step - CellGap + BgPadding * 2f;
         float bgH = (maxR - minR + 1) * step - CellGap + BgPadding * 2f;
@@ -52,9 +63,10 @@ public class BlockFloatingVisual : MonoBehaviour
         bgGO.transform.localPosition = Vector3.zero;
         bgGO.transform.localScale    = new Vector3(bgW, bgH, 1f);
         _bgRenderer = bgGO.AddComponent<SpriteRenderer>();
-        _bgRenderer.sprite       = sprite;
-        _bgRenderer.color        = Color.white;
-        _bgRenderer.sortingOrder = 9;
+        _bgRenderer.sprite           = sprite;
+        _bgRenderer.color            = Color.white;
+        if (!string.IsNullOrEmpty(sortLayer)) _bgRenderer.sortingLayerName = sortLayer;
+        _bgRenderer.sortingOrder     = bgOrder;
 
         // 컬러 셀
         _cellRenderers = new SpriteRenderer[shape.Length];
@@ -72,7 +84,8 @@ public class BlockFloatingVisual : MonoBehaviour
             var sr = cellGO.AddComponent<SpriteRenderer>();
             sr.sprite       = sprite;
             sr.color        = color;
-            sr.sortingOrder = 10;
+            if (!string.IsNullOrEmpty(sortLayer)) sr.sortingLayerName = sortLayer;
+            sr.sortingOrder = cellOrder;
             _cellRenderers[i] = sr;
         }
 

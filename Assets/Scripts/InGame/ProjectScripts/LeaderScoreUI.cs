@@ -76,7 +76,7 @@ public class LeaderScoreUI : MonoBehaviour
                 }
 
                 UpdateScoreText();
-                DevelopmentPanelUI.Instance.AddValues(
+                DevelopmentPanelUI.Instance.AddValuesInstant(
                     type == LeaderType.Planner ? 1f : 0f,
                     type == LeaderType.Programmer ? 1f : 0f,
                     type == LeaderType.Artist ? 1f : 0f,
