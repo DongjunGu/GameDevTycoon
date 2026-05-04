@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 // 아웃게임 화면 전환 오케스트레이터 (SRP)
 // - 어떤 탭이 활성인지 / 메인인지 결정
@@ -100,5 +101,11 @@ public class OutGameNavigationController : MonoBehaviour
         HideAllTabs();
         ShowMain(true);
         _activeIndex = -1;
+    }
+
+    // MainPanel 의 "게임시작" 버튼 OnClick 에 연결 → GameScene 진입
+    public void StartGame()
+    {
+        SceneManager.LoadScene("GameScene");
     }
 }

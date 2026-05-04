@@ -22,7 +22,7 @@ public class LogoScenario : MonoBehaviour
 
 	private void OnAfterProgress()
 	{
-		SceneManager.LoadScene("GameScene");
+		SceneManager.LoadScene("OutGameScene");
 	}
 }
 
