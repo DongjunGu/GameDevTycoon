@@ -42,6 +42,8 @@ public class BackendManager : MonoBehaviour
 
         EmployeeManager.Instance.LoadAllData(() =>
         {
+            OutGameCurrencyManager.Instance?.LoadCurrency(() =>
+            {
             MoneyManager.Instance.LoadMoney(() =>
             {
                 GameTimeManager.Instance.LoadGameTime(() =>
@@ -70,6 +72,7 @@ public class BackendManager : MonoBehaviour
                         });
                     });
                 });
+            });
             });
         });
     }
