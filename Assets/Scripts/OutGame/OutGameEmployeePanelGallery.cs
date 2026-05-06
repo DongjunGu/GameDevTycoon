@@ -76,7 +76,15 @@ public class OutGameEmployeePanelGallery : MonoBehaviour
 
     void SetPreviewVisible(bool on)
     {
-        if (previewImage != null) previewImage.enabled = on;
+        if (previewImage != null)
+        {
+            previewImage.enabled = on;
+            // PreviewContainer의 모든 자식(NameText, DescriptionPanel 등) 토글
+            // PreviewContainer GameObject 자체는 layout 슬롯이라 끄지 않음 (내부만 토글)
+            var t = previewImage.transform;
+            for (int i = 0; i < t.childCount; i++)
+                t.GetChild(i).gameObject.SetActive(on);
+        }
         if (previewContainer != null) previewContainer.gameObject.SetActive(on);
     }
 
@@ -191,7 +199,7 @@ public class OutGameEmployeePanelGallery : MonoBehaviour
         if (item == null || item.Data == null) return;
         if (!item.IsUnlocked && !lockedClickable) return;
         ShowPreview(item.Data.portraitId, item.IsUnlocked);
-        if (descriptionUI != null) descriptionUI.ApplyEmployee(item.Data);
+        if (descriptionUI != null) descriptionUI.ApplyEmployee(item.Data, item.IsUnlocked);
     }
 
     public void ShowPreview(string portraitId, bool unlocked = true)
