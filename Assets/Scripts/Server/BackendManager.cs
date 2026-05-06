@@ -44,6 +44,10 @@ public class BackendManager : MonoBehaviour
         {
             OutGameCurrencyManager.Instance?.LoadCurrency(() =>
             {
+            OutGameEmployeeManager.Instance?.LoadAsync(() =>
+            {
+            OwnedCardManager.Instance?.LoadAsync(() =>
+            {
             MoneyManager.Instance.LoadMoney(() =>
             {
                 GameTimeManager.Instance.LoadGameTime(() =>
@@ -72,6 +76,8 @@ public class BackendManager : MonoBehaviour
                         });
                     });
                 });
+            });
+            });
             });
             });
         });

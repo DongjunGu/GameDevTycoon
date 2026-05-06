@@ -1649,6 +1649,8 @@ GameObject:
   - component: {fileID: 2062941538}
   - component: {fileID: 2062941539}
   - component: {fileID: 2062941540}
+  - component: {fileID: 2062941542}
+  - component: {fileID: 2062941541}
   m_Layer: 0
   m_Name: GameSceneManager
   m_TagString: Untagged
@@ -1867,6 +1869,30 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 80f884251922f334891ef7e07bcfd248, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::OutGameCurrencyManager
+--- !u!114 &2062941541
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2062941524}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 048d79f81d206bb449a6d012a92042bf, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::OwnedCardManager
+--- !u!114 &2062941542
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2062941524}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d52a40b47c7a9854ab2dccfbf7a04244, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::OutGameEmployeeManager
 --- !u!1 &2103001997
 GameObject:
   m_ObjectHideFlags: 0
