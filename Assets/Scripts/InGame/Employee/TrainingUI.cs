@@ -49,10 +49,11 @@ public class TrainingUI : MonoBehaviour
 
     private static int GetMaxEnhancement(EmployeeGrade grade) => grade switch
     {
-        EmployeeGrade.Normal => 15,
-        EmployeeGrade.Rare   => 15,
-        EmployeeGrade.Epic   => 20,
-        EmployeeGrade.Unique => 25,
+        EmployeeGrade.Normal    => 15,
+        EmployeeGrade.Rare      => 15,
+        EmployeeGrade.Epic      => 20,
+        EmployeeGrade.Unique    => 25,
+        EmployeeGrade.Legendary => 30,
         _ => 15
     };
 

@@ -70,6 +70,12 @@ public class OutGameMainEmployeeGallery : MonoBehaviour
         if (buildOnEnable) Rebuild();
     }
 
+    void OnDisable()
+    {
+        // 패널 비활성 시 PreviewAnchor도 함께 끔 (씬 루트의 anchor는 자식이 아니라 자동 비활성 안 됨)
+        SetPreviewVisible(false);
+    }
+
     void SetPreviewVisible(bool on)
     {
         if (previewImage != null) previewImage.enabled = on;
