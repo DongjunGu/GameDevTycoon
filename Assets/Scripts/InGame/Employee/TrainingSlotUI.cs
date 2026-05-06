@@ -58,6 +58,12 @@ public class TrainingSlotUI : MonoBehaviour
 
         StopAllCoroutines();
 
+        if (grade == EmployeeGrade.Legendary)
+        {
+            StartCoroutine(LegendaryShimmer());
+            return;
+        }
+
         if (grade == EmployeeGrade.Unique)
         {
             StartCoroutine(UniqueShimmer());
@@ -84,6 +90,16 @@ public class TrainingSlotUI : MonoBehaviour
         {
             float t = (Mathf.Sin(Time.time * speed) + 1f) / 2f;
             bgImage.color = Color.Lerp(goldB, goldA, t);
+            yield return null;
+        }
+    }
+
+    System.Collections.IEnumerator LegendaryShimmer()
+    {
+        while (true)
+        {
+            float h = Mathf.Repeat(Time.time * 0.25f, 1f);
+            bgImage.color = Color.HSVToRGB(h, 0.55f, 1f);
             yield return null;
         }
     }

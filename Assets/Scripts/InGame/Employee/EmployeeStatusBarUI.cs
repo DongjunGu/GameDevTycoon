@@ -54,9 +54,6 @@ public class EmployeeStatusBarUI : MonoBehaviour
         {
             rect.anchoredPosition = startHidden ? hiddenAnchoredPos : shownAnchoredPos;
         }
-        // slotContainer만 활성/비활성 토글, slidePanel은 항상 켜둠
-        if (slotContainer != null)
-            slotContainer.gameObject.SetActive(!startHidden);
         _isShown = !startHidden;
     }
 
@@ -77,9 +74,8 @@ public class EmployeeStatusBarUI : MonoBehaviour
         var rect = GetSlideRect();
         if (rect == null) return;
         _isShown = true;
-        if (slotContainer != null) slotContainer.gameObject.SetActive(true);
         if (_slideCo != null) StopCoroutine(_slideCo);
-        _slideCo = StartCoroutine(SlideTo(rect, shownAnchoredPos, deactivateContainerAtEnd: false));
+        _slideCo = StartCoroutine(SlideTo(rect, shownAnchoredPos));
     }
 
     public void Hide()
@@ -88,10 +84,10 @@ public class EmployeeStatusBarUI : MonoBehaviour
         if (rect == null) return;
         _isShown = false;
         if (_slideCo != null) StopCoroutine(_slideCo);
-        _slideCo = StartCoroutine(SlideTo(rect, hiddenAnchoredPos, deactivateContainerAtEnd: true));
+        _slideCo = StartCoroutine(SlideTo(rect, hiddenAnchoredPos));
     }
 
-    IEnumerator SlideTo(RectTransform rect, Vector2 target, bool deactivateContainerAtEnd)
+    IEnumerator SlideTo(RectTransform rect, Vector2 target)
     {
         Vector2 start = rect.anchoredPosition;
         float t = 0f;
@@ -105,8 +101,6 @@ public class EmployeeStatusBarUI : MonoBehaviour
             yield return null;
         }
         rect.anchoredPosition = target;
-        if (deactivateContainerAtEnd && slotContainer != null)
-            slotContainer.gameObject.SetActive(false);
         _slideCo = null;
     }
 

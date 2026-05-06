@@ -4,7 +4,7 @@ using UnityEngine;
 
 public enum EmployeeRole { Planner, Programmer, Artist }
 public enum EmployeePotential { C, B, A, S }
-public enum EmployeeGrade { Normal, Rare, Epic, Unique }
+public enum EmployeeGrade { Normal, Rare, Epic, Unique, Legendary }
 public enum EmployeeState { Idle, Working }
 // enum 추가
 public enum SatisfactionState
@@ -259,6 +259,7 @@ public class EmployeeData
         EmployeeGrade.Rare => "Rare",
         EmployeeGrade.Epic => "Epic",
         EmployeeGrade.Unique => "Unique",
+        EmployeeGrade.Legendary => "Legendary",
         _ => ""
     };
 

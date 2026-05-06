@@ -151,10 +151,10 @@ TextureImporter:
       name: OA_walking_b_0
       rect:
         serializedVersion: 2
-        x: 14
-        y: 2
+        x: 16
+        y: 0
         width: 32
-        height: 41
+        height: 43
       alignment: 9
       pivot: {x: 0.5, y: 0.1}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -173,10 +173,10 @@ TextureImporter:
       name: OA_walking_b_1
       rect:
         serializedVersion: 2
-        x: 78
-        y: 2
+        x: 80
+        y: 0
         width: 32
-        height: 42
+        height: 44
       alignment: 9
       pivot: {x: 0.5, y: 0.1}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -195,10 +195,10 @@ TextureImporter:
       name: OA_walking_b_2
       rect:
         serializedVersion: 2
-        x: 142
-        y: 2
+        x: 144
+        y: 0
         width: 32
-        height: 43
+        height: 45
       alignment: 9
       pivot: {x: 0.5, y: 0.1}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -217,10 +217,10 @@ TextureImporter:
       name: OA_walking_b_3
       rect:
         serializedVersion: 2
-        x: 206
-        y: 3
+        x: 208
+        y: 0
         width: 32
-        height: 41
+        height: 44
       alignment: 9
       pivot: {x: 0.5, y: 0.1}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -239,7 +239,7 @@ TextureImporter:
     customData: 
     physicsShape: []
     bones: []
-    spriteID: 7cc5818f5b020674b8c40ef379a1a9b1
+    spriteID: cfbbf1741a70d214db39ce9b6e519528
     internalID: 0
     vertices: []
     indices: 

@@ -65,12 +65,16 @@ public class OutGameTopNavBarUI : MonoBehaviour
     void OnMailboxClicked()
     {
         if (mailboxPanel == null) return;
-        mailboxPanel.SetActive(!mailboxPanel.activeSelf);
+        bool on = !mailboxPanel.activeSelf;
+        mailboxPanel.SetActive(on);
+        if (on) mailboxPanel.transform.SetAsLastSibling();
     }
 
     void OnSettingsClicked()
     {
         if (settingsPanel == null) return;
-        settingsPanel.SetActive(!settingsPanel.activeSelf);
+        bool on = !settingsPanel.activeSelf;
+        settingsPanel.SetActive(on);
+        if (on) settingsPanel.transform.SetAsLastSibling();
     }
 }
