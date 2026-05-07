@@ -61,17 +61,23 @@ public class OutGameEmployeePanelGallery : MonoBehaviour
     private Coroutine _buildRoutine;
     private GameObject _currentPreview;
     private readonly List<EmployeePanelItemUI> _spawned = new();
+    private string _selectedEmpId;
 
     void OnEnable()
     {
         SetPreviewVisible(false);
+        _selectedEmpId = null; // 패널 진입 시 첫 직원 자동 선택
         if (buildOnEnable) Rebuild();
+        if (OutGameEmployeeManager.Instance != null)
+            OutGameEmployeeManager.Instance.OnChanged += Rebuild;
     }
 
     void OnDisable()
     {
         // 패널 비활성 시 PreviewAnchor도 함께 끔 (씬 루트의 anchor는 자식이 아니라 자동 비활성 안 됨)
         SetPreviewVisible(false);
+        if (OutGameEmployeeManager.Instance != null)
+            OutGameEmployeeManager.Instance.OnChanged -= Rebuild;
     }
 
     void SetPreviewVisible(bool on)
@@ -145,6 +151,16 @@ public class OutGameEmployeePanelGallery : MonoBehaviour
             bool unlocked = emp.isDefault || EmployeeManager.Instance.IsAcquired(emp.id);
             CreateItem(emp, unlocked);
         }
+
+        if (_spawned.Count > 0)
+        {
+            EmployeePanelItemUI target = null;
+            if (!string.IsNullOrEmpty(_selectedEmpId))
+                target = _spawned.Find(it => it != null && it.Data != null && it.Data.id == _selectedEmpId);
+            if (target == null) target = _spawned[0];
+            HandleItemClicked(target);
+        }
+        else SetPreviewVisible(false);
     }
 
     bool PassFilter(EmployeeData emp)
@@ -162,11 +178,16 @@ public class OutGameEmployeePanelGallery : MonoBehaviour
     {
         switch (mode)
         {
-            case EmployeeGalleryMode.GradeDesc: return ((int)b.maxGrade).CompareTo((int)a.maxGrade);
-            case EmployeeGalleryMode.GradeAsc:  return ((int)a.maxGrade).CompareTo((int)b.maxGrade);
+            case EmployeeGalleryMode.GradeDesc: return ((int)CurrentMaxGrade(b)).CompareTo((int)CurrentMaxGrade(a));
+            case EmployeeGalleryMode.GradeAsc:  return ((int)CurrentMaxGrade(a)).CompareTo((int)CurrentMaxGrade(b));
             default: return 0; // 풀 원본 순서 유지
         }
     }
+
+    static EmployeeGrade CurrentMaxGrade(EmployeeData emp) =>
+        OutGameEmployeeManager.Instance != null
+            ? OutGameEmployeeManager.Instance.GetMaxGrade(emp.id)
+            : EmployeeGrade.Normal;
 
     void ClearChildren()
     {
@@ -198,6 +219,7 @@ public class OutGameEmployeePanelGallery : MonoBehaviour
     {
         if (item == null || item.Data == null) return;
         if (!item.IsUnlocked && !lockedClickable) return;
+        _selectedEmpId = item.Data.id;
         ShowPreview(item.Data.portraitId, item.IsUnlocked);
         if (descriptionUI != null) descriptionUI.ApplyEmployee(item.Data, item.IsUnlocked);
     }

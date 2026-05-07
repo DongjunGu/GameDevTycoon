@@ -21,7 +21,7 @@ public class EmployeeSlotUI : MonoBehaviour
     public GameObject ownedBadge;  // 보유중 뱃지 이미지
     private static readonly Color ColorNormal = new Color(0.92f, 0.92f, 0.92f);
     private static readonly Color ColorRare = new Color(0.75f, 0.88f, 0.95f);
-    private static readonly Color ColorEpic = new Color(0.82f, 0.75f, 0.95f);
+    private static readonly Color ColorEpic = new Color(0.55f, 0.30f, 0.85f);
     private EmployeeGrade _pendingGrade;
 
     public void Setup(EmployeeData data, HiringUI hiringUI)

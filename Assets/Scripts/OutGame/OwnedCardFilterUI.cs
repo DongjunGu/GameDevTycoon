@@ -3,9 +3,9 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-// EmployeePanel 필터 바 — 6개 토글 버튼
-// 클릭 시 OutGameEmployeePanelGallery.SetMode(...) 호출 + 활성 버튼 시각 강조
-public class EmployeePanelFilterUI : MonoBehaviour
+// 보유 카드 필터 바 — EmployeePanelFilterUI와 동일 UX
+// 클릭 시 OwnedCardContainerUI.SetMode(...) 호출 + 활성 버튼 시각 강조
+public class OwnedCardFilterUI : MonoBehaviour
 {
     [Serializable]
     public class ModeButton
@@ -19,7 +19,7 @@ public class EmployeePanelFilterUI : MonoBehaviour
     }
 
     [Header("References")]
-    public OutGameEmployeePanelGallery gallery;
+    public OwnedCardContainerUI container;
 
     [Header("Buttons")]
     public ModeButton[] buttons;
@@ -39,7 +39,7 @@ public class EmployeePanelFilterUI : MonoBehaviour
     [Tooltip("FilterToggleBtn의 라벨 — 적용된 모드 이름이 표시됨")]
     public TMP_Text toggleButtonLabel;
     [Tooltip("시작 시 FilterBar 노출 여부")]
-    public bool startVisible = true;
+    public bool startVisible = false;
 
     void Start()
     {
@@ -93,6 +93,18 @@ public class EmployeePanelFilterUI : MonoBehaviour
                     toggleButtonLabel.text = entry.labelText.text;
             }
         }
-        if (propagate && gallery != null) gallery.SetMode(m);
+        if (propagate && container != null) container.SetMode(m);
+    }
+
+    // 합성 진행 중에는 필터 잠금. 열려있던 FilterBar는 닫고 토글/모드 버튼 모두 interactable=false.
+    public void SetInteractable(bool on)
+    {
+        if (!on && filterBarRoot != null) filterBarRoot.SetActive(false);
+        if (toggleButton != null) toggleButton.interactable = on;
+        if (buttons != null)
+        {
+            foreach (var entry in buttons)
+                if (entry != null && entry.button != null) entry.button.interactable = on;
+        }
     }
 }

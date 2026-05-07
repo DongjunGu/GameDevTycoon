@@ -20,7 +20,7 @@ public class OvertimeEmployeeSlotUI : MonoBehaviour
 
     private static readonly Color ColorNormal   = new Color(0.92f, 0.92f, 0.92f);
     private static readonly Color ColorRare     = new Color(0.75f, 0.88f, 0.95f);
-    private static readonly Color ColorEpic     = new Color(0.82f, 0.75f, 0.95f);
+    private static readonly Color ColorEpic     = new Color(0.55f, 0.30f, 0.85f);
     private static readonly Color ColorSelected = new Color(1.0f,  0.3f,  0.3f);  // 야근 선택 색
 
     private EmployeeData _data;
