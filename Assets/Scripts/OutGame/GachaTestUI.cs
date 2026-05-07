@@ -35,9 +35,7 @@ public class GachaTestUI : MonoBehaviour
         {
             var emp = pool[Random.Range(0, pool.Count)];
             var grade = RollGrade();
-            // 마스터 풀의 maxGrade 상한 적용 (있다면)
-            if ((int)grade > (int)emp.maxGrade) grade = emp.maxGrade;
-            OwnedCardManager.Instance.AddCard(emp.id, grade, save: i == drawCount - 1);
+            OwnedCardManager.Instance.AddCard(emp.id, grade, stage: 0, save: i == drawCount - 1);
             Debug.Log($"[Gacha] +{emp.employeeName} ({grade})");
         }
     }

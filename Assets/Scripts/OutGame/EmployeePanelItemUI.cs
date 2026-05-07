@@ -27,7 +27,7 @@ public class EmployeePanelItemUI : MonoBehaviour
     // OwnedEmployeeSlotUI와 동일 팔레트
     private static readonly Color ColorNormal = new Color(0.92f, 0.92f, 0.92f);
     private static readonly Color ColorRare   = new Color(0.75f, 0.88f, 0.95f);
-    private static readonly Color ColorEpic   = new Color(0.82f, 0.75f, 0.95f);
+    private static readonly Color ColorEpic   = new Color(0.55f, 0.30f, 0.85f);
 
     public EmployeeData Data { get; private set; }
     public bool IsUnlocked { get; private set; }
@@ -43,7 +43,9 @@ public class EmployeePanelItemUI : MonoBehaviour
         IsUnlocked = unlocked;
         if (emp == null) return;
 
-        _pendingGrade = emp.maxGrade;
+        _pendingGrade = OutGameEmployeeManager.Instance != null
+            ? OutGameEmployeeManager.Instance.GetMaxGrade(emp.id)
+            : EmployeeGrade.Normal;
         ApplyGradeColor(_pendingGrade);
 
         if (portrait != null)
@@ -91,13 +93,15 @@ public class EmployeePanelItemUI : MonoBehaviour
 
         if (grade == EmployeeGrade.Legendary)
         {
-            _shimmerCo = StartCoroutine(LegendaryShimmer());
+            if (isActiveAndEnabled) _shimmerCo = StartCoroutine(LegendaryShimmer());
+            else gradeBackground.color = Color.HSVToRGB(0f, 0.55f, 1f);
             return;
         }
 
         if (grade == EmployeeGrade.Unique)
         {
-            _shimmerCo = StartCoroutine(UniqueShimmer());
+            if (isActiveAndEnabled) _shimmerCo = StartCoroutine(UniqueShimmer());
+            else gradeBackground.color = new Color(1.0f, 0.85f, 0.30f);
             return;
         }
 

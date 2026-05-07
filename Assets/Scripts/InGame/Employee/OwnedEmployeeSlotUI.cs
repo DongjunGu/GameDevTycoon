@@ -23,7 +23,7 @@ public class OwnedEmployeeSlotUI : MonoBehaviour
     private EmployeeListUI _listUI;
     private static readonly Color ColorNormal = new Color(0.92f, 0.92f, 0.92f);
     private static readonly Color ColorRare = new Color(0.75f, 0.88f, 0.95f);
-    private static readonly Color ColorEpic = new Color(0.82f, 0.75f, 0.95f);
+    private static readonly Color ColorEpic = new Color(0.55f, 0.30f, 0.85f);
     public Image bgImage;
     private EmployeeGrade _pendingGrade;
     public void Setup(EmployeeData data, EmployeeListUI listUI)

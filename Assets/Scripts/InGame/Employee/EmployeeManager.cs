@@ -223,8 +223,11 @@ public class EmployeeManager : MonoBehaviour
 
         foreach (var employee in candidates)
         {
-            // Grade / Potential 결정
-            employee.grade = RollGrade(employee.maxGrade);
+            // Grade / Potential 결정 — 등급 상한은 OutGameEmployeeManager의 도달 maxGrade 기준
+            var maxGrade = OutGameEmployeeManager.Instance != null
+                ? OutGameEmployeeManager.Instance.GetMaxGrade(employee.id)
+                : EmployeeGrade.Normal;
+            employee.grade = RollGrade(maxGrade);
             employee.potential = RollPotential(employee.grade, tierIndex);
 
             // 능력치는 마스터 min~max 범위로 재랜덤
