@@ -82,7 +82,7 @@ public class MoneyManager : MonoBehaviour
     // 잔액 확인
     public bool CanAfford(int amount) => _gold >= amount;
 
-    public void SaveMoney()
+    public void SaveMoney(System.Action onComplete = null)
     {
         Debug.Log($"[MoneyManager] SaveMoney 호출 — 현재 잔액: {_gold:N0}G");
         var param = new Param();
@@ -94,6 +94,7 @@ public class MoneyManager : MonoBehaviour
             {
                 if (!bro.IsSuccess())
                     Debug.LogError($"재화 저장 실패: {bro}");
+                onComplete?.Invoke();
             });
         }
         else
@@ -109,8 +110,16 @@ public class MoneyManager : MonoBehaviour
                 {
                     Debug.LogError($"재화 Insert 실패: {bro}");
                 }
+                onComplete?.Invoke();
             });
         }
+    }
+
+    // 새 런 시작 — 100,000G로 리셋 후 서버 저장
+    public void ResetForNewRun(System.Action onComplete = null)
+    {
+        _gold = 100000;
+        SaveMoney(onComplete);
     }
 
     int SafeInt(JsonData row, string key, int fallback)

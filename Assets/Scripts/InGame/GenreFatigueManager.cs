@@ -37,6 +37,14 @@ public class GenreFatigueManager : MonoBehaviour
         _lastGenre = genre;
     }
 
+    // 새 런 시작 — 모든 장르 피로도 0 초기화
+    public void ResetForNewRun()
+    {
+        foreach (ProjectGenre g in System.Enum.GetValues(typeof(ProjectGenre)))
+            _fatigue[g] = 0;
+        _lastGenre = null;
+    }
+
     public void RebuildFromHistory(List<CompletedProjectData> projects)
     {
         foreach (ProjectGenre g in System.Enum.GetValues(typeof(ProjectGenre)))

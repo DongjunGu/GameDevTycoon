@@ -29,4 +29,10 @@ public class StageManager : MonoBehaviour
         Instance = this;
         DontDestroyOnLoad(gameObject);
     }
+
+    // 새 런 시작 — Stage 1 로 복귀 (서버 저장 없음)
+    public void ResetForNewRun()
+    {
+        currentStage = 1;
+    }
 }

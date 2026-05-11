@@ -38,6 +38,7 @@ public class BackendManager : MonoBehaviour
         RandomEventConditionChartLoader.Load();
         ItemChartLoader.Load();
         TechTreeChartLoader.Load();
+        TraitChartLoader.Load();
         RandomEventManager.Instance.InitConditionEvents();
 
         EmployeeManager.Instance.LoadAllData(() =>
@@ -47,6 +48,10 @@ public class BackendManager : MonoBehaviour
             OutGameEmployeeManager.Instance?.LoadAsync(() =>
             {
             OwnedCardManager.Instance?.LoadAsync(() =>
+            {
+            OwnedTraitManager.Instance?.LoadAsync(() =>
+            {
+            RunStateManager.Instance?.LoadAsync(() =>
             {
             MoneyManager.Instance.LoadMoney(() =>
             {
@@ -76,6 +81,8 @@ public class BackendManager : MonoBehaviour
                         });
                     });
                 });
+            });
+            });
             });
             });
             });

@@ -14,7 +14,7 @@ public class EmployeePanelItemUI : MonoBehaviour
     public Image portrait;
     public Image jobIcon;
     public TMP_Text nameText;
-    public Transform perkContainer; // 추후 특성 슬롯 영역
+    public Transform traitContainer; // 추후 특성 슬롯 영역
     public Button button;
 
     [Header("Sprite Tables (인스펙터 등록)")]

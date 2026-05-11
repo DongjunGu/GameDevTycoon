@@ -130,6 +130,38 @@ public class RandomEventManager : MonoBehaviour
         // (Awake 시점엔 Cache가 null이므로 여기서 등록하지 않음)
     }
 
+    // 새 런 시작 — 런타임 이벤트 상태 전부 초기화 (차트 로드된 풀은 유지)
+    // GameTime 저장 시 이 값들이 row에 함께 반영됨
+    public void ResetForNewRun()
+    {
+        _nextWeekPopups.Clear();
+        _pendingRunAlerts.Clear();
+        _unstableCompanyWeeksLeft     = -1;
+        _coffeeRequestWeeksLeft       = -1;
+        _energyDrinkRequestWeeksLeft  = -1;
+        _pendingRomanceEvents.Clear();
+        _pendingRomanceEvent = null;
+        _activeCouple = null;
+        _scheduledEvents.Clear();
+        _nextScheduledIndex = 0;
+        _pendingEvent = null;
+        _pendingChoiceEvent = null;
+        _eventInProgress = false;
+
+        HiringPenalty        = 0;
+        HiringPenaltyEndYear = -1;
+        YoutuberSalesBonus   = 1.0f;
+        InvestmentAccepted   = false;
+        InvestmentStat       = "";
+        InvestmentStatName   = "";
+        InvestmentThreshold  = 0f;
+        InvestmentReward     = 0;
+        PendingInvestmentUI  = false;
+        PendingHackyCodePenalty    = 0f;
+        PendingHackyCodePortraitId = "";
+        PendingHackyCodeWeeksLeft  = 0;
+    }
+
     void Start()
     {
         if (GameTimeManager.Instance != null)

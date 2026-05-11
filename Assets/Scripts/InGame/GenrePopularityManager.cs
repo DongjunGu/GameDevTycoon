@@ -47,6 +47,13 @@ public class GenrePopularityManager : MonoBehaviour
         OnPopularityChanged?.Invoke();
     }
 
+    // 새 런 시작 — 인기도 새로 랜덤 + 주차 카운터 초기화
+    public void ResetForNewRun()
+    {
+        _weekCounter = 0;
+        RandomizeAll();
+    }
+
     public int GetPopularity(ProjectGenre genre)
     {
         return _popularity.TryGetValue(genre, out int v) ? v : 1;

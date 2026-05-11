@@ -141,7 +141,7 @@ MonoBehaviour:
   portrait: {fileID: 3314468719746303390}
   jobIcon: {fileID: 7441519598124654516}
   nameText: {fileID: 5435959321696379649}
-  perkContainer: {fileID: 1809509610708083950}
+  traitContainer: {fileID: 1809509610708083950}
   button: {fileID: 2051704881762808695}
   roleIcons:
   - {fileID: 557219105, guid: b35b93d3d97396945a9a3a8d376c3c92, type: 3}
@@ -309,7 +309,7 @@ GameObject:
   - component: {fileID: 1809509610708083950}
   - component: {fileID: 6723065218522835619}
   m_Layer: 5
-  m_Name: PerkContainer
+  m_Name: TraitContainer
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

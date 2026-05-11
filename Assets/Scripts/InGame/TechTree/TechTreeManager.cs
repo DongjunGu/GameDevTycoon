@@ -71,7 +71,7 @@ public class TechTreeManager : MonoBehaviour
     // ── 저장 ─────────────────────────────────
     private string _rowInDate = null;
 
-    void SaveTechTree()
+    void SaveTechTree(System.Action onComplete = null)
     {
         var unlockedIds = new System.Text.StringBuilder();
         foreach (var node in allNodes)
@@ -87,6 +87,7 @@ public class TechTreeManager : MonoBehaviour
             {
                 if (!bro.IsSuccess())
                     Debug.LogError($"테크트리 저장 실패: {bro}");
+                onComplete?.Invoke();
             });
         }
         else
@@ -102,6 +103,7 @@ public class TechTreeManager : MonoBehaviour
                 {
                     Debug.LogError($"테크트리 Insert 실패: {bro}");
                 }
+                onComplete?.Invoke();
             });
         }
     }
@@ -146,5 +148,12 @@ public class TechTreeManager : MonoBehaviour
     {
         var node = allNodes.Find(n => n.id == id);
         return node != null && node.isUnlocked;
+    }
+
+    // 새 런 시작 — 모든 노드 unlocked=false 로 되돌리고 row 덮어쓰기
+    public void ResetForNewRun(System.Action onComplete = null)
+    {
+        foreach (var node in allNodes) node.isUnlocked = false;
+        SaveTechTree(onComplete);
     }
 }
