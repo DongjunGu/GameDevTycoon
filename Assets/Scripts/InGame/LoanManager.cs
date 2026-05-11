@@ -113,7 +113,18 @@ public class LoanManager : MonoBehaviour
                         $"대출을 상환할 자본이 없습니다.\n파산합니다.",
                         () =>
                         {
-                            Debug.Log("파산 처리 예정");
+                            Debug.Log("[파산] RunState.EndRun → LoadingScene");
+                            if (RunStateManager.Instance != null)
+                            {
+                                RunStateManager.Instance.EndRun(() =>
+                                {
+                                    UnityEngine.SceneManagement.SceneManager.LoadScene("LoadingScene");
+                                });
+                            }
+                            else
+                            {
+                                UnityEngine.SceneManagement.SceneManager.LoadScene("LoadingScene");
+                            }
                         }
                     );
                     return;
@@ -158,6 +169,29 @@ public class LoanManager : MonoBehaviour
             if (!bro.IsSuccess())
                 Debug.LogError($"대출 삭제 실패: {bro}");
         });
+    }
+
+    // 새 런 시작 — UserLoans 테이블 모든 row 삭제 + 메모리 클리어
+    public void ResetForNewRun(System.Action onComplete = null)
+    {
+        var toDelete = new List<LoanData>();
+        foreach (var loan in activeLoans)
+            if (!string.IsNullOrEmpty(loan.rowInDate)) toDelete.Add(loan);
+
+        activeLoans.Clear();
+
+        if (toDelete.Count == 0) { onComplete?.Invoke(); return; }
+
+        int pending = toDelete.Count;
+        foreach (var loan in toDelete)
+        {
+            Backend.GameData.DeleteV2("UserLoans", loan.rowInDate, Backend.UserInDate, bro =>
+            {
+                if (!bro.IsSuccess()) Debug.LogError($"[Reset] UserLoans delete 실패: {bro}");
+                pending--;
+                if (pending == 0) onComplete?.Invoke();
+            });
+        }
     }
 
     public void LoadLoans(System.Action onComplete = null)

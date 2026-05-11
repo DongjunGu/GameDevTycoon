@@ -1,0 +1,10 @@
+traitId,name,description,grade,effectType,effectValue
+trait_silver_spoon,은수저,시작 시 3000G 추가 보유,C,startGold,3000
+trait_caffeine,카페인 중독,시작 시 커피 1개 보유,C,startItem_coffee,1
+trait_haggler,중고 거래,아이템 5% 할인가로 구매,C,itemDiscount,5
+trait_beginner_luck,초심자의 행운,첫 게임 매출 +10%,C,firstSaleBonus,10
+trait_poor_rescue,가난한 회사,회사 돈이 처음 0원이 되면 랜덤 직원의 연봉만큼 지급,C,brokeRescue,0
+trait_gold_spoon,금수저,시작 시 6000G 추가 보유,B,startGold,6000
+trait_haggler_plus,중고 거래+,아이템 10% 할인가로 구매,B,itemDiscount,10
+trait_marketing_god,마케팅의 신,마케팅비 0원으로 최적화 적용,A,marketingFree,0
+trait_recruiter,호객행위,채용 공고 시 지원하는 인원 +1,A,recruitApplicants,1

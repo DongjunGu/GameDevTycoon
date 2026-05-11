@@ -187,10 +187,25 @@ public class GameTimeManager : MonoBehaviour
         if (!prevRunning && _isRunning) OnTimeStopChanged?.Invoke(false);
     }
 
-    // ── 저장 ──────────────────────────────────
-    public void SaveGameTime()
+    // 새 런 시작 — 2000년 1월 1주 + 연관 매니저 상태(임시) 리셋 후 서버 저장
+    // 호출 전 SalaryNegotiationManager/RandomEventManager/EmployeeManager 가 ResetForNewRun으로
+    // 자기 메모리를 비워둔 상태여야 SaveGameTime 이 빈 값으로 row를 덮어쓴다
+    public void ResetForNewRun(System.Action onComplete = null)
     {
-        if (!_isLoaded) return;
+        Year = 2000;
+        Month = 1;
+        Week = 1;
+        _elapsed = 0f;
+        _stopCount = 0;
+        _isRunning = false;
+        _isLoaded = true; // SaveGameTime 가드 통과를 위해 set
+        SaveGameTime(onComplete);
+    }
+
+    // ── 저장 ──────────────────────────────────
+    public void SaveGameTime(System.Action onComplete = null)
+    {
+        if (!_isLoaded) { onComplete?.Invoke(); return; }
         EmployeeManager.Instance?.SaveAllEmployees();
         Debug.Log($"저장 시도 - rowInDate: {_rowInDate} / {Year}년 {Month}월 {Week}주");
 
@@ -219,6 +234,7 @@ public class GameTimeManager : MonoBehaviour
                     Debug.Log($"게임 시간 업데이트 완료: {Year}년 {Month}월 {Week}주");
                 else
                     Debug.LogError($"게임 시간 저장 실패: {bro}");
+                onComplete?.Invoke();
             });
         }
         else
@@ -234,6 +250,7 @@ public class GameTimeManager : MonoBehaviour
                 {
                     Debug.LogError($"게임 시간 Insert 실패: {bro}");
                 }
+                onComplete?.Invoke();
             });
         }
     }

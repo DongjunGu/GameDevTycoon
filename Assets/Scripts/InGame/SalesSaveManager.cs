@@ -148,6 +148,25 @@ public class SalesSaveManager : MonoBehaviour
         });
     }
 
+    // 새 런 시작 — UserSales row 삭제 + 복원 대기 상태 클리어
+    public void ResetForNewRun(System.Action onComplete = null)
+    {
+        _hasPendingRestore = false;
+        WasRestored = false;
+        _insertInProgress = false;
+        _pendingUpdate = null;
+
+        if (string.IsNullOrEmpty(_rowInDate)) { onComplete?.Invoke(); return; }
+
+        var oldRow = _rowInDate;
+        _rowInDate = null;
+        Backend.GameData.DeleteV2("UserSales", oldRow, Backend.UserInDate, bro =>
+        {
+            if (!bro.IsSuccess()) Debug.LogError($"[Reset] UserSales delete 실패: {bro}");
+            onComplete?.Invoke();
+        });
+    }
+
     // ── 로드 ─────────────────────────────────
     public void LoadSales(System.Action onComplete = null)
     {

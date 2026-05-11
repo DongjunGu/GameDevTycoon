@@ -409,6 +409,33 @@ public class EmployeeManager : MonoBehaviour
         });
     }
 
+    // 새 런 시작 — 인게임 채용 직원 전부 wipe (Employee 테이블 row 삭제)
+    // 메타 보존: _acquiredEmployeeIds(AcquiredEmployee 테이블) 와 poolEmployees(차트)는 유지
+    public void ResetForNewRun(System.Action onComplete = null)
+    {
+        var toDelete = new List<EmployeeData>();
+        foreach (var e in ownedEmployees)
+            if (!string.IsNullOrEmpty(e.rowInDate)) toDelete.Add(e);
+
+        ownedEmployees.Clear();
+        YearlyExitCount = 0;
+        ExitCountYear   = 0;
+        _satisfactionDroppedThisCycle = false;
+
+        if (toDelete.Count == 0) { onComplete?.Invoke(); return; }
+
+        int pending = toDelete.Count;
+        foreach (var emp in toDelete)
+        {
+            Backend.GameData.DeleteV2("Employee", emp.rowInDate, Backend.UserInDate, bro =>
+            {
+                if (!bro.IsSuccess()) Debug.LogError($"[Reset] Employee delete 실패: {bro}");
+                pending--;
+                if (pending == 0) onComplete?.Invoke();
+            });
+        }
+    }
+
     void Start()
     {
         if (GameTimeManager.Instance != null)

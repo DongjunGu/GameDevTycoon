@@ -54,9 +54,9 @@ public class ItemManager : MonoBehaviour
     }
 
     // ── 저장 ──────────────────────────────────────────────────
-    public void Save()
+    public void Save(System.Action onComplete = null)
     {
-        if (!_isLoaded) return;
+        if (!_isLoaded) { onComplete?.Invoke(); return; }
 
         var param = new Param();
         param.Add("itemsJson", SerializeInventory());
@@ -66,6 +66,7 @@ public class ItemManager : MonoBehaviour
             Backend.GameData.UpdateV2("UserItems", _rowInDate, Backend.UserInDate, param, bro =>
             {
                 if (!bro.IsSuccess()) Debug.LogError($"[ItemManager] 저장 실패: {bro}");
+                onComplete?.Invoke();
             });
         }
         else
@@ -74,8 +75,17 @@ public class ItemManager : MonoBehaviour
             {
                 if (bro.IsSuccess()) _rowInDate = bro.GetInDate();
                 else Debug.LogError($"[ItemManager] Insert 실패: {bro}");
+                onComplete?.Invoke();
             });
         }
+    }
+
+    // 새 런 시작 — 인벤토리 비우고 row 덮어쓰기
+    public void ResetForNewRun(System.Action onComplete = null)
+    {
+        _inventory.Clear();
+        _isLoaded = true;
+        Save(onComplete);
     }
 
     // ── 조회 ──────────────────────────────────────────────────

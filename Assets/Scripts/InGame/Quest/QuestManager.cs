@@ -61,7 +61,8 @@ public class QuestManager : MonoBehaviour
 
                         bool isMain = SafeInt(row, "isMainQuest", 0) == 1;
                         string unlockAfter = row.ContainsKey("unlockAfter") ? row["unlockAfter"]?.ToString() : "";
-                        _quests.Add(new QuestData
+                        bool chartVisible = SafeInt(row, "isVisible", 0) == 1;
+                    _quests.Add(new QuestData
                         {
                             questId     = row["questId"]?.ToString(),
                             title       = row["title"]?.ToString(),
@@ -71,7 +72,8 @@ public class QuestManager : MonoBehaviour
                             rewardGold  = SafeInt(row, "rewardGold", 0),
                             isMainQuest = isMain,
                             unlockAfter = unlockAfter,
-                            isVisible   = SafeInt(row, "isVisible", 0) == 1, // 차트 isVisible 컬럼으로 직접 제어
+                            isVisible   = chartVisible, // 차트 isVisible 컬럼으로 직접 제어
+                            defaultIsVisible = chartVisible,
                         });
                     }
                 }
@@ -80,6 +82,39 @@ public class QuestManager : MonoBehaviour
                 LoadUserProgress(onComplete);
             });
         });
+    }
+
+    // 새 런 시작 — UserQuest 테이블 모든 row 삭제 + 퀘스트 진행 상태 초기화
+    public void ResetForNewRun(System.Action onComplete = null)
+    {
+        // rowInDate 를 별도 문자열 리스트로 스냅샷 — 아래에서 q.rowInDate=null 로 초기화하면
+        // _quests 와 같은 객체 참조라 캡처가 손상되기 때문
+        var toDeleteIds = new List<string>();
+        foreach (var q in _quests)
+            if (!string.IsNullOrEmpty(q.rowInDate)) toDeleteIds.Add(q.rowInDate);
+
+        // 메모리 초기화: 차트 정의(_quests 자체)는 유지, 진행 상태만 클리어
+        foreach (var q in _quests)
+        {
+            q.currentValue = 0;
+            q.isCompleted = false;
+            q.isRewarded = false;
+            q.isVisible = q.defaultIsVisible;
+            q.rowInDate = null;
+        }
+
+        if (toDeleteIds.Count == 0) { onComplete?.Invoke(); return; }
+
+        int pending = toDeleteIds.Count;
+        foreach (var inDate in toDeleteIds)
+        {
+            Backend.GameData.DeleteV2("UserQuest", inDate, Backend.UserInDate, bro =>
+            {
+                if (!bro.IsSuccess()) Debug.LogError($"[Reset] UserQuest delete 실패: {bro}");
+                pending--;
+                if (pending == 0) onComplete?.Invoke();
+            });
+        }
     }
 
     void LoadUserProgress(System.Action onComplete)

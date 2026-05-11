@@ -67,6 +67,17 @@ public class SalaryNegotiationManager : MonoBehaviour
         DialogManager.Instance.OnDialogEnd    -= OnDialogEnd;
     }
 
+    // 새 런 시작 — 협상 스케줄/진행 상태 전부 초기화 (메모리 only, GameTime 저장 시 자동 반영)
+    public void ResetForNewRun()
+    {
+        _scheduledMonth = 0;
+        _scheduledWeek = 0;
+        _negotiatedThisYear = false;
+        _phase = NegotiationPhase.Idle;
+        _currentEmployee = null;
+        _pendingSatisfactionAlert = null;
+    }
+
     // ── 스케줄 저장/복원 ──────────────────────────────────────────
     public void LoadSchedule(int month, int week, bool negotiatedThisYear)
     {

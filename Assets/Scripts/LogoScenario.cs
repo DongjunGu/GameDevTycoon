@@ -22,7 +22,9 @@ public class LogoScenario : MonoBehaviour
 
 	private void OnAfterProgress()
 	{
-		SceneManager.LoadScene("OutGameScene");
+		// RunState.IsPlaying 이면 인게임 이어하기, 아니면 아웃게임
+		bool isPlaying = RunStateManager.Instance != null && RunStateManager.Instance.IsPlaying;
+		SceneManager.LoadScene(isPlaying ? "GameScene" : "OutGameScene");
 	}
 }
 

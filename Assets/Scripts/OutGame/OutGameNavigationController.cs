@@ -35,6 +35,10 @@ public class OutGameNavigationController : MonoBehaviour
 
     void Start()
     {
+        // 다른 경로(파산 등)로 인게임에서 넘어와도 시간이 계속 틱하지 않도록 안전망
+        GameTimeManager.Instance?.ForceStartTime(); // _stopCount 잔여 초기화
+        GameTimeManager.Instance?.StopTime();       // 그 위에 일관된 정지 상태
+
         WireTabButtons();
         HideAllTabs();
 
@@ -103,9 +107,9 @@ public class OutGameNavigationController : MonoBehaviour
         _activeIndex = -1;
     }
 
-    // MainPanel 의 "게임시작" 버튼 OnClick 에 연결 → GameScene 진입
+    // MainPanel 의 "게임시작" 버튼 OnClick 에 연결 → 새 런 초기화 후 GameScene 진입
     public void StartGame()
     {
-        SceneManager.LoadScene("GameScene");
+        NewRunInitializer.StartNewRun();
     }
 }

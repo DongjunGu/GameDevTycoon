@@ -67,6 +67,29 @@ public class CompletedProjectManager : MonoBehaviour
         });
     }
 
+    // 새 런 시작 — CompletedProjects 테이블 row 일괄 삭제 + 메모리 클리어
+    public void ResetForNewRun(System.Action onComplete = null)
+    {
+        var toDelete = new List<CompletedProjectData>();
+        foreach (var p in completedProjects)
+            if (!string.IsNullOrEmpty(p.rowInDate)) toDelete.Add(p);
+
+        completedProjects.Clear();
+
+        if (toDelete.Count == 0) { onComplete?.Invoke(); return; }
+
+        int pending = toDelete.Count;
+        foreach (var p in toDelete)
+        {
+            Backend.GameData.DeleteV2("CompletedProjects", p.rowInDate, Backend.UserInDate, bro =>
+            {
+                if (!bro.IsSuccess()) Debug.LogError($"[Reset] CompletedProjects delete 실패: {bro}");
+                pending--;
+                if (pending == 0) onComplete?.Invoke();
+            });
+        }
+    }
+
     // ── 로드 ──────────────────────────────────
 public void LoadCompletedProjects(System.Action onComplete = null)
 {

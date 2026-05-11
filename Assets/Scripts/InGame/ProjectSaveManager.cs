@@ -187,6 +187,25 @@ public class ProjectSaveManager : MonoBehaviour
         }
     }
 
+    // 새 런 시작 — UserProject row 삭제 + pending 복원 상태 클리어
+    public void ResetForNewRun(System.Action onComplete = null)
+    {
+        _hasPendingRestore = false;
+        _savedQualityScore = 0f;
+        _savedProjectName = "프로젝트명";
+        _savedPlanning = _savedDevelop = _savedArt = _savedCreativity = _savedBug = 0f;
+
+        if (string.IsNullOrEmpty(_rowInDate)) { onComplete?.Invoke(); return; }
+
+        var oldRow = _rowInDate;
+        _rowInDate = null;
+        Backend.GameData.DeleteV2("UserProject", oldRow, Backend.UserInDate, bro =>
+        {
+            if (!bro.IsSuccess()) Debug.LogError($"[Reset] UserProject delete 실패: {bro}");
+            onComplete?.Invoke();
+        });
+    }
+
     // ── 로드 (씬 전, 데이터만 파싱) ──────────
     public void LoadProject(System.Action onComplete = null)
     {
