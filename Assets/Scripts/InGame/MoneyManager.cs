@@ -63,6 +63,28 @@ public class MoneyManager : MonoBehaviour
         if (_gold < amount)
         {
             Debug.Log($"재화 부족: 필요 {amount}G / 보유 {_gold}G");
+
+            // 가난한 회사 특성 — 잔액 부족 시 1회 발동. AlertUI 확인 후 보너스 G 지급 + 그래도 부족하면 대출 prompt.
+            if (TraitEffectApplier.TryConsumeBrokeRescue(out int rescueSalary, out string rescueName))
+            {
+                AlertUI.Instance?.Show(
+                    $"가난한 회사 발동!\n{rescueName}의 연봉 {rescueSalary:N0}G를 지급합니다.",
+                    () =>
+                    {
+                        AddGold(rescueSalary);
+                        if (_gold < amount &&
+                            LoanManager.Instance != null && LoanManager.Instance.activeLoans.Count == 0)
+                        {
+                            ConfirmUI.Instance?.Show(
+                                "돈이 부족합니다.\n대출하시겠습니까?",
+                                onConfirm: () => LoanUI.Instance?.Open()
+                            );
+                        }
+                    }
+                );
+                return false;
+            }
+
             if (LoanManager.Instance != null && LoanManager.Instance.activeLoans.Count == 0)
             {
                 ConfirmUI.Instance?.Show(

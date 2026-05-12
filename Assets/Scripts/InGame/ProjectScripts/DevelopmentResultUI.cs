@@ -282,6 +282,13 @@ public class DevelopmentResultUI : MonoBehaviour
 
     float CalcMarketingMultiplier()
     {
+        // 마케팅의 신 trait — 마케팅 개수/비용 무관하게 최고치 1.3 적용
+        if (TraitEffectApplier.HasMarketingFree())
+        {
+            Debug.Log($"[마케팅] 마케팅의 신 발동 → M=1.3");
+            return 1.3f;
+        }
+
         int devCost = ProjectData.GetCost(ProjectSetupUI.SelectedScale);
         if (devCost <= 0) return 1.0f;
 

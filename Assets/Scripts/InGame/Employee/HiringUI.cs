@@ -105,7 +105,9 @@ public class HiringUI : MonoBehaviour
                 if (loadingPanel != null) loadingPanel.SetActive(true);
 
                 _currentCandidates.Clear();
-                int effectiveCount = Mathf.Max(1, candidateCount - (RandomEventManager.Instance?.HiringPenalty ?? 0));
+                int recruitBonus  = TraitEffectApplier.GetRecruitApplicantsBonus();
+                int hiringPenalty = RandomEventManager.Instance?.HiringPenalty ?? 0;
+                int effectiveCount = Mathf.Max(1, candidateCount + recruitBonus - hiringPenalty);
                 EmployeeManager.Instance.LoadRandomCandidates(effectiveCount, tierIndex, candidates =>
                 {
                     // 티어별 강화 수치 적용

@@ -2,12 +2,22 @@ using System.Collections.Generic;
 using UnityEngine;
 using BackEnd;
 using BackEnd.Content;
+using LitJson;
 
 public class EmployeeManager : MonoBehaviour
 {
     public static EmployeeManager Instance { get; private set; }
 
     public List<EmployeeData> ownedEmployees = new();
+
+    // CEO — ownedEmployees 에는 안 넣음. CEOManager 가 메타 상태(강화 단계 등) 유지하고
+    // 인게임 진입 시 ApplyCEOFromManager() 호출로 메모리에 EmployeeData 인스턴스 보관.
+    // 팀장 후보로만 노출 (LeaderSelectUI). 만족도/아이템/이벤트/연봉/카운트/퀘스트 자동 제외.
+    public EmployeeData CEO { get; private set; }
+
+    // 런 식별자. ResetForNewRun 마다 ++. HireEmployee 비동기 Insert 콜백이 reset 이후 늦게 도착해
+    // ownedEmployees 에 stale 직원을 박는 race 를 차단.
+    private int _runEpoch = 0;
 
     public int GetTotalSalary()
     {
@@ -291,34 +301,39 @@ public class EmployeeManager : MonoBehaviour
         inGameEmployee.hiredYear = GameTimeManager.Instance != null ? GameTimeManager.Instance.Year : 0;
         inGameEmployee.isFemale  = poolEmployee.isFemale;
         
+        int epochAtCall = _runEpoch;
         Backend.GameData.Insert("Employee", inGameEmployee.ToParam(), bro =>
         {
-            if (bro.IsSuccess())
-            {
-                inGameEmployee.rowInDate = bro.GetInDate();
-                ownedEmployees.Add(inGameEmployee);
-                HUDUI.Instance.RefreshAll();
-                RandomEventManager.Instance?.CheckOfficeRomanceOnHire(inGameEmployee);
-
-                QuestManager.Instance.UpdateProgress(QuestType.HireEmployee, 1);
-                OfficeManager.Instance?.OnEmployeeHired(inGameEmployee);
-                if (DevelopmentManager.Instance.IsStarted)
-                    DevelopmentManager.Instance.OnEmployeeHired(inGameEmployee);
-
-                // if (ownedEmployees.Count >= 2)
-                //     QuestManager.Instance.UnlockQuest("quest_003");
-                // if (ownedEmployees.Count >= 4)
-                //     QuestManager.Instance.UnlockQuest("quest_004");
-
-                MoneyManager.Instance?.SaveMoney();
-                GameTimeManager.Instance?.SaveGameTime();
-                ProjectSaveManager.Instance?.SaveProject();
-                Debug.Log($"채용 완료: {inGameEmployee.employeeName} ({inGameEmployee.grade} / {inGameEmployee.potential})");
-            }
-            else
+            if (!bro.IsSuccess())
             {
                 Debug.LogError($"채용 저장 실패: {bro}");
+                return;
             }
+
+            string newRowInDate = bro.GetInDate();
+
+            // 콜백 도착 시점이 이미 새 런이면 stale — 서버 row 즉시 삭제 후 메모리 변경 없음.
+            if (epochAtCall != _runEpoch)
+            {
+                Debug.LogWarning($"[Stale] HireEmployee 콜백 무시 (런 변경됨) - 서버 row {newRowInDate} 삭제");
+                Backend.GameData.DeleteV2("Employee", newRowInDate, Backend.UserInDate, _ => { });
+                return;
+            }
+
+            inGameEmployee.rowInDate = newRowInDate;
+            ownedEmployees.Add(inGameEmployee);
+            HUDUI.Instance.RefreshAll();
+            RandomEventManager.Instance?.CheckOfficeRomanceOnHire(inGameEmployee);
+
+            QuestManager.Instance.UpdateProgress(QuestType.HireEmployee, 1);
+            OfficeManager.Instance?.OnEmployeeHired(inGameEmployee);
+            if (DevelopmentManager.Instance.IsStarted)
+                DevelopmentManager.Instance.OnEmployeeHired(inGameEmployee);
+
+            MoneyManager.Instance?.SaveMoney();
+            GameTimeManager.Instance?.SaveGameTime();
+            ProjectSaveManager.Instance?.SaveProject();
+            Debug.Log($"채용 완료: {inGameEmployee.employeeName} ({inGameEmployee.grade} / {inGameEmployee.potential})");
         });
     }
 
@@ -413,27 +428,59 @@ public class EmployeeManager : MonoBehaviour
     // 메타 보존: _acquiredEmployeeIds(AcquiredEmployee 테이블) 와 poolEmployees(차트)는 유지
     public void ResetForNewRun(System.Action onComplete = null)
     {
-        var toDelete = new List<EmployeeData>();
+        _runEpoch++;
+
+        // 외부 캐싱된 EmployeeData 참조의 rowInDate 무효화 (UpdateEmployee 404 방지)
         foreach (var e in ownedEmployees)
-            if (!string.IsNullOrEmpty(e.rowInDate)) toDelete.Add(e);
+            e.rowInDate = null;
 
         ownedEmployees.Clear();
         YearlyExitCount = 0;
         ExitCountYear   = 0;
         _satisfactionDroppedThisCycle = false;
 
-        if (toDelete.Count == 0) { onComplete?.Invoke(); return; }
-
-        int pending = toDelete.Count;
-        foreach (var emp in toDelete)
+        // 메모리 List 대신 서버에서 직접 fetch → 모든 row 삭제. inFlight Insert 가 늦게 도착해도 epoch 가드가 자체 정리.
+        Backend.GameData.GetMyData("Employee", new Where(), bro =>
         {
-            Backend.GameData.DeleteV2("Employee", emp.rowInDate, Backend.UserInDate, bro =>
+            if (!bro.IsSuccess())
             {
-                if (!bro.IsSuccess()) Debug.LogError($"[Reset] Employee delete 실패: {bro}");
-                pending--;
-                if (pending == 0) onComplete?.Invoke();
-            });
-        }
+                Debug.Log($"[Reset] Employee fetch 실패/빈 - 삭제 스킵: {bro}");
+                onComplete?.Invoke();
+                return;
+            }
+
+            var rows = bro.FlattenRows();
+            if (rows == null || rows.Count == 0)
+            {
+                onComplete?.Invoke();
+                return;
+            }
+
+            var ids = new List<string>();
+            foreach (var row in rows)
+            {
+                string inDate = TryGetInDate((JsonData)row);
+                if (!string.IsNullOrEmpty(inDate)) ids.Add(inDate);
+            }
+
+            if (ids.Count == 0) { onComplete?.Invoke(); return; }
+
+            int pending = ids.Count;
+            foreach (var inDate in ids)
+            {
+                Backend.GameData.DeleteV2("Employee", inDate, Backend.UserInDate, broDel =>
+                {
+                    if (!broDel.IsSuccess()) Debug.LogError($"[Reset] Employee delete 실패: {broDel}");
+                    pending--;
+                    if (pending == 0) onComplete?.Invoke();
+                });
+            }
+        });
+    }
+
+    static string TryGetInDate(JsonData row)
+    {
+        try { return row["inDate"].ToString(); } catch { return ""; }
     }
 
     void Start()
@@ -546,14 +593,41 @@ public class EmployeeManager : MonoBehaviour
             UpdateEmployee(emp);
     }
 
+    // 인게임 진입 시 CEOManager 메타 데이터로 CEO 인스턴스 셋업. ownedEmployees 에는 안 넣음.
+    // GameSceneInitializer.Start 등에서 호출.
+    public void ApplyCEOFromManager()
+    {
+        if (CEOManager.Instance == null) { CEO = null; return; }
+        CEO = CEOManager.Instance.CreateCEOEmployee();
+        Debug.Log($"[Employee] CEO 셋업: {CEO.employeeName} P{CEO.planningSkill}/D{CEO.developSkill}/A{CEO.artSkill}");
+    }
+
     public void UpdateEmployee(EmployeeData employee)
     {
+        if (employee == null) return;
         if (string.IsNullOrEmpty(employee.rowInDate)) return;
+
+        // 참조 자체가 현재 ownedEmployees 에 없으면 stale. 다른 매니저/코루틴이 옛 EmployeeData 캡처를 들고
+        // 호출해도 여기서 차단. ResetForNewRun 후 잔여 콜백이 stale 참조로 update 치는 404 경로를 봉쇄.
+        if (!ownedEmployees.Contains(employee))
+        {
+            Debug.LogWarning($"[Stale] UpdateEmployee 거부 - ownedEmployees 에 없는 참조: {employee.employeeName} (호출자 추적용)");
+            employee.rowInDate = null;
+            return;
+        }
 
         Backend.GameData.UpdateV2("Employee", employee.rowInDate, Backend.UserInDate, employee.ToParam(), bro =>
         {
-            if (!bro.IsSuccess())
-                Debug.LogError($"직원 업데이트 실패: {bro}");
+            if (bro.IsSuccess()) return;
+
+            Debug.LogError($"직원 업데이트 실패: {bro}");
+            // 404 = 서버 row 없음 (Reset 등으로 사라짐). 메모리 stale 참조 정리.
+            if (bro.GetStatusCode() == "404")
+            {
+                Debug.LogWarning($"[Stale] 서버에 row 없음 - 메모리에서 분리: {employee.employeeName}");
+                employee.rowInDate = null;
+                ownedEmployees.Remove(employee);
+            }
         });
     }
 
@@ -566,6 +640,9 @@ public class EmployeeManager : MonoBehaviour
         OfficeManager.Instance?.OnEmployeeFired(employee);
         if (DevelopmentManager.Instance.IsStarted)
             DevelopmentManager.Instance.OnEmployeeFired(employee.id);
+
+        // 총 연봉 HUD 갱신 — 자발적 퇴사/도주 이벤트 등 호출자 측 갱신 누락 케이스 일괄 처리.
+        HUDUI.Instance?.RefreshAll();
 
         if (string.IsNullOrEmpty(employee.rowInDate))
         {

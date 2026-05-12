@@ -30,7 +30,7 @@ public class LeaderSlotUI : MonoBehaviour
         developSkillText.text = data.DevelopText();
         planningSkillText.text = data.PlanningText();
         artSkillText.text = data.ArtText();
-        creativitySkillText.text = data.CreativityText();
+        creativitySkillText.text = data.isCEO ? "" : data.CreativityText();
         enhancementText.text     = $"+{data.enhancementLevel}";
         satisfactionText.text = data.SatisfactionText();
 
@@ -40,7 +40,8 @@ public class LeaderSlotUI : MonoBehaviour
         creativitySkillText.color = EmployeeData.GetStatColor(data.creativitySkill, data.EffectiveCreativitySkill);
         float sat = data.GetSatisfactionMultiplier();
         satisfactionText.color = sat > 1f ? Color.red : sat < 1f ? Color.blue : Color.white;
-        _pendingGrade = data.grade;
+        // CEO 는 등급 표시 X — Legendary shimmer 등 배경 효과 무력화
+        _pendingGrade = data.isCEO ? EmployeeGrade.Normal : data.grade;
 
         selectButton.onClick.RemoveAllListeners();
         selectButton.onClick.AddListener(() => leaderSelectUI.OnSelectLeader(data));

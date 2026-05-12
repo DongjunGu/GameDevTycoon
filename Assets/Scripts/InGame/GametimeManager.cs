@@ -279,37 +279,85 @@ public class GameTimeManager : MonoBehaviour
     void PayAnnualSalary()
     {
         int totalSalary = EmployeeManager.Instance.GetTotalSalary();
-        if (!MoneyManager.Instance.CanAfford(totalSalary))
+        // 잔액 충분 여부 무관하게 새해 알림(지불하기) 먼저. 확인 후 자금 부족 분기.
+        AlertUI.Instance.Show(
+            $"새해가 밝았습니다!\n직원들에게 임금을 지급합니다.\n지급액: {totalSalary:N0}G",
+            () => TryPaySalary(totalSalary)
+        );
+    }
+
+    // 잔액 충분 → 차감, 부족 → brokeRescue 시도 → 그래도 부족 → 대출 prompt
+    void TryPaySalary(int totalSalary)
+    {
+        if (MoneyManager.Instance.CanAfford(totalSalary))
         {
-            GameUIHelper.ShowLoanPrompt();
+            ProcessSalaryDeduction(totalSalary);
             return;
         }
 
-        AlertUI.Instance.Show($"새해가 밝았습니다!\n직원들에게 임금을 지급합니다.\n지급액: {totalSalary:N0}G", () =>
+        if (TraitEffectApplier.TryConsumeBrokeRescue(out int rescueSalary, out string rescueName))
         {
-            int goldAfter = MoneyManager.Instance.Gold - totalSalary;
-
-            MoneyManager.Instance.ForceSpendGold(totalSalary);
-            SaveGameTime();
-            ProjectSaveManager.Instance?.SaveProject();
-
-            if (goldAfter < 0)
-            {
-                AlertUI.Instance.Show($"파산하셨습니다!\n현재 재화: {goldAfter:N0}G", () =>
+            AlertUI.Instance.Show(
+                $"가난한 회사 발동!\n{rescueName}의 연봉 {rescueSalary:N0}G를 지급합니다.",
+                () =>
                 {
-                    SaveGameTime();
-                    MoneyManager.Instance?.SaveMoney();
-                    ProjectSaveManager.Instance?.SaveProject();
-                    Debug.Log("파산 처리 예정");
+                    MoneyManager.Instance.AddGold(rescueSalary);
+                    TryPaySalary(totalSalary); // 재시도 (재귀 1회 max — brokeRescue 는 한 런당 1회)
                 });
-            }
-            else
+            return;
+        }
+
+        // 대출 활성으로 prompt 불가 / 사용자 prompt 거절 → 임금 못 받음 → 파산
+        // 대출 받고 닫으면 → 다시 임금 차감 시도. 대출 안 받고 그냥 닫으면 → 파산.
+        GameUIHelper.ShowLoanPrompt(
+            onDecline: TriggerBankruptcy,
+            onClose: didTakeLoan =>
             {
-                bool rumorTriggered = RandomEventManager.Instance?.CheckUnstableCompanyOnNewYear(Year) ?? false;
-                EmployeeManager.Instance?.ResetYearlyExitCount();
-                if (!rumorTriggered)
-                    ForceStartTime();
+                if (didTakeLoan) TryPaySalary(totalSalary);
+                else             TriggerBankruptcy();
             }
+        );
+    }
+
+    void TriggerBankruptcy()
+    {
+        AlertUI.Instance.Show("임금을 지급할 자본이 없습니다.\n파산합니다.", () =>
+        {
+            Debug.Log("[파산] PayAnnualSalary → OutGameScene");
+            if (RunStateManager.Instance != null)
+                RunStateManager.Instance.EndRun(success =>
+                {
+                    UnityEngine.SceneManagement.SceneManager.LoadScene("OutGameScene");
+                });
+            else
+                UnityEngine.SceneManagement.SceneManager.LoadScene("OutGameScene");
         });
+    }
+
+    void ProcessSalaryDeduction(int totalSalary)
+    {
+        int goldAfter = MoneyManager.Instance.Gold - totalSalary;
+
+        MoneyManager.Instance.ForceSpendGold(totalSalary);
+        SaveGameTime();
+        ProjectSaveManager.Instance?.SaveProject();
+
+        if (goldAfter < 0)
+        {
+            AlertUI.Instance.Show($"파산하셨습니다!\n현재 재화: {goldAfter:N0}G", () =>
+            {
+                SaveGameTime();
+                MoneyManager.Instance?.SaveMoney();
+                ProjectSaveManager.Instance?.SaveProject();
+                Debug.Log("파산 처리 예정");
+            });
+        }
+        else
+        {
+            bool rumorTriggered = RandomEventManager.Instance?.CheckUnstableCompanyOnNewYear(Year) ?? false;
+            EmployeeManager.Instance?.ResetYearlyExitCount();
+            if (!rumorTriggered)
+                ForceStartTime();
+        }
     }
 }

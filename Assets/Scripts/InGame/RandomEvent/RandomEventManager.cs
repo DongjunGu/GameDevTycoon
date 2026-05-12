@@ -861,14 +861,14 @@ public class RandomEventManager : MonoBehaviour
         {
             MoneyManager.Instance.AddGold(reward);
             AlertUI.Instance.Show(
-                $"돈 {reward:N0}G를 얻었습니다",
+                $"투자 이벤트 성공!\n리워드 {reward:N0}G를 얻었습니다",
                 () => onComplete?.Invoke());
         }
         else
         {
             MoneyManager.Instance.ForceSpendGold(penalty);
             AlertUI.Instance.Show(
-                $"돈 {penalty:N0}G를 잃었습니다",
+                $"투자 이벤트 실패\n위약금 {penalty:N0}G를 잃었습니다",
                 () => onComplete?.Invoke());
         }
     }

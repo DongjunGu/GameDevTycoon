@@ -45,6 +45,9 @@ public class MarketingUI : MonoBehaviour
         _totalCost = 0;
         _countMap.Clear();
 
+        // 마케팅의 신 trait — 모든 슬롯 비용 0G + 차감 스킵 (이 세션 동안 캡처)
+        bool marketingFree = TraitEffectApplier.HasMarketingFree();
+
         // 전체 슬롯 텍스트 초기화 (비활성화 없이 공백)
         for (int i = 0; i < slotButtons.Length; i++)
         {
@@ -60,14 +63,14 @@ public class MarketingUI : MonoBehaviour
             var (name, cost) = _marketingData[i];
             _countMap[name] = 0;
 
+            int displayCost = marketingFree ? 0 : cost;
             slotPlatformTexts[i].text = name;
-            slotCostTexts[i].text = $"{cost:N0}G";
+            slotCostTexts[i].text = $"{displayCost:N0}G";
             slotButtons[i].interactable = true;
 
             int capturedIndex = i;
             slotButtons[i].onClick.AddListener(() =>
-                OnClickMarketing(_marketingData[capturedIndex].name,
-                                 _marketingData[capturedIndex].cost));
+                OnClickMarketing(_marketingData[capturedIndex].name, displayCost));
         }
 
         UpdateUI();
@@ -75,13 +78,15 @@ public class MarketingUI : MonoBehaviour
     }
     void OnClickMarketing(string name, int cost)
     {
-        if (!MoneyManager.Instance.CanAfford(cost))
+        if (cost > 0 && !MoneyManager.Instance.CanAfford(cost))
         {
             GameUIHelper.ShowLoanPrompt();
             return;
         }
 
-        MoneyManager.Instance.SpendGold(cost, saveImmediately: false); // ← 저장 안 함
+        if (cost > 0)
+            MoneyManager.Instance.SpendGold(cost, saveImmediately: false); // ← 저장 안 함 (Complete 시 일괄)
+
         _countMap[name]++;
         _totalCost += cost;
         UpdateUI();

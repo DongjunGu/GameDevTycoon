@@ -76,6 +76,10 @@ public class LeaderSelectUI : MonoBehaviour
         var filtered = EmployeeManager.Instance.ownedEmployees
             .FindAll(e => e.role == filterRole);
 
+        // CEO 는 ownedEmployees 에 없지만 모든 role 의 팀장 후보로 항상 노출
+        var ceo = EmployeeManager.Instance.CEO;
+        if (ceo != null) filtered.Insert(0, ceo);
+
         foreach (var employee in filtered)
         {
             var slot = Instantiate(leaderSlotPrefab, slotParent);

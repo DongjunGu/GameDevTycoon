@@ -142,11 +142,22 @@ public class OfficeManager : MonoBehaviour
     // 씬 로드 시 기존 직원 복원
     public void RestoreEmployees()
     {
+        // CEO 먼저 점유 → 일반 직원이 ceoDeskId(예: desk_04) 못 받게 보호
+        SpawnCEO();
+
+        string ceoDeskId = CEOManager.Instance != null ? CEOManager.Instance.ceoDeskId : "";
+
         foreach (var employee in EmployeeManager.Instance.ownedEmployees)
         {
-            var desk = string.IsNullOrEmpty(employee.assignedDeskId)
-                ? DeskManager.Instance.GetEmptyDesk()
-                : DeskManager.Instance.GetDeskById(employee.assignedDeskId);
+            WorkStation desk;
+            if (string.IsNullOrEmpty(employee.assignedDeskId))
+                desk = DeskManager.Instance.GetEmptyDesk();
+            else
+                desk = DeskManager.Instance.GetDeskById(employee.assignedDeskId);
+
+            // CEO 가 점유한 desk 와 충돌하면 빈 자리로 재할당 (마이그레이션)
+            if (desk != null && !string.IsNullOrEmpty(ceoDeskId) && desk.deskId == ceoDeskId)
+                desk = DeskManager.Instance.GetEmptyDesk();
 
             if (desk == null) continue;
 
@@ -164,6 +175,34 @@ public class OfficeManager : MonoBehaviour
 
         EnsurePatrolScheduler();
         StartCoroutine(RefreshAnimationsNextFrame());
+    }
+
+    // CEO 스폰 — CEOManager.ceoDeskId 고정 배치 + ceoPrefab 직접 인스펙터 참조.
+    // EmployeeStatusBarUI 는 ownedEmployees 만 보므로 CEO 슬롯은 자동 제외.
+    public void SpawnCEO()
+    {
+        var mgr = CEOManager.Instance;
+        var ceo = EmployeeManager.Instance?.CEO;
+        if (mgr == null || ceo == null) return;
+
+        var desk = DeskManager.Instance.GetDeskById(mgr.ceoDeskId);
+        if (desk == null)
+        {
+            Debug.LogWarning($"[CEO] '{mgr.ceoDeskId}' 데스크 없음 - CEO 스폰 스킵");
+            return;
+        }
+
+        DeskManager.Instance.AssignDesk(desk.deskId, ceo.id);
+        ceo.assignedDeskId = desk.deskId;
+
+        var prefab = mgr.ceoPrefab != null ? mgr.ceoPrefab : fallbackPrefab;
+        var obj    = Instantiate(prefab, desk.GetWorkWorldPos(), Quaternion.identity);
+        var oc     = obj.GetComponent<OfficeCharacter>();
+        oc.Init(ceo.id, desk);
+
+        _characters[ceo.id] = oc;
+
+        Debug.Log($"[CEO] {ceo.employeeName} {desk.deskId} 스폰");
     }
 
     // 특정 직원의 patrol 여부 확인 (DevelopmentManager 틱 체크용)

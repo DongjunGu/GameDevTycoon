@@ -51,6 +51,8 @@ public class BackendManager : MonoBehaviour
             {
             OwnedTraitManager.Instance?.LoadAsync(() =>
             {
+            CEOManager.Instance?.LoadAsync(() =>
+            {
             RunStateManager.Instance?.LoadAsync(() =>
             {
             MoneyManager.Instance.LoadMoney(() =>
@@ -81,6 +83,7 @@ public class BackendManager : MonoBehaviour
                         });
                     });
                 });
+            });
             });
             });
             });

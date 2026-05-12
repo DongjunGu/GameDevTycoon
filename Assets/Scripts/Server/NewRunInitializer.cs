@@ -4,9 +4,10 @@ using UnityEngine.SceneManagement;
 
 // 아웃게임 → 인게임 진입 시 인게임 데이터 일제 리셋 오케스트레이션
 //
+// Phase 0: RunState.resetInProgress=true 저장 (중간 실패 자동복구용 플래그)
 // Phase 1: 메모리 only 매니저 리셋 (동기, 즉시)
 // Phase 2: 뒤끝 row 삭제/덮어쓰기 매니저 리셋 (병렬, 콜백 카운터)
-// Phase 3: 전체 완료되면 RunState.StartRun → GameScene 로드
+// Phase 3: 전체 완료되면 RunState.StartRun → playing=true + resetInProgress=false → GameScene 로드
 //
 // 보존(메타): OutGameCurrency / OwnedCard / OwnedTrait / OutGameEmployee
 public static class NewRunInitializer
@@ -14,8 +15,27 @@ public static class NewRunInitializer
     public static void StartNewRun(Action onComplete = null)
     {
         Debug.Log("[NewRun] 시작");
+
+        if (RunStateManager.Instance != null)
+        {
+            RunStateManager.Instance.SetResetInProgress(true, success =>
+            {
+                if (!success)
+                    Debug.LogError("[NewRun] resetInProgress 저장 실패 - 진행은 강행 (다음 로딩 시 자동복구 미보장)");
+                RunResets(onComplete);
+            });
+        }
+        else
+        {
+            RunResets(onComplete);
+        }
+    }
+
+    static void RunResets(Action onComplete)
+    {
         // 아웃게임에서 만진 장착 슬롯 변경 등 pending 저장 즉시 flush
         OwnedTraitManager.Instance?.FlushPendingSave();
+        CEOManager.Instance?.FlushPendingSave();
         ResetMemoryOnly();
 
         int pending = 0;
@@ -57,19 +77,34 @@ public static class NewRunInitializer
         GenrePopularityManager.Instance?.ResetForNewRun();
         SalaryNegotiationManager.Instance?.ResetForNewRun();
         RandomEventManager.Instance?.ResetForNewRun();
+        TraitEffectApplier.ResetForNewRun();  // _firstSaleConsumed / _brokeRescueFired 등 1회성 플래그 리셋
     }
 
     static void FinalizeRun(Action onComplete)
     {
-        Debug.Log("[NewRun] 데이터 리셋 완료 → RunState.StartRun");
+        Debug.Log("[NewRun] 데이터 리셋 완료 → 특성 효과 적용 → RunState.StartRun");
+
+        // 장착 특성 run-start 효과 (예: 금수저/은수저 startGold)
+        // ResetForNewRun 으로 매니저 초기값 세팅 후, RunState 저장 전에 적용
+        TraitEffectApplier.ApplyOnRunStart();
+
         if (RunStateManager.Instance == null)
         {
             SceneManager.LoadScene("GameScene");
             onComplete?.Invoke();
             return;
         }
-        RunStateManager.Instance.StartRun(() =>
+        RunStateManager.Instance.StartRun(success =>
         {
+            if (!success)
+            {
+                // 데이터는 다 비웠지만 playing=true 저장 실패 → 다음 로딩 시 resetInProgress=true 그대로라 자동복구 진입
+                Debug.LogError("[NewRun] StartRun 저장 실패 - GameScene 진입 보류");
+                if (AlertUI.Instance != null)
+                    AlertUI.Instance.Show("진행 상태 저장에 실패했습니다.\n인터넷 상태 확인 후 다시 시도해주세요.");
+                onComplete?.Invoke();
+                return;
+            }
             SceneManager.LoadScene("GameScene");
             onComplete?.Invoke();
         });

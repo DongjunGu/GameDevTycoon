@@ -13,6 +13,10 @@ public class LoanUI : MonoBehaviour
     [Header("Settings")]
     [Range(1, 5)]
     public int loanLevel = 1;
+
+    private System.Action<bool> _onClose;  // bool = 실제로 대출을 받았는지 여부
+    private bool _didTakeLoan;
+
     void Awake()
     {
         if (Instance != null) { Destroy(gameObject); return; }
@@ -20,9 +24,19 @@ public class LoanUI : MonoBehaviour
         loanPanel.SetActive(false);
     }
 
-    public void Open()
+    // Unity 인스펙터 Button OnClick 직렬화용 (매개변수 없음)
+    public void Open() => OpenWithCloseCallback(null);
+
+    // onClose:
+    //   - 패널이 닫힐 때 (대출 확정 후 자동 닫힘 / 유저가 X 로 닫음) bool 파라미터로 호출됨
+    //   - true  = 이 세션에서 대출을 받음
+    //   - false = 대출 안 받고 닫음
+    //   - PayAnnualSalary 등 "대출 받으면 재시도, 안 받으면 파산" 호출자가 사용
+    public void OpenWithCloseCallback(System.Action<bool> onClose)
     {
         GameTimeManager.Instance?.StopTime();
+        _onClose = onClose;
+        _didTakeLoan = false;
         RefreshUI();
         loanPanel.SetActive(true);
     }
@@ -46,7 +60,8 @@ public class LoanUI : MonoBehaviour
             onConfirm: () =>
             {
                 LoanManager.Instance.TakeLoan(tierIndex);
-                RefreshUI();
+                _didTakeLoan = true;
+                OnClickClose(); // 대출 성사 시 패널 자동 닫기 + 시간 재개 + onClose(true)
             },
             onCancel: () => { },
             confirmText: "대출하기",
@@ -79,5 +94,12 @@ public class LoanUI : MonoBehaviour
     {
         GameTimeManager.Instance?.StartTime();
         loanPanel.SetActive(false);
+
+        // 콜백 1회 보장 — Fire 전 캡처하여 null 처리하고 호출
+        var cb = _onClose;
+        bool tookLoan = _didTakeLoan;
+        _onClose = null;
+        _didTakeLoan = false;
+        cb?.Invoke(tookLoan);
     }
 }
