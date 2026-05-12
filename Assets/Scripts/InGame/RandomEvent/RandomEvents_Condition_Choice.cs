@@ -269,6 +269,15 @@ public static class RandomEvents_Condition_Choice
         var mgr = RandomEventManager.Instance;
         if (mgr == null) { onComplete?.Invoke(); return; }
 
+        // 과거 프로젝트가 없으면 baseStat 기준이 없어 임계값(=baseStat+5)이 의미 없음 → 이벤트 자체 스킵
+        var history = CompletedProjectManager.Instance?.completedProjects;
+        if (history == null || history.Count == 0)
+        {
+            Debug.Log("[투자] 과거 프로젝트 없음 → 투자 이벤트 스킵");
+            onComplete?.Invoke();
+            return;
+        }
+
         var statDefs = new (string key, string name)[]
         {
             ("planning", "기획"),
@@ -279,19 +288,14 @@ public static class RandomEvents_Condition_Choice
         mgr.InvestmentStat     = statDefs[idx].key;
         mgr.InvestmentStatName = statDefs[idx].name;
 
-        float baseStat = 0f;
-        var history = CompletedProjectManager.Instance?.completedProjects;
-        if (history != null && history.Count > 0)
+        var last = history[history.Count - 1];
+        float baseStat = mgr.InvestmentStat switch
         {
-            var last = history[history.Count - 1];
-            baseStat = mgr.InvestmentStat switch
-            {
-                "planning" => last.planning,
-                "develop"  => last.develop,
-                "art"      => last.art,
-                _ => 0f
-            };
-        }
+            "planning" => last.planning,
+            "develop"  => last.develop,
+            "art"      => last.art,
+            _ => 0f
+        };
         mgr.InvestmentThreshold = baseStat + 5f;
         mgr.InvestmentReward = Mathf.Max(100,
             Mathf.RoundToInt(EmployeeManager.Instance.GetTotalSalary() * 0.1f));

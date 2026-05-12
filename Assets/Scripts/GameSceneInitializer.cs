@@ -8,6 +8,9 @@ public class GameSceneInitializer : MonoBehaviour
         if (dialogUI != null)
             DialogManager.Instance.SetDialogUI(dialogUI);
 
+        // CEO 인스턴스 셋업 (메타 CEOManager 의 강화 단계 기준 능력치 계산해서 메모리 EmployeeData 생성)
+        EmployeeManager.Instance?.ApplyCEOFromManager();
+
         // StartTime을 먼저 호출해야 RestoreState 내부에서 StopTime()으로 상쇄 가능
         GameTimeManager.Instance.StartTime();
 

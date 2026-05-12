@@ -193,6 +193,11 @@ public class SalesUI : MonoBehaviour
 
         int cumulativeUnits = 0;
 
+        // 초심자의 행운 — 한 런 중 첫 SalesUI 세션에만 +pct% 가산 (이 세션 내 모든 주차에 일관 적용)
+        int firstSaleBonusPct = TraitEffectApplier.ConsumeFirstSaleBonusPct();
+        if (firstSaleBonusPct > 0)
+            InfoUI.Instance?.Show("초심자의\n행운 발동!");
+
         for (int i = 0; i < barCount; i++)
         {
             float targetHeight = maxUnits > 0 ? ((float)unitPerPeriod[i] / maxUnits) * maxBarHeight : 0f;
@@ -249,6 +254,8 @@ public class SalesUI : MonoBehaviour
             barImage.sizeDelta = new Vector2(barImage.sizeDelta.x, targetHeight);
 
             int weeklyRevenue = unitPerPeriod[i] * 9;
+            if (firstSaleBonusPct > 0)
+                weeklyRevenue = Mathf.RoundToInt(weeklyRevenue * (1f + firstSaleBonusPct / 100f));
             int rank = CalcRank(weeklyRevenue);
             valueLabel.text = $"{unitPerPeriod[i]:N0}";
             if (rankText != null)

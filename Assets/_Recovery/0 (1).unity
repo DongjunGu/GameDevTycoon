@@ -1653,7 +1653,6 @@ GameObject:
   - component: {fileID: 2062941541}
   - component: {fileID: 2062941543}
   - component: {fileID: 2062941544}
-  - component: {fileID: 2062941545}
   m_Layer: 0
   m_Name: GameSceneManager
   m_TagString: Untagged
@@ -1811,7 +1810,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::StageManager
   currentStage: 1
-  maxEmployeePerStage: 02000000
+  maxEmployeePerStage: 04000000
 --- !u!114 &2062941536
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1921,37 +1920,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7f44af4d139175c4396c6ff2b0d43f44, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::RunStateManager
---- !u!114 &2062941545
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2062941524}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 7682b390e38b0cd4ebc1a440470308d1, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::CEOManager
-  baseStat: 50
-  statPerStage: 5
-  upgradeWeights:
-  - 100
-  - 73
-  - 53.3
-  - 38.9
-  - 28.4
-  - 20.7
-  - 15.1
-  - 11
-  - 8.1
-  - 5.9
-  - 0
-  maxTotalStage: 20
-  ceoEmployeeId: ceo_001
-  ceoName: CEO
-  ceoPrefab: {fileID: 2828724654860466180, guid: b8736b9fb841bc444beae8a760fe2acb, type: 3}
-  ceoDeskId: desk_04
 --- !u!1 &2103001997
 GameObject:
   m_ObjectHideFlags: 0

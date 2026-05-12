@@ -27,6 +27,9 @@ public class LoanManager : MonoBehaviour
     // 대출 단계별 금액
     public static readonly int[] LoanAmounts = { 10000, 20000, 40000, 60000, 100000 };
 
+    // ResetForNewRun 마다 ++. SaveLoan 비동기 Insert 콜백이 reset 이후 늦게 도착해 stale 대출 잔재를 만드는 race 차단.
+    private int _runEpoch = 0;
+
     void Awake()
     {
         if (Instance != null) { Destroy(gameObject); return; }
@@ -113,18 +116,11 @@ public class LoanManager : MonoBehaviour
                         $"대출을 상환할 자본이 없습니다.\n파산합니다.",
                         () =>
                         {
-                            Debug.Log("[파산] RunState.EndRun → LoadingScene");
+                            Debug.Log("[파산] RunState.EndRun → OutGameScene");
                             if (RunStateManager.Instance != null)
-                            {
-                                RunStateManager.Instance.EndRun(() =>
-                                {
-                                    UnityEngine.SceneManagement.SceneManager.LoadScene("LoadingScene");
-                                });
-                            }
+                                EndRunAndLoad();
                             else
-                            {
-                                UnityEngine.SceneManagement.SceneManager.LoadScene("LoadingScene");
-                            }
+                                UnityEngine.SceneManagement.SceneManager.LoadScene("OutGameScene");
                         }
                     );
                     return;
@@ -133,6 +129,25 @@ public class LoanManager : MonoBehaviour
                 ProcessDueLoan(dueLoans, index + 1);
             }
         );
+    }
+
+    // 파산 → RunState.EndRun 저장 후 OutGameScene 직행.
+    // 저장 실패 시 씬 진입 금지 (다음 부팅에서 playing=true 로 빈 게임씬 진입 방지).
+    // AlertUI 로 재시도 유도.
+    void EndRunAndLoad()
+    {
+        RunStateManager.Instance.EndRun(success =>
+        {
+            if (success)
+            {
+                UnityEngine.SceneManagement.SceneManager.LoadScene("OutGameScene");
+                return;
+            }
+            AlertUI.Instance.Show(
+                "진행 상태 저장에 실패했습니다.\n인터넷 상태 확인 후 다시 시도해주세요.",
+                EndRunAndLoad
+            );
+        });
     }
 
     // ── 뒤끝 저장/로드/삭제 ───────────────────
@@ -145,18 +160,28 @@ public class LoanManager : MonoBehaviour
         param.Add("week", loan.week);
         param.Add("repayAmount", loan.repayAmount);
 
+        int epochAtCall = _runEpoch;
         Backend.GameData.Insert("UserLoans", param, bro =>
         {
-            if (bro.IsSuccess())
-            {
-                loan.rowInDate = bro.GetInDate();
-                Debug.Log("대출 저장 완료");
-                onComplete?.Invoke();
-            }
-            else
+            if (!bro.IsSuccess())
             {
                 Debug.LogError($"대출 저장 실패: {bro}");
+                return;
             }
+
+            string newRowInDate = bro.GetInDate();
+
+            // 콜백 도착 시점이 이미 새 런이면 stale — 서버 row 즉시 삭제.
+            if (epochAtCall != _runEpoch)
+            {
+                Debug.LogWarning($"[Stale] SaveLoan 콜백 무시 (런 변경됨) - 서버 row {newRowInDate} 삭제");
+                Backend.GameData.DeleteV2("UserLoans", newRowInDate, Backend.UserInDate, _ => { });
+                return;
+            }
+
+            loan.rowInDate = newRowInDate;
+            Debug.Log("대출 저장 완료");
+            onComplete?.Invoke();
         });
     }
 
@@ -171,27 +196,53 @@ public class LoanManager : MonoBehaviour
         });
     }
 
-    // 새 런 시작 — UserLoans 테이블 모든 row 삭제 + 메모리 클리어
+    // 새 런 시작 — 메모리 클리어 + 서버 직접 fetch 로 모든 row 일괄 삭제 (inFlight Insert race 안전)
     public void ResetForNewRun(System.Action onComplete = null)
     {
-        var toDelete = new List<LoanData>();
-        foreach (var loan in activeLoans)
-            if (!string.IsNullOrEmpty(loan.rowInDate)) toDelete.Add(loan);
-
+        _runEpoch++;
         activeLoans.Clear();
 
-        if (toDelete.Count == 0) { onComplete?.Invoke(); return; }
-
-        int pending = toDelete.Count;
-        foreach (var loan in toDelete)
+        Backend.GameData.GetMyData("UserLoans", new Where(), bro =>
         {
-            Backend.GameData.DeleteV2("UserLoans", loan.rowInDate, Backend.UserInDate, bro =>
+            if (!bro.IsSuccess())
             {
-                if (!bro.IsSuccess()) Debug.LogError($"[Reset] UserLoans delete 실패: {bro}");
-                pending--;
-                if (pending == 0) onComplete?.Invoke();
-            });
-        }
+                Debug.Log($"[Reset] UserLoans fetch 실패/빈 - 삭제 스킵: {bro}");
+                onComplete?.Invoke();
+                return;
+            }
+
+            var rows = bro.FlattenRows();
+            if (rows == null || rows.Count == 0)
+            {
+                onComplete?.Invoke();
+                return;
+            }
+
+            var ids = new List<string>();
+            foreach (var row in rows)
+            {
+                string inDate = TryGetInDate((JsonData)row);
+                if (!string.IsNullOrEmpty(inDate)) ids.Add(inDate);
+            }
+
+            if (ids.Count == 0) { onComplete?.Invoke(); return; }
+
+            int pending = ids.Count;
+            foreach (var inDate in ids)
+            {
+                Backend.GameData.DeleteV2("UserLoans", inDate, Backend.UserInDate, broDel =>
+                {
+                    if (!broDel.IsSuccess()) Debug.LogError($"[Reset] UserLoans delete 실패: {broDel}");
+                    pending--;
+                    if (pending == 0) onComplete?.Invoke();
+                });
+            }
+        });
+    }
+
+    static string TryGetInDate(JsonData row)
+    {
+        try { return row["inDate"].ToString(); } catch { return ""; }
     }
 
     public void LoadLoans(System.Action onComplete = null)

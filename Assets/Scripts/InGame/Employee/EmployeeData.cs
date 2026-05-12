@@ -68,6 +68,10 @@ public class EmployeeData
     public string assignedProjectId;
     public string portraitId;
 
+    // CEO 표시 플래그 — 메모리 only (ToParam/FromServerRow 직렬화 안 함)
+    // ownedEmployees 에 안 들어가서 만족도/아이템/이벤트/연봉/카운트 자동 제외, 팀장 후보로만 노출.
+    [NonSerialized] public bool isCEO;
+
     // 마스터 데이터 복사본 생성 (채용 후보 표시용)
     public EmployeeData Clone() => new EmployeeData(
         id, employeeName, role,
@@ -202,6 +206,7 @@ public class EmployeeData
 
     public float GetSatisfactionMultiplier()
     {
+        if (isCEO) return 1.0f; // CEO 는 만족도 시스템 적용 안 함
         if (satisfaction >= 81) return 1.1f;
         if (satisfaction >= 61) return 1.0f;
         if (satisfaction >= 41) return 0.9f;
@@ -245,23 +250,31 @@ public class EmployeeData
         : ArtText();
     public string SatisfactionText() => $"만족도: {satisfaction}";
 
-    public string RoleToString() => role switch
+    public string RoleToString()
     {
-        EmployeeRole.Planner => "기획자",
-        EmployeeRole.Programmer => "프로그래머",
-        EmployeeRole.Artist => "아티스트",
-        _ => ""
-    };
+        if (isCEO) return "CEO";
+        return role switch
+        {
+            EmployeeRole.Planner => "기획자",
+            EmployeeRole.Programmer => "프로그래머",
+            EmployeeRole.Artist => "아티스트",
+            _ => ""
+        };
+    }
 
-    public string GradeToString() => grade switch
+    public string GradeToString()
     {
-        EmployeeGrade.Normal => "Normal",
-        EmployeeGrade.Rare => "Rare",
-        EmployeeGrade.Epic => "Epic",
-        EmployeeGrade.Unique => "Unique",
-        EmployeeGrade.Legendary => "Legendary",
-        _ => ""
-    };
+        if (isCEO) return ""; // CEO 는 등급 표시 없음
+        return grade switch
+        {
+            EmployeeGrade.Normal => "Normal",
+            EmployeeGrade.Rare => "Rare",
+            EmployeeGrade.Epic => "Epic",
+            EmployeeGrade.Unique => "Unique",
+            EmployeeGrade.Legendary => "Legendary",
+            _ => ""
+        };
+    }
 
 
     public string PotentialToString() => potential switch
