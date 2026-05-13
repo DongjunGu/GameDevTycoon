@@ -1,18 +1,15 @@
 using System;
-using System.Collections;
 using BackEnd;
 using LitJson;
 using UnityEngine;
 
 // CEO 시스템 매니저 (메타, 영구 보존 — 런 무관)
-// 뒤끝 테이블: UserCEO (단일 row)
-//   planningStage / developStage / artStage         (int, 강화 단계, 디폴트 0)
-//   planningProgress / developProgress / artProgress (int, 강화 시도 누적 progress — 강화 시스템 구현 시 사용)
 //
-// 인게임 진입 시 CreateCEOEmployee() 로 EmployeeData 인스턴스 생성 → EmployeeManager.CEO 로 보관.
-// ownedEmployees 에는 안 들어가므로 만족도/아이템/이벤트/연봉/카운트/퀘스트 자동 제외, 팀장 후보로만 노출.
+// 상태 single source: StoneManager.ActiveStone (Stones 리스트의 한 항목).
+// CEOManager 는 stage/progress 를 ActiveStone 에서 위임 조회. 자체 저장 없음.
+// LoadAsync 는 구 UserCEO row 가 있으면 마이그레이션 시드용으로만 읽어 둠 → StoneManager.LoadAsync 가 활용.
 //
-// 강화 API (PiecePanel 작업 시): TryUpgrade(part, cost, successPct, ...) — TODO
+// 강화/리셋은 ActiveStone 을 직접 mutate 하고 StoneManager.MarkDirty 로 저장 트리거.
 public class CEOManager : MonoBehaviour
 {
     public static CEOManager Instance { get; private set; }
@@ -20,21 +17,16 @@ public class CEOManager : MonoBehaviour
     [Header("Defaults")]
     [Tooltip("강화 단계 0 일 때 기본 능력치 (기획/개발/아트 동일)")]
     public int baseStat = 50;
-    [Tooltip("단계당 능력치 증가량")]
-    public int statPerStage = 5;
+    [Tooltip("1~6 단계 도달 시 단계당 누적되는 능력치 보너스. 6단계면 +60.")]
+    public int statPerStage = 10;
+    [Tooltip("7단계 도달 시 추가되는 1회성 보너스 (1~6 누적 위에 한 번 더 가산). 기본 +100.")]
+    public int stage7Bonus = 100;
 
     [Header("Upgrade")]
     [Tooltip("강화 가중치. 인덱스 = 현재 단계. Lv.0~Lv.10 (11개). 합이 maxTotalStage 도달 시 강화 불가.")]
     public float[] upgradeWeights = new float[] { 100f, 73f, 53.3f, 38.9f, 28.4f, 20.7f, 15.1f, 11f, 8.1f, 5.9f, 0f };
     [Tooltip("강화 합계 최대치 (planning+develop+art). 이 합 도달 시 강화 버튼 비활성.")]
     public int maxTotalStage = 20;
-
-    [Header("Save Debounce")]
-    [Tooltip("변경 후 이 시간(초) 동안 추가 변경이 없으면 서버 저장. 연쇄 강화/리셋 묶음.")]
-    public float saveDebounceSeconds = 0.7f;
-
-    private bool _dirty;
-    private Coroutine _saveCo;
 
     [Header("CEO Identity")]
     public string ceoEmployeeId = "ceo_001";
@@ -44,14 +36,28 @@ public class CEOManager : MonoBehaviour
     [Tooltip("CEO 가 항상 앉을 데스크 ID. 인게임 진입 시 자동 점유되어 일반 직원이 못 앉음.")]
     public string ceoDeskId = "desk_04";
 
-    public int PlanningStage    { get; private set; }
-    public int DevelopStage     { get; private set; }
-    public int ArtStage         { get; private set; }
-    public int PlanningProgress { get; private set; }
-    public int DevelopProgress  { get; private set; }
-    public int ArtProgress      { get; private set; }
+    // ── 활성 돌 위임 조회 ─────────────────────
+    public int PlanningStage    => StoneManager.Instance?.ActiveStone?.planningStage    ?? 0;
+    public int DevelopStage     => StoneManager.Instance?.ActiveStone?.developStage     ?? 0;
+    public int ArtStage         => StoneManager.Instance?.ActiveStone?.artStage         ?? 0;
+    public int PlanningProgress => StoneManager.Instance?.ActiveStone?.planningProgress ?? 0;
+    public int DevelopProgress  => StoneManager.Instance?.ActiveStone?.developProgress  ?? 0;
+    public int ArtProgress      => StoneManager.Instance?.ActiveStone?.artProgress      ?? 0;
+    public bool HasActive       => StoneManager.Instance?.ActiveStone != null;
 
-    private string _rowInDate;
+    // ── 마이그레이션 시드 (구 UserCEO row → StoneManager.LoadAsync 가 첫 active 돌 생성용으로 사용) ──
+    public bool HasMigrationSeed { get; private set; }
+    public int MigPlanningStage { get; private set; }
+    public int MigDevelopStage { get; private set; }
+    public int MigArtStage { get; private set; }
+    public int MigPlanningProgress { get; private set; }
+    public int MigDevelopProgress { get; private set; }
+    public int MigArtProgress { get; private set; }
+
+    public event Action OnChanged;
+
+    // StoneManager 가 ActiveStone 갱신 시 호출 → PiecePanelUI 등 구독자 갱신.
+    public void RaiseChanged() => OnChanged?.Invoke();
 
     void Awake()
     {
@@ -60,41 +66,16 @@ public class CEOManager : MonoBehaviour
         DontDestroyOnLoad(gameObject);
     }
 
-    void OnDestroy()                       => FlushPendingSave();
-    void OnApplicationQuit()               => FlushPendingSave();
-    void OnApplicationPause(bool paused) { if (paused) FlushPendingSave(); }
-
-    // 변경 발생 시 호출 — debounce 타이머 시작/리셋. 연쇄 변경은 마지막만 서버 호출.
-    void ScheduleSave()
-    {
-        _dirty = true;
-        if (_saveCo != null) StopCoroutine(_saveCo);
-        _saveCo = StartCoroutine(SaveAfterDelay());
-    }
-
-    IEnumerator SaveAfterDelay()
-    {
-        yield return new WaitForSecondsRealtime(saveDebounceSeconds);
-        _saveCo = null;
-        FlushPendingSave();
-    }
-
-    // 외부에서 즉시 저장 강제 (예: 인게임 진입 직전)
-    public void FlushPendingSave()
-    {
-        if (_saveCo != null) { StopCoroutine(_saveCo); _saveCo = null; }
-        if (!_dirty) return;
-        _dirty = false;
-        Save();
-    }
+    // 더 이상 자체 저장 없음. StoneManager.FlushPendingSave 가 모든 상태 저장.
+    public void FlushPendingSave() { }
 
     public void LoadAsync(Action onComplete = null)
     {
         BackendRetry.Instance.GetMyData("UserCEO", bro =>
         {
-            PlanningStage = DevelopStage = ArtStage = 0;
-            PlanningProgress = DevelopProgress = ArtProgress = 0;
-            _rowInDate = null;
+            HasMigrationSeed = false;
+            MigPlanningStage = MigDevelopStage = MigArtStage = 0;
+            MigPlanningProgress = MigDevelopProgress = MigArtProgress = 0;
 
             if (bro.IsSuccess())
             {
@@ -102,48 +83,42 @@ public class CEOManager : MonoBehaviour
                 if (rows.Count > 0)
                 {
                     JsonData row = rows[0];
-                    _rowInDate       = row["inDate"]?.ToString();
-                    PlanningStage    = SafeInt(row, "planningStage",    0);
-                    DevelopStage     = SafeInt(row, "developStage",     0);
-                    ArtStage         = SafeInt(row, "artStage",         0);
-                    PlanningProgress = SafeInt(row, "planningProgress", 0);
-                    DevelopProgress  = SafeInt(row, "developProgress",  0);
-                    ArtProgress      = SafeInt(row, "artProgress",      0);
-                    Debug.Log($"[CEO] 로드: 단계 P{PlanningStage}/D{DevelopStage}/A{ArtStage}");
+                    MigPlanningStage    = SafeInt(row, "planningStage",    0);
+                    MigDevelopStage     = SafeInt(row, "developStage",     0);
+                    MigArtStage         = SafeInt(row, "artStage",         0);
+                    MigPlanningProgress = SafeInt(row, "planningProgress", 0);
+                    MigDevelopProgress  = SafeInt(row, "developProgress",  0);
+                    MigArtProgress      = SafeInt(row, "artProgress",      0);
+                    bool hadActive = SafeInt(row, "hasActive", 1) != 0;
+                    // 마이그레이션 트리거: 구 UserCEO 가 hasActive=true 였고 어떤 stage 든 진행이 있었을 때만.
+                    HasMigrationSeed = hadActive && (MigPlanningStage > 0 || MigDevelopStage > 0 || MigArtStage > 0);
+                    Debug.Log($"[CEO] UserCEO 읽음 (마이그레이션용): seed={HasMigrationSeed} P{MigPlanningStage}/D{MigDevelopStage}/A{MigArtStage}");
                 }
-                else
-                {
-                    Save(); // 신규 row insert (디폴트 0)
-                    Debug.Log("[CEO] 신규 유저 — 빈 상태로 초기화");
-                }
-            }
-            else
-            {
-                Debug.LogError($"[CEO] 로드 실패: {bro}");
             }
             onComplete?.Invoke();
         });
     }
 
-    public int GetPlanning() => baseStat + PlanningStage * statPerStage;
-    public int GetDevelop()  => baseStat + DevelopStage  * statPerStage;
-    public int GetArt()      => baseStat + ArtStage      * statPerStage;
+    // 능력치 공식: base + 1~6단계 누적(statPerStage 씩) + 7단계 도달 시 stage7Bonus 1회 가산.
+    // 8/9/10 단계는 카테고리 보너스라 능력치에 가산 안 함 (StoneBonusListUI 가 row 로 표시).
+    public int GetPlanning() => baseStat + Mathf.Min(PlanningStage, 6) * statPerStage + (PlanningStage >= 7 ? stage7Bonus : 0);
+    public int GetDevelop()  => baseStat + Mathf.Min(DevelopStage,  6) * statPerStage + (DevelopStage  >= 7 ? stage7Bonus : 0);
+    public int GetArt()      => baseStat + Mathf.Min(ArtStage,      6) * statPerStage + (ArtStage      >= 7 ? stage7Bonus : 0);
 
-    // 모든 단계/진척도 초기화. PiecePanel 의 리셋 버튼에서 호출.
     public void ResetAll()
     {
-        PlanningStage = 0;
-        DevelopStage  = 0;
-        ArtStage      = 0;
-        PlanningProgress = 0;
-        DevelopProgress  = 0;
-        ArtProgress      = 0;
-        ScheduleSave();
+        var s = StoneManager.Instance?.ActiveStone;
+        if (s == null) return;
+        s.planningStage    = 0;
+        s.developStage     = 0;
+        s.artStage         = 0;
+        s.planningProgress = 0;
+        s.developProgress  = 0;
+        s.artProgress      = 0;
+        StoneManager.Instance.MarkDirty();
         OnChanged?.Invoke();
         Debug.Log("[CEO] 리셋 완료");
     }
-
-    public event Action OnChanged;
 
     // ──────── 강화 ────────
     public enum UpgradePart { Planning, Develop, Art }
@@ -165,12 +140,12 @@ public class CEOManager : MonoBehaviour
 
     public bool CanUpgrade()
     {
+        if (!HasActive) return false;
         if (TotalStage >= maxTotalStage) return false;
         float sum = GetWeight(PlanningStage) + GetWeight(DevelopStage) + GetWeight(ArtStage);
         return sum > 0f;
     }
 
-    // UI 노출용 — 각 스탯이 다음에 오를 확률 (0~1). 합 0 이면 모두 0.
     public float[] GetProbabilities()
     {
         float wP = GetWeight(PlanningStage);
@@ -181,44 +156,44 @@ public class CEOManager : MonoBehaviour
         return new[] { wP / sum, wD / sum, wA / sum };
     }
 
-    // 강화 시도 (비용 없음). 가중치 기반 랜덤으로 한 스탯 +1. 결과 반환.
     public bool TryUpgrade(out UpgradeResult result)
     {
         result = default;
         if (!CanUpgrade()) return false;
+        var s = StoneManager.Instance?.ActiveStone;
+        if (s == null) return false;
 
-        float wP = GetWeight(PlanningStage);
-        float wD = GetWeight(DevelopStage);
-        float wA = GetWeight(ArtStage);
+        float wP = GetWeight(s.planningStage);
+        float wD = GetWeight(s.developStage);
+        float wA = GetWeight(s.artStage);
         float sum  = wP + wD + wA;
         float roll = UnityEngine.Random.Range(0f, sum);
 
         if (roll < wP)
         {
-            PlanningStage++;
+            s.planningStage++;
             result.part = UpgradePart.Planning;
-            result.newStage = PlanningStage;
+            result.newStage = s.planningStage;
         }
         else if (roll < wP + wD)
         {
-            DevelopStage++;
+            s.developStage++;
             result.part = UpgradePart.Develop;
-            result.newStage = DevelopStage;
+            result.newStage = s.developStage;
         }
         else
         {
-            ArtStage++;
+            s.artStage++;
             result.part = UpgradePart.Art;
-            result.newStage = ArtStage;
+            result.newStage = s.artStage;
         }
 
-        ScheduleSave();
+        StoneManager.Instance.MarkDirty();
         OnChanged?.Invoke();
         Debug.Log($"[CEO] 강화 → {result.part} Lv.{result.newStage} (Total {TotalStage}/{maxTotalStage})");
         return true;
     }
 
-    // 인게임 진입 시 EmployeeData 인스턴스 생성 — EmployeeManager.CEO 로 보관
     public EmployeeData CreateCEOEmployee()
     {
         int p = GetPlanning();
@@ -228,7 +203,7 @@ public class CEOManager : MonoBehaviour
         var ceo = new EmployeeData(
             id: ceoEmployeeId,
             name: ceoName,
-            role: EmployeeRole.Planner,   // 단일 enum 필드 채우기용 — isCEO 가드로 모든 role 통과 처리
+            role: EmployeeRole.Planner,
             developMin: d, developMax: d,
             planningMin: p, planningMax: p,
             artMin: a, artMax: a,
@@ -243,48 +218,14 @@ public class CEOManager : MonoBehaviour
         ceo.creativitySkill  = 0;
         ceo.salary           = 0;
         ceo.satisfaction     = 100;
-        ceo.portraitId       = ""; // prefab 직접 참조라 portraitId 불필요
+        ceo.portraitId       = "";
         ceo.isCEO            = true;
         ceo.isDefault        = false;
         ceo.assignedDeskId   = ceoDeskId;
         ceo.masterEmployeeId = ceoEmployeeId;
         ceo.hiredYear        = 0;
-        ceo.grade            = EmployeeGrade.Normal; // 등급 표시/배경 셔머 비활성
+        ceo.grade            = EmployeeGrade.Normal;
         return ceo;
-    }
-
-    void Save()
-    {
-        var param = new Param();
-        param.Add("planningStage",    PlanningStage);
-        param.Add("developStage",     DevelopStage);
-        param.Add("artStage",         ArtStage);
-        param.Add("planningProgress", PlanningProgress);
-        param.Add("developProgress",  DevelopProgress);
-        param.Add("artProgress",      ArtProgress);
-
-        if (!string.IsNullOrEmpty(_rowInDate))
-        {
-            Backend.GameData.UpdateV2("UserCEO", _rowInDate, Backend.UserInDate, param, bro =>
-            {
-                if (!bro.IsSuccess()) Debug.LogError($"[CEO] Update 실패: {bro}");
-            });
-        }
-        else
-        {
-            Backend.GameData.Insert("UserCEO", param, bro =>
-            {
-                if (bro.IsSuccess())
-                {
-                    _rowInDate = bro.GetInDate();
-                    Debug.Log("[CEO] Insert 완료");
-                }
-                else
-                {
-                    Debug.LogError($"[CEO] Insert 실패: {bro}");
-                }
-            });
-        }
     }
 
     static int SafeInt(JsonData row, string key, int fallback)

@@ -53,6 +53,8 @@ public class BackendManager : MonoBehaviour
             {
             CEOManager.Instance?.LoadAsync(() =>
             {
+            StoneManager.Instance?.LoadAsync(() =>
+            {
             RunStateManager.Instance?.LoadAsync(() =>
             {
             MoneyManager.Instance.LoadMoney(() =>
@@ -83,6 +85,7 @@ public class BackendManager : MonoBehaviour
                         });
                     });
                 });
+            });
             });
             });
             });

@@ -285,7 +285,7 @@ public class DevelopmentManager : MonoBehaviour
         if (!_patrolStarted)
         {
             _patrolStarted = true;
-            OfficeManager.Instance?.StartDevelopmentPatrol();
+            // OfficeManager.Instance?.StartDevelopmentPatrol(); // 개발 중 자동 랜덤 patrol — 일단 비활성
         }
 
         while (_elapsed < developmentDuration)

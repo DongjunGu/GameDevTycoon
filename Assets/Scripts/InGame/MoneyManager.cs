@@ -178,6 +178,7 @@ public class MoneyManager : MonoBehaviour
                 MoneyManager.Instance.SpendGold(-resultValue);
 
             GameTimeManager.Instance?.SaveGameTime();
+            ProjectSaveManager.Instance?.SaveProject();
             string msg = resultValue >= 0
                 ? $"+{resultValue:N0}G 지급됐습니다."
                 : $"{resultValue:N0}G 차감됐습니다.";
@@ -199,6 +200,7 @@ public class MoneyManager : MonoBehaviour
                     EmployeeManager.Instance.UpdateEmployee(emp);
 
                     GameTimeManager.Instance?.SaveGameTime();
+                    ProjectSaveManager.Instance?.SaveProject();
                     string sign = resultValue >= 0 ? "+" : "";
                     ShowAfterDialog($"{emp.employeeName}의 만족도가 {sign}{resultValue} 변했습니다.\n현재 만족도: {emp.satisfaction}");
                 }

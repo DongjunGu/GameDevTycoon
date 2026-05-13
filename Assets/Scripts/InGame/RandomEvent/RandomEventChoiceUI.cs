@@ -63,6 +63,7 @@ public class RandomEventChoiceUI : MonoBehaviour
         confirmButton.interactable = false;
 
         eventPanel.SetActive(true);
+        ModalGate.I.Register(this);
 
         // description 타이핑 → 완료 후 선택지 버튼 표시
         StartTyping(data.description, onComplete: () =>
@@ -116,6 +117,7 @@ public class RandomEventChoiceUI : MonoBehaviour
         }
 
         eventPanel.SetActive(false);
+        ModalGate.I.Unregister(this);
 
         MoneyManager.Instance.SaveMoney();
         ProjectSaveManager.Instance.SaveProject();
