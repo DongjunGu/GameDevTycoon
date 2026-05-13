@@ -36,6 +36,7 @@ public static class NewRunInitializer
         // 아웃게임에서 만진 장착 슬롯 변경 등 pending 저장 즉시 flush
         OwnedTraitManager.Instance?.FlushPendingSave();
         CEOManager.Instance?.FlushPendingSave();
+        StoneManager.Instance?.FlushPendingSave();
         ResetMemoryOnly();
 
         int pending = 0;
@@ -56,8 +57,11 @@ public static class NewRunInitializer
         }
 
         if (MoneyManager.Instance != null)            Issue(MoneyManager.Instance.ResetForNewRun);
-        if (GameTimeManager.Instance != null)         Issue(GameTimeManager.Instance.ResetForNewRun);
+        // EmployeeManager 가 GameTimeManager 보다 먼저 — GameTimeManager.SaveGameTime 이 내부적으로
+        // SaveAllEmployees 를 호출하므로, ownedEmployees 가 먼저 비워져 있어야 stale UpdateV2 가 새 런의
+        // DeleteV2 와 충돌해 "gameInfo not found" 404 를 내는 race 를 차단.
         if (EmployeeManager.Instance != null)         Issue(EmployeeManager.Instance.ResetForNewRun);
+        if (GameTimeManager.Instance != null)         Issue(GameTimeManager.Instance.ResetForNewRun);
         if (CompletedProjectManager.Instance != null) Issue(CompletedProjectManager.Instance.ResetForNewRun);
         if (ItemManager.Instance != null)             Issue(ItemManager.Instance.ResetForNewRun);
         if (SalesSaveManager.Instance != null)        Issue(SalesSaveManager.Instance.ResetForNewRun);
@@ -78,6 +82,7 @@ public static class NewRunInitializer
         SalaryNegotiationManager.Instance?.ResetForNewRun();
         RandomEventManager.Instance?.ResetForNewRun();
         TraitEffectApplier.ResetForNewRun();  // _firstSaleConsumed / _brokeRescueFired 등 1회성 플래그 리셋
+        MerchantManager.Instance?.ResetForNewRun();
     }
 
     static void FinalizeRun(Action onComplete)

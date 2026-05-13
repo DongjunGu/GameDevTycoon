@@ -37,7 +37,11 @@ public class PiecePanelUI : MonoBehaviour
     [Header("Buttons")]
     public Button upgradeButton;
     public Button resetButton;
-    public Button listButton; // 기능은 추후 구현 (현재는 클릭 무동작)
+    public Button listButton;
+
+    [Header("Stone List Panel (보관함)")]
+    [Tooltip("listButton 클릭 시 토글되는 패널 GameObject. 인스펙터에 StoneListPanelUI 가 붙어있어야 함.")]
+    public GameObject listPanel;
 
     private bool _subscribed;
 
@@ -53,9 +57,20 @@ public class PiecePanelUI : MonoBehaviour
             resetButton.onClick.RemoveAllListeners();
             resetButton.onClick.AddListener(OnClickReset);
         }
-        // listButton 은 핸들러 미연결 (기능 추후 구현)
+        if (listButton != null)
+        {
+            listButton.onClick.RemoveAllListeners();
+            listButton.onClick.AddListener(OnClickList);
+        }
+        if (listPanel != null) listPanel.SetActive(false);
         Subscribe();
         Refresh();
+    }
+
+    void OnClickList()
+    {
+        if (listPanel == null) return;
+        listPanel.SetActive(!listPanel.activeSelf);
     }
 
     void OnDisable()

@@ -23,14 +23,23 @@ public class PatrolTestUI : MonoBehaviour
     public TMP_Dropdown eventDropdown;
     public Button btnTestEvent;
 
+    [Header("상인 방문")]
+    public Button btnMerchantVisit;
+
     void Start()
     {
         btnPatrolRandom?.onClick.AddListener(OnClickRandom);
         btnAquiredTest?.onClick.AddListener(OnClickAquired);
         btnDialogPatrol?.onClick.AddListener(OnClickDialogPatrol);
         btnTestEvent?.onClick.AddListener(OnClickTestEvent);
+        btnMerchantVisit?.onClick.AddListener(OnClickMerchantVisit);
 
         SetupEventDropdown();
+    }
+
+    void OnClickMerchantVisit()
+    {
+        MerchantManager.Instance?.TestVisit();
     }
 
     void SetupEventDropdown()

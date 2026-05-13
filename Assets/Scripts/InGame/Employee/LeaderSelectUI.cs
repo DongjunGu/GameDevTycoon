@@ -87,12 +87,14 @@ public class LeaderSelectUI : MonoBehaviour
         }
 
         leaderPanel.gameObject.SetActive(true);
+        ModalGate.I.Register(this);
     }
 
     public void OnSelectLeader(EmployeeData employee)
     {
         DevelopmentManager.Instance.SetLeader(_currentType, employee);
         leaderPanel.gameObject.SetActive(false);
+        ModalGate.I.Unregister(this);
         leaderscorePanel.SetActive(true);
     }
 }

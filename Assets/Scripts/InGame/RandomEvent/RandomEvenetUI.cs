@@ -47,12 +47,14 @@ public class RandomEventUI : MonoBehaviour
         }
 
         eventPanel.SetActive(true);
+        ModalGate.I.Register(this);
     }
 
     // 확인 버튼
     public void OnClickConfirm()
     {
         eventPanel.SetActive(false);
+        ModalGate.I.Unregister(this);
         _currentEvent?.onApply?.Invoke();
         ProjectSaveManager.Instance.SaveProject();
         GameTimeManager.Instance.SaveGameTime();
