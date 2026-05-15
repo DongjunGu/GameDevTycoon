@@ -40,7 +40,7 @@ public class ItemDetailUI : MonoBehaviour
 
         int count = ItemManager.Instance.GetCount(row.itemId);
         countText.text         = $"보유: {count}개";
-        useButton.interactable = count > 0;
+        useButton.interactable = count > 0 && ItemManager.IsUsableNow(row) && !IsGameUpgradeAlreadyUsed(row) && !IsRelaxButNoDebuffedEmployee(row);
 
         var sprite = Resources.Load<Sprite>($"Items/{row.imageId}");
         if (sprite != null && itemImage != null)
@@ -55,12 +55,23 @@ public class ItemDetailUI : MonoBehaviour
         if (_currentRow == null) return;
         int count = ItemManager.Instance.GetCount(_currentRow.itemId);
         countText.text         = $"보유: {count}개";
-        useButton.interactable = count > 0;
+        useButton.interactable = count > 0 && ItemManager.IsUsableNow(_currentRow) && !IsGameUpgradeAlreadyUsed(_currentRow) && !IsRelaxButNoDebuffedEmployee(_currentRow);
     }
 
     public void OnClickUse()
     {
         if (_currentRow == null) return;
+
+        // 무대상 아이템 (창의성 블록 등): 직원 선택 안 거치고 즉시 사용
+        if (!NeedsEmployeeTarget(_currentRow))
+        {
+            if (ItemManager.Instance.UseItemNoTarget(_currentRow.itemId))
+            {
+                RefreshCount();
+                ItemPanelUI.Instance?.Refresh();
+            }
+            return;
+        }
 
         // 카드 컨텍스트(특정 직원 대상으로 열림): 직원 선택 단계 건너뛰고 즉시 사용
         string targetId = ItemPanelUI.Instance != null ? ItemPanelUI.Instance.TargetEmployeeId : null;
@@ -75,8 +86,40 @@ public class ItemDetailUI : MonoBehaviour
             return;
         }
 
-        // 일반 플로우: 직원 선택 패널로 이동
-        ItemEmployeeSelectUI.Instance.Open(_currentRow);
+        // 일반 플로우: 직원 선택 패널로 이동 — 게임 카테고리 직군 아이템은 role 필터링
+        EmployeeRole? roleFilter = _currentRow.itemId switch
+        {
+            "upgradeDevelop" => EmployeeRole.Programmer,
+            "upgradeArt"     => EmployeeRole.Artist,
+            "upgradePlan"    => EmployeeRole.Planner,
+            _ => (EmployeeRole?)null
+        };
+        ItemEmployeeSelectUI.Instance.Open(_currentRow, roleFilter);
+    }
+
+    static bool NeedsEmployeeTarget(ItemChartRow row)
+    {
+        // 무대상 아이템 — 직원 선택 스킵
+        if (row.category == "창의성 블록") return false;
+        if (row.itemId == "upgradeRandom") return false;
+        return true;
+    }
+
+    static bool IsGameUpgradeAlreadyUsed(ItemChartRow row)
+    {
+        if (row == null || row.category != "게임") return false;
+        return DevelopmentManager.Instance != null && DevelopmentManager.Instance.IsGameUpgradeUsed(row.itemId);
+    }
+
+    // 라꾸라꾸: 회사 직원 중 디버프 걸린 사람이 한 명도 없으면 사용 버튼 비활성
+    static bool IsRelaxButNoDebuffedEmployee(ItemChartRow row)
+    {
+        if (row == null || row.itemId != "relax") return false;
+        var employees = EmployeeManager.Instance?.ownedEmployees;
+        if (employees == null || employees.Count == 0) return true;
+        foreach (var emp in employees)
+            if (emp.HasAnyStatDebuff()) return false;
+        return true;
     }
 
     public void OnClickBack()

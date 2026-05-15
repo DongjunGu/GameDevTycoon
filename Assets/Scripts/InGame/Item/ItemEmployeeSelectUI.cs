@@ -12,6 +12,7 @@ public class ItemEmployeeSelectUI : MonoBehaviour
     public GameObject itemEmployeeSlotPrefab;
 
     private ItemChartRow _currentRow;
+    private EmployeeRole? _roleFilter;
 
     void Awake()
     {
@@ -20,15 +21,20 @@ public class ItemEmployeeSelectUI : MonoBehaviour
         employeeSelectPanel.SetActive(false);
     }
 
-    public void Open(ItemChartRow row)
+    public void Open(ItemChartRow row, EmployeeRole? roleFilter = null)
     {
-        _currentRow = row;
+        _currentRow  = row;
+        _roleFilter  = roleFilter;
 
         foreach (Transform child in slotParent)
             Destroy(child.gameObject);
 
         foreach (var emp in EmployeeManager.Instance.ownedEmployees)
         {
+            if (_roleFilter.HasValue && emp.role != _roleFilter.Value) continue;
+            // 라꾸라꾸: 디버프 걸린 직원만 노출
+            if (_currentRow != null && _currentRow.itemId == "relax" && !emp.HasAnyStatDebuff()) continue;
+
             var go   = Instantiate(itemEmployeeSlotPrefab, slotParent);
             var slot = go.GetComponent<ItemEmployeeSlotUI>();
             slot.Setup(emp, OnSelectEmployee);

@@ -76,6 +76,7 @@ public class ProjectSaveManager : MonoBehaviour
     private string _loadedFixedGridName = "";
     private bool   _loadedPendingCreativityGame;
     private bool   _loadedPendingDebuggingAlert;
+    private string _loadedUsedGameUpgrades = "";
 
     private string _loadedProjectName = "프로젝트명";
     public string GetLoadedProjectName() => _loadedProjectName;
@@ -159,6 +160,7 @@ public class ProjectSaveManager : MonoBehaviour
         param.Add("fixedGridName", CreativityGameUI.Instance != null ? CreativityGameUI.Instance.GetFixedGridName() : "");
         param.Add("pendingCreativityGame", dm.IsPendingCreativityGame);
         param.Add("pendingDebuggingAlert", dm.IsPendingDebuggingAlert);
+        param.Add("usedGameUpgrades", dm.GetUsedGameUpgradesString());
 
         if (!string.IsNullOrEmpty(_rowInDate))
         {
@@ -295,6 +297,7 @@ public class ProjectSaveManager : MonoBehaviour
             _loadedFixedGridName                 = SafeString(row, "fixedGridName", "");
             _loadedPendingCreativityGame         = SafeBool(row, "pendingCreativityGame", false);
             _loadedPendingDebuggingAlert         = SafeBool(row, "pendingDebuggingAlert", false);
+            _loadedUsedGameUpgrades              = SafeString(row, "usedGameUpgrades", "");
 
             Debug.Log($"프로젝트 로드 완료: stage={_loadedStage} elapsed={_loadedElapsed:F1}");
             onComplete?.Invoke();
@@ -342,6 +345,7 @@ public class ProjectSaveManager : MonoBehaviour
         RandomEventManager.Instance.RestorePendingRunAlerts(_loadedPendingRunAlerts);
         CreativityGameUI.Instance?.RestoreEarnedBlocks(_loadedEarnedBlocks);
         CreativityGameUI.Instance?.RestoreFixedGrid(_loadedFixedGridName);
+        DevelopmentManager.Instance.RestoreUsedGameUpgrades(_loadedUsedGameUpgrades);
         RandomEventManager.Instance.InvestmentAccepted  = _loadedInvestmentAccepted;
         RandomEventManager.Instance.InvestmentStat      = _loadedInvestmentStat;
         RandomEventManager.Instance.InvestmentStatName  = _loadedInvestmentStatName;

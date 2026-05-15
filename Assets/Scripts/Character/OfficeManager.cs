@@ -15,6 +15,14 @@ public class OfficeManager : MonoBehaviour
     [SerializeField] private int   patrolCountPerCycle = 1;    // 한 번에 patrol 보낼 최대 인원
     [SerializeField] private float patrolStayDuration = 5f;    // 목적지 도착 후 대기 시간
 
+    [Header("Secretary (Visual NPC)")]
+    [Tooltip("비서 캐릭터 prefab. OfficeCharacter 컴포넌트 부착된 portrait_secretary 등을 드래그.")]
+    public GameObject secretaryPrefab;
+    [Tooltip("비서가 항상 앉을 데스크 ID. 일반 직원이 못 앉도록 보호됨.")]
+    public string secretaryDeskId = "desk_03";
+    [Tooltip("비서 인스턴스의 합성 ID — _characters dict 키로만 사용. EmployeeData 없음.")]
+    public string secretaryId = "secretary_001";
+
     [Header("Block Popup Sorting")]
     [SerializeField] private string blockPopupSortingLayer = "Default";
     [SerializeField] private int    blockPopupBgOrder      = 9;
@@ -144,8 +152,11 @@ public class OfficeManager : MonoBehaviour
     {
         // CEO 먼저 점유 → 일반 직원이 ceoDeskId(예: desk_04) 못 받게 보호
         SpawnCEO();
+        // 비서도 같은 패턴 — 점유 먼저 (desk_03 보호)
+        SpawnSecretary();
 
-        string ceoDeskId = CEOManager.Instance != null ? CEOManager.Instance.ceoDeskId : "";
+        string ceoDeskId       = CEOManager.Instance != null ? CEOManager.Instance.ceoDeskId : "";
+        string secretaryDeskId = !string.IsNullOrEmpty(this.secretaryDeskId) ? this.secretaryDeskId : "";
 
         foreach (var employee in EmployeeManager.Instance.ownedEmployees)
         {
@@ -155,8 +166,10 @@ public class OfficeManager : MonoBehaviour
             else
                 desk = DeskManager.Instance.GetDeskById(employee.assignedDeskId);
 
-            // CEO 가 점유한 desk 와 충돌하면 빈 자리로 재할당 (마이그레이션)
-            if (desk != null && !string.IsNullOrEmpty(ceoDeskId) && desk.deskId == ceoDeskId)
+            // CEO 또는 비서가 점유한 desk 와 충돌하면 빈 자리로 재할당 (마이그레이션)
+            if (desk != null &&
+                ((!string.IsNullOrEmpty(ceoDeskId)       && desk.deskId == ceoDeskId) ||
+                 (!string.IsNullOrEmpty(secretaryDeskId) && desk.deskId == secretaryDeskId)))
                 desk = DeskManager.Instance.GetEmptyDesk();
 
             if (desk == null) continue;
@@ -203,6 +216,36 @@ public class OfficeManager : MonoBehaviour
         _characters[ceo.id] = oc;
 
         Debug.Log($"[CEO] {ceo.employeeName} {desk.deskId} 스폰");
+    }
+
+    // 비서 스폰 — secretaryDeskId 고정 배치, EmployeeData 없는 시각 NPC.
+    // ownedEmployees 에 없으므로 만족도/아이템/팀장후보/이벤트 자동 제외.
+    public void SpawnSecretary()
+    {
+        if (secretaryPrefab == null || string.IsNullOrEmpty(secretaryDeskId)) return;
+
+        var desk = DeskManager.Instance.GetDeskById(secretaryDeskId);
+        if (desk == null)
+        {
+            Debug.LogWarning($"[Secretary] '{secretaryDeskId}' 데스크 없음 - 스폰 스킵");
+            return;
+        }
+
+        DeskManager.Instance.AssignDesk(desk.deskId, secretaryId);
+
+        var obj = Instantiate(secretaryPrefab, desk.GetWorkWorldPos(), Quaternion.identity);
+        var oc  = obj.GetComponent<OfficeCharacter>();
+        if (oc == null)
+        {
+            Debug.LogError("[Secretary] secretaryPrefab 에 OfficeCharacter 컴포넌트 없음");
+            Destroy(obj);
+            return;
+        }
+        oc.Init(secretaryId, desk);
+
+        _characters[secretaryId] = oc;
+
+        Debug.Log($"[Secretary] {desk.deskId} 스폰");
     }
 
     // 특정 직원의 patrol 여부 확인 (DevelopmentManager 틱 체크용)
@@ -330,13 +373,16 @@ public class OfficeManager : MonoBehaviour
                 yield return null;
             }
 
-            float devProgress = DevelopmentManager.Instance.developmentDuration > 0
-                ? DevelopmentManager.Instance.GetElapsed() / DevelopmentManager.Instance.developmentDuration
-                : 0f;
-            if (_patrolPoints != null && _patrolPoints.Length > 0
-                && DevelopmentManager.Instance.CurrentStage != ProjectStage.BugFixing
-                && devProgress < 0.7f)
-                TriggerPatrolRandom(patrolCountPerCycle);
+            // 자동 random patrol 비활성 — 직원이 자기 데스크 떠나 master_desk 등으로 무작위 이동하는 문제.
+            // 다이얼로그 patrol 과 명시적 ForcePatrolTo (상인 등) 는 그대로 동작.
+            // 다시 켜려면 아래 주석 해제 + CEO/비서 제외 가드 + master_desk 같은 system PatrolPoint 풀 분리 필요.
+            // float devProgress = DevelopmentManager.Instance.developmentDuration > 0
+            //     ? DevelopmentManager.Instance.GetElapsed() / DevelopmentManager.Instance.developmentDuration
+            //     : 0f;
+            // if (_patrolPoints != null && _patrolPoints.Length > 0
+            //     && DevelopmentManager.Instance.CurrentStage != ProjectStage.BugFixing
+            //     && devProgress < 0.7f)
+            //     TriggerPatrolRandom(patrolCountPerCycle);
             CheckDialogPatrols();
         }
     }

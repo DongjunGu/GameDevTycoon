@@ -525,8 +525,12 @@ public class EmployeeManager : MonoBehaviour
 
         foreach (var emp in ownedEmployees)
         {
-            if (emp.statDebuffWeeksLeft > 0)
-                emp.statDebuffWeeksLeft--;
+            // 디버프 스택: 각 entry 1주씩 감소, 만료(≤0) 시 제거
+            for (int i = emp.statDebuffStacks.Count - 1; i >= 0; i--)
+            {
+                emp.statDebuffStacks[i]--;
+                if (emp.statDebuffStacks[i] <= 0) emp.statDebuffStacks.RemoveAt(i);
+            }
             if (emp.statBuffWeeksLeft > 0)
                 emp.statBuffWeeksLeft--;
             if (emp.romanceBuffWeeksLeft > 0)

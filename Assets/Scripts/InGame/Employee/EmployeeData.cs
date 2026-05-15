@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using LitJson;
 using UnityEngine;
 
@@ -36,7 +37,9 @@ public class EmployeeData
     public int salary;
     public int enhancementLevel;
     public int satisfaction = 80;
-    public int statDebuffWeeksLeft  = 0; // 임시 능력치 -20% 디버프 남은 주차
+    // 임시 능력치 디버프 — 발동마다 entry 추가, 각 entry 가 남은 주차. Count 가 곧 활성 디버프 개수.
+    // 예: 감기(5주) + 번아웃(8주) → [5, 8] → 매주 -20% × 2 누적 적용.
+    public List<int> statDebuffStacks = new();
     public int statBuffWeeksLeft    = 0; // 임시 능력치 +20% 버프 남은 주차
     public int romanceBuffWeeksLeft = 0; // 사내 연애 능력치 +10% 버프 남은 주차
     public int consecutiveLeaderCount    = 0; // 연속 팀장 선정 횟수
@@ -145,7 +148,7 @@ public class EmployeeData
         data.enhancementRecordsJson = SafeString(row, "enhancementRecordsJson", "[]");
         data.hiredYear = SafeInt(row, "hiredYear", 0);
         data.isFemale  = SafeBool(row, "isFemale", false);
-        data.statDebuffWeeksLeft       = SafeInt(row, "statDebuffWeeksLeft",       0);
+        ParseStatDebuffStacks(data, row);
         data.statBuffWeeksLeft         = SafeInt(row, "statBuffWeeksLeft",         0);
         data.romanceBuffWeeksLeft      = SafeInt(row, "romanceBuffWeeksLeft",      0);
         data.consecutiveLeaderCount    = SafeInt(row, "consecutiveLeaderCount",    0);
@@ -188,7 +191,7 @@ public class EmployeeData
         param.Add("enhancementRecordsJson", enhancementRecordsJson);
         param.Add("hiredYear", hiredYear);
         param.Add("isFemale",  isFemale);
-        param.Add("statDebuffWeeksLeft",    statDebuffWeeksLeft);
+        param.Add("statDebuffStacks",       string.Join(",", statDebuffStacks));
         param.Add("statBuffWeeksLeft",      statBuffWeeksLeft);
         param.Add("romanceBuffWeeksLeft",   romanceBuffWeeksLeft);
         param.Add("consecutiveLeaderCount",    consecutiveLeaderCount);
@@ -215,7 +218,8 @@ public class EmployeeData
 
     public void ApplyStatDebuff(int weeks)
     {
-        statDebuffWeeksLeft = Mathf.Max(statDebuffWeeksLeft, weeks);
+        if (weeks <= 0) return;
+        statDebuffStacks.Add(weeks); // 누적 — 발동마다 새 entry
     }
 
     public void ApplyStatBuff(int weeks)
@@ -223,8 +227,12 @@ public class EmployeeData
         statBuffWeeksLeft = Mathf.Max(statBuffWeeksLeft, weeks);
     }
 
-    // 주 스탯 기준 합연산 디버프/버프량
-    public int GetStatDebuffAmount()    => statDebuffWeeksLeft   > 0 ? (int)(GetMainStat() * 0.2f) : 0;
+    // 라꾸라꾸 등으로 모든 디버프 스택 즉시 회복
+    public void ClearAllStatDebuffs() => statDebuffStacks.Clear();
+    public bool HasAnyStatDebuff() => statDebuffStacks.Count > 0;
+
+    // 주 스탯 기준 합연산 디버프/버프량 — 디버프는 활성 스택 개수만큼 누적 감산
+    public int GetStatDebuffAmount()    => statDebuffStacks.Count > 0 ? (int)(GetMainStat() * 0.2f) * statDebuffStacks.Count : 0;
     public int GetStatBuffAmount()      => statBuffWeeksLeft     > 0 ? (int)(GetMainStat() * 0.2f) : 0;
     public int GetRomanceBuffAmount()   => romanceBuffWeeksLeft  > 0 ? (int)(GetMainStat() * 0.1f) : 0;
 
@@ -309,6 +317,21 @@ public class EmployeeData
         SatisfactionState.VeryUnhappy => "매우 불만",
         _ => ""
     };
+    // 신규 컬럼 statDebuffStacks (CSV) 우선, 없으면 구버전 statDebuffWeeksLeft (단일 int) 를 단일 스택으로 변환
+    static void ParseStatDebuffStacks(EmployeeData data, JsonData row)
+    {
+        data.statDebuffStacks.Clear();
+        string csv = SafeString(row, "statDebuffStacks", "");
+        if (!string.IsNullOrEmpty(csv))
+        {
+            foreach (var s in csv.Split(','))
+                if (int.TryParse(s, out int w) && w > 0) data.statDebuffStacks.Add(w);
+            return;
+        }
+        int legacy = SafeInt(row, "statDebuffWeeksLeft", 0);
+        if (legacy > 0) data.statDebuffStacks.Add(legacy);
+    }
+
     static int SafeInt(JsonData row, string key, int defaultValue)
     {
         try { return int.Parse(row[key].ToString()); }

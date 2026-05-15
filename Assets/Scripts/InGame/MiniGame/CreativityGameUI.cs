@@ -67,6 +67,16 @@ public class CreativityGameUI : MonoBehaviour
     [Tooltip("그리드를 전부 채우면 활성화되는 텍스트 (씬에서 비활성 상태로 배치)")]
     [SerializeField] GameObject _perfectBonusText;
 
+    [Header("아이템 (랜덤/전설 블록)")]
+    [Tooltip("랜덤 블록 보유 개수 텍스트 (예: x3)")]
+    [SerializeField] TextMeshProUGUI _blockRandomCountText;
+    [Tooltip("랜덤 블록 사용하기 버튼")]
+    [SerializeField] Button _blockRandomUseBtn;
+    [Tooltip("전설의 블록 보유 개수 텍스트")]
+    [SerializeField] TextMeshProUGUI _blockLegendaryCountText;
+    [Tooltip("전설의 블록 사용하기 버튼")]
+    [SerializeField] Button _blockLegendaryUseBtn;
+
     [Header("디버그")]
     [Tooltip("그리드 전부 채움 시뮬레이션 (퍼펙트 보너스 테스트용)")]
     [SerializeField] Button _debugFillBtn;
@@ -122,6 +132,8 @@ public class CreativityGameUI : MonoBehaviour
         if (_panel != null) _panel.SetActive(false);
         if (_confirmBtn != null) _confirmBtn.onClick.AddListener(OnClickConfirm);
         if (_debugFillBtn != null) _debugFillBtn.onClick.AddListener(OnClickDebugFill);
+        if (_blockRandomUseBtn != null) _blockRandomUseBtn.onClick.AddListener(() => OnClickUseItem("blockRandom"));
+        if (_blockLegendaryUseBtn != null) _blockLegendaryUseBtn.onClick.AddListener(() => OnClickUseItem("blockLegendary"));
         _initialized = true;
     }
 
@@ -142,6 +154,66 @@ public class CreativityGameUI : MonoBehaviour
 
         UpdateScore();
         SpawnEarnedBlocks();
+        RefreshItemControls();
+    }
+
+    // ── 아이템 (랜덤/전설 블록) ─────────────────────────────────────────────
+    public void RefreshItemControls()
+    {
+        int rndCount = ItemManager.Instance != null ? ItemManager.Instance.GetCount("blockRandom")    : 0;
+        int legCount = ItemManager.Instance != null ? ItemManager.Instance.GetCount("blockLegendary") : 0;
+
+        if (_blockRandomCountText    != null) _blockRandomCountText.text    = $"x{rndCount}";
+        if (_blockLegendaryCountText != null) _blockLegendaryCountText.text = $"x{legCount}";
+        if (_blockRandomUseBtn       != null) _blockRandomUseBtn.interactable    = rndCount > 0;
+        if (_blockLegendaryUseBtn    != null) _blockLegendaryUseBtn.interactable = legCount > 0;
+    }
+
+    void OnClickUseItem(string itemId)
+    {
+        if (ItemManager.Instance == null) return;
+        // UseItemNoTarget 내부에서 GrantItemBlock 까지 호출되므로 트레이는 즉시 갱신됨
+        ItemManager.Instance.UseItemNoTarget(itemId);
+        RefreshItemControls();
+    }
+
+    // ItemManager.ApplyNoTargetEffect 에서 호출. 패널이 열려있으면 즉시 트레이에 1개 추가.
+    public void GrantItemBlock(CreativityGameData.BlockShape def)
+    {
+        if (def == null) return;
+        _earnedBlocks.Add(def);
+        if (_panel != null && _panel.activeSelf)
+            SpawnSingleBlock(def);
+    }
+
+    void SpawnSingleBlock(CreativityGameData.BlockShape def)
+    {
+        Canvas.ForceUpdateCanvases();
+        int count = _activeBlocks.Count + 1;
+        var (slotSz, previewCell) = CalcSlotAndPreviewCell(count);
+
+        var glg = _blockTray.GetComponent<GridLayoutGroup>();
+        if (glg == null) glg = _blockTray.gameObject.AddComponent<GridLayoutGroup>();
+        glg.constraint      = GridLayoutGroup.Constraint.FixedColumnCount;
+        glg.constraintCount = 5;
+        glg.cellSize        = new Vector2(slotSz, slotSz);
+        glg.spacing         = new Vector2(20f, 20f);
+        glg.childAlignment  = TextAnchor.MiddleCenter;
+
+        var slotGO = new GameObject($"Slot_{_blockTray.childCount}");
+        slotGO.AddComponent<RectTransform>().SetParent(_blockTray, false);
+        slotGO.AddComponent<Image>().color = new Color(0.9f, 0.93f, 1f, 0.4f);
+
+        var blockGO = new GameObject("Block");
+        var blockRT = blockGO.AddComponent<RectTransform>();
+        blockRT.SetParent(slotGO.transform, false);
+        blockRT.anchorMin        = blockRT.anchorMax = new Vector2(0.5f, 0.5f);
+        blockRT.pivot            = new Vector2(0.5f, 0.5f);
+        blockRT.anchoredPosition = Vector2.zero;
+
+        var block = blockGO.AddComponent<CreativityGameBlockUI>();
+        block.Init(def.cells, def.color, _gridUI, this, previewCell, 2f);
+        _activeBlocks.Add(block);
     }
 
     void SpawnPreviewSlots()
