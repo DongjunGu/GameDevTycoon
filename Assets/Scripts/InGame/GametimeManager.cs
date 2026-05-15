@@ -112,6 +112,11 @@ public class GameTimeManager : MonoBehaviour
                     RandomEventManager.Instance?.LoadEnergyDrinkRequestWeeksLeft(
                         SafeInt(row, "energyDrinkRequestWeeksLeft", -1)
                     );
+                    MerchantManager.Instance?.LoadSchedule(
+                        SafeString(row, "merchantSchedule", ""),
+                        SafeString(row, "merchantItems", ""),
+                        SafeInt(row, "merchantVisitedYear", 0)
+                    );
 
                     Debug.Log($"로드 완료: {Year}년 {Month}월 {Week}주 / rowInDate: {_rowInDate}");
                     SaveGameTime(); // 신규 컬럼 자동 추가
@@ -225,6 +230,9 @@ public class GameTimeManager : MonoBehaviour
         param.Add("unstableCompanyWeeksLeft",   RandomEventManager.Instance?.GetUnstableCompanyWeeksLeft()     ?? -1);
         param.Add("coffeeRequestWeeksLeft",       RandomEventManager.Instance?.GetCoffeeRequestWeeksLeft()         ?? -1);
         param.Add("energyDrinkRequestWeeksLeft",  RandomEventManager.Instance?.GetEnergyDrinkRequestWeeksLeft()    ?? -1);
+        param.Add("merchantSchedule",             MerchantManager.Instance?.GetScheduleString()                     ?? "");
+        param.Add("merchantItems",                MerchantManager.Instance?.GetItemsString()                        ?? "");
+        param.Add("merchantVisitedYear",          MerchantManager.Instance?.VisitedYear                             ?? 0);
 
         if (!string.IsNullOrEmpty(_rowInDate))
         {

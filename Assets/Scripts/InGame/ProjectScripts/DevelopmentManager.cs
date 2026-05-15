@@ -68,6 +68,35 @@ public class DevelopmentManager : MonoBehaviour
     private float _leaderPlanningBonusTotal;
     private float _leaderArtBonusTotal;
 
+    // 게임 카테고리 아이템 (upgradeRandom/Develop/Art/Plan) 의 프로젝트당 1회 사용 추적.
+    // ProjectSaveManager 가 CSV 로 직렬화 → 새 프로젝트(StartDevelopment) 진입 시 클리어.
+    private readonly HashSet<string> _usedGameUpgrades = new();
+    public bool IsGameUpgradeUsed(string itemId) => _usedGameUpgrades.Contains(itemId);
+    public void MarkGameUpgradeUsed(string itemId) => _usedGameUpgrades.Add(itemId);
+    public string GetUsedGameUpgradesString() => string.Join(",", _usedGameUpgrades);
+    public void RestoreUsedGameUpgrades(string csv)
+    {
+        _usedGameUpgrades.Clear();
+        if (string.IsNullOrEmpty(csv)) return;
+        foreach (var id in csv.Split(','))
+            if (!string.IsNullOrEmpty(id)) _usedGameUpgrades.Add(id);
+    }
+
+    // 게임 카테고리 아이템용 — 기존 팀장 점수 로직 그대로 통과시킨 후 1/4. n 추첨도 동일하게 가져감.
+    public float CalcGameUpgradeScore(EmployeeData employee, EmployeeRole role)
+    {
+        int skill = role switch
+        {
+            EmployeeRole.Planner    => employee.planningSkill,
+            EmployeeRole.Programmer => employee.developSkill,
+            EmployeeRole.Artist     => employee.artSkill,
+            _ => 0
+        };
+        int n = CalcLeaderTickCount(skill);
+        float total = CalcLeaderScore(skill, n);
+        return total * 0.25f;
+    }
+
     // 네트워크 이벤트 등 duration 연장 시 진행도 표시 보정
     private float _progressVisualOffset = 0f;      // 현재 남은 시각 보정값
     private float _progressOffsetElapsedAtEvent = 0f; // 이벤트 발동 시점 _elapsed
@@ -119,6 +148,7 @@ public class DevelopmentManager : MonoBehaviour
         _isRunning = false;
         _triggered25 = false;
         _triggered75 = false;
+        _usedGameUpgrades.Clear();
 
         plannerLeader = null;
         programmerLeader = null;

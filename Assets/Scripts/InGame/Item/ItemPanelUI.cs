@@ -70,4 +70,10 @@ public class ItemPanelUI : MonoBehaviour
       ItemManager.Instance.AddItem("energyDrink", 1);
       Debug.Log("아이템 지급");
   }
+
+  // 디버그: 차트의 모든 아이템을 5개씩 한 번에 지급 (Save 1회)
+  public void OnClickAddAllItems()
+  {
+      ItemManager.Instance.GiveAllItemsForTest(5);
+  }
 }

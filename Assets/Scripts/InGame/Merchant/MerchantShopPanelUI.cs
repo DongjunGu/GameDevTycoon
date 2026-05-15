@@ -85,30 +85,25 @@ public class MerchantShopPanelUI : MonoBehaviour
         if (row == null) return;
 
         int price = GetPrice(row);
-        // 가격 차감 (0G 면 skip)
+        // 가격 차감 (메모리만 — 패널 닫힐 때 MerchantManager.OnShopClosed 가 SaveMoney 일괄 호출)
         if (price > 0)
         {
-            if (MoneyManager.Instance == null || !MoneyManager.Instance.SpendGold(price))
+            if (MoneyManager.Instance == null || !MoneyManager.Instance.SpendGold(price, saveImmediately: false))
             {
                 Debug.Log("[Merchant] 골드 부족 — 구입 실패");
                 return;
             }
         }
 
-        ItemManager.Instance?.AddItem(id, 1);
-        Debug.Log($"[Merchant] 구입: {row.name} (1개) -{price}G");
-
-        // ItemManager.UseItem 패턴 따라 일관 저장. SpendGold 가 가격>0 일 때 SaveMoney 까지 자체 호출하지만
-        // 가격 0G 케이스(현재 임시) 와 시간/프로젝트 저장은 여기서 보강.
-        MoneyManager.Instance?.SaveMoney();
-        GameTimeManager.Instance?.SaveGameTime();
-        ProjectSaveManager.Instance?.SaveProject();
+        // 인벤토리도 메모리만 — 닫힐 때 ItemManager.Save 일괄 호출
+        ItemManager.Instance?.AddItemNoSave(id, 1);
+        Debug.Log($"[Merchant] 구입(메모리): {row.name} (1개) -{price}G");
 
         // 목록에서 제거
         _itemIds.RemoveAt(_index);
         if (_itemIds.Count == 0)
         {
-            // 다 사면 자동 닫기
+            // 다 사면 자동 닫기 → OnShopClosed 콜백에서 batched save
             OnClickClose();
             return;
         }
