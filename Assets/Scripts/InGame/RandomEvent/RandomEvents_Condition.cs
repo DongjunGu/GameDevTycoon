@@ -16,28 +16,6 @@ public static class RandomEvents_Condition
     public static string GetSystemMessage(string key) =>
         Chart != null && Chart.TryGetValue(key, out var r) ? r.systemMessage : null;
 
-    // ── 사직 메시지 ───────────────────────────────────────────────
-    // description1~2 = 일반 사직, description3 = 야근 사직
-    // [CDN fallback]
-    // "안녕히 계세요 여러분\n전 이 세상의 모든 굴레와 속박을 벗어 던지고\n제 행복을 찾아 떠납니다."
-    // "건강상의 사유로 그만두겠습니다.\n진단명은... 사장님 알레르기!"
-    // [야근] "야근 도저히 못해먹겠네\n난 퇴사할껍니다!"
-    public static string GetResignationMessage(bool isOvertime)
-    {
-        var descs = GetDescs("EmployeeResignation");
-        if (descs == null) return "";
-        if (isOvertime && descs.Length >= 3) return descs[2];
-        int count = Mathf.Min(descs.Length, isOvertime ? descs.Length - 1 : 2);
-        return count > 0 ? descs[Random.Range(0, count)] : "";
-    }
-
-    // [CDN fallback] "{이름}이(가) 사직서를 제출하고 퇴사했습니다.\n남은 직원들의 만족도가 10 하락합니다."
-    public static string GetResignationSystemMessage(string empName)
-    {
-        string msg = GetSystemMessage("EmployeeResignation");
-        return !string.IsNullOrEmpty(msg) ? msg.Replace("{이름}", empName) : "";
-    }
-
     // ── 도망 메시지 ───────────────────────────────────────────────
     // [CDN fallback]
     // "책상 위에 놓인 사원증이 반으로 쪼개져 있습니다."

@@ -145,7 +145,9 @@ public class RandomEventChoiceUI : MonoBehaviour
 
             var btn      = go.GetComponent<Button>();
             var captured = choice;
-            btn.onClick.AddListener(() => OnChoiceSelected(captured));
+            btn.interactable = !choice.disabled;
+            if (!choice.disabled)
+                btn.onClick.AddListener(() => OnChoiceSelected(captured));
 
             _spawnedButtons.Add(go);
         }

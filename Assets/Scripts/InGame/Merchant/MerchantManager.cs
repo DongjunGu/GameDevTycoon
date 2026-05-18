@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using UnityEngine;
 
 // 인게임 상인 시스템 — 1년에 한 번 5~7월 랜덤 주차에 방문.
-// master_desk 로 이동 → 도착 시 (랜덤이벤트/팀장 선택 진행 중이면 대기) 1.5초 후 MerchantPromptUI 표시.
-// 사용자가 prompt 클릭 → MerchantShopPanelUI 열림. 닫으면 상인 즉시 퇴장.
+// master_desk 로 이동 → 도착 시 (랜덤이벤트/팀장 선택 진행 중이면 대기) 즉시 AlertUI 표시.
+// 사용자가 AlertUI 확인 → MerchantShopPanelUI 열림. 닫으면 상인 즉시 퇴장.
 //
 // 스케줄/방문완료여부는 UserGameTime 에 저장:
 //   - merchantSchedule (string "M,W") — 그 해 방문 예정 월/주
@@ -26,7 +26,6 @@ public class MerchantManager : MonoBehaviour
     public Transform destinationFallback;
 
     [Header("UI")]
-    public MerchantPromptUI promptUI;
     public MerchantShopPanelUI shopPanelUI;
 
     [Header("Schedule")]
@@ -34,8 +33,9 @@ public class MerchantManager : MonoBehaviour
     public int visitStartMonth = 5;
     [Tooltip("방문 가능 끝 월 (포함)")]
     public int visitEndMonth = 7;
-    [Tooltip("랜덤이벤트/팀장 패널 종료 후 대기 시간(초)")]
-    public float waitAfterClearSec = 1.5f;
+
+    [Tooltip("AlertUI 안내 문구")]
+    public string promptMessage = "아이템 사세요!";
 
     [Header("Shop Settings")]
     [Tooltip("한 번 방문에 노출할 아이템 수")]
@@ -237,29 +237,27 @@ public class MerchantManager : MonoBehaviour
         if (elapsed >= timeout)
             Debug.LogWarning("[Merchant] 도착 timeout — 강제 진행");
 
-        // ModalGate 큐잉 — 차단 UI 가 모두 닫히면 콜백 실행. 차단 없으면 즉시.
+        // ModalGate 큐잉 — 차단 UI 가 모두 닫히면 즉시 AlertUI. 차단 없으면 곧장.
         var gate = ModalGate.I;
         if (gate.IsBlocked)
         {
             string names = string.Join(", ", gate.GetActiveNames());
             Debug.Log($"[Merchant] ModalGate 대기 — 활성 모달: {names}");
         }
-        gate.WhenFree(() => StartCoroutine(ShowPromptAfterDelay()));
+        gate.WhenFree(ShowPrompt);
     }
 
-    IEnumerator ShowPromptAfterDelay()
+    void ShowPrompt()
     {
-        Debug.Log($"[Merchant] prompt 대기 시작 ({waitAfterClearSec}s)");
-        yield return new WaitForSecondsRealtime(waitAfterClearSec);
         GameTimeManager.Instance?.StopTime();
-        if (promptUI != null)
+        if (AlertUI.Instance != null)
         {
-            Debug.Log("[Merchant] prompt 표시");
-            promptUI.Show(OnPromptClicked);
+            Debug.Log("[Merchant] AlertUI 표시");
+            AlertUI.Instance.Show(promptMessage, OnPromptClicked);
         }
         else
         {
-            Debug.LogWarning("[Merchant] promptUI null — 바로 ShopPanel 열기");
+            Debug.LogWarning("[Merchant] AlertUI.Instance null — 바로 ShopPanel 열기");
             OpenShop();
         }
     }

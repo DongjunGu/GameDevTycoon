@@ -147,6 +147,8 @@ public class RandomEventManager : MonoBehaviour
         _pendingEvent = null;
         _pendingChoiceEvent = null;
         _eventInProgress = false;
+        _resignationQueue.Clear();
+        _resignationModalActive = false;
 
         HiringPenalty        = 0;
         HiringPenaltyEndYear = -1;
@@ -912,22 +914,100 @@ public class RandomEventManager : MonoBehaviour
 
     // ── stub ──────────────────────────────────────────────────
 
+    // 같은 주 여러 직원이 동시에 사직 트리거되어도 순차로 모달 표시. 큐가 빌 때만 시간 재개.
+    private readonly Queue<string> _resignationQueue = new Queue<string>();
+    private bool _resignationModalActive = false;
+
     public void TriggerEmployeeResignationEvent(EmployeeData emp)
     {
-        bool   isOvertime = false;
-        string message    = RandomEvents_Condition.GetResignationMessage(isOvertime);
-        string title      = RandomEvents_Condition.GetTitle("EmployeeResignation") ?? "사직서 제출";
+        if (emp == null) return;
+        _resignationQueue.Enqueue(emp.id);
+        TryShowNextResignation();
+    }
 
-        EventUI.Instance.Show(title, emp.portraitId, $"{emp.employeeName}\n\n{message}", () =>
+    void TryShowNextResignation()
+    {
+        if (_resignationModalActive) return;
+
+        while (_resignationQueue.Count > 0)
         {
-            EmployeeManager.Instance.FireEmployee(emp);
-            EmployeeManager.Instance.ReduceAllSatisfactionExcept(10, emp);
-            AlertUI.Instance.Show(RandomEvents_Condition.GetResignationSystemMessage(emp.employeeName), () =>
+            string empId = _resignationQueue.Dequeue();
+            var emp = EmployeeManager.Instance?.GetEmployee(empId);
+            if (emp == null) continue;  // 이미 처리/제거된 직원 스킵
+
+            _resignationModalActive = true;
+            ShowResignationModal(emp);
+            return;
+        }
+    }
+
+    void ShowResignationModal(EmployeeData emp)
+    {
+        var captured = emp;
+        bool[] fireBadReview = { false };
+        bool hasHypnotizer = (ItemManager.Instance?.GetCount("hypnotizer") ?? 0) > 0;
+
+        var evt = new RandomEventChoiceData
+        {
+            type             = RandomEventType.EmployeeResignation,
+            portraitId       = captured.portraitId,
+            targetEmployeeId = captured.id,
+            requiresPatrol   = false,
+            choices = new List<RandomEventChoiceOption>
             {
-                if (UnityEngine.Random.value < 0.3f)
-                    RandomEvents_Condition.TriggerCompanyBadReviewEvent(this, GameTimeManager.Instance?.Year ?? 2000);
-            });
-        });
+                // ── 선택지 1: 사직 수락 ──
+                new RandomEventChoiceOption
+                {
+                    onChoose = () =>
+                    {
+                        EmployeeManager.Instance.FireEmployee(captured);
+                        EmployeeManager.Instance.ReduceAllSatisfactionExcept(10, captured);
+                        fireBadReview[0] = UnityEngine.Random.value < 0.3f;
+                    }
+                },
+                // ── 선택지 2: 최면술사의 시계 사용 (보유 시에만 활성) ──
+                new RandomEventChoiceOption
+                {
+                    disabled = !hasHypnotizer,
+                    onChoose = () =>
+                    {
+                        ItemManager.Instance.UseItemDirect("hypnotizer");
+                        captured.satisfaction = 80;
+                        EmployeeManager.Instance.UpdateEmployee(captured);
+                        OfficeManager.Instance?.ShowStatPopup(
+                            captured.id, "만족도 80", new Color(1f, 0.4f, 0.4f));
+                        ItemPanelUI.Instance?.Refresh();
+                    }
+                }
+            }
+        };
+
+        RandomEventChoiceChartLoader.Apply(evt, "EmployeeResignation", RandomEventChoiceChartLoader.Cache);
+
+        // 시스템 메시지 {이름} 치환
+        if (!string.IsNullOrEmpty(evt.choices[0].resultSystemMessage))
+            evt.choices[0].resultSystemMessage =
+                evt.choices[0].resultSystemMessage.Replace("{이름}", captured.employeeName);
+        if (evt.choices.Count > 1 && !string.IsNullOrEmpty(evt.choices[1].resultSystemMessage))
+            evt.choices[1].resultSystemMessage =
+                evt.choices[1].resultSystemMessage.Replace("{이름}", captured.employeeName);
+
+        evt.onConfirm = () =>
+        {
+            _resignationModalActive = false;
+
+            if (fireBadReview[0])
+                RandomEvents_Condition.TriggerCompanyBadReviewEvent(
+                    this, GameTimeManager.Instance?.Year ?? 2000);
+
+            // 큐에 더 있으면 시간 재개하지 않고 다음 모달 바로 표시
+            if (_resignationQueue.Count > 0)
+                TryShowNextResignation();
+            else
+                DevelopmentManager.Instance?.ResumeFromEvent();
+        };
+
+        TriggerConditionChoiceEvent(evt);
     }
 
     public void TriggerEmployeeRunEvent(EmployeeData emp)

@@ -5,6 +5,9 @@ public class RandomEventChoiceOption
 {
     public string buttonLabel;
 
+    // true면 버튼을 표시하되 비활성(회색) 상태로 렌더 — onChoose는 호출되지 않음
+    public bool disabled = false;
+
     // null이면 원래 값 유지
     public string resultPortraitId;  // 선택 시 portrait1 교체 (portrait2 숨김)
     public string resultPortraitId2; // 선택 시 portrait2 표시 + portrait1 숨김
