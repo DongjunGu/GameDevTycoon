@@ -308,6 +308,15 @@ public class ItemManager : MonoBehaviour
                 target.id, "디버프 회복", new Color(0.5f, 1f, 0.5f));
         }
 
+        // 각성의 물약: 4~8주간 +10% 버프 스택 추가. 기존 버프와 합연산 (20% + 10% → 30%).
+        if (itemId == "awaken")
+        {
+            int weeks = Random.Range(4, 9);
+            target.ApplyStatBuff(weeks, 10);
+            OfficeManager.Instance?.ShowStatPopup(
+                target.id, $"능력치 +10% ({weeks}주)", new Color(1f, 0.9f, 0.3f));
+        }
+
         // 게임 카테고리 직군 아이템 → role 매핑 후 업그레이드 적용
         EmployeeRole? upgradeRole = itemId switch
         {

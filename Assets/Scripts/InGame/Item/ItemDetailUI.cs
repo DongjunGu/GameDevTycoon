@@ -40,7 +40,7 @@ public class ItemDetailUI : MonoBehaviour
 
         int count = ItemManager.Instance.GetCount(row.itemId);
         countText.text         = $"보유: {count}개";
-        useButton.interactable = count > 0 && ItemManager.IsUsableNow(row) && !IsGameUpgradeAlreadyUsed(row) && !IsRelaxButNoDebuffedEmployee(row);
+        useButton.interactable = count > 0 && ItemManager.IsUsableNow(row) && !IsGameUpgradeAlreadyUsed(row) && !IsRelaxButNoDebuffedEmployee(row) && !IsEventReadyCategory(row);
 
         var sprite = Resources.Load<Sprite>($"Items/{row.imageId}");
         if (sprite != null && itemImage != null)
@@ -110,6 +110,10 @@ public class ItemDetailUI : MonoBehaviour
         if (row == null || row.category != "게임") return false;
         return DevelopmentManager.Instance != null && DevelopmentManager.Instance.IsGameUpgradeUsed(row.itemId);
     }
+
+    // 이벤트 대비 카테고리: 아이템창에서는 항상 비활성. 실제 사용은 해당 이벤트 발생 시 선택지 흐름에서 처리.
+    static bool IsEventReadyCategory(ItemChartRow row)
+        => row != null && row.category == "이벤트 대비";
 
     // 라꾸라꾸: 회사 직원 중 디버프 걸린 사람이 한 명도 없으면 사용 버튼 비활성
     static bool IsRelaxButNoDebuffedEmployee(ItemChartRow row)

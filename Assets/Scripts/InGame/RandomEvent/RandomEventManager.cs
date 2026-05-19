@@ -973,9 +973,10 @@ public class RandomEventManager : MonoBehaviour
                     {
                         ItemManager.Instance.UseItemDirect("hypnotizer");
                         captured.satisfaction = 80;
+                        captured.ClearAllStatDebuffs();
                         EmployeeManager.Instance.UpdateEmployee(captured);
                         OfficeManager.Instance?.ShowStatPopup(
-                            captured.id, "만족도 80", new Color(1f, 0.4f, 0.4f));
+                            captured.id, "만족도 80, 디버프 회복", new Color(1f, 0.4f, 0.4f));
                         ItemPanelUI.Instance?.Refresh();
                     }
                 }

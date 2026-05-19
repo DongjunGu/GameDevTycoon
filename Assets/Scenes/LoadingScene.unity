@@ -1655,6 +1655,7 @@ GameObject:
   - component: {fileID: 2062941544}
   - component: {fileID: 2062941545}
   - component: {fileID: 2062941546}
+  - component: {fileID: 2062941547}
   m_Layer: 0
   m_Name: GameSceneManager
   m_TagString: Untagged
@@ -1968,6 +1969,27 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::StoneManager
   saveDebounceSeconds: 0.7
   maxStones: 0
+--- !u!114 &2062941547
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2062941524}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 275fcc9e68045bc4b968825a45e90c64, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MerchantManager
+  merchantPrefab: {fileID: 2828724654860466180, guid: ca628cc521fd2eb45acd11fb04c813d3, type: 3}
+  spawnPoint: {fileID: 0}
+  destinationPatrolPointId: master_desk
+  destinationFallback: {fileID: 0}
+  shopPanelUI: {fileID: 0}
+  visitStartMonth: 5
+  visitEndMonth: 7
+  promptMessage: "\uC544\uC774\uD15C \uC0AC\uC138\uC694!"
+  itemsPerVisit: 3
 --- !u!1 &2103001997
 GameObject:
   m_ObjectHideFlags: 0
