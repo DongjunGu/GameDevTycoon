@@ -108,7 +108,7 @@ public class BackendManager : MonoBehaviour
         }
         else
         {
-            var signUp = Backend.BMember.CustomSignUp("testuser2", "3456");
+            var signUp = Backend.BMember.CustomSignUp("testuser3", "4567");
             if (signUp.IsSuccess())
             {
                 Debug.Log("회원가입 성공");

@@ -30,17 +30,26 @@ public class AlertUI : MonoBehaviour
     void ShowNext()
     {
         if (_queue.Count == 0) { _isShowing = false; return; }
-        _isShowing = true;
+        _isShowing = true; // WhenFree 대기 중에도 isShowing 유지해 중복 ShowNext 호출 방지
+        // 다른 모달(LeaderScoreUI, RandomEventUI 등)이 차단 중이면 닫힐 때까지 대기 후 실제 표시
+        ModalGate.I.WhenFree(DisplayDequeued);
+    }
+
+    void DisplayDequeued()
+    {
+        if (_queue.Count == 0) { _isShowing = false; return; }
         var (msg, cb) = _queue.Dequeue();
         GameTimeManager.Instance?.StopTime();
         messageText.text = msg;
         _onConfirm = cb;
         alertPanel.SetActive(true);
+        ModalGate.I.Register(this); // 표시 시점에 차단 모달로 등록
     }
 
     public void OnClickConfirm()
     {
         alertPanel.SetActive(false);
+        ModalGate.I.Unregister(this);
         GameTimeManager.Instance?.StartTime();
         var cb = _onConfirm;
         _onConfirm = null;

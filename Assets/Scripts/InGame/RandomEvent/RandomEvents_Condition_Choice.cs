@@ -55,7 +55,7 @@ public static class RandomEvents_Condition_Choice
                         }
                         else
                         {
-                            targetEmp.ApplyStatBuff(Random.Range(4, 9));
+                            targetEmp.ApplyStatBuff(Random.Range(4, 9), 20);
                             EmployeeManager.Instance.UpdateEmployee(targetEmp);
                             OfficeManager.Instance?.ShowStatPopup(targetEmp.id, "능력치 +20%", new Color(1f, 0.4f, 0.4f));
                         }
@@ -190,7 +190,7 @@ public static class RandomEvents_Condition_Choice
                     {
                         if (targetEmp == null) return;
                         ItemManager.Instance.UseItemDirect("energyDrink");
-                        targetEmp.ApplyStatBuff(Random.Range(4, 9));
+                        targetEmp.ApplyStatBuff(Random.Range(4, 9), 20);
                         EmployeeManager.Instance.UpdateEmployee(targetEmp);
                         OfficeManager.Instance?.ShowStatPopup(targetEmp.id, "능력치 +20%", new Color(1f, 0.4f, 0.4f));
                         ItemPanelUI.Instance?.Refresh();

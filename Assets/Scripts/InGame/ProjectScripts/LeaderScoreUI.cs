@@ -48,6 +48,7 @@ public class LeaderScoreUI : MonoBehaviour
 
         confirmButton.interactable = false;
         leaderscorePanel.SetActive(true);
+        ModalGate.I.Register(this); // 점수 표시 중 다른 모달(상인 Alert 등) 차단
 
         StartCoroutine(ApplyScoreCoroutine(type, scores, tickDelay));
     }
@@ -104,6 +105,7 @@ public class LeaderScoreUI : MonoBehaviour
     public void OnClickConfirm()
     {
         leaderscorePanel.SetActive(false);
+        ModalGate.I.Unregister(this);
         _onComplete?.Invoke();
     }
 }

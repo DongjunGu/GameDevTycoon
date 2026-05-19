@@ -112,7 +112,7 @@ public static class RandomEvents_Choice
                             MoneyManager.Instance.ForceSpendGold(equipCostSnapshot, saveImmediately: false);
 
                             int buffWeeks = UnityEngine.Random.Range(4, 9);
-                            emp.ApplyStatBuff(buffWeeks);
+                            emp.ApplyStatBuff(buffWeeks, 20);
 
                             string weeks = buffWeeks.ToString();
                             equipEvt.choices[0].resultSystemMessage =

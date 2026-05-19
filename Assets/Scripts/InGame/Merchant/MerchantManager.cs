@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 // 인게임 상인 시스템 — 1년에 한 번 5~7월 랜덤 주차에 방문.
 // master_desk 로 이동 → 도착 시 (랜덤이벤트/팀장 선택 진행 중이면 대기) 즉시 AlertUI 표시.
@@ -63,6 +64,9 @@ public class MerchantManager : MonoBehaviour
     {
         if (Instance != null) { Destroy(gameObject); return; }
         Instance = this;
+        // LoadingScene 에 배치되어 GameScene/OutGameScene 사이 영속. 씬별 참조는 OnSceneLoaded 에서 hookup.
+        DontDestroyOnLoad(gameObject);
+        SceneManager.sceneLoaded += OnSceneLoaded;
     }
 
     void Start()
@@ -75,6 +79,31 @@ public class MerchantManager : MonoBehaviour
     {
         if (GameTimeManager.Instance != null)
             GameTimeManager.Instance.OnTimeChanged -= OnTimeChanged;
+        SceneManager.sceneLoaded -= OnSceneLoaded;
+    }
+
+    // GameScene 진입 시 그 씬의 OfficeManager.spawnPoint / MerchantShopPanelUI 자동 hookup.
+    // GameScene 이 아니면 씬과 함께 파괴된 참조를 무효화하고 코루틴/활성 상인 상태 정리.
+    void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+    {
+        if (scene.name == "GameScene")
+        {
+            if (OfficeManager.Instance != null)
+                spawnPoint = OfficeManager.Instance.spawnPoint;
+            shopPanelUI = FindAnyObjectByType<MerchantShopPanelUI>(FindObjectsInactive.Include);
+            // destinationFallback 은 PatrolPoint 검색이 우선이라 null 로 둠.
+            destinationFallback = null;
+        }
+        else
+        {
+            // 씬 떠나면 활성 상인/코루틴은 자동 파괴되지만 참조는 dangling 상태이므로 정리.
+            _activeMerchant = null;
+            _resolvedDestination = null;
+            if (_arrivalCo != null) { StopCoroutine(_arrivalCo); _arrivalCo = null; }
+            spawnPoint = null;
+            shopPanelUI = null;
+            destinationFallback = null;
+        }
     }
 
     public void ResetForNewRun()

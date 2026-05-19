@@ -531,8 +531,14 @@ public class EmployeeManager : MonoBehaviour
                 emp.statDebuffStacks[i]--;
                 if (emp.statDebuffStacks[i] <= 0) emp.statDebuffStacks.RemoveAt(i);
             }
-            if (emp.statBuffWeeksLeft > 0)
-                emp.statBuffWeeksLeft--;
+            // 버프 스택: 각 entry 1주씩 감소, 만료(≤0) 시 제거 (struct 라 인덱스 재할당)
+            for (int i = emp.statBuffStacks.Count - 1; i >= 0; i--)
+            {
+                var s = emp.statBuffStacks[i];
+                s.weeksLeft--;
+                if (s.weeksLeft <= 0) emp.statBuffStacks.RemoveAt(i);
+                else emp.statBuffStacks[i] = s;
+            }
             if (emp.romanceBuffWeeksLeft > 0)
                 emp.romanceBuffWeeksLeft--;
         }
@@ -545,13 +551,21 @@ public class EmployeeManager : MonoBehaviour
     {
         foreach (var emp in ownedEmployees)
         {
-            if (emp.satisfaction >= 40) continue;
+            // 만족도 40 이상 회복 시 플래그 리셋 — 다음 진입 때 재적용 가능
+            if (emp.satisfaction >= 40)
+            {
+                emp.lowSatisfactionPenaltyApplied = false;
+                continue;
+            }
+            // 이번 진입 사이클에서 이미 페널티 적용됨 — 매주 누적 방지
+            if (emp.lowSatisfactionPenaltyApplied) continue;
 
             // 스탯 ×0.8 (데이터 패널티만 처리, 이벤트 트리거는 RandomEventManager 담당)
             emp.developSkill    = Mathf.Max(1, Mathf.RoundToInt(emp.developSkill    * 0.8f));
             emp.planningSkill   = Mathf.Max(1, Mathf.RoundToInt(emp.planningSkill   * 0.8f));
             emp.artSkill        = Mathf.Max(1, Mathf.RoundToInt(emp.artSkill        * 0.8f));
             emp.creativitySkill = Mathf.Max(1, Mathf.RoundToInt(emp.creativitySkill * 0.8f));
+            emp.lowSatisfactionPenaltyApplied = true;
         }
     }
 

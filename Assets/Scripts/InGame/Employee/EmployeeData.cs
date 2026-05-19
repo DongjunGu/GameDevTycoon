@@ -4,6 +4,14 @@ using LitJson;
 using UnityEngine;
 
 public enum EmployeeRole { Planner, Programmer, Artist }
+
+[Serializable]
+public struct StatBuffStack
+{
+    public int weeksLeft;
+    public int percent; // 정수 퍼센트 (10 = 10%, 20 = 20%)
+}
+
 public enum EmployeePotential { C, B, A, S }
 public enum EmployeeGrade { Normal, Rare, Epic, Unique, Legendary }
 public enum EmployeeState { Idle, Working }
@@ -40,11 +48,16 @@ public class EmployeeData
     // 임시 능력치 디버프 — 발동마다 entry 추가, 각 entry 가 남은 주차. Count 가 곧 활성 디버프 개수.
     // 예: 감기(5주) + 번아웃(8주) → [5, 8] → 매주 -20% × 2 누적 적용.
     public List<int> statDebuffStacks = new();
-    public int statBuffWeeksLeft    = 0; // 임시 능력치 +20% 버프 남은 주차
+    // 임시 능력치 버프 스택 — 발동마다 (남은 주차, 퍼센트) 추가. 합산해 한 번에 적용.
+    // 예: 랜덤이벤트 20%(6주) + 각성의 물약 10%(4주) → 4주간 +30%, 이후 2주간 +20%.
+    public List<StatBuffStack> statBuffStacks = new();
     public int romanceBuffWeeksLeft = 0; // 사내 연애 능력치 +10% 버프 남은 주차
     public int consecutiveLeaderCount    = 0; // 연속 팀장 선정 횟수
     public int consecutiveNonLeaderCount = 0; // 연속 팀장 미선정 횟수
     public bool isOvertimeWorker = false;     // 이번 프로젝트 야근 여부 (프로젝트 단위 리셋)
+    // 만족도 < 40 진입 시 base skill ×0.8 영구 감산을 1회만 적용하기 위한 플래그.
+    // 만족도가 40 이상으로 회복되면 false 로 리셋되어 다음 진입 때 재적용 가능.
+    public bool lowSatisfactionPenaltyApplied = false;
 
     // ── 범위 수치 ─────────────────────────────
     public int developMin, developMax;
@@ -149,11 +162,12 @@ public class EmployeeData
         data.hiredYear = SafeInt(row, "hiredYear", 0);
         data.isFemale  = SafeBool(row, "isFemale", false);
         ParseStatDebuffStacks(data, row);
-        data.statBuffWeeksLeft         = SafeInt(row, "statBuffWeeksLeft",         0);
+        ParseStatBuffStacks(data, row);
         data.romanceBuffWeeksLeft      = SafeInt(row, "romanceBuffWeeksLeft",      0);
         data.consecutiveLeaderCount    = SafeInt(row, "consecutiveLeaderCount",    0);
         data.consecutiveNonLeaderCount = SafeInt(row, "consecutiveNonLeaderCount", 0);
         data.isOvertimeWorker          = SafeBool(row, "isOvertimeWorker",          false);
+        data.lowSatisfactionPenaltyApplied = SafeBool(row, "lowSatisfactionPenaltyApplied", false);
         return data;
     }
 
@@ -192,11 +206,12 @@ public class EmployeeData
         param.Add("hiredYear", hiredYear);
         param.Add("isFemale",  isFemale);
         param.Add("statDebuffStacks",       string.Join(",", statDebuffStacks));
-        param.Add("statBuffWeeksLeft",      statBuffWeeksLeft);
+        param.Add("statBuffStacks",         SerializeStatBuffStacks(statBuffStacks));
         param.Add("romanceBuffWeeksLeft",   romanceBuffWeeksLeft);
         param.Add("consecutiveLeaderCount",    consecutiveLeaderCount);
         param.Add("consecutiveNonLeaderCount", consecutiveNonLeaderCount);
         param.Add("isOvertimeWorker",          isOvertimeWorker);
+        param.Add("lowSatisfactionPenaltyApplied", lowSatisfactionPenaltyApplied);
         return param;
     }
 
@@ -222,18 +237,25 @@ public class EmployeeData
         statDebuffStacks.Add(weeks); // 누적 — 발동마다 새 entry
     }
 
-    public void ApplyStatBuff(int weeks)
+    public void ApplyStatBuff(int weeks, int percent)
     {
-        statBuffWeeksLeft = Mathf.Max(statBuffWeeksLeft, weeks);
+        if (weeks <= 0 || percent <= 0) return;
+        statBuffStacks.Add(new StatBuffStack { weeksLeft = weeks, percent = percent });
     }
 
     // 라꾸라꾸 등으로 모든 디버프 스택 즉시 회복
     public void ClearAllStatDebuffs() => statDebuffStacks.Clear();
     public bool HasAnyStatDebuff() => statDebuffStacks.Count > 0;
 
-    // 주 스탯 기준 합연산 디버프/버프량 — 디버프는 활성 스택 개수만큼 누적 감산
+    // 주 스탯 기준 합연산 디버프/버프량 — 디버프는 활성 스택 개수만큼 누적 감산, 버프는 스택 percent 합
     public int GetStatDebuffAmount()    => statDebuffStacks.Count > 0 ? (int)(GetMainStat() * 0.2f) * statDebuffStacks.Count : 0;
-    public int GetStatBuffAmount()      => statBuffWeeksLeft     > 0 ? (int)(GetMainStat() * 0.2f) : 0;
+    public int GetStatBuffAmount()
+    {
+        if (statBuffStacks.Count == 0) return 0;
+        int totalPercent = 0;
+        for (int i = 0; i < statBuffStacks.Count; i++) totalPercent += statBuffStacks[i].percent;
+        return (int)(GetMainStat() * totalPercent / 100f);
+    }
     public int GetRomanceBuffAmount()   => romanceBuffWeeksLeft  > 0 ? (int)(GetMainStat() * 0.1f) : 0;
 
     public int EffectivePlanningSkill   => (int)(planningSkill   * GetSatisfactionMultiplier()) - (role == EmployeeRole.Planner    ? GetStatDebuffAmount() : 0) + (role == EmployeeRole.Planner    ? GetStatBuffAmount() : 0) + (role == EmployeeRole.Planner    ? GetRomanceBuffAmount() : 0);
@@ -330,6 +352,41 @@ public class EmployeeData
         }
         int legacy = SafeInt(row, "statDebuffWeeksLeft", 0);
         if (legacy > 0) data.statDebuffStacks.Add(legacy);
+    }
+
+    // 신규 컬럼 statBuffStacks ("weeks:percent,weeks:percent") 우선,
+    // 없으면 구버전 statBuffWeeksLeft (단일 int, 20% 고정) 를 단일 스택으로 변환.
+    static void ParseStatBuffStacks(EmployeeData data, JsonData row)
+    {
+        data.statBuffStacks.Clear();
+        string csv = SafeString(row, "statBuffStacks", "");
+        if (!string.IsNullOrEmpty(csv))
+        {
+            foreach (var entry in csv.Split(','))
+            {
+                if (string.IsNullOrEmpty(entry)) continue;
+                var parts = entry.Split(':');
+                if (parts.Length != 2) continue;
+                if (int.TryParse(parts[0], out int w) && int.TryParse(parts[1], out int p) && w > 0 && p > 0)
+                    data.statBuffStacks.Add(new StatBuffStack { weeksLeft = w, percent = p });
+            }
+            return;
+        }
+        int legacyWeeks = SafeInt(row, "statBuffWeeksLeft", 0);
+        if (legacyWeeks > 0)
+            data.statBuffStacks.Add(new StatBuffStack { weeksLeft = legacyWeeks, percent = 20 });
+    }
+
+    static string SerializeStatBuffStacks(List<StatBuffStack> stacks)
+    {
+        if (stacks == null || stacks.Count == 0) return "";
+        var sb = new System.Text.StringBuilder();
+        for (int i = 0; i < stacks.Count; i++)
+        {
+            if (i > 0) sb.Append(',');
+            sb.Append(stacks[i].weeksLeft).Append(':').Append(stacks[i].percent);
+        }
+        return sb.ToString();
     }
 
     static int SafeInt(JsonData row, string key, int defaultValue)
