@@ -661,6 +661,8 @@ public class EmployeeManager : MonoBehaviour
 
         // 총 연봉 HUD 갱신 — 자발적 퇴사/도주 이벤트 등 호출자 측 갱신 누락 케이스 일괄 처리.
         HUDUI.Instance?.RefreshAll();
+        // 직원 리스트 패널이 열려있으면 자동 재빌드 — 커플 동반퇴사, 사직, 도주 이벤트로 외부 해고 시 슬롯 잔존 방지.
+        EmployeeListUI.Instance?.RefreshIfOpen();
 
         if (string.IsNullOrEmpty(employee.rowInDate))
         {

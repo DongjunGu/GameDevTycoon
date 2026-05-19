@@ -13,24 +13,29 @@ public class TechTreeUI : MonoBehaviour
     [Header("Scroll")]
     public ScrollRect scrollRect;
 
-
     [Header("Tabs")]
-    public Button[] tabButtons; // 5개, 순서: 만족도/효율성/장르플랫폼/참신함/유틸리티
+    public Button[] tabButtons; // 5개, 순서: 돈 / 채용 / 만족도 / 창의성 / 광고
 
     [Header("Content")]
     public Transform nodeContent;    // HorizontalLayoutGroup
     public GameObject techNodePrefab;
     public GameObject arrowPrefab;
 
-    private TechCategory _currentCategory = TechCategory.EmployeeSatisfaction;
+    [Header("Points")]
+    public TextMeshProUGUI currentPointsText; // "보유 N P" 또는 "N P" 표시
+    [Tooltip("디버그 +N 버튼 (테스트용). 광고 row 가 들어오면 별도 획득 경로로 교체.")]
+    public Button debugAddPointsButton;
+    public int    debugAddAmount = 10;
+
+    private TechCategory _currentCategory = TechCategory.Money;
 
     private static readonly TechCategory[] CategoryOrder =
     {
-        TechCategory.EmployeeSatisfaction,
-        TechCategory.EmployeeEfficiency,
-        TechCategory.GenrePlatform,
-        TechCategory.Novelty,
-        TechCategory.Utility
+        TechCategory.Money,
+        TechCategory.Hiring,
+        TechCategory.Satisfaction,
+        TechCategory.Creativity,
+        TechCategory.Ad,
     };
 
     void Awake()
@@ -47,12 +52,49 @@ public class TechTreeUI : MonoBehaviour
             int captured = i;
             tabButtons[i].onClick.AddListener(() => OnClickTab(captured));
         }
+
+        if (debugAddPointsButton != null)
+        {
+            debugAddPointsButton.onClick.AddListener(() =>
+            {
+                TechTreeManager.Instance?.AddPoints(debugAddAmount);
+            });
+        }
+
+        if (TechTreeManager.Instance != null)
+        {
+            TechTreeManager.Instance.OnPointsChanged += RefreshPointsAndCategory;
+            TechTreeManager.Instance.OnUnlockChanged += RefreshPointsAndCategory;
+        }
+    }
+
+    void OnDestroy()
+    {
+        if (TechTreeManager.Instance != null)
+        {
+            TechTreeManager.Instance.OnPointsChanged -= RefreshPointsAndCategory;
+            TechTreeManager.Instance.OnUnlockChanged -= RefreshPointsAndCategory;
+        }
+    }
+
+    void RefreshPointsAndCategory()
+    {
+        RefreshPointsLabel();
+        if (techPanel != null && techPanel.activeInHierarchy)
+            ShowCategory(_currentCategory);
+    }
+
+    void RefreshPointsLabel()
+    {
+        if (currentPointsText == null || TechTreeManager.Instance == null) return;
+        currentPointsText.text = $"{TechTreeManager.Instance.CurrentPoints} P";
     }
 
     public void Open()
     {
         GameTimeManager.Instance?.StopTime();
         techPanel.SetActive(true);
+        RefreshPointsLabel();
         RefreshTabs();
         ShowCategory(_currentCategory);
     }
@@ -78,26 +120,23 @@ public class TechTreeUI : MonoBehaviour
             if (img == null) continue;
             img.color = CategoryOrder[i] == _currentCategory
                 ? new Color(0.93f, 0.93f, 0.99f)  // 선택된 탭
-                : new Color(1f, 1f, 1f, 1f);       // 기본 탭
+                : new Color(1f, 1f, 1f, 1f);
         }
     }
 
     void ShowCategory(TechCategory category)
     {
-
-        // 기존 노드 제거
         foreach (Transform child in nodeContent)
             Destroy(child.gameObject);
 
+        // 차트 row 순서 = 해금 순서. 별도 정렬 X.
         var nodes = TechTreeManager.Instance.allNodes
             .FindAll(n => n.category == category);
-        nodes.Sort((a, b) => a.order.CompareTo(b.order));
 
         for (int i = 0; i < nodes.Count; i++)
         {
             var node = nodes[i];
 
-            // 노드 생성
             var obj = Instantiate(techNodePrefab, nodeContent);
             var nameText = obj.transform.Find("NameText").GetComponent<TextMeshProUGUI>();
             var costText = obj.transform.Find("CostText").GetComponent<TextMeshProUGUI>();
@@ -118,14 +157,14 @@ public class TechTreeUI : MonoBehaviour
             }
             else if (canUnlock)
             {
-                costText.text = $"{node.cost:N0}G";
+                costText.text = $"{node.requiredPoints} P";
                 img.color = new Color(0.93f, 0.93f, 0.99f); // 보라
                 if (badge != null) badge.SetActive(false);
                 btn.interactable = true;
             }
             else
             {
-                costText.text = $"{node.cost:N0}G";
+                costText.text = $"{node.requiredPoints} P";
                 img.color = new Color(0.85f, 0.85f, 0.85f, 0.5f); // 회색
                 if (badge != null) badge.SetActive(false);
                 btn.interactable = false;
@@ -135,7 +174,6 @@ public class TechTreeUI : MonoBehaviour
             btn.onClick.RemoveAllListeners();
             btn.onClick.AddListener(() => OnClickNode(captured));
 
-            // 화살표 (마지막 노드 제외)
             if (i < nodes.Count - 1 && arrowPrefab != null)
                 Instantiate(arrowPrefab, nodeContent);
         }
@@ -153,13 +191,13 @@ public class TechTreeUI : MonoBehaviour
         foreach (Transform child in nodeContent)
         {
             var btn = child.GetComponent<Button>();
-            if (btn == null) continue; // 화살표 건너뜀
+            if (btn == null) continue;
 
             nodeIndex++;
 
-            if (btn.interactable) // 해금 가능한 노드 발견
+            if (btn.interactable)
             {
-                if (nodeIndex >= 3) // 전체 노드 중 3번째 이상이면
+                if (nodeIndex >= 3)
                     targetNode = child.GetComponent<RectTransform>();
                 break;
             }
@@ -167,7 +205,7 @@ public class TechTreeUI : MonoBehaviour
 
         if (targetNode == null || scrollRect == null)
         {
-            scrollRect.horizontalNormalizedPosition = 0f;
+            if (scrollRect != null) scrollRect.horizontalNormalizedPosition = 0f;
             yield break;
         }
 
@@ -192,16 +230,16 @@ public class TechTreeUI : MonoBehaviour
     void OnClickNode(TechNodeData node)
     {
         ConfirmUI.Instance.Show(
-            $"{node.name}\n비용: {node.cost:N0}G\n해금하시겠습니까?",
+            $"{node.name}\n{node.description}\n\n필요 포인트: {node.requiredPoints} P\n해금하시겠습니까?",
             onConfirm: () =>
             {
-                if (!MoneyManager.Instance.CanAfford(node.cost))
+                if (TechTreeManager.Instance.CurrentPoints < node.requiredPoints)
                 {
-                    AlertUI.Instance.Show("재화가 부족합니다.");
+                    AlertUI.Instance.Show("포인트가 부족합니다.");
                     return;
                 }
                 TechTreeManager.Instance.Unlock(node);
-                ShowCategory(_currentCategory);
+                // OnUnlockChanged → RefreshPointsAndCategory 에서 ShowCategory 재호출
             },
             onCancel: () => { },
             confirmText: "해금",

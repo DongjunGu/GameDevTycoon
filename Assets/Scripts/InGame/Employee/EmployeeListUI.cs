@@ -44,6 +44,13 @@ public class EmployeeListUI : MonoBehaviour
         ShowList();
     }
 
+    // 리스트가 열려있고 확인 패널이 아닌 상태일 때만 다시 빌드. 비활성/확인 중엔 no-op.
+    // 사용처: FireEmployee 외부 트리거(커플 동반퇴사, 사직, 도주 이벤트)로 ownedEmployees 가 변경된 경우.
+    public void RefreshIfOpen()
+    {
+        if (listPanel != null && listPanel.activeInHierarchy) ShowList();
+    }
+
     void ShowList()
     {
         foreach (Transform child in slotParent)

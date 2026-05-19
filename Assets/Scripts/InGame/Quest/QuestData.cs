@@ -1,6 +1,5 @@
 public enum QuestType
 {
-    TotalSales,
     HireEmployee,
     SurviveYears,
     TotalRevenue,

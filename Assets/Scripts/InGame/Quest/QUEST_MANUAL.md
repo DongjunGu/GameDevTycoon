@@ -31,7 +31,6 @@
 
 | QuestType | 진행 트리거 | UpdateProgress 호출 위치 |
 |---|---|---|
-| TotalSales | 게임 판매량 누적 | `SalesUI` — 판매 완료 시 |
 | HireEmployee | 직원 채용 누적 | `EmployeeManager.HireEmployee` |
 | SurviveYears | 연도 경과 누적 | `GameTimeManager.AdvanceWeek` — 연도 변경 시 |
 | TotalRevenue | 매출 누적 | `SalesUI` — 주차별 수익 지급 시 |
@@ -55,7 +54,7 @@ UnlockQuest("quest_001") 호출
 
 ### 완료 흐름
 ```
-UpdateProgress(QuestType.TotalSales, 500) 호출
+UpdateProgress(QuestType.TotalRevenue, 500) 호출
     → isVisible인 퀘스트만 진행
     → currentValue += 500
     → targetValue 도달 시 isCompleted = true
@@ -124,8 +123,6 @@ UpdateProgress 호출 → targetValue 도달
 
 ```csv
 questId,title,description,type,targetValue,rewardGold,isMainQuest,unlockAfter
-quest_001,첫 판매,게임을 총 1000개 판매하세요,TotalSales,1000,500,0,
-quest_002,히트작,게임을 총 10000개 판매하세요,TotalSales,10000,2000,0,
 quest_003,팀 꾸리기,직원을 2명 채용하세요,HireEmployee,2,300,0,
 quest_004,든든한 팀,직원을 5명 채용하세요,HireEmployee,5,1000,0,
 main_quest_001,1년 버티기,1년 이상 회사를 운영하세요,SurviveYears,1,0,1,
@@ -133,3 +130,5 @@ main_quest_002,2년 버티기,2년 이상 회사를 운영하세요,SurviveYears
 main_quest_003,매출 100000G,누적 매출 100000G를 달성하세요,TotalRevenue,100000,0,1,
 main_quest_004,매출 200000G,누적 매출 200000G를 달성하세요,TotalRevenue,200000,0,1,main_quest_003
 ```
+
+> 백엔드 콘솔의 `Quest` 차트에서도 quest_001 / quest_002 row 삭제 필요. (코드에선 QuestType.TryParse 실패로 자동 무시되지만 콘솔에서 청소해두는 게 깔끔.)
