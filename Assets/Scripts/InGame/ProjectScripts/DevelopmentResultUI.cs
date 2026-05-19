@@ -196,9 +196,9 @@ public class DevelopmentResultUI : MonoBehaviour
                 ProjectSaveManager.Instance.SaveProject();
                 GameTimeManager.Instance.SaveGameTime();
 
-                // 조기 저장 — 앱 종료로 인한 Sales 유실 방지
+                // 조기 저장 — 앱 종료로 인한 Sales 유실 방지. revenuePerPeriod 는 SalesUI.Show 호출 시점에 결정/저장됨.
                 SalesSaveManager.Instance.SaveSales(
-                    0, 0, quality, ProjectSetupUI.SelectedScale,
+                    0, 0, null, quality, ProjectSetupUI.SelectedScale,
                     _lastProjectName,
                     ProjectSetupUI.SelectedScale, ProjectSetupUI.SelectedGenre, ProjectSetupUI.SelectedPlatform,
                     _lastPlanning, _lastDevelop, _lastArt, _lastCreativity, _lastBug

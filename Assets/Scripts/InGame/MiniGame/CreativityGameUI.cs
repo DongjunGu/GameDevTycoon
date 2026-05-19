@@ -83,28 +83,29 @@ public class CreativityGameUI : MonoBehaviour
 
     [Header("창의성 레벨 (테크트리 미해금시 fallback)")]
     [SerializeField, Range(1, 3)] int _creativityLevel = 1;
-    // 테크트리 해금 상태에 따라 1~3단계로 결정 (creativity_grid_1/2)
+    // 테크트리 해금 상태에 따라 1~3단계로 결정 (creat_box2/3)
     // 테크트리가 없는 환경(에디터 직접 테스트 등)에서는 인스펙터 값 사용
     public int CreativityLevel
     {
         get
         {
             if (TechTreeManager.Instance == null) return _creativityLevel;
-            if (TechTreeManager.Instance.IsUnlocked("creativity_grid_2")) return 3;
-            if (TechTreeManager.Instance.IsUnlocked("creativity_grid_1")) return 2;
+            if (TechTreeManager.Instance.IsUnlocked("creat_box3")) return 3;
+            if (TechTreeManager.Instance.IsUnlocked("creat_box2")) return 2;
             return 1;
         }
         set => _creativityLevel = value;
     }
 
-    // 한 칸당 가산 점수: 기본 5, 테크트리 해금에 따라 10/15
+    // 한 칸당 가산 점수: 기본 5, 테크트리 해금에 따라 10/15/20 (creat_value1/2/3)
     public int BaseScorePerCell
     {
         get
         {
             if (TechTreeManager.Instance == null) return 5;
-            if (TechTreeManager.Instance.IsUnlocked("creativity_score_2")) return 15;
-            if (TechTreeManager.Instance.IsUnlocked("creativity_score_1")) return 10;
+            if (TechTreeManager.Instance.IsUnlocked("creat_value3")) return 20;
+            if (TechTreeManager.Instance.IsUnlocked("creat_value2")) return 15;
+            if (TechTreeManager.Instance.IsUnlocked("creat_value1")) return 10;
             return 5;
         }
     }

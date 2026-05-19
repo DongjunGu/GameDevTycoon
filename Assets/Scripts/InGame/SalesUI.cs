@@ -17,7 +17,6 @@ public class SalesUI : MonoBehaviour
 
     [Header("UI")]
     public TextMeshProUGUI totalRevenueText;
-    public TextMeshProUGUI totalUnitsText;
     public TextMeshProUGUI qualityScoreText;
     public TextMeshProUGUI rankText;
     private int barCount;
@@ -33,7 +32,8 @@ public class SalesUI : MonoBehaviour
     private bool _newProjectStartedDuringSales = false;
     private float _cachedQualityScore;
     private int _completedBarIndex = 0;
-    private int _cachedTotalUnits = 0;
+    private int _cachedTotalRevenue = 0;
+    private int[] _cachedRevenuePerPeriod = null; // 세션 시작 시 동결, 매 SaveSales 호출에 그대로 전달
     private CompletedProjectData _currentSalesProject = null;
 
     public void NotifyNewProjectStarted()
@@ -66,7 +66,7 @@ public class SalesUI : MonoBehaviour
         float qualityScore, ProjectScale scale, string projectName,
         ProjectScale cachedScale, ProjectGenre cachedGenre, ProjectPlatform cachedPlatform,
         float planning, float develop, float art, float creativity, float bug,
-        int completedWeeks = 0, int savedTotalUnits = 0, bool applyCompletion = true)
+        int completedWeeks = 0, int savedTotalRevenue = 0, int[] savedRevenuePerPeriod = null, bool applyCompletion = true)
     {
         _cachedScale = cachedScale;
         _cachedGenre = cachedGenre;
@@ -78,9 +78,9 @@ public class SalesUI : MonoBehaviour
         _cachedCreativity = creativity;
         _cachedBug = bug;
         GameTimeManager.Instance.ForceStartTime();
-        ShowInternal(qualityScore, scale, completedWeeks, savedTotalUnits, applyCompletion);
+        ShowInternal(qualityScore, scale, completedWeeks, savedTotalRevenue, savedRevenuePerPeriod, applyCompletion);
     }
-    void ShowInternal(float qualityScore, ProjectScale scale, int completedWeeks = 0, int savedTotalUnits = 0, bool applyCompletion = true)
+    void ShowInternal(float qualityScore, ProjectScale scale, int completedWeeks = 0, int savedTotalRevenue = 0, int[] savedRevenuePerPeriod = null, bool applyCompletion = true)
     {
         _cachedQualityScore = qualityScore;
         _newProjectStartedDuringSales = !applyCompletion && SalesSaveManager.Instance != null && SalesSaveManager.Instance.LoadedNewProjectStarted;
@@ -99,7 +99,7 @@ public class SalesUI : MonoBehaviour
                     .Find(p => p.rowInDate == targetRowInDate);
             else
                 _currentSalesProject = CompletedProjectManager.Instance?.completedProjects
-                    .Find(p => p.totalUnits == 0); // fallback
+                    .Find(p => p.totalRevenue == 0); // fallback
 
             if (_currentSalesProject == null)
                 Debug.LogWarning("[SalesUI] 복원 시 currentSalesProject를 찾지 못함");
@@ -120,7 +120,6 @@ public class SalesUI : MonoBehaviour
                 art              = _cachedArt,
                 creativity       = _cachedCreativity,
                 bug              = _cachedBug,
-                totalUnits       = 0,
                 totalRevenue     = 0,
                 year             = GameTimeManager.Instance.Year,
                 month            = GameTimeManager.Instance.Month,
@@ -148,50 +147,101 @@ public class SalesUI : MonoBehaviour
             ProjectScale.Large  => 5,
             _ => 1
         };
-        int totalUnits;
-        if (savedTotalUnits > 0)
-            totalUnits = savedTotalUnits;
+        float[] distribution = CalcDistribution(scale);
+        barCount = distribution.Length;
+
+        int[] revenuePerPeriod;
+        int totalRevenue;
+        // 복원 분기: 저장된 배열이 distribution 길이와 일치하고 sum>0 이면 그대로 사용 → 해금 가드 재통과 X.
+        bool hasSavedArray = savedRevenuePerPeriod != null && savedRevenuePerPeriod.Length == barCount;
+        if (hasSavedArray)
+        {
+            int sum = 0;
+            foreach (var r in savedRevenuePerPeriod) sum += r;
+            hasSavedArray = sum > 0;
+        }
+
+        if (hasSavedArray)
+        {
+            revenuePerPeriod = savedRevenuePerPeriod;
+            // 원본 totalRevenue 는 표시/저장 호환을 위해 배열 합 또는 savedTotalRevenue 중 큰 값으로
+            totalRevenue = savedTotalRevenue;
+            if (totalRevenue <= 0)
+                foreach (var r in revenuePerPeriod) totalRevenue += r;
+        }
         else
         {
-            float rand         = UnityEngine.Random.Range(0.9f, 1.1f);
-            float youtuberBonus = RandomEventManager.Instance != null
-                ? RandomEventManager.Instance.YoutuberSalesBonus : 1.0f;
-            totalUnits = Mathf.RoundToInt(
-                (5000f + 200f * scaleMultiplier * Mathf.Pow(qualityScore / 100f, 2f)) * rand * youtuberBonus
-            );
-            if (RandomEventManager.Instance != null)
-                RandomEventManager.Instance.YoutuberSalesBonus = 1.0f; // 적용 후 초기화
+            // 신규 계산 — 첫 ShowInternal 진입 시점에 1회만 도달. 이후 복원에선 위 분기로 들어감.
+
+            // 테크트리 '장인 정신(money_craftsman)' — 출시 시점에 카운터 +1 (cap 20). 그 카운트로 매출 보너스.
+            // 해금 후 첫 게임: 카운트 1 → +0.5%, 20번째: +10%, 21번째 이상: cap 유지.
+            TechTreeManager.Instance?.IncrementCraftsmanCount();
+            float craftsmanBonus = TechTreeManager.Instance != null
+                ? TechTreeManager.Instance.CraftsmanBonusMultiplier() : 1f;
+
+            // 테크트리 '만점 신화(money_perfect)' — 평론가 점수 100점 정확히일 때만 +15%.
+            float perfectBonus = 0f;
+            if (TechTreeManager.Instance != null && TechTreeManager.Instance.IsUnlocked("money_perfect")
+                && CriticReviewUI.Instance != null && CriticReviewUI.Instance.LastCriticTotal == 100)
+                perfectBonus = 0.15f;
+
+            // TODO: 테크트리 '익숙한 맛(money_sequel)' — 후속작 출시 시 +20%. 후속작 시스템 미구현 상태라 보류.
+            // 구현 시 perfectBonus 와 같은 패턴으로 sequelBonus 추가 + bonusSum 에 합산.
+
+            if (savedTotalRevenue > 0)
+                totalRevenue = savedTotalRevenue;
+            else
+            {
+                float rand         = UnityEngine.Random.Range(0.9f, 1.1f);
+                float youtuberBonus = RandomEventManager.Instance != null
+                    ? RandomEventManager.Instance.YoutuberSalesBonus : 1.0f;
+                // 매출 보너스는 합연산 — 유튜버 +5% + 장인정신 +10% + 만점 +15% = +30% (곱셈으로 1.05×1.10×1.15 ≠ 1.30 아님).
+                // rand 는 별개의 자연스러운 변동성이라 곱셈 유지.
+                float bonusSum         = (youtuberBonus - 1f) + (craftsmanBonus - 1f) + perfectBonus;
+                float totalMultiplier  = Mathf.Max(0f, 1f + bonusSum);
+                totalRevenue = Mathf.RoundToInt(
+                    (5000f + 200f * scaleMultiplier * Mathf.Pow(qualityScore / 100f, 2f)) * rand * totalMultiplier
+                );
+                if (RandomEventManager.Instance != null)
+                    RandomEventManager.Instance.YoutuberSalesBonus = 1.0f; // 적용 후 초기화
+            }
+
+            revenuePerPeriod = new int[barCount];
+            for (int i = 0; i < barCount; i++)
+                revenuePerPeriod[i] = Mathf.RoundToInt(totalRevenue * distribution[i]);
+
+            // 테크트리 '역주행(money_comeback)' — 첫 호출 시점의 해금 상태로 한 번 결정. 배열에 박혀 저장됨.
+            bool comebackUnlocked = TechTreeManager.Instance != null && TechTreeManager.Instance.IsUnlocked("money_comeback");
+            if (comebackUnlocked && barCount > 0)
+                revenuePerPeriod[barCount - 1] *= 3;
         }
-        _cachedTotalUnits = totalUnits;
-        _completedBarIndex = completedWeeks;
+
+        _cachedTotalRevenue       = totalRevenue;
+        _cachedRevenuePerPeriod   = revenuePerPeriod;
+        _completedBarIndex        = completedWeeks;
+
         SalesSaveManager.Instance?.SaveSales(
-            completedWeeks, totalUnits, _cachedQualityScore, scale, _cachedProjectName,
+            completedWeeks, totalRevenue, revenuePerPeriod, _cachedQualityScore, scale, _cachedProjectName,
             _cachedScale, _cachedGenre, _cachedPlatform,
             _cachedPlanning, _cachedDevelop, _cachedArt, _cachedCreativity, _cachedBug
         );
 
-        float[] distribution = CalcDistribution(scale);
-        barCount = distribution.Length;
-        int[] unitPerPeriod = new int[barCount];
-        for (int i = 0; i < barCount; i++)
-            unitPerPeriod[i] = Mathf.RoundToInt(totalUnits * distribution[i]);
+        int maxRevenue = 0;
+        foreach (var r in revenuePerPeriod) if (r > maxRevenue) maxRevenue = r;
 
-        int maxUnits = 0;
-        foreach (var u in unitPerPeriod) if (u > maxUnits) maxUnits = u;
-
-        int totalRevenue = totalUnits * 9;
-        totalUnitsText.text = $"총 판매량: {totalUnits:N0}개";
-        totalRevenueText.text = $"총 매출: {totalRevenue:N0}G";
+        int adjustedTotalRevenue = 0;
+        foreach (var r in revenuePerPeriod) adjustedTotalRevenue += r;
+        totalRevenueText.text = $"총 매출: {adjustedTotalRevenue:N0}G";
 
         salesPanel.SetActive(true);
-        StartCoroutine(ShowBarsSequentially(unitPerPeriod, maxUnits, completedWeeks));
+        StartCoroutine(ShowBarsSequentially(revenuePerPeriod, maxRevenue, completedWeeks));
     }
-    IEnumerator ShowBarsSequentially(int[] unitPerPeriod, int maxUnits, int completedWeeks = 0)
+    IEnumerator ShowBarsSequentially(int[] revenuePerPeriod, int maxRevenue, int completedWeeks = 0)
     {
         yield return null; // ← 한 프레임 대기 후 높이 계산
         maxBarHeight = chartArea.rect.height * 0.9f;
 
-        int cumulativeUnits = 0;
+        int cumulativeRevenue = 0;
 
         // 초심자의 행운 — 한 런 중 첫 SalesUI 세션에만 +pct% 가산 (이 세션 내 모든 주차에 일관 적용)
         int firstSaleBonusPct = TraitEffectApplier.ConsumeFirstSaleBonusPct();
@@ -200,8 +250,8 @@ public class SalesUI : MonoBehaviour
 
         for (int i = 0; i < barCount; i++)
         {
-            float targetHeight = maxUnits > 0 ? ((float)unitPerPeriod[i] / maxUnits) * maxBarHeight : 0f;
-            int endUnits = cumulativeUnits + unitPerPeriod[i];
+            float targetHeight = maxRevenue > 0 ? ((float)revenuePerPeriod[i] / maxRevenue) * maxBarHeight : 0f;
+            int endRevenue = cumulativeRevenue + revenuePerPeriod[i];
 
             var barObj = Instantiate(barPrefab, chartArea);
             var barImage = barObj.transform.Find("BarImage").GetComponent<RectTransform>();
@@ -213,10 +263,9 @@ public class SalesUI : MonoBehaviour
             if (i < completedWeeks)
             {
                 barImage.sizeDelta = new Vector2(barImage.sizeDelta.x, targetHeight);
-                valueLabel.text = $"{unitPerPeriod[i]:N0}";
-                cumulativeUnits = endUnits;
-                totalUnitsText.text = $"총 판매량: {cumulativeUnits:N0}개";
-                totalRevenueText.text = $"총 매출: {cumulativeUnits * 9:N0}G";
+                valueLabel.text = $"{revenuePerPeriod[i]:N0}G";
+                cumulativeRevenue = endRevenue;
+                totalRevenueText.text = $"총 매출: {cumulativeRevenue:N0}G";
                 continue;
             }
 
@@ -224,7 +273,7 @@ public class SalesUI : MonoBehaviour
             valueLabel.text = "";
             barImage.sizeDelta = new Vector2(barImage.sizeDelta.x, 0f);
 
-            int startUnits = cumulativeUnits;
+            int startRevenue = cumulativeRevenue;
 
             float weekDuration = _cachedScale switch
             {
@@ -243,9 +292,8 @@ public class SalesUI : MonoBehaviour
                 float t = Mathf.SmoothStep(0f, 1f, elapsed / barAnimDuration);
 
                 barImage.sizeDelta = new Vector2(barImage.sizeDelta.x, t * targetHeight);
-                int currentUnits = Mathf.RoundToInt(Mathf.Lerp(startUnits, endUnits, t));
-                totalUnitsText.text = $"총 판매량: {currentUnits:N0}개";
-                totalRevenueText.text = $"총 매출: {currentUnits * 9:N0}G";
+                int currentRevenue = Mathf.RoundToInt(Mathf.Lerp(startRevenue, endRevenue, t));
+                totalRevenueText.text = $"총 매출: {currentRevenue:N0}G";
 
                 yield return null;
             }
@@ -253,29 +301,28 @@ public class SalesUI : MonoBehaviour
             if (barObj == null) yield break;
             barImage.sizeDelta = new Vector2(barImage.sizeDelta.x, targetHeight);
 
-            int weeklyRevenue = unitPerPeriod[i] * 9;
+            int weeklyRevenue = revenuePerPeriod[i];
             if (firstSaleBonusPct > 0)
                 weeklyRevenue = Mathf.RoundToInt(weeklyRevenue * (1f + firstSaleBonusPct / 100f));
             int rank = CalcRank(weeklyRevenue);
-            valueLabel.text = $"{unitPerPeriod[i]:N0}";
+            valueLabel.text = $"{revenuePerPeriod[i]:N0}G";
             if (rankText != null)
                 rankText.text = rank > 0 ? $"{rank}위" : "순위권 밖";
-            totalUnitsText.text = $"총 판매량: {endUnits:N0}개";
-            totalRevenueText.text = $"총 매출: {endUnits * 9:N0}G";
+            totalRevenueText.text = $"총 매출: {endRevenue:N0}G";
 
             MoneyManager.Instance.AddGold(weeklyRevenue);
             QuestManager.Instance?.UpdateProgress(QuestType.TotalRevenue, weeklyRevenue);
 
             _completedBarIndex = i + 1;
             SalesSaveManager.Instance?.SaveSales(
-                _completedBarIndex, _cachedTotalUnits, _cachedQualityScore, _cachedScale, _cachedProjectName,
+                _completedBarIndex, _cachedTotalRevenue, _cachedRevenuePerPeriod, _cachedQualityScore, _cachedScale, _cachedProjectName,
                 _cachedScale, _cachedGenre, _cachedPlatform,
                 _cachedPlanning, _cachedDevelop, _cachedArt, _cachedCreativity, _cachedBug
             );
             GameTimeManager.Instance?.SaveGameTime();
             ProjectSaveManager.Instance?.SaveProject();
 
-            cumulativeUnits = endUnits;
+            cumulativeRevenue = endRevenue;
 
             float gap = weekDuration * 0.3f;
             float gapElapsed = 0f;
@@ -285,7 +332,6 @@ public class SalesUI : MonoBehaviour
                 yield return null;
             }
         }
-        QuestManager.Instance.UpdateProgress(QuestType.TotalSales, cumulativeUnits);
         float endWait = 0f;
         while (endWait < 0.5f)
         {
@@ -294,21 +340,20 @@ public class SalesUI : MonoBehaviour
         }
 
         // 마이그레이션: AlertUI → InfoUI (슬라이드 아웃 종료 후 OnSalesComplete 호출)
-        // AlertUI.Instance.Show("판매 완료!", () => OnSalesComplete(cumulativeUnits));
         if (InfoUI.Instance != null)
-            InfoUI.Instance.Show("판매 완료!", () => OnSalesComplete(cumulativeUnits));
+            InfoUI.Instance.Show("판매 완료!", () => OnSalesComplete(cumulativeRevenue));
         else
-            OnSalesComplete(cumulativeUnits); // InfoUI 없으면 즉시 진행 (안전망)
+            OnSalesComplete(cumulativeRevenue); // InfoUI 없으면 즉시 진행 (안전망)
     }
 
-    void OnSalesComplete(int cumulativeUnits)
+    void OnSalesComplete(int cumulativeRevenue)
     {
         salesPanel.SetActive(false);
 
         if (_currentSalesProject != null)
         {
-            Debug.Log($"업데이트: scale={_currentSalesProject.scale} genre={_currentSalesProject.genre} units={cumulativeUnits}");
-            CompletedProjectManager.Instance.UpdateSalesResult(_currentSalesProject, cumulativeUnits, cumulativeUnits * 9);
+            Debug.Log($"업데이트: scale={_currentSalesProject.scale} genre={_currentSalesProject.genre} revenue={cumulativeRevenue}");
+            CompletedProjectManager.Instance.UpdateSalesResult(_currentSalesProject, cumulativeRevenue);
             _currentSalesProject = null;
         }
 

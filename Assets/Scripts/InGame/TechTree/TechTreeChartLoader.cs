@@ -3,18 +3,20 @@ using LitJson;
 using UnityEngine;
 
 // 뒤끝 콘솔 차트 이름: "TechTree"
-// 컬럼: nodeId(string), name(string), category(int = TechCategory),
-//       order(int), prerequisiteId(string, 없으면 빈값), cost(int)
-// 주의: "id"는 뒤끝 예약 키라 사용 불가 → nodeId로 명명
+// 컬럼: nodeId(string), category(string 한글), name(string),
+//       description(string), logic(string), requiredPoints(int)
+// 카테고리는 한글 라벨로 입력하고 로더에서 enum 매핑.
+// 선후 관계는 별도 컬럼 없이 동일 카테고리 내 row 순서로 자동 부여.
+// 주의: "id"는 뒤끝 예약 키라 사용 불가 → nodeId로 명명.
 
 public class TechNodeChartRow
 {
     public string       id;
     public string       name;
     public TechCategory category;
-    public int          order;
-    public string       prerequisiteId;
-    public int          cost;
+    public string       description;
+    public string       logic;
+    public int          requiredPoints;
 }
 
 public static class TechTreeChartLoader
@@ -31,48 +33,103 @@ public static class TechTreeChartLoader
         Debug.Log($"[TechTreeChart] {_cache.Count}개 노드 로드 완료");
     }
 
-    // CDN 로드 실패/차트 미업로드 시 사용 — 콘솔 업로드 전 마지막으로 코드에 박혀있던 정의와 동일
+    // CDN 로드 실패/차트 미업로드 시 사용 — CSV 와 동일한 정의를 코드에도 박아둠.
+    // 카테고리별 row 순서 = 해금 순서 (위 row 가 prerequisite).
     static List<TechNodeChartRow> GetFallback() => new()
     {
-        // 직원관리 - 만족도 유지
-        new() { id="emp_sat_1", name="협상의 기술",     category=TechCategory.EmployeeSatisfaction, order=1, prerequisiteId="",          cost=100 },
-        new() { id="emp_sat_2", name="기초 복지 인프라", category=TechCategory.EmployeeSatisfaction, order=2, prerequisiteId="emp_sat_1", cost=100 },
-        new() { id="emp_sat_3", name="전문 멘탈 케어",   category=TechCategory.EmployeeSatisfaction, order=3, prerequisiteId="emp_sat_2", cost=100 },
-        new() { id="emp_sat_4", name="고급 테마 라운지", category=TechCategory.EmployeeSatisfaction, order=4, prerequisiteId="emp_sat_3", cost=100 },
-        new() { id="emp_sat_5", name="성과급 체계 도입", category=TechCategory.EmployeeSatisfaction, order=5, prerequisiteId="emp_sat_4", cost=100 },
+        // ── 돈 ──────────────────────────────────────
+        new() { id="money_awaken",    category=TechCategory.Money, name="각성 상태",
+                description="직원이 가끔씩 개발 도중 각성상태가 되어 게임 점수가 크게 증가합니다",
+                logic="기존 틱에서 상승하던 잭팟 시스템이 추가 ( 찍기전에는 잭팟 없이 기본만 )",
+                requiredPoints=5 },
+        new() { id="money_comeback",  category=TechCategory.Money, name="역주행",
+                description="마지막 달의 매출이 3배 증가합니다",
+                logic="로직상 매출이 나오는 마지막 달의 매출 3배로 증가",
+                requiredPoints=10 },
+        new() { id="money_craftsman", category=TechCategory.Money, name="장인 정신",
+                description="연구 완료 이후 출시한 게임이 증가할때마다 매출 0.5% 상승합니다 (최대 10%)",
+                logic="연구 완료 이후 낸 게임이 1개가 증가할때마다 매출 0.5% 상승 최대 15개",
+                requiredPoints=15 },
+        new() { id="money_bugmaster", category=TechCategory.Money, name="버그 잡기 달인",
+                description="버그 해결속도가 증가합니다",
+                logic="버그 해결속도 증가",
+                requiredPoints=20 },
+        new() { id="money_perfect",   category=TechCategory.Money, name="만점 신화",
+                description="게임 점수가 100점이 나오면 해당 게임의 매출이 15% 증가합니다",
+                logic="100점이면 매출 증가 15%",
+                requiredPoints=25 },
+        new() { id="money_sequel",    category=TechCategory.Money, name="익숙한 맛",
+                description="후속작을 출시 했을 경우 해당 게임의 매출이 20% 증가합니다",
+                logic="후속작 개발시 매출 + 20%",
+                requiredPoints=30 },
 
-        // 직원관리 - 효율성 극대화
-        new() { id="emp_eff_1", name="야근 및 주말 근무",  category=TechCategory.EmployeeEfficiency, order=1, prerequisiteId="",          cost=100 },
-        new() { id="emp_eff_2", name="직군 이동 최적화",   category=TechCategory.EmployeeEfficiency, order=2, prerequisiteId="emp_eff_1", cost=100 },
-        new() { id="emp_eff_3", name="전략적 인재 영입",   category=TechCategory.EmployeeEfficiency, order=3, prerequisiteId="emp_eff_2", cost=100 },
-        new() { id="emp_eff_4", name="한계 돌파 훈련",     category=TechCategory.EmployeeEfficiency, order=4, prerequisiteId="emp_eff_3", cost=100 },
-        new() { id="emp_eff_5", name="성장 확률 증가",     category=TechCategory.EmployeeEfficiency, order=5, prerequisiteId="emp_eff_4", cost=100 },
+        // ── 채용 ────────────────────────────────────
+        new() { id="hire_discount", category=TechCategory.Hiring, name="채용 비용 할인",
+                description="채용하는데 드는 비용이 20% 감소합니다",
+                logic="채용하는데 드는 비용 20% 할인",
+                requiredPoints=5 },
+        new() { id="hire_tier2",    category=TechCategory.Hiring, name="채용 2단계",
+                description="채용 등급이 2단계로 상승하여 더 좋은 직원이 등장할 확률이 높아집니다",
+                logic="채용 2단계",
+                requiredPoints=10 },
+        new() { id="hire_more",     category=TechCategory.Hiring, name="한 명 더!",
+                description="채용 리스트에 등장하는 직원이 한 명 더 추가됩니다",
+                logic="채용 인원 +1",
+                requiredPoints=15 },
+        new() { id="hire_refresh",  category=TechCategory.Hiring, name="한 번 더!",
+                description="채용 리스트에서 원하는 사람이 없는 경우 새로고침을 1회 할 수 있게됩니다",
+                logic="채용 리스트 전원 새로 고침 1회 가능 (이러면 여기서 못뽑게) 뽑으면 새로고침 버튼 사라짐",
+                requiredPoints=20 },
+        new() { id="hire_tier3",    category=TechCategory.Hiring, name="채용 3단계",
+                description="채용 등급이 3단계로 상승하여 더 좋은 직원이 등장할 확률이 높아집니다",
+                logic="채용 3단계",
+                requiredPoints=25 },
 
-        // 기술연구 - 장르/플랫폼
-        new() { id="tech_gp_1", name="장르 마스터리 1단계", category=TechCategory.GenrePlatform, order=1, prerequisiteId="",          cost=100 },
-        new() { id="tech_gp_2", name="장르 마스터리 2단계", category=TechCategory.GenrePlatform, order=2, prerequisiteId="tech_gp_1", cost=100 },
-        new() { id="tech_gp_3", name="플랫폼 라이선스",     category=TechCategory.GenrePlatform, order=3, prerequisiteId="tech_gp_2", cost=100 },
-        new() { id="tech_gp_4", name="플랫폼 최적화",       category=TechCategory.GenrePlatform, order=4, prerequisiteId="tech_gp_3", cost=100 },
+        // ── 만족도 ──────────────────────────────────
+        new() { id="sat_mental",     category=TechCategory.Satisfaction, name="멘탈 케어 서비스",
+                description="매달 하락하는 만족도가 1 감소합니다",
+                logic="기본 만족도 하락양 감소",
+                requiredPoints=5 },
+        new() { id="sat_loyalty",    category=TechCategory.Satisfaction, name="평생 직장",
+                description="직원이 자진 퇴사할 확률이 하락합니다",
+                logic="직원 자진 퇴사 확률 10% 하락 (도망포함된 전체 확률, 음수는 0% 처리)",
+                requiredPoints=10 },
+        new() { id="sat_welcome",    category=TechCategory.Satisfaction, name="신입 환영회",
+                description="신규 직원이 입사하면 랜덤한 직원의 만족도가 20 회복됩니다",
+                logic="신규 직원 입사시 랜덤 직원 만족도 + 20",
+                requiredPoints=15 },
+        new() { id="sat_completion", category=TechCategory.Satisfaction, name="완성의 기쁨",
+                description="게임을 출시하면 모든직원의 만족도가 5 회복됩니다",
+                logic="게임 완성시 만족도 전원 추가 5 상승",
+                requiredPoints=20 },
+        new() { id="sat_elite",      category=TechCategory.Satisfaction, name="고급 인력",
+                description="11성 이상일 때 강화를 성공하면 해당 직원의 만족도가 5 회복됩니다",
+                logic="11성 이상 강화 성공시 해당 직원 만족도 +5",
+                requiredPoints=25 },
 
-        // 기술연구 - 참신함
-        new() { id="tech_nov_1", name="참신함 연구 1단계", category=TechCategory.Novelty, order=1, prerequisiteId="",           cost=100 },
-        new() { id="tech_nov_2", name="참신함 연구 2단계", category=TechCategory.Novelty, order=2, prerequisiteId="tech_nov_1", cost=100 },
-        new() { id="tech_nov_3", name="이스터에그 설계",   category=TechCategory.Novelty, order=3, prerequisiteId="tech_nov_2", cost=100 },
-        new() { id="tech_nov_4", name="실시간 상호작용",   category=TechCategory.Novelty, order=4, prerequisiteId="tech_nov_3", cost=100 },
+        // ── 창의성 ──────────────────────────────────
+        new() { id="creat_value1", category=TechCategory.Creativity, name="블록 가치 상승 Ⅰ",
+                description="창의성 블록이 차지한 한 칸당 점수가 10점으로 증가합니다",
+                logic="칸당 점수 5점 > 10점",
+                requiredPoints=5 },
+        new() { id="creat_box2",   category=TechCategory.Creativity, name="창의성 2단계",
+                description="창의성 블록이 들어갈 박스를 한 단계 넓게 만들어줍니다",
+                logic="창의성 박스 크기를 한단계 업그레이드",
+                requiredPoints=10 },
+        new() { id="creat_value2", category=TechCategory.Creativity, name="블록 가치 상승 Ⅱ",
+                description="창의성 블록이 차지한 한 칸당 점수가 15점으로 증가합니다",
+                logic="칸당 점수 10점 > 15점",
+                requiredPoints=15 },
+        new() { id="creat_box3",   category=TechCategory.Creativity, name="창의성 3단계",
+                description="창의성 블록이 들어갈 박스를 한 단계 넓게 만들어줍니다",
+                logic="창의성 박스 크기를 한단계 업그레이드",
+                requiredPoints=20 },
+        new() { id="creat_value3", category=TechCategory.Creativity, name="블록 가치 상승 Ⅲ",
+                description="창의성 블록이 차지한 한 칸당 점수가 20점으로 증가합니다",
+                logic="칸당 점수 15점 > 20점",
+                requiredPoints=25 },
 
-        // 유틸리티
-        new() { id="util_1", name="트렌드 레이더",      category=TechCategory.Utility, order=1, prerequisiteId="",        cost=100 },
-        new() { id="util_2", name="장르 블렌더",        category=TechCategory.Utility, order=2, prerequisiteId="util_1",  cost=100 },
-        new() { id="util_3", name="프랜차이즈 빌더",    category=TechCategory.Utility, order=3, prerequisiteId="util_2",  cost=100 },
-        new() { id="util_4", name="하이퍼 프로세스",    category=TechCategory.Utility, order=4, prerequisiteId="util_3",  cost=100 },
-        new() { id="util_5", name="신용 분석 알고리즘", category=TechCategory.Utility, order=5, prerequisiteId="util_4",  cost=100 },
-        new() { id="util_6", name="금융권 네트워킹",    category=TechCategory.Utility, order=6, prerequisiteId="util_5",  cost=100 },
-
-        // 창의성 미니게임 강화
-        new() { id="creativity_score_1", name="창의성 점수 강화 1단계", category=TechCategory.Utility, order=7,  prerequisiteId="",                   cost=100 },
-        new() { id="creativity_score_2", name="창의성 점수 강화 2단계", category=TechCategory.Utility, order=8,  prerequisiteId="creativity_score_1", cost=100 },
-        new() { id="creativity_grid_1",  name="그리드 확장 1단계",      category=TechCategory.Utility, order=9,  prerequisiteId="",                   cost=100 },
-        new() { id="creativity_grid_2",  name="그리드 확장 2단계",      category=TechCategory.Utility, order=10, prerequisiteId="creativity_grid_1",  cost=100 },
+        // ── 광고 ──────────────────────────────────── (row 0개, UI 탭만 유지)
     };
 
     static List<TechNodeChartRow> LoadFromServer()
@@ -114,13 +171,30 @@ public static class TechTreeChartLoader
             {
                 id             = id,
                 name           = S(row, "name"),
-                category       = (TechCategory)N(row, "category"),
-                order          = N(row, "order"),
-                prerequisiteId = S(row, "prerequisiteId"),
-                cost           = N(row, "cost"),
+                category       = ParseCategory(S(row, "category")),
+                description    = S(row, "description"),
+                logic          = S(row, "logic"),
+                requiredPoints = N(row, "requiredPoints"),
             });
         }
         return result;
+    }
+
+    // 한글 라벨 → enum. 미매칭 시 Money 폴백 + 경고.
+    static TechCategory ParseCategory(string label) => label switch
+    {
+        "돈"     => TechCategory.Money,
+        "채용"   => TechCategory.Hiring,
+        "만족도" => TechCategory.Satisfaction,
+        "창의성" => TechCategory.Creativity,
+        "광고"   => TechCategory.Ad,
+        _ => LogAndFallback(label),
+    };
+
+    static TechCategory LogAndFallback(string label)
+    {
+        Debug.LogWarning($"[TechTreeChart] 알 수 없는 카테고리 '{label}' → Money 로 폴백");
+        return TechCategory.Money;
     }
 
     static string S(JsonData r, string k) { try { return r[k].ToString(); } catch { return ""; } }

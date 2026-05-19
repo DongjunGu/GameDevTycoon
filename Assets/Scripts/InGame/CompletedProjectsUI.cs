@@ -96,7 +96,7 @@ public class CompletedProjectsUI : MonoBehaviour
         detailArtText.text = $"아트: {Mathf.RoundToInt(data.art)}";
         detailCreativityText.text = $"창의성: {Mathf.RoundToInt(data.creativity)}";
         detailBugText.text = $"버그: {Mathf.RoundToInt(data.bug)}";
-        detailUnitsText.text = $"판매량: {data.totalUnits:N0}개";
+        if (detailUnitsText != null) detailUnitsText.gameObject.SetActive(false); // 판매량 표시 제거 — 매출 단일화
         detailRevenueText.text = $"매출: {data.totalRevenue:N0}G";
         detailDateText.text = $"출시일: {data.year}년 {data.month}월 {data.week}주";
         if (detailQualityScoreText != null)

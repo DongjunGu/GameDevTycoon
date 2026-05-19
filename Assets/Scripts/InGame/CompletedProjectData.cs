@@ -12,7 +12,6 @@ public class CompletedProjectData
     public float  art;
     public float  creativity;
     public float  bug;
-    public int    totalUnits;
     public int    totalRevenue;
     public int    year;
     public int    month;
@@ -32,7 +31,6 @@ public class CompletedProjectData
         param.Add("art",         art);
         param.Add("creativity",  creativity);
         param.Add("bug",         bug);
-        param.Add("totalUnits",       totalUnits);
         param.Add("totalRevenue",     totalRevenue);
         param.Add("year",             year);
         param.Add("month",            month);
@@ -55,7 +53,6 @@ public class CompletedProjectData
         data.art          = SafeFloat(row,  "art",         0f);
         data.creativity   = SafeFloat(row,  "creativity",  0f);
         data.bug          = SafeFloat(row,  "bug",         0f);
-        data.totalUnits       = SafeInt(row,   "totalUnits",       0);
         data.totalRevenue     = SafeInt(row,   "totalRevenue",     0);
         data.year             = SafeInt(row,   "year",             2000);
         data.month            = SafeInt(row,   "month",            1);

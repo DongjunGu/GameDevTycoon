@@ -9,6 +9,18 @@ public class TechTreeManager : MonoBehaviour
 
     public List<TechNodeData> allNodes = new();
 
+    // 테크 포인트는 MoneyManager.Point 에서 관리 — 여기서는 forwarding 만.
+    // OnPointsChanged 이벤트는 MoneyManager.OnPointChanged 를 그대로 전달.
+    public int CurrentPoints => MoneyManager.Instance != null ? MoneyManager.Instance.Point : 0;
+
+    // 장인 정신(money_craftsman) — 해금 후 출시한 게임 누적 카운트. 20 cap, 1 당 매출 +0.5%.
+    public int CraftsmanGameCount { get; private set; }
+    public const int CraftsmanMaxCount = 20;
+    public const float CraftsmanBonusPerCount = 0.005f; // 0.5%
+
+    public event System.Action OnPointsChanged;
+    public event System.Action OnUnlockChanged;
+
     void Awake()
     {
         if (Instance != null) { Destroy(gameObject); return; }
@@ -17,9 +29,20 @@ public class TechTreeManager : MonoBehaviour
         BuildNodesFromChart();
     }
 
-    // 차트 캐시(`TechTreeChartLoader.Cache`)에서 노드 정의를 다시 만든다.
-    // - Awake 시점: 아직 차트 로드 전이라 fallback(코드 내 기본값) 사용 가능
-    // - LoadTechTree 진입 직전: BackendManager가 차트 로드 완료한 뒤이므로 서버 정의 반영
+    void Start()
+    {
+        if (MoneyManager.Instance != null)
+            MoneyManager.Instance.OnPointChanged += ForwardPointChanged;
+    }
+
+    void OnDestroy()
+    {
+        if (MoneyManager.Instance != null)
+            MoneyManager.Instance.OnPointChanged -= ForwardPointChanged;
+    }
+
+    void ForwardPointChanged() => OnPointsChanged?.Invoke();
+
     public void BuildNodesFromChart()
     {
         var prevUnlocked = new HashSet<string>();
@@ -34,41 +57,78 @@ public class TechTreeManager : MonoBehaviour
                 id             = row.id,
                 name           = row.name,
                 category       = row.category,
-                order          = row.order,
-                prerequisiteId = row.prerequisiteId,
-                cost           = row.cost,
+                description    = row.description,
+                logic          = row.logic,
+                requiredPoints = row.requiredPoints,
                 isUnlocked     = prevUnlocked.Contains(row.id),
             });
         }
     }
 
-    // ── 해금 가능 여부 ────────────────────────
-    public bool CanUnlock(TechNodeData node)
+    // 카테고리 내 row 순서로 직전 노드를 자동 prerequisite 으로 사용.
+    TechNodeData FindPrerequisite(TechNodeData node)
     {
-        if (node.isUnlocked) return false;
-        if (!MoneyManager.Instance.CanAfford(node.cost)) return false;
-
-        if (string.IsNullOrEmpty(node.prerequisiteId)) return true;
-
-        var prereq = allNodes.Find(n => n.id == node.prerequisiteId);
-        return prereq != null && prereq.isUnlocked;
+        TechNodeData prev = null;
+        foreach (var n in allNodes)
+        {
+            if (n == node) return prev;
+            if (n.category == node.category) prev = n;
+        }
+        return null;
     }
 
-    // ── 해금 ─────────────────────────────────
+    public bool CanUnlock(TechNodeData node)
+    {
+        if (node == null || node.isUnlocked) return false;
+        if (MoneyManager.Instance == null || !MoneyManager.Instance.CanAffordPoint(node.requiredPoints)) return false;
+
+        var prereq = FindPrerequisite(node);
+        return prereq == null || prereq.isUnlocked;
+    }
+
     public void Unlock(TechNodeData node)
     {
         if (!CanUnlock(node)) return;
 
-        MoneyManager.Instance.SpendGold(node.cost);
+        if (!MoneyManager.Instance.SpendPoint(node.requiredPoints)) return; // SaveMoney 자동
         node.isUnlocked = true;
+        OnUnlockChanged?.Invoke();
+        // 4-set 저장 — UserTechTree + (SpendPoint 가 호출한) UserMoney + UserGameTime + UserProject
         SaveTechTree();
         GameTimeManager.Instance?.SaveGameTime();
         ProjectSaveManager.Instance?.SaveProject();
 
-        Debug.Log($"테크 해금: {node.name}");
+        Debug.Log($"[TechTree] 해금: {node.name} (-{node.requiredPoints}P, 잔여 {CurrentPoints}P)");
     }
 
-    // ── 저장 ─────────────────────────────────
+    // 디버그/획득 — MoneyManager 로 forward
+    public void AddPoints(int delta)
+    {
+        if (delta == 0 || MoneyManager.Instance == null) return;
+        if (delta > 0) MoneyManager.Instance.AddPoint(delta);
+        else           MoneyManager.Instance.SpendPoint(-delta);
+    }
+
+    // 장인 정신 — 출시 1회마다 +1 (cap 20). 매출 보너스 (CraftsmanBonusMultiplier) 곱.
+    // SalesUI.ShowInternal 신규 분기 진입 시 호출. 복원 분기는 호출하지 않음.
+    public void IncrementCraftsmanCount()
+    {
+        if (!IsUnlocked("money_craftsman")) return;
+        if (CraftsmanGameCount >= CraftsmanMaxCount) return;
+        CraftsmanGameCount++;
+        SaveTechTree();
+        Debug.Log($"[TechTree] 장인 정신 카운트 +1 → {CraftsmanGameCount}/{CraftsmanMaxCount}");
+    }
+
+    // 현재 매출 보너스 배율 (1.0 ~ 1.10). 미해금 시 1.0.
+    public float CraftsmanBonusMultiplier()
+    {
+        if (!IsUnlocked("money_craftsman")) return 1f;
+        int count = Mathf.Min(CraftsmanMaxCount, CraftsmanGameCount);
+        return 1f + count * CraftsmanBonusPerCount;
+    }
+
+    // ── 저장 (unlockedIds 만 — 포인트는 UserMoney.point 에서) ───────
     private string _rowInDate = null;
 
     void SaveTechTree(System.Action onComplete = null)
@@ -79,7 +139,8 @@ public class TechTreeManager : MonoBehaviour
                 unlockedIds.Append(node.id + ",");
 
         var param = new Param();
-        param.Add("unlockedIds", unlockedIds.ToString().TrimEnd(','));
+        param.Add("unlockedIds",    unlockedIds.ToString().TrimEnd(','));
+        param.Add("craftsmanCount", CraftsmanGameCount);
 
         if (!string.IsNullOrEmpty(_rowInDate))
         {
@@ -108,10 +169,8 @@ public class TechTreeManager : MonoBehaviour
         }
     }
 
-    // ── 로드 ─────────────────────────────────
     public void LoadTechTree(System.Action onComplete = null)
     {
-        // 서버 차트가 이번 로그인 시점에 갱신됐을 수 있으니 노드 정의 재빌드 후 unlock 적용
         BuildNodesFromChart();
 
         Backend.GameData.GetMyData("UserTechTree", new Where(), bro =>
@@ -133,13 +192,15 @@ public class TechTreeManager : MonoBehaviour
             JsonData row = (JsonData)rows[rows.Count - 1];
             _rowInDate = row["inDate"]?.ToString();
 
-            string unlockedIds = row["unlockedIds"]?.ToString() ?? "";
+            string unlockedIds = SafeString(row, "unlockedIds", "");
             var ids = new HashSet<string>(unlockedIds.Split(','));
-
             foreach (var node in allNodes)
                 node.isUnlocked = ids.Contains(node.id);
 
-            Debug.Log($"테크트리 로드 완료");
+            CraftsmanGameCount = SafeInt(row, "craftsmanCount", 0);
+
+            OnUnlockChanged?.Invoke();
+            Debug.Log($"[TechTree] 로드 완료 (craftsmanCount={CraftsmanGameCount})");
             onComplete?.Invoke();
         });
     }
@@ -150,10 +211,15 @@ public class TechTreeManager : MonoBehaviour
         return node != null && node.isUnlocked;
     }
 
-    // 새 런 시작 — 모든 노드 unlocked=false 로 되돌리고 row 덮어쓰기
+    // 새 런 시작 — 노드 unlock 전부 false + 카운터 0 후 row 덮어쓰기. 포인트는 MoneyManager.ResetForNewRun 에서 처리.
     public void ResetForNewRun(System.Action onComplete = null)
     {
         foreach (var node in allNodes) node.isUnlocked = false;
+        CraftsmanGameCount = 0;
+        OnUnlockChanged?.Invoke();
         SaveTechTree(onComplete);
     }
+
+    static int    SafeInt   (JsonData row, string key, int    defaultValue) { try { return int.Parse(row[key].ToString()); }  catch { return defaultValue; } }
+    static string SafeString(JsonData row, string key, string defaultValue) { try { return row[key].ToString(); } catch { return defaultValue; } }
 }

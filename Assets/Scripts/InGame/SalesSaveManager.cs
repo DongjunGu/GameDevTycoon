@@ -14,7 +14,8 @@ public class SalesSaveManager : MonoBehaviour
     // ── 로드된 데이터 ─────────────────────────
     private bool _loadedIsActive;
     private int _loadedCompletedWeeks;
-    private int _loadedTotalUnits;
+    private int _loadedTotalRevenue;
+    private int[] _loadedRevenuePerPeriod = null; // 세션 시작 시 동결된 주차별 매출 배열
     private float _loadedQualityScore;
     private ProjectScale _loadedSalesScale;
     private string _loadedProjectName;
@@ -43,7 +44,7 @@ public class SalesSaveManager : MonoBehaviour
     }
 
     // ── 저장 ─────────────────────────────────
-    public void SaveSales(int completedWeeks, int totalUnits,
+    public void SaveSales(int completedWeeks, int totalRevenue, int[] revenuePerPeriod,
         float qualityScore, ProjectScale salesScale, string projectName,
         ProjectScale cachedScale, ProjectGenre cachedGenre, ProjectPlatform cachedPlatform,
         float planning, float develop, float art, float creativity, float bug)
@@ -51,7 +52,9 @@ public class SalesSaveManager : MonoBehaviour
         var param = new Param();
         param.Add("isActive", true);
         param.Add("completedWeeks", completedWeeks);
-        param.Add("totalUnits", totalUnits);
+        param.Add("totalRevenue", totalRevenue);
+        // 세션 시작 시 동결된 주차별 매출 배열 — 복원 시 distribution/comebackUnlocked 재계산 안 함
+        param.Add("revenuePerPeriod", revenuePerPeriod != null ? string.Join(",", revenuePerPeriod) : "");
         param.Add("qualityScore", qualityScore);
         param.Add("salesScale", (int)salesScale);
         param.Add("projectName", projectName);
@@ -213,7 +216,8 @@ public class SalesSaveManager : MonoBehaviour
             }
 
             _loadedCompletedWeeks = SafeInt(row, "completedWeeks", 0);
-            _loadedTotalUnits     = SafeInt(row, "totalUnits", 0);
+            _loadedTotalRevenue   = SafeInt(row, "totalRevenue", 0);
+            _loadedRevenuePerPeriod = ParseRevenuePerPeriod(SafeString(row, "revenuePerPeriod", ""));
             _loadedQualityScore   = SafeFloat(row, "qualityScore", 0f);
             _loadedSalesScale     = (ProjectScale)SafeInt(row, "salesScale", 0);
             _loadedProjectName    = SafeString(row, "projectName", "프로젝트명");
@@ -245,7 +249,7 @@ public class SalesSaveManager : MonoBehaviour
             _loadedQualityScore, _loadedSalesScale, _loadedProjectName,
             _loadedCachedScale, _loadedCachedGenre, _loadedCachedPlatform,
             _loadedPlanning, _loadedDevelop, _loadedArt, _loadedCreativity, _loadedBug,
-            _loadedCompletedWeeks, _loadedTotalUnits, applyCompletion: false
+            _loadedCompletedWeeks, _loadedTotalRevenue, _loadedRevenuePerPeriod, applyCompletion: false
         );
 
         Debug.Log($"[SalesSaveManager] RestoreIfNeeded: completedWeeks={_loadedCompletedWeeks}");
@@ -275,6 +279,16 @@ public class SalesSaveManager : MonoBehaviour
     {
         try { return bool.Parse(row[key].ToString()); }
         catch { return fallback; }
+    }
+
+    static int[] ParseRevenuePerPeriod(string csv)
+    {
+        if (string.IsNullOrEmpty(csv)) return null;
+        var parts = csv.Split(',');
+        var list = new System.Collections.Generic.List<int>(parts.Length);
+        foreach (var p in parts)
+            if (int.TryParse(p, out int v)) list.Add(v);
+        return list.Count > 0 ? list.ToArray() : null;
     }
 
     static string SafeString(JsonData row, string key, string fallback)

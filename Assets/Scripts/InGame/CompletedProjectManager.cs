@@ -48,16 +48,15 @@ public class CompletedProjectManager : MonoBehaviour
             SalesSaveManager.Instance?.SaveCompletedProjectRowInDate(data.rowInDate);
             Debug.Log($"완료 프로젝트 저장: {data.projectName} rowInDate={data.rowInDate}");
 
-            // Sales가 먼저 끝났다면 (totalUnits이 이미 기록됨) 즉시 업데이트
-            if (data.totalUnits > 0)
+            // Sales가 먼저 끝났다면 (totalRevenue 이 이미 기록됨) 즉시 업데이트
+            if (data.totalRevenue > 0)
                 ExecuteSalesResultUpdate(data);
         });
     }
 
-    // ── 판매 완료 시 매출/판매량 업데이트 ──────
-    public void UpdateSalesResult(CompletedProjectData data, int totalUnits, int totalRevenue)
+    // ── 판매 완료 시 매출 업데이트 ──────
+    public void UpdateSalesResult(CompletedProjectData data, int totalRevenue)
     {
-        data.totalUnits   = totalUnits;
         data.totalRevenue = totalRevenue;
 
         // rowInDate가 아직 없으면 값만 저장 — Insert 콜백에서 처리
@@ -69,13 +68,12 @@ public class CompletedProjectManager : MonoBehaviour
     void ExecuteSalesResultUpdate(CompletedProjectData data)
     {
         var param = new BackEnd.Param();
-        param.Add("totalUnits",   data.totalUnits);
         param.Add("totalRevenue", data.totalRevenue);
 
         Backend.GameData.UpdateV2("CompletedProjects", data.rowInDate, Backend.UserInDate, param, bro =>
         {
             if (bro.IsSuccess())
-                Debug.Log($"판매 결과 업데이트: {data.projectName} units={data.totalUnits}");
+                Debug.Log($"판매 결과 업데이트: {data.projectName} revenue={data.totalRevenue}");
             else
                 Debug.LogError($"판매 결과 업데이트 실패: {bro}");
         });

@@ -7,9 +7,14 @@ public class MoneyManager : MonoBehaviour
     public static MoneyManager Instance { get; private set; }
 
     private int _gold = 0;
+    private int _point = 0; // 인게임 테크 포인트 — 테크트리 해금 전용
     private string _rowInDate = null;
 
-    public int Gold => _gold;
+    public int Gold  => _gold;
+    public int Point => _point;
+
+    // 포인트 변경 통지 — TechTreeUI 등이 구독
+    public event System.Action OnPointChanged;
 
     void Awake()
     {
@@ -29,9 +34,11 @@ public class MoneyManager : MonoBehaviour
                 if (rows.Count > 0)
                 {
                     JsonData row = rows[0];
-                    _gold = SafeInt(row, "gold", 0);
+                    _gold  = SafeInt(row, "gold",  0);
+                    _point = SafeInt(row, "point", 0);
                     _rowInDate = row["inDate"]?.ToString();
-                    Debug.Log($"재화 로드 완료: {_gold}G");
+                    OnPointChanged?.Invoke();
+                    Debug.Log($"재화 로드 완료: {_gold}G, {_point}P");
                 }
                 else
                 {
@@ -106,9 +113,10 @@ public class MoneyManager : MonoBehaviour
 
     public void SaveMoney(System.Action onComplete = null)
     {
-        Debug.Log($"[MoneyManager] SaveMoney 호출 — 현재 잔액: {_gold:N0}G");
+        Debug.Log($"[MoneyManager] SaveMoney 호출 — 현재 잔액: {_gold:N0}G / {_point}P");
         var param = new Param();
-        param.Add("gold", _gold);
+        param.Add("gold",  _gold);
+        param.Add("point", _point);
 
         if (!string.IsNullOrEmpty(_rowInDate))
         {
@@ -140,8 +148,39 @@ public class MoneyManager : MonoBehaviour
     // 새 런 시작 — 100,000G로 리셋 후 서버 저장
     public void ResetForNewRun(System.Action onComplete = null)
     {
-        _gold = 100000;
+        _gold  = 100000;
+        _point = 0;
+        OnPointChanged?.Invoke();
         SaveMoney(onComplete);
+    }
+
+    // ── Point (테크 포인트) ──────────────────────────────
+    public bool CanAffordPoint(int amount) => _point >= amount;
+
+    // 포인트 가산. 디버그/획득 경로 공용. 음수면 SpendPoint 사용.
+    public void AddPoint(int amount, bool saveImmediately = true)
+    {
+        if (amount <= 0) return;
+        _point += amount;
+        if (saveImmediately) SaveMoney();
+        OnPointChanged?.Invoke();
+        Debug.Log($"포인트 지급: +{amount}P / 잔여: {_point}P");
+    }
+
+    // 포인트 차감 — 부족하면 false 반환, _point 변경 없음
+    public bool SpendPoint(int amount, bool saveImmediately = true)
+    {
+        if (amount <= 0) return false;
+        if (_point < amount)
+        {
+            Debug.Log($"포인트 부족: 필요 {amount}P / 보유 {_point}P");
+            return false;
+        }
+        _point -= amount;
+        if (saveImmediately) SaveMoney();
+        OnPointChanged?.Invoke();
+        Debug.Log($"포인트 차감: -{amount}P / 잔여: {_point}P");
+        return true;
     }
 
     int SafeInt(JsonData row, string key, int fallback)

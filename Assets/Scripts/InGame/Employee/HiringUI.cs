@@ -14,6 +14,14 @@ public class HiringUI : MonoBehaviour
     public GameObject confirmPanel;
     public GameObject loadingPanel;
 
+    [Header("Tier Buttons")]
+    [Tooltip("티어 버튼 GameObject 3개를 순서대로 인스펙터에 할당 (1단계/2단계/3단계). 2/3단계는 hire_tier2/3 해금 시 노출.")]
+    public GameObject[] tierButtons;
+
+    [Header("Refresh")]
+    [Tooltip("후보 리스트 새로고침 버튼. 'hire_refresh' 해금 시 활성, 같은 세션 1회만 사용 가능.")]
+    public Button refreshButton;
+
     [Header("Slots")]
     public Transform slotParent;
     public GameObject employeeSlotPrefab;
@@ -54,6 +62,9 @@ public class HiringUI : MonoBehaviour
     private List<EmployeeData> _currentCandidates = new();
     private int _hireCost;
 
+    private int  _currentTierIndex = -1;        // hire_refresh 재로드용 — 마지막 OnClickTier 의 티어
+    private bool _refreshUsed      = false;     // 같은 세션 1회 가드
+
     // 티어 데이터 (강화 레벨 범위/가중치, 잠재력 확률은 EmployeeManager.PotentialWeightTable 참조)
     private static readonly (string label, int cost, int[] range, int[] weights)[] Tiers =
     {
@@ -68,6 +79,12 @@ public class HiringUI : MonoBehaviour
         Instance = this;
     }
 
+    void Start()
+    {
+        if (refreshButton != null)
+            refreshButton.onClick.AddListener(OnClickRefresh);
+    }
+
     // ── 티어 선택 패널 열기 ───────────────────
     public void OpenHiring()
     {
@@ -76,21 +93,53 @@ public class HiringUI : MonoBehaviour
         tierPanel.SetActive(true);
         hiringPanel.SetActive(false);
         confirmPanel.SetActive(false);
+        RefreshTierButtonVisibility();
     }
 
-    // 티어 버튼 클릭 (0~4)
+    // 1단계는 항상 표시. 2/3단계는 hire_tier2 / hire_tier3 해금 시에만 노출.
+    void RefreshTierButtonVisibility()
+    {
+        if (tierButtons == null) return;
+        bool tier2Unlocked = TechTreeManager.Instance != null && TechTreeManager.Instance.IsUnlocked("hire_tier2");
+        bool tier3Unlocked = TechTreeManager.Instance != null && TechTreeManager.Instance.IsUnlocked("hire_tier3");
+
+        if (tierButtons.Length > 0 && tierButtons[0] != null) tierButtons[0].SetActive(true);
+        if (tierButtons.Length > 1 && tierButtons[1] != null) tierButtons[1].SetActive(tier2Unlocked);
+        if (tierButtons.Length > 2 && tierButtons[2] != null) tierButtons[2].SetActive(tier3Unlocked);
+    }
+
+    // 티어 버튼 클릭 (0~2)
     public void OnClickTier(int tierIndex)
     {
+        // 안전망 — 해금 안 된 티어가 다른 경로로 호출되는 케이스 차단
+        if (tierIndex == 1 && (TechTreeManager.Instance == null || !TechTreeManager.Instance.IsUnlocked("hire_tier2")))
+        {
+            AlertUI.Instance.Show("채용 2단계가 해금되지 않았습니다.");
+            return;
+        }
+        if (tierIndex == 2 && (TechTreeManager.Instance == null || !TechTreeManager.Instance.IsUnlocked("hire_tier3")))
+        {
+            AlertUI.Instance.Show("채용 3단계가 해금되지 않았습니다.");
+            return;
+        }
+
         if (EmployeeManager.Instance.ownedEmployees.Count >= StageManager.Instance.MaxEmployeeCount)
         {
             AlertUI.Instance.Show("최대 직원수 입니다.");
             return;
         }
 
-        var (label, cost, range, weights) = Tiers[tierIndex];
+        var (label, baseCost, range, weights) = Tiers[tierIndex];
+
+        // 테크트리 '채용 비용 할인(hire_discount)' — 티어 진입 비용도 20% 감소
+        bool discounted = TechTreeManager.Instance != null && TechTreeManager.Instance.IsUnlocked("hire_discount");
+        int cost = discounted ? Mathf.RoundToInt(baseCost * 0.8f) : baseCost;
+        string costDisplay = discounted
+            ? $"<s><color=#888888>{baseCost:N0}G</color></s>  <color=#FFD24A>{cost:N0}G</color>  <size=70%>(-20%)</size>"
+            : $"{cost:N0}G";
 
         ConfirmUI.Instance.Show(
-            $"{label}\n비용: {cost:N0}G",
+            $"{label}\n비용: {costDisplay}",
             onConfirm: () =>
             {
                 if (!MoneyManager.Instance.CanAfford(cost))
@@ -104,25 +153,67 @@ public class HiringUI : MonoBehaviour
                 tierPanel.SetActive(false);
                 if (loadingPanel != null) loadingPanel.SetActive(true);
 
-                _currentCandidates.Clear();
-                int recruitBonus  = TraitEffectApplier.GetRecruitApplicantsBonus();
-                int hiringPenalty = RandomEventManager.Instance?.HiringPenalty ?? 0;
-                int effectiveCount = Mathf.Max(1, candidateCount + recruitBonus - hiringPenalty);
-                EmployeeManager.Instance.LoadRandomCandidates(effectiveCount, tierIndex, candidates =>
-                {
-                    // 티어별 강화 수치 적용
-                    foreach (var employee in candidates)
-                    {
-                        int enhLevel = RollWeighted(range, weights);
-                        ApplyEnhancementLevel(employee, enhLevel);
-                    }
-                    ShowCandidates(candidates);
-                });
+                _currentTierIndex = tierIndex;
+                _refreshUsed = false; // 새 티어 진입 시 새로고침 권리 부여
+                LoadAndShowCandidates(tierIndex);
             },
             onCancel: () => { },
             confirmText: "채용하기",
             cancelText: "취소"
         );
+    }
+
+    // OnClickTier / OnClickRefresh 공용 — 마지막 진입 티어 기준으로 후보 재로드 후 ShowCandidates.
+    void LoadAndShowCandidates(int tierIndex)
+    {
+        var (label, baseCost, range, weights) = Tiers[tierIndex];
+
+        _currentCandidates.Clear();
+        int recruitBonus  = TraitEffectApplier.GetRecruitApplicantsBonus();
+        int hiringPenalty = RandomEventManager.Instance?.HiringPenalty ?? 0;
+        // 테크트리 '한 명 더!(hire_more)' — 후보 +1
+        int hireMoreBonus = (TechTreeManager.Instance != null && TechTreeManager.Instance.IsUnlocked("hire_more")) ? 1 : 0;
+        int effectiveCount = Mathf.Max(1, candidateCount + recruitBonus + hireMoreBonus - hiringPenalty);
+
+        EmployeeManager.Instance.LoadRandomCandidates(effectiveCount, tierIndex, candidates =>
+        {
+            foreach (var employee in candidates)
+            {
+                int enhLevel = RollWeighted(range, weights);
+                ApplyEnhancementLevel(employee, enhLevel);
+            }
+            ShowCandidates(candidates);
+        });
+    }
+
+    // 테크트리 '한 번 더!(hire_refresh)' — 같은 세션 1회 한정 후보 전체 재추첨.
+    // ConfirmUI 로 확인받은 뒤 진행.
+    public void OnClickRefresh()
+    {
+        if (_refreshUsed) return;
+        if (TechTreeManager.Instance == null || !TechTreeManager.Instance.IsUnlocked("hire_refresh")) return;
+        if (_currentTierIndex < 0) return;
+
+        ConfirmUI.Instance.Show(
+            "후보 리스트를 새로고침 하시겠습니까?\n(1회만 가능합니다)",
+            onConfirm: () =>
+            {
+                if (_refreshUsed) return; // ConfirmUI 대기 중 상태 변동 안전망
+                _refreshUsed = true;
+                if (loadingPanel != null) loadingPanel.SetActive(true);
+                LoadAndShowCandidates(_currentTierIndex);
+            },
+            onCancel: () => { },
+            confirmText: "예",
+            cancelText: "아니오"
+        );
+    }
+
+    void UpdateRefreshButton()
+    {
+        if (refreshButton == null) return;
+        bool unlocked = TechTreeManager.Instance != null && TechTreeManager.Instance.IsUnlocked("hire_refresh");
+        refreshButton.interactable = unlocked && !_refreshUsed;
     }
 
     // 가중치 랜덤 롤
@@ -163,6 +254,7 @@ public class HiringUI : MonoBehaviour
         }
 
         hiringPanel.SetActive(true);
+        UpdateRefreshButton();
     }
 
     public void OnSelectEmployee(EmployeeData employee)
@@ -171,6 +263,10 @@ public class HiringUI : MonoBehaviour
 
         int baseHireCost = EmployeeManager.GetExpectedEnhanceCost(employee.enhancementLevel);
         _hireCost = Mathf.RoundToInt(baseHireCost * UnityEngine.Random.Range(0.8f, 1.2f));
+        // 테크트리 '채용 비용 할인(hire_discount)' — 채용 비용 20% 감소 (취소선+할인가 표시)
+        bool hireDiscounted = TechTreeManager.Instance != null && TechTreeManager.Instance.IsUnlocked("hire_discount");
+        int prediscountHireCost = _hireCost;
+        if (hireDiscounted) _hireCost = Mathf.RoundToInt(_hireCost * 0.8f);
 
         confirmNameText.text = employee.employeeName;
         confirmRoleText.text = employee.RoleToString();
@@ -183,7 +279,14 @@ public class HiringUI : MonoBehaviour
         confirmSalaryText.text = employee.SalaryRangeText();
         enhancementText.text = $"+{employee.enhancementLevel}";
         if (confirmHireCostText != null)
-            confirmHireCostText.text = _hireCost > 0 ? $"{_hireCost:N0}G" : "무료";
+        {
+            if (_hireCost <= 0)
+                confirmHireCostText.text = "무료";
+            else if (hireDiscounted)
+                confirmHireCostText.text = $"<s><color=#888888>{prediscountHireCost:N0}G</color></s>  <color=#FFD24A>{_hireCost:N0}G</color>  <size=70%>(-20%)</size>";
+            else
+                confirmHireCostText.text = $"{_hireCost:N0}G";
+        }
         if (confirmSatisfactionText != null)
             confirmSatisfactionText.text = employee.SatisfactionText();
         else

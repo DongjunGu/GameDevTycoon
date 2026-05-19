@@ -1,6 +1,4 @@
 questId,title,description,type,targetValue,rewardGold,isMainQuest,unlockAfter,isVisible
-quest_001,첫 판매,게임을 총 1000개 판매하세요,TotalSales,1000,500,0,,0
-quest_002,히트작,게임을 총 10000개 판매하세요,TotalSales,10000,2000,0,,0
 quest_003,팀 꾸리기,직원을 2명 채용하세요,HireEmployee,2,300,0,,0
 quest_004,든든한 팀,직원을 5명 채용하세요,HireEmployee,5,1000,0,,0
 main_quest_001,1년 버티기,1년 이상 회사를 운영하세요,SurviveYears,1,0,1,,1

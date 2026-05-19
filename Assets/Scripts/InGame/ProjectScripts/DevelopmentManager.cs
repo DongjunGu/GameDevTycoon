@@ -285,7 +285,15 @@ public class DevelopmentManager : MonoBehaviour
         float creativityCap = overtime ? 0.40f : 0.45f;
         float creativityP = Mathf.Clamp((10f + stat / 50f) / 100f, 0.10f, creativityCap);
 
-        int jackpot    = Mathf.Max(1, Mathf.RoundToInt(total * jackpotP));
+        // 테크트리 '각성 상태(money_awaken)' 미해금 시 잭팟 미발동, 확률은 성공으로 흡수
+        bool awakenUnlocked = TechTreeManager.Instance != null && TechTreeManager.Instance.IsUnlocked("money_awaken");
+        if (!awakenUnlocked)
+        {
+            successP += jackpotP;
+            jackpotP  = 0f;
+        }
+
+        int jackpot    = jackpotP > 0f ? Mathf.Max(1, Mathf.RoundToInt(total * jackpotP)) : 0;
         int success    = Mathf.RoundToInt(total * successP);
         int creativity = Mathf.RoundToInt(total * creativityP);
         int bug        = Mathf.Max(1, Mathf.RoundToInt(total * bugP));
@@ -506,6 +514,10 @@ public class DevelopmentManager : MonoBehaviour
             elapsed = 0f;
 
             float bugFixChance = IsOvertimeMode ? 0.6f : 0.5f;
+            // 테크트리 '버그 잡기 달인(money_bugmaster)' — 해결 확률 +10% (= 실패 확률 -10%)
+            if (TechTreeManager.Instance != null && TechTreeManager.Instance.IsUnlocked("money_bugmaster"))
+                bugFixChance += 0.10f;
+            bugFixChance = Mathf.Clamp01(bugFixChance);
             if (UnityEngine.Random.value < bugFixChance)
             {
                 var workers = EmployeeManager.Instance.ownedEmployees
@@ -629,8 +641,12 @@ public class DevelopmentManager : MonoBehaviour
                     jealousyCandidates.Add(emp);
             }
         }
-        employee.consecutiveLeaderCount++;
-        employee.consecutiveNonLeaderCount = 0;
+        // CEO 는 랜덤이벤트 / 카운트 모두 자동 제외 — 연속 팀장 카운트도 증가 X (LeaderBurnout 트리거 조건 못 채움)
+        if (!employee.isCEO)
+        {
+            employee.consecutiveLeaderCount++;
+            employee.consecutiveNonLeaderCount = 0;
+        }
 
         EmployeeData jealousyTarget = jealousyCandidates.Count > 0
             ? jealousyCandidates[UnityEngine.Random.Range(0, jealousyCandidates.Count)] : null;
@@ -691,7 +707,8 @@ public class DevelopmentManager : MonoBehaviour
                     StartDeveloping();
             }
 
-            if (leaderCount >= 3 && UnityEngine.Random.value < 0.5f)
+            // CEO 는 랜덤이벤트 자체 제외 — burnout 트리거 명시적 가드 (카운터가 안 늘어나 자연스럽게도 막히지만 안전망)
+            if (!employee.isCEO && leaderCount >= 3 && UnityEngine.Random.value < 0.5f)
                 RandomEvents_Condition.TriggerLeaderBurnoutEvent(employee, leaderCount, AfterBurnout);
             else
                 AfterBurnout();
