@@ -257,6 +257,10 @@ public class TrainingUI : MonoBehaviour
         {
             _selectedEmployee.enhancementLevel++;
             EmployeeManager.Instance.ApplyEnhancement(_selectedEmployee);
+            // 테크트리 '고급 인력(sat_elite)' — 11성 이상 강화 성공 시 해당 직원 만족도 +5
+            if (_selectedEmployee.enhancementLevel >= 11 &&
+                TechTreeManager.Instance != null && TechTreeManager.Instance.IsUnlocked("sat_elite"))
+                _selectedEmployee.ChangeSatisfaction(+5);
             outcome = "O 강화 성공!";
         }
         else if (downgrade > 0 && roll >= success + maintain)

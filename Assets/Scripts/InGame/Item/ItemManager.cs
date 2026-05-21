@@ -120,10 +120,10 @@ public class ItemManager : MonoBehaviour
     }
 
     // ── 사용 가능 여부 ────────────────────────────────────────
-    // 카테고리별 사용 조건: 강화/만족도/이벤트 대비는 항상 사용 가능,
-    // 그 외(게임/능력치/테크트리 포인트/창의성 블록)는 프로젝트 진행중에만.
+    // 카테고리별 사용 조건: 강화/만족도/이벤트 대비/테크트리 포인트는 항상 사용 가능,
+    // 그 외(게임/능력치/창의성 블록)는 프로젝트 진행중에만.
     public static bool IsAlwaysUsableCategory(string category)
-        => category == "강화" || category == "만족도" || category == "이벤트 대비";
+        => category == "강화" || category == "만족도" || category == "이벤트 대비" || category == "테크트리 포인트";
 
     public static bool IsProjectActive()
     {
@@ -219,6 +219,14 @@ public class ItemManager : MonoBehaviour
                 var dot = System.Array.Find(CreativityGameData.Blocks, b => b.name == "Dot");
                 if (dot == null) { Debug.LogWarning("[Item] Dot 블록 정의 누락"); return false; }
                 return AddBlockToCreativity(dot);
+            }
+            case "techNote":
+            {
+                // 오래된 연구노트 — 테크트리 포인트 1 획득 (인게임 TechPoint = UserMoney.point)
+                if (TechTreeManager.Instance == null) return false;
+                TechTreeManager.Instance.AddPoints(1);
+                AlertUI.Instance?.Show("오래된 연구노트를 해독했습니다.\n테크트리 포인트 +1");
+                return true;
             }
         }
         Debug.LogWarning($"[Item] '{itemId}' 무대상 효과 미구현");

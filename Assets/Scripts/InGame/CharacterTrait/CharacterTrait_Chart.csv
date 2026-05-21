@@ -1,0 +1,7 @@
+traitId,name,description,effectType,effectValue
+ctrait_kim,유리멘탈,만족도가 높을 때 스탯이 크게 상승하고 낮을 때 크게 하락합니다,,0
+ctrait_otaku,오타쿠,특정 장르를 만들 때 능력치가 20% 상승하고 해당 게임 매출이 20% 증가합니다,,0
+ctrait_goldspoon,금수저,연봉을 다른 직원의 50%만 받고 연봉 협상을 요구하지 않습니다,,0
+ctrait_ugi,우주의 기운,능력치가 매주 변동합니다,,0
+ctrait_genius,게으른 천재,프로젝트가 2주 지연되는 대신 개발 팀장 점수가 30% 증가합니다,,0
+ctrait_hunsu,훈수쟁이,개발 도중 다른 파트의 수치가 일부 증가합니다,,0

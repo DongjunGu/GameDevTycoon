@@ -14,6 +14,7 @@ public class EmployeeCardUI : MonoBehaviour
     [Header("UI References")]
     public Image portraitImage;
     public TextMeshProUGUI nameText;
+    public TextMeshProUGUI traitText;   // 캐릭터 특성명 (grade >= Epic 일 때만, 아니면 빈 문자열)
     public TextMeshProUGUI enhancementText;
     public Slider satisfactionSlider;
     public TextMeshProUGUI satisfactionText;
@@ -55,6 +56,7 @@ public class EmployeeCardUI : MonoBehaviour
             if (sprite != null) portraitImage.sprite = sprite;
         }
         if (nameText != null) nameText.text = emp.employeeName;
+        if (traitText != null) traitText.text = CharacterTraitApplier.GetTraitName(emp);
         if (satisfactionSlider != null)
         {
             satisfactionSlider.minValue = 0f;

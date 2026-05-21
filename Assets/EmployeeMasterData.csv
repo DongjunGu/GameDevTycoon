@@ -1,7 +1,7 @@
-﻿employeeId,employeeName,role,isDefault,developMin,developMax,planningMin,planningMax,artMin,artMax,creativityMin,creativityMax,salaryMin,salaryMax,maxGrade,portraitId,isFemale
-goldspoon_01,금수저,0,1,10,20,20,50,10,20,10,20,2500,5000,1,portrait_goldspoon_01,0
-hunsu_01,훈수쟁이,1,0,10,20,20,50,10,20,10,20,2500,5000,1,portrait_hunsu_01,1
-genius_01,천재,1,1,10,20,20,50,10,20,10,20,2500,5000,0,portrait_genius_01,0
-ugi_01,우기,0,0,20,50,10,20,10,20,10,20,2500,5000,3,portrait_ugi_01,0
-kim_01,김아무개,2,1,10,20,10,20,20,50,10,20,2500,5000,0,portrait_kim_01,1
-otaku_01,오타쿠,2,1,10,20,10,20,20,50,10,20,2500,5000,4,portrait_otaku_01,1
+employeeId,employeeName,role,isDefault,developMin,developMax,planningMin,planningMax,artMin,artMax,creativityMin,creativityMax,salaryMin,salaryMax,maxGrade,portraitId,isFemale,epicTraitId,uniqueEventType
+goldspoon_01,금수저,0,1,10,20,20,50,10,20,10,20,2500,5000,1,portrait_goldspoon_01,0,ctrait_goldspoon,GoldspoonUnique
+hunsu_01,훈수쟁이,1,0,10,20,20,50,10,20,10,20,2500,5000,1,portrait_hunsu_01,1,ctrait_hunsu,HunsuUnique
+genius_01,천재,1,1,10,20,20,50,10,20,10,20,2500,5000,0,portrait_genius_01,0,ctrait_genius,GeniusUnique
+ugi_01,우기,0,0,20,50,10,20,10,20,10,20,2500,5000,3,portrait_ugi_01,0,ctrait_ugi,UgiUnique
+kim_01,김아무개,2,1,10,20,10,20,20,50,10,20,2500,5000,0,portrait_kim_01,1,ctrait_kim,KimUnique
+otaku_01,오타쿠,2,1,10,20,10,20,20,50,10,20,2500,5000,4,portrait_otaku_01,1,ctrait_otaku,OtakuUnique

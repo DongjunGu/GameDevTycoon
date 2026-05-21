@@ -8,7 +8,7 @@ using UnityEngine;
 //   - HiringUI.OnClickTier:           GetRecruitApplicantsBonus()                ← recruitApplicants
 //   - SalesUI 매출 코루틴 진입부:    ConsumeFirstSaleBonusPct()                 ← firstSaleBonus (1회만)
 //   - MoneyManager.SpendGold 부족:   TryConsumeBrokeRescue(out salary, out name) ← brokeRescue (1회만)
-//   - 매출 정산 외 미구현
+//   - MarketingUI / DevelopmentResultUI: HasMarketingFree()                       ← marketingFree
 //
 // effectType 키:
 //   startGold          → MoneyManager.AddGold(value)                  ← 구현됨
@@ -16,8 +16,8 @@ using UnityEngine;
 //   recruitApplicants  → HiringUI 지원자 수 +value                    ← 구현됨
 //   firstSaleBonus     → SalesUI 첫 게임 매출 +value%                 ← 구현됨
 //   brokeRescue        → MoneyManager 0 도달 시 랜덤 직원 연봉 지급   ← 구현됨 (effectValue 무시)
-//   itemDiscount       → TODO
-//   marketingFree      → TODO
+//   marketingFree      → MarketingUI 비용 0G + DevelopmentResultUI 1.3 보정 ← 구현됨
+//   itemDiscount       → TODO (중고 거래 5% / 중고 거래+ 10%) — 상인 가격 시스템 선행 필요. 미구현
 public static class TraitEffectApplier
 {
     const string STARTITEM_PREFIX = "startItem_";

@@ -31,6 +31,7 @@ public class HiringUI : MonoBehaviour
     public TextMeshProUGUI enhancementText;
     public TextMeshProUGUI confirmRoleText;
     public TextMeshProUGUI confirmGradeText;
+    public TextMeshProUGUI confirmTraitText;   // 캐릭터 특성명 (grade >= Epic 일 때만, 아니면 빈 문자열)
     public TextMeshProUGUI confirmPotentialText;
     public TextMeshProUGUI confirmDevelopText;
     public TextMeshProUGUI confirmPlanningText;
@@ -44,6 +45,7 @@ public class HiringUI : MonoBehaviour
     public TextMeshProUGUI ownedNameText;
     public TextMeshProUGUI ownedRoleText;
     public TextMeshProUGUI ownedGradeText;
+    public TextMeshProUGUI ownedTraitText;   // 캐릭터 특성명 (grade >= Epic 일 때만, 아니면 빈 문자열)
     public TextMeshProUGUI ownedPotentialText;
     public TextMeshProUGUI ownedDevelopText;
     public TextMeshProUGUI ownedPlanningText;
@@ -271,6 +273,7 @@ public class HiringUI : MonoBehaviour
         confirmNameText.text = employee.employeeName;
         confirmRoleText.text = employee.RoleToString();
         confirmGradeText.text = employee.GradeToString();
+        if (confirmTraitText != null) confirmTraitText.text = CharacterTraitApplier.GetTraitName(employee);
         confirmPotentialText.text = employee.PotentialToString();
         confirmDevelopText.text = employee.DevelopDisplayText();
         confirmPlanningText.text = employee.PlanningDisplayText();
@@ -306,6 +309,7 @@ public class HiringUI : MonoBehaviour
             if (ownedNameText != null)       ownedNameText.text       = owned.employeeName;
             if (ownedRoleText != null)       ownedRoleText.text       = owned.RoleToString();
             if (ownedGradeText != null)      ownedGradeText.text      = owned.GradeToString();
+            if (ownedTraitText != null)      ownedTraitText.text      = CharacterTraitApplier.GetTraitName(owned);
             if (ownedPotentialText != null)  ownedPotentialText.text  = owned.PotentialToString();
             if (ownedDevelopText != null)    ownedDevelopText.text    = owned.DevelopText();
             if (ownedPlanningText != null)   ownedPlanningText.text   = owned.PlanningText();

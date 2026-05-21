@@ -899,7 +899,10 @@ public class RandomEventManager : MonoBehaviour
             if (emp.satisfaction >= 41) continue;
 
             float triggerChance = (50 - emp.satisfaction) / 100f;
-            if (UnityEngine.Random.value >= triggerChance) continue;
+            // 테크트리 '평생 직장(sat_loyalty)' — 자진 퇴사(사직서/도망) 전체 확률 10%p 하락 (음수는 0%)
+            if (TechTreeManager.Instance != null && TechTreeManager.Instance.IsUnlocked("sat_loyalty"))
+                triggerChance -= 0.10f;
+            if (triggerChance <= 0f || UnityEngine.Random.value >= triggerChance) continue;
 
             var captured = emp;
             if (UnityEngine.Random.value < 0.7f)
@@ -907,7 +910,28 @@ public class RandomEventManager : MonoBehaviour
             else
                 TriggerEmployeeRunEvent(captured);
         }
+
+        CheckCharacterUniqueEvents();
     }
+
+    // 유니크 등급 직원 전용 이벤트 후보 탐색.
+    // TODO: 발동 확률/조건 미정 — 현재 CHARACTER_UNIQUE_EVENT_CHANCE = 0f 라 자동 발동 안 함.
+    //       확률·주기·중복 발동 정책이 정해지면 값을 올리고 트리거 로직 보강할 것.
+    const float CHARACTER_UNIQUE_EVENT_CHANCE = 0f;
+    void CheckCharacterUniqueEvents()
+    {
+        if (CHARACTER_UNIQUE_EVENT_CHANCE <= 0f) return; // 미튜닝 — 비활성
+        foreach (var emp in new List<EmployeeData>(EmployeeManager.Instance.ownedEmployees))
+        {
+            if (emp.grade < EmployeeGrade.Unique) continue;
+            if (string.IsNullOrEmpty(CharacterTraitApplier.ResolveEventType(emp))) continue;
+            if (UnityEngine.Random.value >= CHARACTER_UNIQUE_EVENT_CHANCE) continue;
+            TriggerCharacterUniqueEvent(emp);
+        }
+    }
+
+    // 유니크 직원 전용 이벤트 발동 — 로직은 CharacterUniqueEvents 에 위임 (얇은 진입점).
+    public void TriggerCharacterUniqueEvent(EmployeeData emp) => CharacterUniqueEvents.Trigger(emp);
 
     public bool CheckUnstableCompanyOnNewYear(int newYear) =>
         RandomEvents_Condition.CheckUnstableCompanyOnNewYear(this, newYear);
