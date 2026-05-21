@@ -9,6 +9,7 @@ public class OwnedEmployeeSlotUI : MonoBehaviour
     public TextMeshProUGUI enhancementText;
     public TextMeshProUGUI roleText;
     public TextMeshProUGUI gradeText;
+    public TextMeshProUGUI traitText;   // 캐릭터 특성명 (grade >= Epic 일 때만, 아니면 빈 문자열)
     public TextMeshProUGUI potentialText;
     public TextMeshProUGUI developSkillText;
     public TextMeshProUGUI planningSkillText;
@@ -34,6 +35,7 @@ public class OwnedEmployeeSlotUI : MonoBehaviour
         nameText.text = data.employeeName;
         roleText.text = data.RoleToString();
         gradeText.text = data.GradeToString();
+        if (traitText != null) traitText.text = CharacterTraitApplier.GetTraitName(data);
         potentialText.text = data.PotentialToString();
         developSkillText.text = data.DevelopText();
         planningSkillText.text = data.PlanningText();
@@ -51,7 +53,8 @@ public class OwnedEmployeeSlotUI : MonoBehaviour
         satisfactionText.color = sat > 1f ? Color.red : sat < 1f ? Color.blue : Color.white;
         //stateText.text           = data.StateToString();
         _pendingGrade = data.grade;
-        ApplyGradeColor(_pendingGrade);
+        // 비활성 시 코루틴 에러 방지 — 활성이면 즉시 적용, 비활성이면 OnEnable 에 위임
+        if (isActiveAndEnabled) ApplyGradeColor(_pendingGrade);
 
         fireButton.onClick.RemoveAllListeners();
         if (_listUI != null)

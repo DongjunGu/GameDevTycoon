@@ -80,6 +80,17 @@ public class EmployeeData
     public int hiredYear; // 채용된 게임 연도 (연봉협상 첫해 제외 조건에 사용)
     public bool isFemale; // 여직원 여부 (연봉협상 특수 대사 조건, EmployeeMasterData 차트 isFemale 컬럼 필요)
 
+    // ── 캐릭터별 등급 특징 (CEO 특성과 별개, 마스터 데이터 귀속) ──
+    // 발동 기준은 채용 시 roll 된 현재 grade. 누적: Epic 이상 → 특성, Unique 이상 → 특성 + 전용 이벤트.
+    public string epicTraitId    = ""; // 캐릭터 고유 특성 ID (grade >= Epic 일 때 활성). CharacterTrait_Chart 참조.
+    public string uniqueEventType = ""; // 캐릭터 전용 이벤트 타입 (grade >= Unique 일 때 발동 후보). CharacterUniqueEvent 차트 참조.
+
+    // ── 캐릭터 특성/이벤트 런타임 상태 (특성 스크립트와 이벤트 스크립트가 공유, 영속화) ──
+    // 캐릭터별 효과 구현 시 사용. 필요한 캐릭터가 생기면 여기에 필드 추가.
+    public string otakuFixedGenre        = "";  // 오타쿠: 채용 시 1회 고정된 선호 장르 (특성+버튜버 이벤트 공유)
+    public int    lastUniqueEventYear    = -1;  // 연 1회 전용 이벤트(금수저/우기 등) 마지막 발동 연도
+    public int    glassMentalCooldownWeeks = 0; // 김아무개 유리멘탈 회복: 발동 후 재발동 금지 남은 주차 (>0 = 대기중)
+
     public EmployeeState state;
     public string assignedProjectId;
     public string portraitId;
@@ -97,7 +108,8 @@ public class EmployeeData
         creativityMin, creativityMax,
         salaryMin, salaryMax,
         maxGrade
-    ) { portraitId = this.portraitId, isDefault = this.isDefault, isFemale = this.isFemale };
+    ) { portraitId = this.portraitId, isDefault = this.isDefault, isFemale = this.isFemale,
+        epicTraitId = this.epicTraitId, uniqueEventType = this.uniqueEventType };
 
     // ── 생성자 (EmployeePool 마스터 데이터용) ──
     public EmployeeData(string id, string name, EmployeeRole role,
@@ -161,6 +173,11 @@ public class EmployeeData
         data.enhancementRecordsJson = SafeString(row, "enhancementRecordsJson", "[]");
         data.hiredYear = SafeInt(row, "hiredYear", 0);
         data.isFemale  = SafeBool(row, "isFemale", false);
+        data.epicTraitId     = SafeString(row, "epicTraitId", "");
+        data.uniqueEventType = SafeString(row, "uniqueEventType", "");
+        data.otakuFixedGenre          = SafeString(row, "otakuFixedGenre", "");
+        data.lastUniqueEventYear      = SafeInt(row, "lastUniqueEventYear", -1);
+        data.glassMentalCooldownWeeks = SafeInt(row, "glassMentalCooldownWeeks", 0);
         ParseStatDebuffStacks(data, row);
         ParseStatBuffStacks(data, row);
         data.romanceBuffWeeksLeft      = SafeInt(row, "romanceBuffWeeksLeft",      0);
@@ -205,6 +222,11 @@ public class EmployeeData
         param.Add("enhancementRecordsJson", enhancementRecordsJson);
         param.Add("hiredYear", hiredYear);
         param.Add("isFemale",  isFemale);
+        param.Add("epicTraitId",     epicTraitId);
+        param.Add("uniqueEventType", uniqueEventType);
+        param.Add("otakuFixedGenre",          otakuFixedGenre);
+        param.Add("lastUniqueEventYear",      lastUniqueEventYear);
+        param.Add("glassMentalCooldownWeeks", glassMentalCooldownWeeks);
         param.Add("statDebuffStacks",       string.Join(",", statDebuffStacks));
         param.Add("statBuffStacks",         SerializeStatBuffStacks(statBuffStacks));
         param.Add("romanceBuffWeeksLeft",   romanceBuffWeeksLeft);

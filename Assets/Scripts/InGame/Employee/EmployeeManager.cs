@@ -149,6 +149,9 @@ public class EmployeeManager : MonoBehaviour
                 data.isDefault  = row["isDefault"].ToString() == "1";
                 var femaleVal   = row.ContainsKey("isFemale") ? row["isFemale"].ToString() : "0";
                 data.isFemale   = femaleVal == "1" || femaleVal.ToLower() == "true";
+                // 캐릭터별 등급 특징 (차트에 컬럼 없으면 빈 문자열 — 뒤끝 차트 미반영 환경 대비)
+                data.epicTraitId     = row.ContainsKey("epicTraitId")     ? row["epicTraitId"].ToString()     : "";
+                data.uniqueEventType = row.ContainsKey("uniqueEventType") ? row["uniqueEventType"].ToString() : "";
                 poolEmployees.Add(data);
             }
             catch (System.Exception e)
@@ -300,6 +303,8 @@ public class EmployeeManager : MonoBehaviour
         inGameEmployee.satisfaction = 80;
         inGameEmployee.hiredYear = GameTimeManager.Instance != null ? GameTimeManager.Instance.Year : 0;
         inGameEmployee.isFemale  = poolEmployee.isFemale;
+        inGameEmployee.epicTraitId     = poolEmployee.epicTraitId;
+        inGameEmployee.uniqueEventType = poolEmployee.uniqueEventType;
         
         int epochAtCall = _runEpoch;
         Backend.GameData.Insert("Employee", inGameEmployee.ToParam(), bro =>
@@ -322,6 +327,18 @@ public class EmployeeManager : MonoBehaviour
 
             inGameEmployee.rowInDate = newRowInDate;
             ownedEmployees.Add(inGameEmployee);
+
+            // 캐릭터 특성 채용 hook (오타쿠 선호 장르 고정 등 — 현재 골격 스텁)
+            CharacterTraitApplier.OnHire(inGameEmployee);
+
+            // 테크트리 '신입 환영회(sat_welcome)' — 신규 입사 시 기존 직원 랜덤 1명 만족도 +20
+            if (TechTreeManager.Instance != null && TechTreeManager.Instance.IsUnlocked("sat_welcome"))
+            {
+                var welcomeTargets = ownedEmployees.FindAll(e => e != inGameEmployee);
+                if (welcomeTargets.Count > 0)
+                    welcomeTargets[UnityEngine.Random.Range(0, welcomeTargets.Count)].ChangeSatisfaction(+20);
+            }
+
             HUDUI.Instance.RefreshAll();
             RandomEventManager.Instance?.CheckOfficeRomanceOnHire(inGameEmployee);
 
@@ -516,9 +533,13 @@ public class EmployeeManager : MonoBehaviour
             if (DevelopmentManager.Instance != null && DevelopmentManager.Instance.IsVoluntaryOvertimeActive) return;
             bool globalOvertime = DevelopmentManager.Instance != null && DevelopmentManager.Instance.IsOvertimeMode;
 
+            // 테크트리 '멘탈 케어 서비스(sat_mental)' — 주기 만족도 하락량 1 감소
+            int mentalCare = (TechTreeManager.Instance != null && TechTreeManager.Instance.IsUnlocked("sat_mental")) ? 1 : 0;
+
             foreach (var emp in ownedEmployees)
             {
                 int dropAmount = (globalOvertime || emp.isOvertimeWorker) ? 10 : 5;
+                dropAmount = Mathf.Max(0, dropAmount - mentalCare);
                 emp.satisfaction = Mathf.Clamp(emp.satisfaction - dropAmount, 0, 100);
             }
         }
@@ -541,6 +562,9 @@ public class EmployeeManager : MonoBehaviour
             }
             if (emp.romanceBuffWeeksLeft > 0)
                 emp.romanceBuffWeeksLeft--;
+
+            // 캐릭터 특성 매주 hook (유리멘탈/우주의 기운 등 — 현재 골격 스텁)
+            CharacterTraitApplier.WeeklyTick(emp);
         }
 
         CheckLowSatisfaction();
@@ -595,9 +619,14 @@ public class EmployeeManager : MonoBehaviour
     // 프로젝트 완성 시 호출 — 전 직원 만족도 +40
     public void OnProjectCompleted()
     {
+        // 테크트리 '완성의 기쁨(sat_completion)' — 완성 시 만족도 회복량 +5
+        int recover = 40;
+        if (TechTreeManager.Instance != null && TechTreeManager.Instance.IsUnlocked("sat_completion"))
+            recover += 5;
+
         foreach (var emp in ownedEmployees)
         {
-            emp.satisfaction = Mathf.Clamp(emp.satisfaction + 40, 0, 100);
+            emp.satisfaction = Mathf.Clamp(emp.satisfaction + recover, 0, 100);
             UpdateEmployee(emp);
         }
     }

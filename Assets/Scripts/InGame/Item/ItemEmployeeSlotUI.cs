@@ -10,6 +10,7 @@ public class ItemEmployeeSlotUI : MonoBehaviour
     public TextMeshProUGUI enhancementText;
     public TextMeshProUGUI roleText;
     public TextMeshProUGUI gradeText;
+    public TextMeshProUGUI traitText;   // 캐릭터 특성명 (grade >= Epic 일 때만, 아니면 빈 문자열)
     public TextMeshProUGUI potentialText;
     public TextMeshProUGUI developSkillText;
     public TextMeshProUGUI planningSkillText;
@@ -30,6 +31,7 @@ public class ItemEmployeeSlotUI : MonoBehaviour
         nameText.text            = data.employeeName;
         roleText.text            = data.RoleToString();
         gradeText.text           = data.GradeToString();
+        if (traitText != null) traitText.text = CharacterTraitApplier.GetTraitName(data);
         potentialText.text       = data.PotentialToString();
         developSkillText.text    = data.DevelopText();
         planningSkillText.text   = data.PlanningText();
@@ -50,6 +52,9 @@ public class ItemEmployeeSlotUI : MonoBehaviour
 
         selectButton.onClick.RemoveAllListeners();
         selectButton.onClick.AddListener(() => onSelect(data));
+
+        // 이미 활성 상태에서 재생성될 때는 OnEnable 이 Setup 보다 먼저 실행되어 색이 어긋남 → 활성이면 재적용
+        if (isActiveAndEnabled) ApplyGradeColor(_pendingGrade);
     }
 
     void OnEnable() => ApplyGradeColor(_pendingGrade);

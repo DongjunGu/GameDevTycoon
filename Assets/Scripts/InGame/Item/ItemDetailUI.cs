@@ -101,6 +101,7 @@ public class ItemDetailUI : MonoBehaviour
     {
         // 무대상 아이템 — 직원 선택 스킵
         if (row.category == "창의성 블록") return false;
+        if (row.category == "테크트리 포인트") return false;
         if (row.itemId == "upgradeRandom") return false;
         return true;
     }

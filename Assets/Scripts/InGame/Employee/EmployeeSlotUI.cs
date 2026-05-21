@@ -10,6 +10,7 @@ public class EmployeeSlotUI : MonoBehaviour
     public TextMeshProUGUI enhancementText;
     public TextMeshProUGUI roleText;
     public TextMeshProUGUI gradeText;
+    public TextMeshProUGUI traitText;   // 캐릭터 특성명 (grade >= Epic 일 때만 표시, 아니면 빈 문자열)
     public TextMeshProUGUI potentialText;
     public TextMeshProUGUI developSkillText;
     public TextMeshProUGUI planningSkillText;
@@ -29,6 +30,7 @@ public class EmployeeSlotUI : MonoBehaviour
         nameText.text = data.employeeName;
         roleText.text = data.RoleToString();
         gradeText.text = data.GradeToString();
+        if (traitText != null) traitText.text = CharacterTraitApplier.GetTraitName(data);
         potentialText.text = data.PotentialToString();
         developSkillText.text = data.DevelopDisplayText();
         planningSkillText.text = data.PlanningDisplayText();
@@ -46,6 +48,11 @@ public class EmployeeSlotUI : MonoBehaviour
 
         selectButton.onClick.RemoveAllListeners();
         selectButton.onClick.AddListener(() => hiringUI.OnSelectEmployee(data));
+
+        // 새로고침 등 이미 활성 상태에서 재생성될 때는 OnEnable 이 Setup 보다 먼저 실행되어
+        // _pendingGrade 가 기본값일 때 색이 칠해짐 → 활성 상태면 여기서 다시 적용.
+        // 비활성이면 코루틴 에러 방지 위해 건너뛰고 OnEnable 에 위임.
+        if (isActiveAndEnabled) ApplyGradeColor(_pendingGrade);
     }
     void OnEnable()
     {
