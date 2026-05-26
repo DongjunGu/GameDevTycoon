@@ -24,7 +24,13 @@ public class RandomEventUI : MonoBehaviour
         eventPanel.SetActive(false);
     }
 
+    // 다른 모달(AlertUI / 다른 이벤트 패널)이 떠 있으면 닫힐 때까지 대기 후 표시 — 동시 표시 방지.
     public void Show(RandomEventData evt)
+    {
+        ModalGate.I.WhenFree(() => DisplayInternal(evt));
+    }
+
+    void DisplayInternal(RandomEventData evt)
     {
         _currentEvent = evt;
         titleText.text = evt.title;
@@ -53,18 +59,21 @@ public class RandomEventUI : MonoBehaviour
     // 확인 버튼
     public void OnClickConfirm()
     {
+        // Unregister 시 대기 큐의 다음 모달이 즉시 표시되며 _currentEvent 가 바뀔 수 있으므로 먼저 캡처.
+        var evt = _currentEvent;
+
         eventPanel.SetActive(false);
         ModalGate.I.Unregister(this);
-        _currentEvent?.onApply?.Invoke();
+        evt?.onApply?.Invoke();
         ProjectSaveManager.Instance.SaveProject();
         GameTimeManager.Instance.SaveGameTime();
         EmployeeManager.Instance.SaveAllEmployees();
 
         // 개발중 이벤트일 때만 재개
-        if (_currentEvent != null &&
-            _currentEvent.type != RandomEventType.EmployeeRun &&
-            _currentEvent.type != RandomEventType.EmployeeFight &&
-            _currentEvent.type != RandomEventType.BadCompany)
+        if (evt != null &&
+            evt.type != RandomEventType.EmployeeRun &&
+            evt.type != RandomEventType.EmployeeFight &&
+            evt.type != RandomEventType.BadCompany)
         {
             DevelopmentManager.Instance.ResumeFromEvent();
         }

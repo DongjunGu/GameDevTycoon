@@ -273,7 +273,8 @@ public class HiringUI : MonoBehaviour
         confirmNameText.text = employee.employeeName;
         confirmRoleText.text = employee.RoleToString();
         confirmGradeText.text = employee.GradeToString();
-        if (confirmTraitText != null) confirmTraitText.text = CharacterTraitApplier.GetTraitName(employee);
+        CharacterTraitApplier.SetupTraitText(confirmTraitText, employee);
+        CharacterUniqueEvents.SetupEventText(confirmTraitText, employee);
         confirmPotentialText.text = employee.PotentialToString();
         confirmDevelopText.text = employee.DevelopDisplayText();
         confirmPlanningText.text = employee.PlanningDisplayText();
@@ -309,7 +310,8 @@ public class HiringUI : MonoBehaviour
             if (ownedNameText != null)       ownedNameText.text       = owned.employeeName;
             if (ownedRoleText != null)       ownedRoleText.text       = owned.RoleToString();
             if (ownedGradeText != null)      ownedGradeText.text      = owned.GradeToString();
-            if (ownedTraitText != null)      ownedTraitText.text      = CharacterTraitApplier.GetTraitName(owned);
+            CharacterTraitApplier.SetupTraitText(ownedTraitText, owned);
+            CharacterUniqueEvents.SetupEventText(ownedTraitText, owned);
             if (ownedPotentialText != null)  ownedPotentialText.text  = owned.PotentialToString();
             if (ownedDevelopText != null)    ownedDevelopText.text    = owned.DevelopText();
             if (ownedPlanningText != null)   ownedPlanningText.text   = owned.PlanningText();

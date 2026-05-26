@@ -51,7 +51,8 @@ public static class RandomEvents_Condition_Choice
                         if (isSpill[0])
                         {
                             DevelopmentManager.Instance?.ExtendDevelopmentDuration(
-                                delayWeeks[0] * 2f * GetSecondsPerWeek());
+                                delayWeeks[0] * GetSecondsPerWeek(),
+                                delayWeeks[0] * 2f * GetSecondsPerWeek()); // 연장 N주 / 감속 2N주
                         }
                         else
                         {

@@ -269,6 +269,20 @@ public class ItemManager : MonoBehaviour
         AlertUI.Instance?.Show($"{emp.employeeName}가 게임성을 업그레이드 했습니다.\n{roleName}점수 +{rounded}");
     }
 
+    // 잠 깨우기 (천재 GeniusUnique 전용 이벤트): 개발 진행 중 Unique+ 천재에게 커피 사용 시
+    // 개발 업그레이드권과 동일하게 팀장 점수의 1/4 추가. 프로젝트당 1회(geniusWakeup 키).
+    // 조건 충족 시 CharacterUniqueEvents.Trigger 로 위임 → EventChoicePanel 표시 + ApplyEffect(점수+마킹) + 4-set.
+    void TryGeniusWakeUp(EmployeeData emp)
+    {
+        var dm = DevelopmentManager.Instance;
+        if (dm == null || !dm.IsStarted) return;                                  // 개발 진행 중에만
+        if (emp.grade < EmployeeGrade.Unique) return;                             // 전용 이벤트 = Unique+
+        if (CharacterTraitApplier.ResolveEventType(emp) != "GeniusUnique") return;
+        if (dm.IsGameUpgradeUsed("geniusWakeup")) return;                         // 프로젝트당 1회 (마킹은 ApplyEffect 에서)
+
+        CharacterUniqueEvents.Trigger(emp);
+    }
+
     public bool UseItem(string itemId, EmployeeData target)
     {
         if (GetCount(itemId) <= 0) return false;
@@ -335,6 +349,10 @@ public class ItemManager : MonoBehaviour
         };
         if (upgradeRole.HasValue)
             ApplyGameUpgrade(target, upgradeRole.Value, itemId);
+
+        // 잠 깨우기 (천재 GeniusUnique): 개발 중 Unique+ 천재에게 커피 사용 시 팀장점수 1/4 적용 (프로젝트당 1회)
+        if (itemId == "coffee")
+            TryGeniusWakeUp(target);
 
         // 저장
         Save();

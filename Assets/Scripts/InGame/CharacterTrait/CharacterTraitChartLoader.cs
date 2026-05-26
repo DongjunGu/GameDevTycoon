@@ -21,14 +21,15 @@ public static class CharacterTraitChartLoader
 {
     private const string CHART_NAME = "CharacterTrait";
     private static Dictionary<string, CharacterTraitRow> _cache;
-    public static Dictionary<string, CharacterTraitRow> Cache => _cache ?? GetFallback();
+    public static Dictionary<string, CharacterTraitRow> Cache => _cache; // 테스트: fallback 비활성 (원복: => _cache ?? GetFallback();)
 
     public static void Load()
     {
         _cache = LoadFromServer();
-        if (_cache == null || _cache.Count == 0)
-            _cache = GetFallback();
-        Debug.Log($"[CharacterTraitChart] {_cache.Count}개 캐릭터 특성 로드 완료");
+        // 테스트: fallback 비활성 — 뒤끝 "CharacterTrait" 차트 적용 여부 확인용. (원복 시 아래 2줄 주석 해제)
+        // if (_cache == null || _cache.Count == 0)
+        //     _cache = GetFallback();
+        Debug.Log($"[CharacterTraitChart] {(_cache?.Count ?? 0)}개 캐릭터 특성 로드 (fallback 비활성 — 0개면 뒤끝 차트 못 찾음)");
     }
 
     // 차트 미업로드 시 fallback — 6 캐릭터 특성. 효과 로직은 CharacterTraitApplier 에서 traitId 별 분기(현재 TODO).

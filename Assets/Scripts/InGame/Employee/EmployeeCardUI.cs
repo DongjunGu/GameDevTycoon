@@ -56,7 +56,8 @@ public class EmployeeCardUI : MonoBehaviour
             if (sprite != null) portraitImage.sprite = sprite;
         }
         if (nameText != null) nameText.text = emp.employeeName;
-        if (traitText != null) traitText.text = CharacterTraitApplier.GetTraitName(emp);
+        CharacterTraitApplier.SetupTraitText(traitText, emp);
+        CharacterUniqueEvents.SetupEventText(traitText, emp);
         if (satisfactionSlider != null)
         {
             satisfactionSlider.minValue = 0f;

@@ -90,6 +90,7 @@ public class EmployeeData
     public string otakuFixedGenre        = "";  // 오타쿠: 채용 시 1회 고정된 선호 장르 (특성+버튜버 이벤트 공유)
     public int    lastUniqueEventYear    = -1;  // 연 1회 전용 이벤트(금수저/우기 등) 마지막 발동 연도
     public int    glassMentalCooldownWeeks = 0; // 김아무개 유리멘탈 회복: 발동 후 재발동 금지 남은 주차 (>0 = 대기중)
+    public int    cosmicEnergyPercent      = 100; // 우기 우주의 기운: 이번 주 능력치 배율(%) 70~150, 매주 WeeklyTick 재추첨. 비-우기/비활성은 100(영향 없음)
 
     public EmployeeState state;
     public string assignedProjectId;
@@ -178,6 +179,7 @@ public class EmployeeData
         data.otakuFixedGenre          = SafeString(row, "otakuFixedGenre", "");
         data.lastUniqueEventYear      = SafeInt(row, "lastUniqueEventYear", -1);
         data.glassMentalCooldownWeeks = SafeInt(row, "glassMentalCooldownWeeks", 0);
+        data.cosmicEnergyPercent      = SafeInt(row, "cosmicEnergyPercent", 100);
         ParseStatDebuffStacks(data, row);
         ParseStatBuffStacks(data, row);
         data.romanceBuffWeeksLeft      = SafeInt(row, "romanceBuffWeeksLeft",      0);
@@ -227,6 +229,7 @@ public class EmployeeData
         param.Add("otakuFixedGenre",          otakuFixedGenre);
         param.Add("lastUniqueEventYear",      lastUniqueEventYear);
         param.Add("glassMentalCooldownWeeks", glassMentalCooldownWeeks);
+        param.Add("cosmicEnergyPercent",      cosmicEnergyPercent);
         param.Add("statDebuffStacks",       string.Join(",", statDebuffStacks));
         param.Add("statBuffStacks",         SerializeStatBuffStacks(statBuffStacks));
         param.Add("romanceBuffWeeksLeft",   romanceBuffWeeksLeft);
@@ -247,6 +250,15 @@ public class EmployeeData
     public float GetSatisfactionMultiplier()
     {
         if (isCEO) return 1.0f; // CEO 는 만족도 시스템 적용 안 함
+        // 유리멘탈(김아무개) 특성: 만족도 구간 배율이 일반 직원보다 극단적.
+        // 91~100 +30% / 81~90 +15% / 61~80 중립 / 60 이하 -20%.
+        if (CharacterTraitApplier.IsGlassMental(this))
+        {
+            if (satisfaction >= 91) return 1.3f;
+            if (satisfaction >= 81) return 1.15f;
+            if (satisfaction >= 61) return 1.0f;
+            return 0.8f; // 60 이하 (41~60 및 40 이하 모두)
+        }
         if (satisfaction >= 81) return 1.1f;
         if (satisfaction >= 61) return 1.0f;
         if (satisfaction >= 41) return 0.9f;
@@ -280,10 +292,14 @@ public class EmployeeData
     }
     public int GetRomanceBuffAmount()   => romanceBuffWeeksLeft  > 0 ? (int)(GetMainStat() * 0.1f) : 0;
 
-    public int EffectivePlanningSkill   => (int)(planningSkill   * GetSatisfactionMultiplier()) - (role == EmployeeRole.Planner    ? GetStatDebuffAmount() : 0) + (role == EmployeeRole.Planner    ? GetStatBuffAmount() : 0) + (role == EmployeeRole.Planner    ? GetRomanceBuffAmount() : 0);
-    public int EffectiveDevelopSkill    => (int)(developSkill    * GetSatisfactionMultiplier()) - (role == EmployeeRole.Programmer ? GetStatDebuffAmount() : 0) + (role == EmployeeRole.Programmer ? GetStatBuffAmount() : 0) + (role == EmployeeRole.Programmer ? GetRomanceBuffAmount() : 0);
-    public int EffectiveArtSkill        => (int)(artSkill        * GetSatisfactionMultiplier()) - (role == EmployeeRole.Artist     ? GetStatDebuffAmount() : 0) + (role == EmployeeRole.Artist     ? GetStatBuffAmount() : 0) + (role == EmployeeRole.Artist     ? GetRomanceBuffAmount() : 0);
-    public int EffectiveCreativitySkill => (int)(creativitySkill * GetSatisfactionMultiplier());
+    // 우기 우주의 기운: 이번 주 능력치 배율 (비-우기/비활성은 100 → ×1.0, 영향 없음).
+    // Effective*Skill 의 외곽 곱으로 적용 → (raw → 만족도 → ±버프/디버프) × 우주배율 순서.
+    public float GetCosmicMultiplier() => cosmicEnergyPercent / 100f;
+
+    public int EffectivePlanningSkill   => Mathf.RoundToInt(((int)(planningSkill   * GetSatisfactionMultiplier()) - (role == EmployeeRole.Planner    ? GetStatDebuffAmount() : 0) + (role == EmployeeRole.Planner    ? GetStatBuffAmount() : 0) + (role == EmployeeRole.Planner    ? GetRomanceBuffAmount() : 0)) * GetCosmicMultiplier());
+    public int EffectiveDevelopSkill    => Mathf.RoundToInt(((int)(developSkill    * GetSatisfactionMultiplier()) - (role == EmployeeRole.Programmer ? GetStatDebuffAmount() : 0) + (role == EmployeeRole.Programmer ? GetStatBuffAmount() : 0) + (role == EmployeeRole.Programmer ? GetRomanceBuffAmount() : 0)) * GetCosmicMultiplier());
+    public int EffectiveArtSkill        => Mathf.RoundToInt(((int)(artSkill        * GetSatisfactionMultiplier()) - (role == EmployeeRole.Artist     ? GetStatDebuffAmount() : 0) + (role == EmployeeRole.Artist     ? GetStatBuffAmount() : 0) + (role == EmployeeRole.Artist     ? GetRomanceBuffAmount() : 0)) * GetCosmicMultiplier());
+    public int EffectiveCreativitySkill => Mathf.RoundToInt((int)(creativitySkill * GetSatisfactionMultiplier()) * GetCosmicMultiplier());
 
     public string DevelopText()    => $"개발: {EffectiveDevelopSkill}";
     public string PlanningText()   => $"기획: {EffectivePlanningSkill}";
@@ -428,12 +444,22 @@ public class EmployeeData
         catch { return defaultValue; }
     }
 
-    // 역할별 주스탯 반환 (연봉협상 대상 선정에 사용)
+    // 역할별 주스탯 반환 (연봉협상 대상 선정에 사용) — raw 값
     public int GetMainStat() => role switch
     {
         EmployeeRole.Planner    => planningSkill,
         EmployeeRole.Programmer => developSkill,
         EmployeeRole.Artist     => artSkill,
+        _ => 0
+    };
+
+    // 역할별 주스탯의 Effective 값 (만족도 배율 + 임시 버프/디버프 스택 + 사내연애 반영).
+    // 개발 틱 누적·팀장 점수 산출이 이 값을 사용해 표시 능력치와 실제 산출을 일치시킨다. (오타쿠 ×1.2 는 호출부에서 별도 적용)
+    public int GetEffectiveMainStat() => role switch
+    {
+        EmployeeRole.Planner    => EffectivePlanningSkill,
+        EmployeeRole.Programmer => EffectiveDevelopSkill,
+        EmployeeRole.Artist     => EffectiveArtSkill,
         _ => 0
     };
 
