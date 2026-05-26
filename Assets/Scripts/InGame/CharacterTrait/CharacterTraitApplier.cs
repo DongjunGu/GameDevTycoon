@@ -1,4 +1,5 @@
 using UnityEngine;
+using TMPro;
 
 // 캐릭터별 등급 특성의 인게임 효과 디스패처 (CEO 특성 TraitEffectApplier 와 별개)
 //
@@ -62,12 +63,127 @@ public static class CharacterTraitApplier
 
     public static bool HasActiveTrait(EmployeeData emp) => GetActiveTrait(emp) != null;
 
+    // 유리멘탈(김아무개) 특성 활성 여부 — 만족도 구간 배율이 일반 직원보다 극단적으로 적용됨.
+    // EmployeeData.GetSatisfactionMultiplier 가 이 패시브 효과를 직접 분기 (별도 WeeklyTick 불필요).
+    public static bool IsGlassMental(EmployeeData emp)
+        => GetActiveTrait(emp) != null && ResolveTraitId(emp) == "ctrait_kim";
+
+    // ──────────── 오타쿠(otaku_01) ────────────
+    // 채용 시마다 랜덤 장르 1개를 emp.otakuFixedGenre 에 고정(재추첨). 그 장르 개발 시:
+    //   - 오타쿠 본인 능력치 +20% (개발 틱 누적 + 팀장 점수 양쪽). DevelopmentManager 가 GetOtakuStatMultiplier 호출.
+    //   - 프로젝트 매출 +20% (보유 오타쿠의 고정장르가 프로젝트 장르와 일치 시). SalesUI 가 GetOtakuSalesBonus 호출.
+    public const float OTAKU_STAT_MULT  = 1.2f;  // 능력치 ×1.2
+    public const float OTAKU_SALES_BONUS = 0.2f; // 매출 bonusSum 합연산 +0.20
+
+    public static bool IsOtaku(EmployeeData emp)
+        => GetActiveTrait(emp) != null && ResolveTraitId(emp) == "ctrait_otaku";
+
+    // 이 직원이 오타쿠이고 고정 장르가 주어진 프로젝트 장르와 일치하는가.
+    public static bool IsOtakuGenreMatch(EmployeeData emp, ProjectGenre genre)
+        => IsOtaku(emp)
+           && !string.IsNullOrEmpty(emp.otakuFixedGenre)
+           && emp.otakuFixedGenre == genre.ToString();
+
+    // 개발 틱/팀장 점수용 능력치 배율 — 오타쿠 본인 + 고정장르 매칭 시 1.2, 그 외 1.0.
+    public static float GetOtakuStatMultiplier(EmployeeData emp, ProjectGenre genre)
+        => IsOtakuGenreMatch(emp, genre) ? OTAKU_STAT_MULT : 1.0f;
+
+    // 매출 보너스 — 보유 직원 중 고정장르가 프로젝트 장르와 일치하는 오타쿠가 한 명이라도 있으면 +0.20.
+    public static float GetOtakuSalesBonus(ProjectGenre genre)
+    {
+        var em = EmployeeManager.Instance;
+        if (em == null || em.ownedEmployees == null) return 0f;
+        foreach (var emp in em.ownedEmployees)
+            if (IsOtakuGenreMatch(emp, genre)) return OTAKU_SALES_BONUS;
+        return 0f;
+    }
+
+    // ──────────── 금수저(goldspoon_01) ────────────
+    // 기본 연봉·강화 연봉 상승량 50% 감소(채용/강화 시점에 salary 값 자체를 절반으로 확정 저장) + 연봉 협상 대상 제외.
+    //   - 연봉 감소: EmployeeManager 의 후보 연봉 roll / 강화 연봉 가감 시 ApplyGoldspoonSalary 로 절반 처리.
+    //   - 협상 제외: SalaryNegotiationManager.SelectNegotiationTarget 의 eligible 필터에서 IsGoldspoon 제외.
+    public const float GOLDSPOON_SALARY_FACTOR = 0.5f;
+
+    public static bool IsGoldspoon(EmployeeData emp)
+        => GetActiveTrait(emp) != null && ResolveTraitId(emp) == "ctrait_goldspoon";
+
+    // 금수저면 amount 의 절반(반올림), 아니면 amount 그대로. 기본 연봉·강화 상승량 양쪽에 공통 사용.
+    public static int ApplyGoldspoonSalary(EmployeeData emp, int amount)
+        => IsGoldspoon(emp) ? Mathf.RoundToInt(amount * GOLDSPOON_SALARY_FACTOR) : amount;
+
+    // ──────────── 게으른 천재(genius_01) ────────────
+    // 게으른 천재를 보유(Epic+)하면: 프로젝트 기간 +2주(고정, 다수여도 누적 X) + 개발(프로그래머) 팀장 최종 점수 ×1.3.
+    //   - 기간: DevelopmentManager.StartDevelopment 의 developmentDuration 산정에 HasLazyGeniusOwned 시 +2주.
+    //   - 팀장: DevelopmentManager.SetLeader 에서 type==Programmer 이고 보유 중이면 total ×1.3 (팀장 본인 여부 무관).
+    public const int   LAZY_GENIUS_EXTRA_WEEKS = 2;
+    public const float LAZY_GENIUS_LEADER_BONUS = 1.3f;
+
+    public static bool IsLazyGenius(EmployeeData emp)
+        => GetActiveTrait(emp) != null && ResolveTraitId(emp) == "ctrait_genius";
+
+    // 게으른 천재를 한 명이라도 보유 중인가 (기간 +2주 / 개발 팀장 점수 +30% 발동 조건)
+    public static bool HasLazyGeniusOwned()
+    {
+        var em = EmployeeManager.Instance;
+        if (em == null || em.ownedEmployees == null) return false;
+        foreach (var emp in em.ownedEmployees)
+            if (IsLazyGenius(emp)) return true;
+        return false;
+    }
+
+    // ──────────── 훈수쟁이(hunsu_01) ────────────
+    // 개발(프로그래머) 팀장일 때, 그 개발 팀장 점수의 10% 를 기획/아트 중 랜덤 1곳에 추가.
+    // (훈수쟁이는 프로그래머라 LeaderSelect 역할 필터상 개발 팀장으로만 선정됨.)
+    // 추가분은 LeaderScoreUI 마지막 tick 에 함께 카운트업 — DevelopmentManager.SetLeader 가 보너스/대상을 계산해 Show 에 전달.
+    public const float HUNSU_BONUS_RATIO = 0.1f; // 개발 점수의 10%
+
+    public static bool IsHunsu(EmployeeData emp)
+        => GetActiveTrait(emp) != null && ResolveTraitId(emp) == "ctrait_hunsu";
+
     // 슬롯/카드 UI 표시용 — 활성 특성명 반환, 없으면 "" (grade < Epic 또는 미보유). UI 는 빈 문자열이면 숨김.
     public static string GetTraitName(EmployeeData emp)
     {
         var row = GetActiveTrait(emp);
         return row != null ? row.name : "";
     }
+
+    // 슬롯/카드 공통 — traitText 에 특성명 세팅 + 클릭 시 설명을 띄우는 버튼으로 만든다(런타임 컴포넌트 부착, 에디터 배선 불필요).
+    // 특성 없음/CEO 면 빈 문자열 + raycastTarget off → 클릭이 슬롯 버튼으로 통과(가로채지 않음).
+    public static void SetupTraitText(TMP_Text traitText, EmployeeData emp)
+    {
+        if (traitText == null) return;
+        string traitName = (emp != null && !emp.isCEO) ? GetTraitName(emp) : "";
+        traitText.text = traitName;
+
+        var btn = traitText.GetComponent<TraitDescriptionButton>();
+        if (string.IsNullOrEmpty(traitName))
+        {
+            if (btn != null) btn.Bind(null);
+            traitText.raycastTarget = false; // 특성 없으면 클릭 통과
+            return;
+        }
+        if (btn == null) btn = traitText.gameObject.AddComponent<TraitDescriptionButton>();
+        btn.Bind(emp);
+        traitText.raycastTarget = true; // 특성 있으면 클릭 받아 설명 표시
+    }
+
+    // 특성명 텍스트 클릭 시 — 특성명 + 설명을 AlertUI 로 표시. 오타쿠는 고정 장르를 덧붙임.
+    public static void ShowTraitDescription(EmployeeData emp)
+    {
+        var row = GetActiveTrait(emp);
+        if (row == null || AlertUI.Instance == null) return;
+
+        string msg = $"[{row.name}]\n{row.description}";
+        if (ResolveTraitId(emp) == "ctrait_otaku" && !string.IsNullOrEmpty(emp.otakuFixedGenre))
+            msg += $"\n\n고정 장르: {GenreKorName(emp.otakuFixedGenre)}";
+        AlertUI.Instance.Show(msg);
+    }
+
+    // 저장된 enum 이름(RPG, VisualNovel 등)을 한글 표시명으로 변환 (ProjectData 의 canonical 매핑 재사용)
+    static string GenreKorName(string genreEnumName)
+        => System.Enum.TryParse<ProjectGenre>(genreEnumName, out var g)
+            ? new ProjectData { genre = g }.GenreToString()
+            : genreEnumName;
 
     // ──────────── 시점별 hook 진입점 (각 시스템이 호출) ────────────
 
@@ -78,9 +194,23 @@ public static class CharacterTraitApplier
         switch (ResolveTraitId(emp))
         {
             case "ctrait_otaku":
-                // TODO: 채용 시 랜덤 장르 1개를 emp.otakuFixedGenre 에 고정
+                // 채용 시마다 랜덤 장르 1개 재추첨 고정 (해고 후 재채용 시 새 장르). enum 이름으로 저장.
+                var genres = (ProjectGenre[])System.Enum.GetValues(typeof(ProjectGenre));
+                emp.otakuFixedGenre = genres[UnityEngine.Random.Range(0, genres.Length)].ToString();
+                Debug.Log($"[오타쿠] {emp.employeeName} 고정 장르 = {emp.otakuFixedGenre}");
+                break;
+            case "ctrait_ugi":
+                // 채용 첫 주부터 변동되도록 초기 배율 1회 추첨 (이후 매주 WeeklyTick 재추첨)
+                RerollCosmicEnergy(emp);
                 break;
         }
+    }
+
+    // 우주의 기운 — 능력치 배율 70~150% 재추첨 (영속 필드 cosmicEnergyPercent, Effective*Skill 외곽 곱으로 소비)
+    static void RerollCosmicEnergy(EmployeeData emp)
+    {
+        emp.cosmicEnergyPercent = UnityEngine.Random.Range(70, 151); // 70~150
+        Debug.Log($"[우주의 기운] {emp.employeeName} 이번 배율 = {emp.cosmicEnergyPercent}%");
     }
 
     // 매주 1회. 유리멘탈(만족도 구간 배율) / 우주의 기운(주간 능력치 변동) 등.
@@ -89,11 +219,10 @@ public static class CharacterTraitApplier
         if (GetActiveTrait(emp) == null) return;
         switch (ResolveTraitId(emp))
         {
-            case "ctrait_kim":   // 유리멘탈 — 만족도 구간별 능력치 가감
-                // TODO: 만족도 81~90 +15% / 91~100 +30% / 41~60 -20% 적용
+            case "ctrait_kim":   // 유리멘탈 — 패시브로 EmployeeData.GetSatisfactionMultiplier 가 직접 분기 (IsGlassMental). 매주 처리 불필요.
                 break;
             case "ctrait_ugi":   // 우주의 기운 — 매주 능력치 70~150% 변동
-                // TODO: 주간 배율 갱신
+                RerollCosmicEnergy(emp);
                 break;
         }
     }

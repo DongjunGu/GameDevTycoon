@@ -30,7 +30,8 @@ public class EmployeeSlotUI : MonoBehaviour
         nameText.text = data.employeeName;
         roleText.text = data.RoleToString();
         gradeText.text = data.GradeToString();
-        if (traitText != null) traitText.text = CharacterTraitApplier.GetTraitName(data);
+        CharacterTraitApplier.SetupTraitText(traitText, data);
+        CharacterUniqueEvents.SetupEventText(traitText, data);
         potentialText.text = data.PotentialToString();
         developSkillText.text = data.DevelopDisplayText();
         planningSkillText.text = data.PlanningDisplayText();

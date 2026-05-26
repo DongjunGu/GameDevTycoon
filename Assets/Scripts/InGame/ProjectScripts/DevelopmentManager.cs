@@ -101,6 +101,7 @@ public class DevelopmentManager : MonoBehaviour
     private float _progressVisualOffset = 0f;      // 현재 남은 시각 보정값
     private float _progressOffsetElapsedAtEvent = 0f; // 이벤트 발동 시점 _elapsed
     private float _progressOffsetExtension = 0f;   // 연장된 초 (보정 감소 기준)
+    private float _characterSlowEndElapsed = 0f;   // 캐릭터 감속 종료 _elapsed (연장과 분리 — 게으른 천재는 연장의 2배 감속)
 
     private Dictionary<string, List<float>> _tickTimesMap = new();
     private Dictionary<string, int> _tickIndexMap = new();
@@ -141,6 +142,8 @@ public class DevelopmentManager : MonoBehaviour
             _ => 5f
         };
         developmentDuration = baseDuration - diff * secondsPerWeek;
+        // 게으른 천재 +2주는 여기서 더하지 않고, 개발 시작(팀장 선택 직후)에 ExtendDevelopmentDuration 으로 적용
+        // → 기간 연장 + 캐릭터 속도 감소 + progress 보정 + 저장/복원(networkSlow 필드)을 기존 기제로 일괄 처리
 
         IsStarted = true;
         _patrolStarted = false;
@@ -189,20 +192,25 @@ public class DevelopmentManager : MonoBehaviour
                 ProceedToInvestment();
         }
 
-        if (diff != 0)
+        void BeginSetup()
         {
-            int absDiff = Mathf.Abs(diff);
-            string sign   = diff > 0 ? "많아서" : "적어서";
-            string effect = diff > 0 ? "줄었습니다" : "늘었습니다";
-            AlertUI.Instance.Show(
-                $"개발 인원이 추천보다 {absDiff}명 {sign}\n개발기간이 {absDiff}주 {effect}.",
-                ProceedToOvertimeSelect
-            );
+            if (diff != 0)
+            {
+                int absDiff = Mathf.Abs(diff);
+                string sign   = diff > 0 ? "많아서" : "적어서";
+                string effect = diff > 0 ? "줄었습니다" : "늘었습니다";
+                AlertUI.Instance.Show(
+                    $"개발 인원이 추천보다 {absDiff}명 {sign}\n개발기간이 {absDiff}주 {effect}.",
+                    ProceedToOvertimeSelect
+                );
+            }
+            else
+            {
+                ProceedToOvertimeSelect();
+            }
         }
-        else
-        {
-            ProceedToOvertimeSelect();
-        }
+
+        BeginSetup();
     }
 
     void InitTickMap()
@@ -467,6 +475,10 @@ public class DevelopmentManager : MonoBehaviour
                 GameTimeManager.Instance.SaveGameTime();
                 MoneyManager.Instance?.SaveMoney();
                 EmployeeManager.Instance?.SaveAllEmployees();
+
+                // 약점 극복(HunsuUnique): 창의성 미니게임 후·디버깅 전. Unique+ 훈수쟁이 보유 시 최저 파트 상승 (CharacterUniqueEvents 위임).
+                CharacterUniqueEvents.CheckWeaknessOvercome();
+
                 AlertUI.Instance.Show("디버깅 작업을 시작합니다.", () =>
                 {
                     _pendingDebuggingAlert = false;
@@ -563,6 +575,13 @@ public class DevelopmentManager : MonoBehaviour
         GameTimeManager.Instance.ResetSpeed();
         GameTimeManager.Instance.StopTime();
 
+        // 버튜버 데뷔: 디버깅 끝난 뒤(결과 표시 직전) 조건 충족 시 인기도 3단계 + 이벤트 패널.
+        // 시간은 위에서 StopTime 됨 → 패널 확인 후 결과(ShowResultInternal) 로. 조건 미충족이면 즉시 결과.
+        CharacterUniqueEvents.CheckVtuberDebut(ShowResultInternal);
+    }
+
+    void ShowResultInternal()
+    {
         float planning = DevelopmentPanelUI.Instance.GetPlanning();
         float develop = DevelopmentPanelUI.Instance.GetDevelop();
         float art = DevelopmentPanelUI.Instance.GetArt();
@@ -651,17 +670,35 @@ public class DevelopmentManager : MonoBehaviour
         EmployeeData jealousyTarget = jealousyCandidates.Count > 0
             ? jealousyCandidates[UnityEngine.Random.Range(0, jealousyCandidates.Count)] : null;
 
+        // 팀장 점수 = Effective 주스탯(만족도 배율 + 버프/디버프 스택 + 사내연애 포함) × 오타쿠 배율
         int skill = type switch
         {
-            LeaderType.Planner => employee.planningSkill,
-            LeaderType.Programmer => employee.developSkill,
-            LeaderType.Artist => employee.artSkill,
+            LeaderType.Planner    => employee.EffectivePlanningSkill,
+            LeaderType.Programmer => employee.EffectiveDevelopSkill,
+            LeaderType.Artist     => employee.EffectiveArtSkill,
             _ => 0
         };
+        // 오타쿠 특성: 고정 장르 프로젝트의 팀장일 때 능력치 ×1.2 (팀장 점수에 반영)
+        skill = Mathf.RoundToInt(skill * CharacterTraitApplier.GetOtakuStatMultiplier(employee, ProjectSetupUI.SelectedGenre));
 
         int n = CalcLeaderTickCount(skill);
 
         float total = CalcLeaderScore(skill, n);
+
+        // 훈수쟁이: 개발 점수의 10% 를 기획/아트 중 랜덤 1곳에 추가.
+        // 게으른 천재 ×1.3 "이전" 의 base 개발 점수 기준 (훈수쟁이 먼저 → 게으른 천재 나중).
+        // 예: base 100 → 훈수 10(다른 파트) → 게으른 천재로 개발만 130.
+        int hunsuBonus = 0;
+        LeaderType hunsuBonusTarget = LeaderType.Planner;
+        if (type == LeaderType.Programmer && CharacterTraitApplier.IsHunsu(employee))
+        {
+            hunsuBonus = Mathf.RoundToInt(total * CharacterTraitApplier.HUNSU_BONUS_RATIO);
+            hunsuBonusTarget = UnityEngine.Random.value < 0.5f ? LeaderType.Planner : LeaderType.Artist;
+        }
+
+        // 게으른 천재 보유 시: 개발(프로그래머) 팀장 최종 점수 ×1.3 (훈수쟁이 보너스 계산 후, develop 에만)
+        if (type == LeaderType.Programmer && CharacterTraitApplier.HasLazyGeniusOwned())
+            total *= CharacterTraitApplier.LAZY_GENIUS_LEADER_BONUS;
         if (type == LeaderType.Programmer) _leaderDevelopBonusTotal  = total;
         if (type == LeaderType.Planner)    _leaderPlanningBonusTotal = total;
         if (type == LeaderType.Artist)     _leaderArtBonusTotal      = total;
@@ -681,7 +718,7 @@ public class DevelopmentManager : MonoBehaviour
 
         int leaderCount = employee.consecutiveLeaderCount;
         GameTimeManager.Instance.StopTime();
-        LeaderScoreUI.Instance.Show(employee, type, scores, leaderTickDelay, () =>
+        LeaderScoreUI.Instance.Show(employee, type, scores, leaderTickDelay, hunsuBonus, hunsuBonusTarget, () =>
         {
             void StartDeveloping()
             {
@@ -690,6 +727,22 @@ public class DevelopmentManager : MonoBehaviour
                 CurrentStage = ProjectStage.Developing;
                 GameTimeManager.Instance.ForceStartTime();
                 Debug.Log("팀장점수완료 저장");
+
+                // 게으른 천재: 첫 팀장(기획) 선정 직후 1회 — 기간 +2주 / 캐릭터 감속 4주(연장의 2배)
+                // (기획 Open 콜백은 OnSelectLeader 가 _onComplete 를 호출 안 해 dead → 실제 개발 시작 경로인 여기로 이동)
+                if (type == LeaderType.Planner && CharacterTraitApplier.HasLazyGeniusOwned())
+                {
+                    float spw = ProjectSetupUI.SelectedScale switch
+                    {
+                        ProjectScale.Small  => 5f,
+                        ProjectScale.Medium => 4.2f,
+                        ProjectScale.Large  => 3.9f,
+                        _ => 5f
+                    };
+                    float ext = CharacterTraitApplier.LAZY_GENIUS_EXTRA_WEEKS * spw;
+                    ExtendDevelopmentDuration(ext, ext * 2f);
+                    InfoUI.Instance?.Show("게으른 천재 특성 발동!");
+                }
 
                 MoneyManager.Instance.SaveMoney();
                 ProjectSaveManager.Instance.SaveProject();
@@ -745,6 +798,7 @@ public class DevelopmentManager : MonoBehaviour
             ProjectScale.Large  => 3.9f,
             _ => 5f
         };
+        // 게으른 천재 +2주는 savedDuration 에 이미 반영돼 복원됨(ExtendDevelopmentDuration 시점에 baked). 캐릭터 속도 감소도 networkSlowEndElapsed 로 복원.
         developmentDuration = savedDuration > 0f ? savedDuration : baseDuration - diff * secondsPerWeek;
         _elapsed = elapsed;
 
@@ -753,7 +807,8 @@ public class DevelopmentManager : MonoBehaviour
         _progressOffsetExtension = progOffsetExtension;
         _progressVisualOffset = progVisualOffset;
 
-        // 캐릭터 속도 감소 복원
+        // 캐릭터 속도 감소 복원 (감속 종료 시점 = networkSlowEndElapsed, 연장과 분리 저장됨)
+        _characterSlowEndElapsed = networkSlowEndElapsed;
         if (networkSlowEndElapsed > elapsed)
         {
             OfficeManager.Instance?.SetCharacterSpeedMultiplier(0.5f);
@@ -878,8 +933,7 @@ public class DevelopmentManager : MonoBehaviour
         Debug.Log($"프로젝트 복원 완료: {stage} / elapsed: {elapsed:F1}");
     }
 
-    public float GetNetworkSlowEndElapsed() =>
-        _progressOffsetExtension > 0f ? _progressOffsetElapsedAtEvent + _progressOffsetExtension : 0f;
+    public float GetNetworkSlowEndElapsed() => _characterSlowEndElapsed;
     public float GetProgressVisualOffset()       => _progressVisualOffset;
     public float GetProgressOffsetElapsedAtEvent() => _progressOffsetElapsedAtEvent;
     public float GetProgressOffsetExtension()    => _progressOffsetExtension;
@@ -1051,16 +1105,12 @@ public class DevelopmentManager : MonoBehaviour
 
     void AccumulateByType(EmployeeData employee, int tickType)
     {
-        float satisfactionMultiplier = GetSatisfactionMultiplier(employee);
+        // 오타쿠 특성: 고정 장르 프로젝트 개발 시 본인 능력치 ×1.2 (그 외 1.0)
+        float otakuMultiplier = CharacterTraitApplier.GetOtakuStatMultiplier(employee, ProjectSetupUI.SelectedGenre);
 
-        // 만족도 배율을 스킬 값 자체에 적용 (주스탯·부스탯 모두)
-        int skill = (int)(employee.role switch
-        {
-            EmployeeRole.Planner    => employee.planningSkill,
-            EmployeeRole.Programmer => employee.developSkill,
-            EmployeeRole.Artist     => employee.artSkill,
-            _ => 0
-        } * satisfactionMultiplier);
+        // 개발 틱 산출 = Effective 주스탯(만족도 배율 + 버프/디버프 스택 + 사내연애 포함) × 오타쿠 배율
+        // → 슬롯/카드에 표시되는 Effective 능력치와 실제 개발 산출이 일치
+        int skill = (int)(employee.GetEffectiveMainStat() * otakuMultiplier);
 
         int effectiveCreativity = employee.EffectiveCreativitySkill;
 
@@ -1170,6 +1220,7 @@ public class DevelopmentManager : MonoBehaviour
         _progressVisualOffset = 0f;
         _progressOffsetElapsedAtEvent = 0f;
         _progressOffsetExtension = 0f;
+        _characterSlowEndElapsed = 0f;
         OfficeManager.Instance?.SetCharacterSpeedMultiplier(1f);
         OfficeManager.Instance?.StopDevelopmentPatrol();
 
@@ -1205,8 +1256,12 @@ public class DevelopmentManager : MonoBehaviour
         GameTimeManager.Instance.ForceStartTime();
         Debug.Log("프로젝트 초기화 완료");
     }
-    public void ExtendDevelopmentDuration(float extensionSeconds)
+    // extensionSeconds: 개발 기간 연장량. slowdownSeconds: 캐릭터 감속 지속 시간(미지정 시 연장량과 동일 = 네트워크 이벤트).
+    // 게으른 천재는 연장 2주 / 감속 4주 처럼 분리해서 호출.
+    public void ExtendDevelopmentDuration(float extensionSeconds, float slowdownSeconds = -1f)
     {
+        if (slowdownSeconds < 0f) slowdownSeconds = extensionSeconds;
+
         float oldRemaining = developmentDuration - _elapsed;
         float actualProgressBefore = developmentDuration > 0f ? _elapsed / developmentDuration : 0f;
 
@@ -1232,9 +1287,10 @@ public class DevelopmentManager : MonoBehaviour
         _progressOffsetElapsedAtEvent = _elapsed;
         _progressOffsetExtension = extensionSeconds;
 
-        // 캐릭터 속도 50% 감소 → extensionSeconds 후 복귀
+        // 캐릭터 속도 50% 감소 → slowdownSeconds 후 복귀 (연장과 분리 가능)
+        _characterSlowEndElapsed = _elapsed + slowdownSeconds;
         OfficeManager.Instance?.SetCharacterSpeedMultiplier(0.5f);
-        StartCoroutine(RestoreCharacterSpeedAfter(extensionSeconds));
+        StartCoroutine(RestoreCharacterSpeedAfter(slowdownSeconds));
     }
 
     IEnumerator RestoreCharacterSpeedAfter(float extensionSeconds)

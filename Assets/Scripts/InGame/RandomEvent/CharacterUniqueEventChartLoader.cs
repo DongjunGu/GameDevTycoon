@@ -22,30 +22,31 @@ public static class CharacterUniqueEventChartLoader
     private const int    MAX_DESCS  = 5;
 
     private static Dictionary<string, CharacterUniqueEventRow> _cache;
-    public  static Dictionary<string, CharacterUniqueEventRow> Cache => _cache ?? GetFallback();
+    public  static Dictionary<string, CharacterUniqueEventRow> Cache => _cache; // 테스트: fallback 비활성 (원복: => _cache ?? GetFallback();)
 
     public static void Load()
     {
         _cache = LoadFromServer();
-        if (_cache == null || _cache.Count == 0)
-            _cache = GetFallback();
-        Debug.Log($"[CharacterUniqueEventChart] {_cache.Count}개 전용 이벤트 로드 / 키: {string.Join(", ", _cache.Keys)}");
+        // 테스트: fallback 비활성 — 뒤끝 "CharacterUniqueEvent" 차트 적용 여부 확인용. (원복 시 아래 2줄 주석 해제)
+        // if (_cache == null || _cache.Count == 0)
+        //     _cache = GetFallback();
+        Debug.Log($"[CharacterUniqueEventChart] {(_cache?.Count ?? 0)}개 전용 이벤트 로드 / 키: {(_cache != null ? string.Join(", ", _cache.Keys) : "")} (fallback 비활성 — 0개면 뒤끝 차트 못 찾음)");
     }
 
-    // 차트 미업로드 시 fallback — 6 캐릭터 전용 이벤트. 문구·효과는 미정(TODO).
+    // 차트 미업로드 시 fallback — 6 캐릭터 전용 이벤트. 설명은 player-facing 문구(상세 로직은 CharacterUniqueEvents TODO).
     static Dictionary<string, CharacterUniqueEventRow> GetFallback() => new()
     {
-        ["KimUnique"]       = E("유리 멘탈 회복", "portrait_kim_01"),
-        ["OtakuUnique"]     = E("버튜버 데뷔",     "portrait_otaku_01"),
-        ["GoldspoonUnique"] = E("오다 주웠다",     "portrait_goldspoon_01"),
-        ["UgiUnique"]       = E("신의 축복",       "portrait_ugi_01"),
-        ["GeniusUnique"]    = E("잠 깨우기",       "portrait_genius_01"),
-        ["HunsuUnique"]     = E("약점 극복",       "portrait_hunsu_01"),
+        ["KimUnique"]       = E("유리 멘탈 회복", "만족도가 80 이하일 때 낮은 확률로 100까지 회복합니다", "portrait_kim_01"),
+        ["OtakuUnique"]     = E("버튜버 데뷔",     "방송을 통해 좋아하는 장르를 더욱 인기있게 만들어줍니다", "portrait_otaku_01"),
+        ["GoldspoonUnique"] = E("오다 주웠다",     "1년에 한 번씩 아이템을 랜덤하게 하나를 제공합니다", "portrait_goldspoon_01"),
+        ["UgiUnique"]       = E("신의 축복",       "1년에 한 번 주사위를 던져서 랜덤한 버프를 본인에게 제공합니다", "portrait_ugi_01"),
+        ["GeniusUnique"]    = E("잠 깨우기",       "커피 아이템을 사용할 경우 개발 점수가 소폭 상승합니다", "portrait_genius_01"),
+        ["HunsuUnique"]     = E("약점 극복",       "출시 직전 게임의 가장 점수가 낮은 파트의 점수를 증가시킵니다", "portrait_hunsu_01"),
     };
 
-    static CharacterUniqueEventRow E(string title, string portrait) => new()
+    static CharacterUniqueEventRow E(string title, string desc, string portrait) => new()
     {
-        title = title, descriptions = new[] { "(문구 미정 — TODO)" },
+        title = title, descriptions = new[] { desc },
         systemMessage = "", portraitId = portrait
     };
 

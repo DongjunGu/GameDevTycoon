@@ -191,7 +191,7 @@ public static class RandomEvents_Dev
                         ProjectScale.Large  => 3.9f,
                         _ => 5f
                     };
-                    DevelopmentManager.Instance.ExtendDevelopmentDuration(delayWeeks * 2 * secondsPerWeek);
+                    DevelopmentManager.Instance.ExtendDevelopmentDuration(delayWeeks * secondsPerWeek, delayWeeks * 2 * secondsPerWeek); // 연장 N주 / 감속 2N주
                 }
             };
             RandomEventChartLoader.Apply(networkEvt, chart);

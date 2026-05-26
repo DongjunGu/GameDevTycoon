@@ -1,7 +1,7 @@
 eventType,title,description1,description2,description3,description4,description5,systemMessage,portraitId
-KimUnique,유리 멘탈 회복,(문구 미정 — TODO),,,,,,portrait_kim_01
-OtakuUnique,버튜버 데뷔,(문구 미정 — TODO),,,,,,portrait_otaku_01
-GoldspoonUnique,오다 주웠다,(문구 미정 — TODO),,,,,,portrait_goldspoon_01
-UgiUnique,신의 축복,(문구 미정 — TODO),,,,,,portrait_ugi_01
-GeniusUnique,잠 깨우기,(문구 미정 — TODO),,,,,,portrait_genius_01
-HunsuUnique,약점 극복,(문구 미정 — TODO),,,,,,portrait_hunsu_01
+KimUnique,유리 멘탈 회복,만족도가 80 이하일 때 낮은 확률로 100까지 회복합니다,,,,,,portrait_kim_01
+OtakuUnique,버튜버 데뷔,방송을 통해 좋아하는 장르를 더욱 인기있게 만들어줍니다,,,,,,portrait_otaku_01
+GoldspoonUnique,오다 주웠다,1년에 한 번씩 아이템을 랜덤하게 하나를 제공합니다,,,,,,portrait_goldspoon_01
+UgiUnique,신의 축복,1년에 한 번 주사위를 던져서 랜덤한 버프를 본인에게 제공합니다,,,,,,portrait_ugi_01
+GeniusUnique,잠 깨우기,커피 아이템을 사용할 경우 개발 점수가 소폭 상승합니다,,,,,,portrait_genius_01
+HunsuUnique,약점 극복,출시 직전 게임의 가장 점수가 낮은 파트의 점수를 증가시킵니다,,,,,,portrait_hunsu_01

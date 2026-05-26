@@ -914,19 +914,16 @@ public class RandomEventManager : MonoBehaviour
         CheckCharacterUniqueEvents();
     }
 
-    // 유니크 등급 직원 전용 이벤트 후보 탐색.
-    // TODO: 발동 확률/조건 미정 — 현재 CHARACTER_UNIQUE_EVENT_CHANCE = 0f 라 자동 발동 안 함.
-    //       확률·주기·중복 발동 정책이 정해지면 값을 올리고 트리거 로직 보강할 것.
-    const float CHARACTER_UNIQUE_EVENT_CHANCE = 0f;
+    // 유니크 등급(grade >= Unique) 직원의 전용 이벤트 주간 체크 — 발동 조건/확률/쿨다운은 이벤트 타입별로
+    // CharacterUniqueEvents.WeeklyCheck 가 판단 (유리 멘탈 회복 등). 매주 CheckConditionEvents 에서 호출됨.
     void CheckCharacterUniqueEvents()
     {
-        if (CHARACTER_UNIQUE_EVENT_CHANCE <= 0f) return; // 미튜닝 — 비활성
+        if (EmployeeManager.Instance == null) return;
         foreach (var emp in new List<EmployeeData>(EmployeeManager.Instance.ownedEmployees))
         {
             if (emp.grade < EmployeeGrade.Unique) continue;
             if (string.IsNullOrEmpty(CharacterTraitApplier.ResolveEventType(emp))) continue;
-            if (UnityEngine.Random.value >= CHARACTER_UNIQUE_EVENT_CHANCE) continue;
-            TriggerCharacterUniqueEvent(emp);
+            CharacterUniqueEvents.WeeklyCheck(emp);
         }
     }
 

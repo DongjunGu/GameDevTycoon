@@ -47,7 +47,13 @@ public class RandomEventChoiceUI : MonoBehaviour
     }
 
     // ── 공개 API ─────────────────────────────────────────────────
+    // 다른 모달(AlertUI / 다른 이벤트 패널)이 떠 있으면 닫힐 때까지 대기 후 표시 — 동시 표시·덮어쓰기 방지.
     public void Show(RandomEventChoiceData data)
+    {
+        ModalGate.I.WhenFree(() => DisplayInternal(data));
+    }
+
+    void DisplayInternal(RandomEventChoiceData data)
     {
         _currentData         = data;
         _chosenSystemMessage = null;
@@ -65,10 +71,19 @@ public class RandomEventChoiceUI : MonoBehaviour
         eventPanel.SetActive(true);
         ModalGate.I.Register(this);
 
-        // description 타이핑 → 완료 후 선택지 버튼 표시
+        // description 타이핑 → 완료 후 선택지 버튼 표시.
+        // 선택지가 없으면(정보성 이벤트 — ChoiceButtonContainer 미사용) 확인 버튼을 바로 노출해 닫을 수 있게 함.
         StartTyping(data.description, onComplete: () =>
         {
-            SpawnChoiceButtons(data.choices);
+            if (data.choices != null && data.choices.Count > 0)
+            {
+                SpawnChoiceButtons(data.choices);
+            }
+            else
+            {
+                confirmButton.gameObject.SetActive(true);
+                confirmButton.interactable = true;
+            }
         });
     }
 
@@ -116,6 +131,10 @@ public class RandomEventChoiceUI : MonoBehaviour
             return;
         }
 
+        // Unregister 시 대기 큐의 다음 모달이 즉시 표시되며 _currentData 가 바뀔 수 있으므로 먼저 캡처.
+        var    onConf = _currentData?.onConfirm;
+        string sysMsg = _chosenSystemMessage;
+
         eventPanel.SetActive(false);
         ModalGate.I.Unregister(this);
 
@@ -124,10 +143,10 @@ public class RandomEventChoiceUI : MonoBehaviour
         GameTimeManager.Instance.SaveGameTime();
         EmployeeManager.Instance.SaveAllEmployees();
 
-        System.Action resume = _currentData.onConfirm ?? (() => DevelopmentManager.Instance.ResumeFromEvent());
+        System.Action resume = onConf ?? (() => DevelopmentManager.Instance.ResumeFromEvent());
 
-        if (!string.IsNullOrEmpty(_chosenSystemMessage))
-            AlertUI.Instance.Show(_chosenSystemMessage, resume);
+        if (!string.IsNullOrEmpty(sysMsg))
+            AlertUI.Instance.Show(sysMsg, resume);
         else
             resume();
     }

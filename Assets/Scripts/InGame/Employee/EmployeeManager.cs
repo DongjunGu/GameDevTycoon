@@ -249,9 +249,10 @@ public class EmployeeManager : MonoBehaviour
             employee.artSkill = UnityEngine.Random.Range(employee.artMin, employee.artMax + 1);
             employee.creativitySkill = UnityEngine.Random.Range(employee.creativityMin, employee.creativityMax + 1);
 
-            // 연봉 재랜덤
+            // 연봉 재랜덤 — 금수저 특성(Epic+)이면 기본 연봉 50% 감소 적용
             int steps = (employee.salaryMax - employee.salaryMin) / 50;
-            employee.salary = employee.salaryMin + (UnityEngine.Random.Range(0, steps + 1) * 50);
+            int rolledSalary = employee.salaryMin + (UnityEngine.Random.Range(0, steps + 1) * 50);
+            employee.salary = CharacterTraitApplier.ApplyGoldspoonSalary(employee, rolledSalary);
         }
 
         onComplete?.Invoke(candidates);
@@ -844,7 +845,8 @@ public class EmployeeManager : MonoBehaviour
         ApplyStat(employee, subStats[0], subGain0);
         ApplyStat(employee, subStats[1], subGain1);
         ApplyStat(employee, subStats[2], subGain2);
-        employee.salary += EnhanceSalaryTable[tableIndex];
+        // 금수저: 강화 연봉 상승량도 50% 감소
+        employee.salary += CharacterTraitApplier.ApplyGoldspoonSalary(employee, EnhanceSalaryTable[tableIndex]);
 
         // 부스탯 배정 기록 저장 (하락 시 롤백용, 주스탯/연봉은 테이블로 계산 가능)
         var records = ParseEnhancementRecords(employee);
@@ -880,7 +882,8 @@ public class EmployeeManager : MonoBehaviour
         int mainGain = (mainMin + mainMax) / 2 + potentialBonus; // 0~10강은 min==max
 
         ApplyStat(employee, GetMainStatKey(employee.role), -mainGain);
-        employee.salary = Mathf.Max(0, employee.salary - EnhanceSalaryTable[tableIndex]);
+        // 금수저: 강화 시 절반만 더했으므로 롤백도 절반만 차감 (가감 대칭)
+        employee.salary = Mathf.Max(0, employee.salary - CharacterTraitApplier.ApplyGoldspoonSalary(employee, EnhanceSalaryTable[tableIndex]));
 
         var records = ParseEnhancementRecords(employee);
         var record  = records.Find(r => r.level == levelToReverse);
@@ -974,7 +977,8 @@ public class EmployeeManager : MonoBehaviour
         ApplyStat(employee, subStats[1], subGainTotal);
         ApplyStat(employee, subStats[2], subGainTotal);
 
-        employee.salary += salaryGain;
+        // 금수저: 채용 시 일괄강화 연봉 상승량도 50% 감소
+        employee.salary += CharacterTraitApplier.ApplyGoldspoonSalary(employee, salaryGain);
     }
 
     private string GetMainStatKey(EmployeeRole role) => role switch
