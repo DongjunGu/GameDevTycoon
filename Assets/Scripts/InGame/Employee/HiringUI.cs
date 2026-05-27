@@ -58,6 +58,7 @@ public class HiringUI : MonoBehaviour
 
     [Header("Settings")]
     public int candidateCount = 4;
+    const int INTERVIEW_WEEKS = 3; // 채용 클릭 → 후보 리스트 공개까지 대기 주차
 
     private EmployeeData _selectedEmployee;
     private EmployeeData _conflictingOwned;     // 동일 masterEmployeeId 보유 직원
@@ -96,18 +97,55 @@ public class HiringUI : MonoBehaviour
         hiringPanel.SetActive(false);
         confirmPanel.SetActive(false);
         RefreshTierButtonVisibility();
+        RefreshTierPrices();
     }
 
-    // 1단계는 항상 표시. 2/3단계는 hire_tier2 / hire_tier3 해금 시에만 노출.
+    // 각 티어 버튼의 자식 "priceText"(TMP)에 가격 표시. hire_discount 해금 시 할인가(20% 감소) 반영.
+    void RefreshTierPrices()
+    {
+        if (tierButtons == null) return;
+        bool discounted = TechTreeManager.Instance != null && TechTreeManager.Instance.IsUnlocked("hire_discount");
+        for (int i = 0; i < tierButtons.Length && i < Tiers.Length; i++)
+        {
+            if (tierButtons[i] == null) continue;
+            var priceText = FindChildText(tierButtons[i].transform, "priceText");
+            if (priceText == null) continue;
+            int cost = discounted ? Mathf.RoundToInt(Tiers[i].cost * 0.8f) : Tiers[i].cost;
+            priceText.text = $"{cost:N0}G";
+        }
+    }
+
+    static TextMeshProUGUI FindChildText(Transform root, string childName)
+    {
+        foreach (var t in root.GetComponentsInChildren<Transform>(true))
+            if (t.name == childName) return t.GetComponent<TextMeshProUGUI>();
+        return null;
+    }
+
+    // 모든 티어 버튼을 항상 표시. 해금 안 된 티어(2/3단계)는 어둡게 표시하되 클릭은 가능
+    // (클릭 시 OnClickTier 가 "해금되지 않았습니다" 안내). 1단계는 항상 해금.
     void RefreshTierButtonVisibility()
     {
         if (tierButtons == null) return;
         bool tier2Unlocked = TechTreeManager.Instance != null && TechTreeManager.Instance.IsUnlocked("hire_tier2");
         bool tier3Unlocked = TechTreeManager.Instance != null && TechTreeManager.Instance.IsUnlocked("hire_tier3");
 
-        if (tierButtons.Length > 0 && tierButtons[0] != null) tierButtons[0].SetActive(true);
-        if (tierButtons.Length > 1 && tierButtons[1] != null) tierButtons[1].SetActive(tier2Unlocked);
-        if (tierButtons.Length > 2 && tierButtons[2] != null) tierButtons[2].SetActive(tier3Unlocked);
+        SetTierButtonState(0, true);
+        SetTierButtonState(1, tier2Unlocked);
+        SetTierButtonState(2, tier3Unlocked);
+    }
+
+    // 티어 버튼: 항상 활성 + 잠금 시 어둡게(alpha) 표시. 클릭은 항상 가능(잠금 안내는 OnClickTier).
+    void SetTierButtonState(int index, bool unlocked)
+    {
+        if (tierButtons == null || index >= tierButtons.Length || tierButtons[index] == null) return;
+        var go = tierButtons[index];
+        go.SetActive(true);
+        var cg = go.GetComponent<CanvasGroup>();
+        if (cg == null) cg = go.AddComponent<CanvasGroup>();
+        cg.alpha = unlocked ? 1f : 0.45f;  // 잠금 시 어둡게
+        cg.interactable = true;            // 클릭 유지
+        cg.blocksRaycasts = true;
     }
 
     // 티어 버튼 클릭 (0~2)
@@ -131,38 +169,67 @@ public class HiringUI : MonoBehaviour
             return;
         }
 
-        var (label, baseCost, range, weights) = Tiers[tierIndex];
+        // 이미 진행 중인 모집공고가 있으면 차단
+        if (EmployeeManager.Instance.HiringPendingTier >= 0)
+        {
+            AlertUI.Instance.Show("이미 모집공고가 등록되었습니다.");
+            return;
+        }
 
-        // 테크트리 '채용 비용 할인(hire_discount)' — 후보 목록을 뽑는 티어 진입 비용 20% 감소 (개별 채용 비용에는 미적용)
+        // 비용 계산 (hire_discount 반영) — 클릭 즉시 차감
         bool discounted = TechTreeManager.Instance != null && TechTreeManager.Instance.IsUnlocked("hire_discount");
-        int cost = discounted ? Mathf.RoundToInt(baseCost * 0.8f) : baseCost;
-        string costDisplay = discounted
-            ? $"<s><color=#888888>{baseCost:N0}G</color></s>  <color=#FFD24A>{cost:N0}G</color>  <size=70%>(-20%)</size>"
-            : $"{cost:N0}G";
+        int cost = discounted ? Mathf.RoundToInt(Tiers[tierIndex].cost * 0.8f) : Tiers[tierIndex].cost;
+        if (!MoneyManager.Instance.CanAfford(cost))
+        {
+            GameUIHelper.ShowLoanPrompt();
+            return;
+        }
+        MoneyManager.Instance.SpendGold(cost);
 
-        ConfirmUI.Instance.Show(
-            $"{label}\n비용: {costDisplay}",
-            onConfirm: () =>
-            {
-                if (!MoneyManager.Instance.CanAfford(cost))
-                {
-                    GameUIHelper.ShowLoanPrompt();
-                    return;
-                }
+        // pending 등록(INTERVIEW_WEEKS 주 후 리스트) + 즉시 저장 — 돈만 쓰고 리스트 못 받는 일 방지(복원 가능)
+        EmployeeManager.Instance.SetHiringPending(tierIndex, INTERVIEW_WEEKS);
+        GameTimeManager.Instance?.SaveGameTime();
 
-                MoneyManager.Instance.SpendGold(cost);
+        // 채용 UI 닫고 "면접 확정" 비서 안내 → 확인 시 시간 재개(OpenHiring 의 StopTime 해소). 이후 게임 진행하며 INTERVIEW_WEEKS 주 경과.
+        tierPanel.SetActive(false);
+        gameObject.SetActive(false);
+        ShowSecretaryEvent("면접 확정 후 알려드리겠습니다.", () => GameTimeManager.Instance?.StartTime());
+    }
 
-                tierPanel.SetActive(false);
-                if (loadingPanel != null) loadingPanel.SetActive(true);
+    // 면접 대기 만료(EmployeeManager.OnWeekPassed) 시 호출 — "최종 리스트" 안내 후 후보 리스트 표시.
+    public void RevealHiring(int tierIndex)
+    {
+        GameTimeManager.Instance?.StopTime(); // 리스트 표시 동안 정지(후보 선택 완료/취소 시 StartTime 으로 해소)
+        ShowSecretaryEvent("최종 리스트 전달드리겠습니다.", () => OpenCandidateList(tierIndex));
+    }
 
-                _currentTierIndex = tierIndex;
-                _refreshUsed = false; // 새 티어 진입 시 새로고침 권리 부여
-                LoadAndShowCandidates(tierIndex);
-            },
-            onCancel: () => { },
-            confirmText: "채용하기",
-            cancelText: "취소"
-        );
+    void OpenCandidateList(int tierIndex)
+    {
+        gameObject.SetActive(true);
+        tierPanel.SetActive(false);
+        hiringPanel.SetActive(false);
+        confirmPanel.SetActive(false);
+        if (loadingPanel != null) loadingPanel.SetActive(true);
+
+        _currentTierIndex = tierIndex;
+        _refreshUsed = false; // 새 진입 시 새로고침 권리 부여
+        LoadAndShowCandidates(tierIndex);
+    }
+
+    // 비서 초상화 RandomEventUI 안내(EventPanel). 확인 시 onConfirm. type=Recruit 라 시간 강제재개(ResumeFromEvent) 안 함.
+    void ShowSecretaryEvent(string description, System.Action onConfirm)
+    {
+        if (RandomEventUI.Instance == null) { onConfirm?.Invoke(); return; }
+        RandomEventUI.Instance.Show(new RandomEventData
+        {
+            type                    = RandomEventType.Recruit,
+            title                   = "직원 채용",
+            description             = description,
+            portraitId              = "portrait_secretary",
+            systemMessage           = "",     // 공백이지만
+            keepSystemMessageActive = true,   // systemMessageText GameObject 는 활성 유지
+            onApply                 = onConfirm,
+        });
     }
 
     // OnClickTier / OnClickRefresh 공용 — 마지막 진입 티어 기준으로 후보 재로드 후 ShowCandidates.

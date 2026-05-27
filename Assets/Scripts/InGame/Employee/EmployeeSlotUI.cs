@@ -5,20 +5,10 @@ using TMPro;
 public class EmployeeSlotUI : MonoBehaviour
 {
     [Header("UI")]
-    public Image bgImage;
+    public Image bgImage;          // 등급 배경색
+    public Image portraitImage;    // 초상화
     public TextMeshProUGUI nameText;
-    public TextMeshProUGUI enhancementText;
-    public TextMeshProUGUI roleText;
-    public TextMeshProUGUI gradeText;
-    public TextMeshProUGUI traitText;   // 캐릭터 특성명 (grade >= Epic 일 때만 표시, 아니면 빈 문자열)
-    public TextMeshProUGUI potentialText;
-    public TextMeshProUGUI developSkillText;
-    public TextMeshProUGUI planningSkillText;
-    public TextMeshProUGUI artSkillText;
-    public TextMeshProUGUI creativitySkillText;
-    public TextMeshProUGUI salaryText;
-    public TextMeshProUGUI satisfactionText;
-    public Button selectButton;
+    public Button selectButton;    // 슬롯 선택(채용 후보 클릭)
     public GameObject ownedBadge;  // 보유중 뱃지 이미지
     private static readonly Color ColorNormal = new Color(0.92f, 0.92f, 0.92f);
     private static readonly Color ColorRare = new Color(0.75f, 0.88f, 0.95f);
@@ -27,19 +17,13 @@ public class EmployeeSlotUI : MonoBehaviour
 
     public void Setup(EmployeeData data, HiringUI hiringUI)
     {
-        nameText.text = data.employeeName;
-        roleText.text = data.RoleToString();
-        gradeText.text = data.GradeToString();
-        CharacterTraitApplier.SetupTraitText(traitText, data);
-        CharacterUniqueEvents.SetupEventText(traitText, data);
-        potentialText.text = data.PotentialToString();
-        developSkillText.text = data.DevelopDisplayText();
-        planningSkillText.text = data.PlanningDisplayText();
-        artSkillText.text = data.ArtDisplayText();
-        creativitySkillText.text = data.CreativityText();
-        salaryText.text = data.SalaryRangeText();
-        enhancementText.text     = $"+{data.enhancementLevel}";
-        satisfactionText.text = data.SatisfactionText();
+        // 표시: 초상화 / 등급 배경색 / 이름 / 보유중 뱃지 만
+        if (nameText != null) nameText.text = data.employeeName;
+        if (portraitImage != null && !string.IsNullOrEmpty(data.portraitId))
+        {
+            var sprite = Resources.Load<Sprite>($"Portraits/{data.portraitId}");
+            if (sprite != null) portraitImage.sprite = sprite;
+        }
         _pendingGrade = data.grade;
 
         // 보유중 뱃지 (masterEmployeeId 공백이면 이름으로 대조)

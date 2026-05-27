@@ -40,7 +40,7 @@ public class RandomEventUI : MonoBehaviour
         {
             bool hasSystem = !string.IsNullOrEmpty(evt.systemMessage);
             systemMessageText.text = evt.systemMessage;
-            systemMessageText.gameObject.SetActive(hasSystem);
+            systemMessageText.gameObject.SetActive(hasSystem || evt.keepSystemMessageActive);
         }
 
         if (portraitImage != null)
@@ -73,7 +73,8 @@ public class RandomEventUI : MonoBehaviour
         if (evt != null &&
             evt.type != RandomEventType.EmployeeRun &&
             evt.type != RandomEventType.EmployeeFight &&
-            evt.type != RandomEventType.BadCompany)
+            evt.type != RandomEventType.BadCompany &&
+            evt.type != RandomEventType.Recruit)
         {
             DevelopmentManager.Instance.ResumeFromEvent();
         }

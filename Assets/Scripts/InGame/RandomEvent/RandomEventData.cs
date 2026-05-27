@@ -53,6 +53,9 @@ public enum RandomEventType
     // ── 조건 선택지 이벤트 ───────────────────────────────────
     CoffeeRequest,          // 커피 아이템 획득 시 2~4주 후 1회 발동
     EnergyDrinkRequest,     // 에너지드링크 아이템 획득 시 2~4주 후 1회 발동
+
+    // ── 안내 전용 (시간 강제 재개 X) ─────────────────────────
+    Recruit,                // 채용 면접 진행/완료 안내 (RandomEventUI 표시, ResumeFromEvent 스킵)
 }
 
 [Serializable]
@@ -71,6 +74,7 @@ public class RandomEventData
     public int    categoryMax;
     public string portraitId;       // 특정 직원 이벤트일 때 설정, 없으면 ""
     public string systemMessage;   // 시스템 효과 안내 문구, 없으면 ""
+    public bool   keepSystemMessageActive = false; // true 면 systemMessage 가 비어도 systemMessageText GameObject 활성 유지
 
     // 패트롤 도착 트리거 설정
     public bool   requiresPatrol        = false; // true면 진행도 도달 후 패트롤 도착 시 발동

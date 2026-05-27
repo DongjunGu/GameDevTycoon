@@ -12,6 +12,9 @@ public class DevelopmentPanelUI : MonoBehaviour
     public TextMeshProUGUI bugText;
     public TextMeshProUGUI creativityText;
 
+    [Tooltip("프로젝트 개발 중이 아닐 때만 표시되는 기본 텍스트 (개발 중이면 자동 비활성)")]
+    public GameObject defaultText;
+
     [Header("애니메이션")]
     [Tooltip("표시값이 1 변할 때마다 걸리는 시간 (초). 0 이하면 즉시 반영")]
     public float tickInterval = 0.15f;
@@ -44,8 +47,11 @@ public class DevelopmentPanelUI : MonoBehaviour
         Instance = this;
     }
 
+    void Start() => UpdateDefaultText();
+
     void Update()
     {
+        UpdateDefaultText(); // 시간 정지 중에도 갱신해야 하므로 IsRunning 게이트보다 위
         if (GameTimeManager.Instance != null && !GameTimeManager.Instance.IsRunning) return;
         if (tickInterval <= 0f)
         {
@@ -151,6 +157,14 @@ public class DevelopmentPanelUI : MonoBehaviour
         artText.text        = $"아트: {Mathf.RoundToInt(_artDisplay)}";
         bugText.text        = $"버그: {Mathf.RoundToInt(_bugDisplay)}";
         creativityText.text = $"창의성: {Mathf.RoundToInt(_creativityDisplay)}";
+    }
+
+    // 프로젝트 개발 중이면 defaultText 비활성, 아니면 활성. (상태 바뀔 때만 SetActive)
+    void UpdateDefaultText()
+    {
+        if (defaultText == null) return;
+        bool developing = DevelopmentManager.Instance != null && DevelopmentManager.Instance.IsStarted;
+        if (defaultText.activeSelf == developing) defaultText.SetActive(!developing);
     }
 
     public void SetBug(float value)
