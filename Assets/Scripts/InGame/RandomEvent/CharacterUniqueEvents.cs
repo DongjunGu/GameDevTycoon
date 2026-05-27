@@ -134,18 +134,23 @@ public static class CharacterUniqueEvents
         AlertUI.Instance.Show($"[{row.title}]\n{desc}");
     }
 
-    // 슬롯/카드 공통 — traitText 의 형제 "eventText"(TMP)에 전용 이벤트명 세팅 + 클릭 시 설명 버튼화.
-    // eventText 는 프리팹에서 traitText 형제로 생성하므로 traitText 참조로 찾는다 → 별도 직렬화 필드/배선 불필요.
+    // 슬롯 프리팹용 — traitText 의 형제 "eventText"(TMP)를 찾아 세팅 (직렬화 필드 없이 형제 탐색).
     public static void SetupEventText(TMP_Text traitText, EmployeeData emp)
     {
         if (traitText == null || traitText.transform.parent == null) return;
         var found = traitText.transform.parent.Find("eventText");
         if (found == null) return;
-        var eventText = found.GetComponent<TMP_Text>();
+        SetupEventTextDirect(found.GetComponent<TMP_Text>(), emp);
+    }
+
+    // 직렬화된 eventText 를 직접 받아 세팅 (EmployeeCardUI 등 직접 배선용).
+    // 전용 이벤트명 세팅 + 클릭 시 설명 버튼화(런타임 AddComponent). 이벤트 없으면 빈 문자열 + 클릭 통과.
+    public static void SetupEventTextDirect(TMP_Text eventText, EmployeeData emp)
+    {
         if (eventText == null) return;
 
         string eventName = GetEventName(emp);
-        eventText.text = eventName;
+        eventText.text = string.IsNullOrEmpty(eventName) ? "" : $"이벤트 : {eventName}";
 
         var btn = eventText.GetComponent<EventDescriptionButton>();
         if (string.IsNullOrEmpty(eventName))

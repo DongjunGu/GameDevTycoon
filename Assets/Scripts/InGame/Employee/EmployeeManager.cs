@@ -33,6 +33,12 @@ public class EmployeeManager : MonoBehaviour
     public int YearlyExitCount { get; private set; } = 0;
     public int ExitCountYear   { get; private set; } = 0;
 
+    // 채용 면접 대기 (HiringUI 가 등록, 매주 카운트다운 → 0 시 리스트 공개). UserGameTime 에 영속.
+    public int HiringPendingTier  { get; private set; } = -1; // -1 = 진행 중 없음
+    public int HiringPendingWeeks { get; private set; } = 0;
+    public void SetHiringPending(int tier, int weeks)  { HiringPendingTier = tier; HiringPendingWeeks = weeks; }
+    public void LoadHiringPending(int tier, int weeks) { HiringPendingTier = tier; HiringPendingWeeks = weeks; }
+
     public void RecordEmployeeExit()
     {
         int currentYear = GameTimeManager.Instance?.Year ?? 0;
@@ -455,6 +461,8 @@ public class EmployeeManager : MonoBehaviour
         ownedEmployees.Clear();
         YearlyExitCount = 0;
         ExitCountYear   = 0;
+        HiringPendingTier  = -1;
+        HiringPendingWeeks = 0;
         _satisfactionDroppedThisCycle = false;
 
         // 메모리 List 대신 서버에서 직접 fetch → 모든 row 삭제. inFlight Insert 가 늦게 도착해도 epoch 가드가 자체 정리.
@@ -570,6 +578,21 @@ public class EmployeeManager : MonoBehaviour
 
         CheckLowSatisfaction();
         RandomEventManager.Instance?.CheckConditionEvents();
+
+        // 채용 면접 대기 카운트다운 — 0 되면 후보 리스트 공개 (HiringUI 가 비활성이어도 동작)
+        if (HiringPendingTier >= 0)
+        {
+            HiringPendingWeeks--;
+            if (HiringPendingWeeks <= 0)
+            {
+                int tier = HiringPendingTier;
+                HiringPendingTier = -1;
+                HiringPendingWeeks = 0;
+                GameTimeManager.Instance?.SaveGameTime(); // pending 해제 영속화
+                var hiring = FindObjectOfType<HiringUI>(true); // 비활성 포함
+                if (hiring != null) hiring.RevealHiring(tier);
+            }
+        }
     }
 
     void CheckLowSatisfaction()

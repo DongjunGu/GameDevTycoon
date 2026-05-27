@@ -117,6 +117,10 @@ public class GameTimeManager : MonoBehaviour
                         SafeString(row, "merchantItems", ""),
                         SafeInt(row, "merchantVisitedYear", 0)
                     );
+                    EmployeeManager.Instance?.LoadHiringPending(
+                        SafeInt(row, "hiringPendingTier", -1),
+                        SafeInt(row, "hiringPendingWeeks", 0)
+                    );
 
                     Debug.Log($"로드 완료: {Year}년 {Month}월 {Week}주 / rowInDate: {_rowInDate}");
                     SaveGameTime(); // 신규 컬럼 자동 추가
@@ -225,6 +229,8 @@ public class GameTimeManager : MonoBehaviour
         param.Add("exitCountYear",        EmployeeManager.Instance?.ExitCountYear        ?? 0);
         param.Add("hiringPenalty",        RandomEventManager.Instance?.HiringPenalty        ?? 0);
         param.Add("hiringPenaltyEndYear", RandomEventManager.Instance?.HiringPenaltyEndYear ?? -1);
+        param.Add("hiringPendingTier",    EmployeeManager.Instance?.HiringPendingTier   ?? -1);
+        param.Add("hiringPendingWeeks",   EmployeeManager.Instance?.HiringPendingWeeks  ?? 0);
         param.Add("activeCoupleIds",            RandomEventManager.Instance?.GetActiveCoupleString()           ?? "");
         param.Add("pendingRomance",             RandomEventManager.Instance?.GetPendingRomanceString()          ?? "");
         param.Add("unstableCompanyWeeksLeft",   RandomEventManager.Instance?.GetUnstableCompanyWeeksLeft()     ?? -1);

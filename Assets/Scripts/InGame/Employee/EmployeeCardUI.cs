@@ -14,7 +14,13 @@ public class EmployeeCardUI : MonoBehaviour
     [Header("UI References")]
     public Image portraitImage;
     public TextMeshProUGUI nameText;
+    public TextMeshProUGUI potentialText;   // "잠재력: {잠재력}"
+    public TextMeshProUGUI gradeText;       // 등급 텍스트
+    public Image gradePanel;                // 등급색 배경
+    public Image roleBadge;                 // 역할 아이콘
+    public Sprite[] roleIcons;              // role enum 인덱스 순서 [Planner, Programmer, Artist]
     public TextMeshProUGUI traitText;   // 캐릭터 특성명 (grade >= Epic 일 때만, 아니면 빈 문자열)
+    public TextMeshProUGUI eventText;   // 전용 이벤트명 (grade >= Unique 일 때만, 아니면 빈 문자열)
     public TextMeshProUGUI enhancementText;
     public Slider satisfactionSlider;
     public TextMeshProUGUI satisfactionText;
@@ -56,8 +62,15 @@ public class EmployeeCardUI : MonoBehaviour
             if (sprite != null) portraitImage.sprite = sprite;
         }
         if (nameText != null) nameText.text = emp.employeeName;
+        if (potentialText != null) potentialText.text = $"잠재력: {emp.PotentialToString()}";
+        if (gradeText != null) gradeText.text = emp.GradeToString();
+        if (roleBadge != null && roleIcons != null
+            && (int)emp.role >= 0 && (int)emp.role < roleIcons.Length
+            && roleIcons[(int)emp.role] != null)
+            roleBadge.sprite = roleIcons[(int)emp.role];
+        ApplyGradeColor(emp.grade);
         CharacterTraitApplier.SetupTraitText(traitText, emp);
-        CharacterUniqueEvents.SetupEventText(traitText, emp);
+        CharacterUniqueEvents.SetupEventTextDirect(eventText, emp);
         if (satisfactionSlider != null)
         {
             satisfactionSlider.minValue = 0f;
@@ -88,7 +101,7 @@ public class EmployeeCardUI : MonoBehaviour
             ApplySatisfactionColor(satisfactionSlider, displayedSatisfaction);
         }
         if (satisfactionText != null) satisfactionText.text = $"{displayedSatisfaction}";
-        if (enhancementText  != null) enhancementText.text  = $"{emp.enhancementLevel}성";
+        if (enhancementText  != null) enhancementText.text  = $"Lv.{emp.enhancementLevel}";
         if (planningText     != null) planningText.text     = $"{emp.EffectivePlanningSkill}";
         if (developText      != null) developText.text      = $"{emp.EffectiveDevelopSkill}";
         if (artText          != null) artText.text          = $"{emp.EffectiveArtSkill}";
@@ -99,6 +112,49 @@ public class EmployeeCardUI : MonoBehaviour
     {
         _currentEmployeeId = null;
         if (cardPanel != null) cardPanel.SetActive(false);
+    }
+
+    // ── 등급색 (gradePanel) — 슬롯 UI 와 동일 규칙. Normal/Rare/Epic 단색, Unique/Legendary 셰머 ──
+    private static readonly Color GradeNormal = new Color(0.92f, 0.92f, 0.92f);
+    private static readonly Color GradeRare   = new Color(0.75f, 0.88f, 0.95f);
+    private static readonly Color GradeEpic   = new Color(0.55f, 0.30f, 0.85f);
+
+    void ApplyGradeColor(EmployeeGrade grade)
+    {
+        if (gradePanel == null) return;
+        StopAllCoroutines();
+
+        if (grade == EmployeeGrade.Legendary) { StartCoroutine(LegendaryShimmer()); return; }
+        if (grade == EmployeeGrade.Unique)    { StartCoroutine(UniqueShimmer());    return; }
+
+        gradePanel.color = grade switch
+        {
+            EmployeeGrade.Rare => GradeRare,
+            EmployeeGrade.Epic => GradeEpic,
+            _                  => GradeNormal,
+        };
+    }
+
+    System.Collections.IEnumerator UniqueShimmer()
+    {
+        Color goldA = new Color(1.0f, 0.85f, 0.30f);
+        Color goldB = new Color(0.85f, 0.65f, 0.10f);
+        while (true)
+        {
+            float t = (Mathf.Sin(Time.time * 2.0f) + 1f) / 2f;
+            gradePanel.color = Color.Lerp(goldB, goldA, t);
+            yield return null;
+        }
+    }
+
+    System.Collections.IEnumerator LegendaryShimmer()
+    {
+        while (true)
+        {
+            float h = Mathf.Repeat(Time.time * 0.25f, 1f);
+            gradePanel.color = Color.HSVToRGB(h, 0.55f, 1f);
+            yield return null;
+        }
     }
 
     public void OnClickClose() => Hide();

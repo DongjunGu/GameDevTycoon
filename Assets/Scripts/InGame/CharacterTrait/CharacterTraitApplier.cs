@@ -153,7 +153,7 @@ public static class CharacterTraitApplier
     {
         if (traitText == null) return;
         string traitName = (emp != null && !emp.isCEO) ? GetTraitName(emp) : "";
-        traitText.text = traitName;
+        traitText.text = string.IsNullOrEmpty(traitName) ? "" : $"특성 : {traitName}";
 
         var btn = traitText.GetComponent<TraitDescriptionButton>();
         if (string.IsNullOrEmpty(traitName))
