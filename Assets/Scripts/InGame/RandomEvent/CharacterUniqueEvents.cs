@@ -8,11 +8,14 @@ using TMPro;
 // 공유 상태: EmployeeData 의 otakuFixedGenre / lastUniqueEventYear / glassMentalCooldownWeeks 등
 //            (특성 CharacterTraitApplier 와 공유).
 //
-// 구조: uniqueEventType 별 분기. 표시(EventUI)는 공통, 효과는 케이스별 TODO.
-// 효과 명세는 [[project_character_trait_event_spec]] 참조. 현재 전부 TODO 스텁.
+// 구조: uniqueEventType 별 분기. 표시(EventChoicePanel)는 공통, 효과는 케이스별 ApplyEffect.
+// 효과 명세는 [[project_character_trait_event_spec]] 참조.
 public static class CharacterUniqueEvents
 {
     const float GLASS_MENTAL_RECOVERY_CHANCE = 0.03f; // 매주 3%
+    const int   GOD_BLESSING_STAT_PERCENT       = 10;    // 신의 축복 주사위 3: 랜덤 직원 능력치 +10%
+    public const float GOD_BLESSING_SALES_BONUS = 0.10f; // 신의 축복 주사위 6: 매출 +10% (SalesUI bonusSum 합연산)
+    public static int DebugForcedDice = 0; // 테스트용 — 1~6 지정 시 다음 신의 축복이 그 눈으로 발동(소비 후 0 리셋). 0=정상 랜덤.
 
     // 매주 1회 (RandomEventManager.CheckCharacterUniqueEvents → 유니크 직원별 호출).
     // 주간 발동형 전용 이벤트(유리 멘탈 회복 등) 의 조건/확률/쿨다운을 처리.
@@ -23,21 +26,35 @@ public static class CharacterUniqueEvents
         {
             case "KimUnique":       CheckGlassMentalRecovery(emp); break;
             case "GoldspoonUnique": CheckGoldspoonGift(emp);       break;
-            // 그 외(Ugi/Genius/Hunsu)는 각자 시점(주사위/아이템/99% hook)에서 처리
+            case "UgiUnique":       CheckGodBlessing(emp);         break;
+            // 그 외(Genius/Hunsu)는 각자 시점(아이템/99% hook)에서 처리
         }
     }
 
-    // 오다 주웠다 — 매년 1월 중 랜덤한 한 주에 1회, 상점 등장 아이템 중 랜덤 1개 지급.
-    static void CheckGoldspoonGift(EmployeeData emp)
+    // 연중 정확히 한 주에 1회 발동 — 아직 올해 발동 안 했으면 남은 주차 기준 1/weeksLeft 확률(연말 주 확정).
+    // 1년 = 12개월 × 4주 = 48주. 오다 주웠다·신의 축복 공통(월 한정 없이 1년 중 아무 주에 1회).
+    static bool ShouldFireAnnualRandom(EmployeeData emp)
     {
         var gt = GameTimeManager.Instance;
-        if (gt == null) return;
-        if (gt.Month != 1) return;                      // 1월에만
-        if (emp.lastUniqueEventYear == gt.Year) return; // 올해 이미 받음
-        // 1월(1~4주) 중 정확히 한 주에 발동: 남은 주차 기준 1/(5-week) → 4주차엔 확정 발동
-        int weeksLeft = Mathf.Max(1, 5 - gt.Week);
-        if (Random.value >= 1f / weeksLeft) return;
+        if (gt == null) return false;
+        if (emp.lastUniqueEventYear == gt.Year) return false; // 올해 이미 발동
+        int weekOfYear = (gt.Month - 1) * 4 + gt.Week;        // 1..48
+        int weeksLeft  = Mathf.Max(1, 49 - weekOfYear);
+        return Random.value < 1f / weeksLeft;
+    }
+
+    // 오다 주웠다 — 1년 중 랜덤한 한 주에 1회, 상점 등장 아이템 중 랜덤 1개 지급.
+    static void CheckGoldspoonGift(EmployeeData emp)
+    {
+        if (!ShouldFireAnnualRandom(emp)) return;
         Trigger(emp); // 패널 + ApplyEffect(아이템 지급 + lastUniqueEventYear) + 4-set 저장
+    }
+
+    // 신의 축복 — 1년 중 랜덤한 한 주에 1회 주사위(d6) 발동.
+    static void CheckGodBlessing(EmployeeData emp)
+    {
+        if (!ShouldFireAnnualRandom(emp)) return;
+        Trigger(emp); // 패널(주사위 결과 문구) + ApplyEffect(d6 효과 + lastUniqueEventYear) + 4-set 저장
     }
 
     // 약점 극복(HunsuUnique) — 창의성 미니게임 후·디버깅 전 1회(DevelopmentManager.ShowCreativityGame 콜백에서 호출).
@@ -159,7 +176,8 @@ public static class CharacterUniqueEvents
 
         // 효과 + 4-set 즉시 적용/저장 — 패널 확인 전 종료해도 저장/복원 일관성 보장.
         // (그 주 OnWeekPassed 의 다른 직원 변동·시간·머니·프로젝트까지 함께 박음. SaveGameTime 이 SaveAllEmployees fan-out)
-        ApplyEffect(emp, row, eventType);
+        // ApplyEffect 가 null 이 아닌 문구를 반환하면(신의 축복 주사위 결과 등) 차트 description 대신 그 문구를 패널에 표시.
+        string customDesc = ApplyEffect(emp, row, eventType);
         MoneyManager.Instance?.SaveMoney();
         ProjectSaveManager.Instance?.SaveProject();
         GameTimeManager.Instance?.SaveGameTime();
@@ -169,16 +187,18 @@ public static class CharacterUniqueEvents
         ModalGate.I.WhenFree(() =>
         {
             GameTimeManager.Instance?.StopTime();
-            ShowEventPanel(emp, row, () => GameTimeManager.Instance?.StartTime());
+            ShowEventPanel(emp, row, customDesc, () => GameTimeManager.Instance?.StartTime());
         });
     }
 
     // EventChoicePanel(RandomEventChoiceUI) 로 전용 이벤트 표시 — 선택지 없음(ChoiceButtonContainer 미사용),
     // 제목 "{이벤트명} 발동", 설명 = description1, 초상화 = 해당 직원. onConfirm 은 확인 시 콜백(시간 관리는 호출자 책임).
-    static void ShowEventPanel(EmployeeData emp, CharacterUniqueEventRow row, System.Action onConfirm)
+    static void ShowEventPanel(EmployeeData emp, CharacterUniqueEventRow row, string customDesc, System.Action onConfirm)
     {
         if (RandomEventChoiceUI.Instance == null) { onConfirm?.Invoke(); return; }
-        string desc = (row.descriptions != null && row.descriptions.Length > 0) ? row.descriptions[0] : "";
+        string desc = !string.IsNullOrEmpty(customDesc)
+            ? customDesc
+            : ((row.descriptions != null && row.descriptions.Length > 0) ? row.descriptions[0] : "");
         RandomEventChoiceUI.Instance.Show(new RandomEventChoiceData
         {
             title       = $"{row.title} 발동",
@@ -216,10 +236,11 @@ public static class CharacterUniqueEvents
         CharacterUniqueEventRow row = null;
         CharacterUniqueEventChartLoader.Cache?.TryGetValue("OtakuUnique", out row);
         if (row == null) { onDone?.Invoke(); return; }
-        ShowEventPanel(otaku, row, onDone); // 시간은 이미 정지 — 확인 시 setup 계속
+        ShowEventPanel(otaku, row, null, onDone); // 시간은 이미 정지 — 확인 시 setup 계속 (차트 문구 사용)
     }
 
-    static void ApplyEffect(EmployeeData emp, CharacterUniqueEventRow row, string eventType)
+    // 효과 적용. 패널에 차트 description 대신 표시할 문구가 있으면 반환(없으면 null → 차트 description1 사용).
+    static string ApplyEffect(EmployeeData emp, CharacterUniqueEventRow row, string eventType)
     {
         switch (eventType)
         {
@@ -239,12 +260,8 @@ public static class CharacterUniqueEvents
                 }
                 emp.lastUniqueEventYear = GameTimeManager.Instance != null ? GameTimeManager.Instance.Year : emp.lastUniqueEventYear;
                 break;
-            case "UgiUnique":       // 신의 축복
-                // TODO: 1년에 한 번 주사위(d6):
-                //   1=꽝 / 2=우기 능력치 100~130% 중 특정값 고정 / 3=랜덤 직원 능력치 +10% /
-                //   4=우기 만족도 +20 / 5=모든 직원 만족도 +10 / 6=매출 +10%
-                //   (연 1회, lastUniqueEventYear 로 중복 방지)
-                break;
+            case "UgiUnique":       // 신의 축복 — d6 주사위. 결과 문구를 반환해 패널에 표시.
+                return ApplyGodBlessing(emp);
             case "GeniusUnique":    // 잠 깨우기 — 커피 사용 hook(ItemManager.TryGeniusWakeUp)이 조건 확인 후 Trigger 호출.
                 // 효과: 개발 업그레이드권과 동일하게 팀장 점수의 1/4 를 개발 점수로 추가 + 프로젝트당 1회 마킹.
                 {
@@ -291,5 +308,100 @@ public static class CharacterUniqueEvents
                 Debug.LogWarning($"[CharacterUniqueEvent] '{eventType}' 효과 미구현");
                 break;
         }
+        return null; // 위 break 경로는 차트 description1 사용
+    }
+
+    // ──────────── 신의 축복 (UgiUnique) — 1년 1회 d6 주사위 ────────────
+    // 결과별 효과 적용 + 패널 표시 문구 반환. 2/3/6 은 "다음 축복까지" 지속(영속 필드), 4/5 는 즉시 1회.
+    // 발동 시 작년 축복의 지속효과는 ClearGodBlessing 으로 먼저 해제(한 번에 하나만 활성).
+    static string ApplyGodBlessing(EmployeeData ugi)
+    {
+        ClearGodBlessing(); // 작년 축복(지속형 2/3/6) 해제 후 새 축복 적용
+        ugi.lastUniqueEventYear = GameTimeManager.Instance != null ? GameTimeManager.Instance.Year : ugi.lastUniqueEventYear;
+
+        // 테스트용 강제 주사위(1~6) 가 지정돼 있으면 그 값 사용 후 리셋, 아니면 정상 랜덤.
+        int dice = (DebugForcedDice >= 1 && DebugForcedDice <= 6) ? DebugForcedDice : Random.Range(1, 7); // 1~6
+        DebugForcedDice = 0;
+        Debug.Log($"[신의 축복] {ugi.employeeName} 주사위 = {dice}");
+        switch (dice)
+        {
+            case 1: // 꽝
+                return "주사위 결과: 1\n\n…이번 해에는 아무 일도 일어나지 않았습니다. (꽝)";
+            case 2: // 우기 능력치 100~130% 중 특정값 고정 (다음 축복까지, 우주의 기운 매주 재추첨 정지)
+            {
+                int pct = Random.Range(100, 131); // 100~130
+                ugi.cosmicEnergyPercent = pct;
+                ugi.cosmicFrozen        = true;
+                return $"주사위 결과: 2\n\n{ugi.employeeName}의 능력치 배율이 <b>{pct}%</b>로 고정됩니다!\n(다음 축복 때까지 매주 변동 정지)";
+            }
+            case 3: // 랜덤 직원 능력치 +10% (다음 축복까지)
+            {
+                var target = PickRandomOwnedEmployee();
+                if (target == null) return "주사위 결과: 3\n\n…대상 직원이 없어 축복이 흩어졌습니다.";
+                target.godBlessingStatPercent = GOD_BLESSING_STAT_PERCENT;
+                return $"주사위 결과: 3\n\n<b>{target.employeeName}</b>의 능력치가 +10% 상승합니다!\n(다음 축복 때까지 유지)";
+            }
+            case 4: // 우기 만족도 +20 (즉시)
+                ugi.ChangeSatisfaction(20);
+                return $"주사위 결과: 4\n\n{ugi.employeeName}의 만족도가 +20 상승했습니다!";
+            case 5: // 모든 직원 만족도 +10 (즉시)
+                ApplyAllSatisfaction(10);
+                return "주사위 결과: 5\n\n모든 직원의 만족도가 +10 상승했습니다!";
+            case 6: // 매출 +10% (다음 축복까지)
+                ugi.godBlessingSalesActive = true;
+                return "주사위 결과: 6\n\n다음 축복 때까지 게임 매출이 +10% 상승합니다!";
+        }
+        return null;
+    }
+
+    // 신의 축복의 "근원" — grade>=Unique 우기 보유 여부. 우기가 없으면(미보유/해고/도주) 지속 효과(2/3/6)는 발동도 유지도 안 됨.
+    // 효과 읽기 시점 게이팅에 사용 → 우기 부재 시 즉시 0 (어떤 경로로 사라져도 robust).
+    public static bool HasUniqueUgi()
+    {
+        var em = EmployeeManager.Instance;
+        if (em?.ownedEmployees == null) return false;
+        foreach (var e in em.ownedEmployees)
+            if (e.grade >= EmployeeGrade.Unique && CharacterTraitApplier.ResolveEventType(e) == "UgiUnique")
+                return true;
+        return false;
+    }
+
+    // 신의 축복 지속형 효과(2/3/6) 일괄 해제 — (a) 다음 축복 발동 시 작년 효과 교체, (b) 우기 퇴장 시 잔존 버프 정리.
+    // 한 번에 하나의 축복만 활성 + 우기 재채용 시 옛 버프 부활 방지.
+    public static void ClearGodBlessing()
+    {
+        var em = EmployeeManager.Instance;
+        if (em?.ownedEmployees == null) return;
+        foreach (var e in em.ownedEmployees)
+        {
+            e.godBlessingStatPercent = 0;
+            e.godBlessingSalesActive = false;
+            e.cosmicFrozen           = false; // 우주의 기운 매주 재추첨 재개 (이번이 주사위 2면 직후 다시 set)
+        }
+    }
+
+    static EmployeeData PickRandomOwnedEmployee()
+    {
+        var em = EmployeeManager.Instance;
+        if (em?.ownedEmployees == null || em.ownedEmployees.Count == 0) return null;
+        return em.ownedEmployees[Random.Range(0, em.ownedEmployees.Count)];
+    }
+
+    static void ApplyAllSatisfaction(int amount)
+    {
+        var em = EmployeeManager.Instance;
+        if (em?.ownedEmployees == null) return;
+        foreach (var e in em.ownedEmployees) e.ChangeSatisfaction(amount);
+    }
+
+    // SalesUI bonusSum 합연산용 — 신의 축복 주사위 6(매출 +10%) 활성 직원이 있으면 0.10, 없으면 0.
+    public static float GetGodBlessingSalesBonus()
+    {
+        if (!HasUniqueUgi()) return 0f; // 우기 없으면 매출 보너스 즉시 중단
+        var em = EmployeeManager.Instance;
+        if (em?.ownedEmployees == null) return 0f;
+        foreach (var e in em.ownedEmployees)
+            if (e.godBlessingSalesActive) return GOD_BLESSING_SALES_BONUS;
+        return 0f;
     }
 }

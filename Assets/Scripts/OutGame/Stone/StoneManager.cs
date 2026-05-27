@@ -211,6 +211,17 @@ public class StoneManager : MonoBehaviour
             // 구 UserCEO 마이그레이션: CEOManager 가 시드를 가지고 있고 아직 active 가 없다면, 시드로 새 돌 생성 + 활성화.
             TryMigrateFromCEO();
 
+            // 신규 유저(돌 0개): 기본 돌 1개 지급 → 첫 로그인부터 조각 강화 가능.
+            // (마이그레이션 시드가 있으면 위에서 이미 1개 생겨 skip. 0개일 때만 = 진짜 신규.)
+            if (Stones.Count == 0)
+            {
+                var starter = new Stone();
+                Stones.Add(starter);
+                ActiveStoneId = starter.id;
+                Dirty(); // 영속화(신규 row Insert / 기존 row Update)
+                Debug.Log("[StoneManager] 신규 유저 기본 돌 1개 지급 (active)");
+            }
+
             OnChanged?.Invoke();
             CEOManager.Instance?.RaiseChanged();
             onComplete?.Invoke();

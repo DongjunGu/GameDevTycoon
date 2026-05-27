@@ -6,7 +6,8 @@ using UnityEngine;
 // 뒤끝 콘솔 차트 이름: "CharacterTrait"
 // 컬럼: traitId(string), name(string), description(string), effectType(string), effectValue(int)
 // 주의: "id"는 뒤끝 예약 키 → traitId 사용 (feedback_backend_reserved_keys.md)
-// 발동 기준은 EmployeeData.grade >= Epic. 적용 로직은 CharacterTraitApplier (effectType 미정 = TODO).
+// 발동 기준은 EmployeeData.grade >= Epic. 적용 로직은 CharacterTraitApplier (traitId 별 분기).
+// effectType/effectValue 컬럼은 미사용(dead) — 복합 로직이라 traitId 별 전용 분기로 처리.
 
 public class CharacterTraitRow
 {
@@ -32,7 +33,7 @@ public static class CharacterTraitChartLoader
         Debug.Log($"[CharacterTraitChart] {(_cache?.Count ?? 0)}개 캐릭터 특성 로드 (fallback 비활성 — 0개면 뒤끝 차트 못 찾음)");
     }
 
-    // 차트 미업로드 시 fallback — 6 캐릭터 특성. 효과 로직은 CharacterTraitApplier 에서 traitId 별 분기(현재 TODO).
+    // 차트 미업로드 시 fallback — 6 캐릭터 특성. 효과 로직은 CharacterTraitApplier 에서 traitId 별 분기.
     static Dictionary<string, CharacterTraitRow> GetFallback() => new()
     {
         ["ctrait_kim"]       = new CharacterTraitRow { traitId = "ctrait_kim",       name = "유리멘탈",

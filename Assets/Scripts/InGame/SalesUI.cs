@@ -197,9 +197,11 @@ public class SalesUI : MonoBehaviour
                     ? RandomEventManager.Instance.YoutuberSalesBonus : 1.0f;
                 // 오타쿠 특성: 보유 오타쿠의 고정 장르가 이 프로젝트 장르와 일치하면 매출 +20%.
                 float otakuSalesBonus  = CharacterTraitApplier.GetOtakuSalesBonus(_cachedGenre);
-                // 매출 보너스는 합연산 — 유튜버 +5% + 장인정신 +10% + 만점 +15% + 오타쿠 +20% (곱셈 아님).
+                // 신의 축복(우기 전용 이벤트) 주사위 6: 다음 축복까지 매출 +10%.
+                float godBlessingBonus = CharacterUniqueEvents.GetGodBlessingSalesBonus();
+                // 매출 보너스는 합연산 — 유튜버 +5% + 장인정신 +10% + 만점 +15% + 오타쿠 +20% + 신의축복 +10% (곱셈 아님).
                 // rand 는 별개의 자연스러운 변동성이라 곱셈 유지.
-                float bonusSum         = (youtuberBonus - 1f) + (craftsmanBonus - 1f) + perfectBonus + otakuSalesBonus;
+                float bonusSum         = (youtuberBonus - 1f) + (craftsmanBonus - 1f) + perfectBonus + otakuSalesBonus + godBlessingBonus;
                 float totalMultiplier  = Mathf.Max(0f, 1f + bonusSum);
                 totalRevenue = Mathf.RoundToInt(
                     (5000f + 200f * scaleMultiplier * Mathf.Pow(qualityScore / 100f, 2f)) * rand * totalMultiplier

@@ -91,6 +91,10 @@ public class EmployeeData
     public int    lastUniqueEventYear    = -1;  // 연 1회 전용 이벤트(금수저/우기 등) 마지막 발동 연도
     public int    glassMentalCooldownWeeks = 0; // 김아무개 유리멘탈 회복: 발동 후 재발동 금지 남은 주차 (>0 = 대기중)
     public int    cosmicEnergyPercent      = 100; // 우기 우주의 기운: 이번 주 능력치 배율(%) 70~150, 매주 WeeklyTick 재추첨. 비-우기/비활성은 100(영향 없음)
+    // ── 신의 축복(우기 전용 이벤트, UgiUnique) — 발동 시 효과가 "다음 축복까지" 지속(연 1회). CharacterUniqueEvents 가 set/clear ──
+    public bool   cosmicFrozen           = false; // 주사위 2: 우주의 기운 매주 재추첨을 정지하고 cosmicEnergyPercent 를 고정값(100~130)으로 유지
+    public int    godBlessingStatPercent = 0;     // 주사위 3: 주스탯 % 버프(다음 축복까지 유지 — statBuffStacks 와 달리 주차 감소 없음)
+    public bool   godBlessingSalesActive = false; // 주사위 6: 매출 +10%(다음 축복까지). SalesUI 가 GetGodBlessingSalesBonus 로 소비
 
     public EmployeeState state;
     public string assignedProjectId;
@@ -180,6 +184,9 @@ public class EmployeeData
         data.lastUniqueEventYear      = SafeInt(row, "lastUniqueEventYear", -1);
         data.glassMentalCooldownWeeks = SafeInt(row, "glassMentalCooldownWeeks", 0);
         data.cosmicEnergyPercent      = SafeInt(row, "cosmicEnergyPercent", 100);
+        data.cosmicFrozen             = SafeBool(row, "cosmicFrozen", false);
+        data.godBlessingStatPercent   = SafeInt(row, "godBlessingStatPercent", 0);
+        data.godBlessingSalesActive   = SafeBool(row, "godBlessingSalesActive", false);
         ParseStatDebuffStacks(data, row);
         ParseStatBuffStacks(data, row);
         data.romanceBuffWeeksLeft      = SafeInt(row, "romanceBuffWeeksLeft",      0);
@@ -230,6 +237,9 @@ public class EmployeeData
         param.Add("lastUniqueEventYear",      lastUniqueEventYear);
         param.Add("glassMentalCooldownWeeks", glassMentalCooldownWeeks);
         param.Add("cosmicEnergyPercent",      cosmicEnergyPercent);
+        param.Add("cosmicFrozen",             cosmicFrozen);
+        param.Add("godBlessingStatPercent",   godBlessingStatPercent);
+        param.Add("godBlessingSalesActive",   godBlessingSalesActive);
         param.Add("statDebuffStacks",       string.Join(",", statDebuffStacks));
         param.Add("statBuffStacks",         SerializeStatBuffStacks(statBuffStacks));
         param.Add("romanceBuffWeeksLeft",   romanceBuffWeeksLeft);
@@ -291,14 +301,19 @@ public class EmployeeData
         return (int)(GetMainStat() * totalPercent / 100f);
     }
     public int GetRomanceBuffAmount()   => romanceBuffWeeksLeft  > 0 ? (int)(GetMainStat() * 0.1f) : 0;
+    // 신의 축복 주사위 3 — 주스탯 % 버프(다음 축복까지). 주차 감소 없는 영속 버프라 statBuff 와 별도.
+    // grade>=Unique 우기가 있어야만 유효 — 우기 부재(해고/도주/미보유) 시 즉시 0 (HasUniqueUgi 게이팅).
+    public int GetGodBlessingBuffAmount()
+        => (godBlessingStatPercent > 0 && CharacterUniqueEvents.HasUniqueUgi())
+           ? (int)(GetMainStat() * godBlessingStatPercent / 100f) : 0;
 
     // 우기 우주의 기운: 이번 주 능력치 배율 (비-우기/비활성은 100 → ×1.0, 영향 없음).
     // Effective*Skill 의 외곽 곱으로 적용 → (raw → 만족도 → ±버프/디버프) × 우주배율 순서.
     public float GetCosmicMultiplier() => cosmicEnergyPercent / 100f;
 
-    public int EffectivePlanningSkill   => Mathf.RoundToInt(((int)(planningSkill   * GetSatisfactionMultiplier()) - (role == EmployeeRole.Planner    ? GetStatDebuffAmount() : 0) + (role == EmployeeRole.Planner    ? GetStatBuffAmount() : 0) + (role == EmployeeRole.Planner    ? GetRomanceBuffAmount() : 0)) * GetCosmicMultiplier());
-    public int EffectiveDevelopSkill    => Mathf.RoundToInt(((int)(developSkill    * GetSatisfactionMultiplier()) - (role == EmployeeRole.Programmer ? GetStatDebuffAmount() : 0) + (role == EmployeeRole.Programmer ? GetStatBuffAmount() : 0) + (role == EmployeeRole.Programmer ? GetRomanceBuffAmount() : 0)) * GetCosmicMultiplier());
-    public int EffectiveArtSkill        => Mathf.RoundToInt(((int)(artSkill        * GetSatisfactionMultiplier()) - (role == EmployeeRole.Artist     ? GetStatDebuffAmount() : 0) + (role == EmployeeRole.Artist     ? GetStatBuffAmount() : 0) + (role == EmployeeRole.Artist     ? GetRomanceBuffAmount() : 0)) * GetCosmicMultiplier());
+    public int EffectivePlanningSkill   => Mathf.RoundToInt(((int)(planningSkill   * GetSatisfactionMultiplier()) - (role == EmployeeRole.Planner    ? GetStatDebuffAmount() : 0) + (role == EmployeeRole.Planner    ? GetStatBuffAmount() : 0) + (role == EmployeeRole.Planner    ? GetRomanceBuffAmount() : 0) + (role == EmployeeRole.Planner    ? GetGodBlessingBuffAmount() : 0)) * GetCosmicMultiplier());
+    public int EffectiveDevelopSkill    => Mathf.RoundToInt(((int)(developSkill    * GetSatisfactionMultiplier()) - (role == EmployeeRole.Programmer ? GetStatDebuffAmount() : 0) + (role == EmployeeRole.Programmer ? GetStatBuffAmount() : 0) + (role == EmployeeRole.Programmer ? GetRomanceBuffAmount() : 0) + (role == EmployeeRole.Programmer ? GetGodBlessingBuffAmount() : 0)) * GetCosmicMultiplier());
+    public int EffectiveArtSkill        => Mathf.RoundToInt(((int)(artSkill        * GetSatisfactionMultiplier()) - (role == EmployeeRole.Artist     ? GetStatDebuffAmount() : 0) + (role == EmployeeRole.Artist     ? GetStatBuffAmount() : 0) + (role == EmployeeRole.Artist     ? GetRomanceBuffAmount() : 0) + (role == EmployeeRole.Artist     ? GetGodBlessingBuffAmount() : 0)) * GetCosmicMultiplier());
     public int EffectiveCreativitySkill => Mathf.RoundToInt((int)(creativitySkill * GetSatisfactionMultiplier()) * GetCosmicMultiplier());
 
     public string DevelopText()    => $"개발: {EffectiveDevelopSkill}";

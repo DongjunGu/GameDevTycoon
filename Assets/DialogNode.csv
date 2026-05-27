@@ -39,3 +39,5 @@ dlg_patrol_001,event_patrol_talk,1,NPC,,{employeeName},{portraitId},사장님! �
 dlg_patrol_002,event_patrol_talk,2,NPC,,{employeeName},{portraitId},그렇다구요..,Normal,true,,default,false,,,false,0,false
 dlg_patrol_bonus_001,event_patrol_bonus,1,NPC,,{employeeName},{portraitId},감사합니다!,Normal,false,,happy,false,,,false,0,true
 dlg_patrol_sad_001,event_patrol_sad,1,NPC,,{employeeName},{portraitId},너무해욧!,Normal,false,,sad,false,,,false,0,true
+tut_intro_0,tutorial_intro,1,NPC,npc_secretary,비서,portrait_secretary,"조조 게임즈를 꺾고 세계 최고가 되겠다고 창업해 놓고, 회사 차린 지 30분 만에 졸고 계시면 어떡해요!",Normal,false,tut_intro_1,default,false,,,false,0,true
+tut_intro_1,tutorial_intro,2,NPC,npc_secretary,비서,portrait_secretary,얼른 직원도 뽑고 개발도 시작해서 이 칙칙한 반지하부터 탈출해야죠. 설마 평생 여기서 게임 만들 생각은 아니시죠?,Normal,false,,default,false,,,false,0,true
