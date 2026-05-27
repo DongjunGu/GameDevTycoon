@@ -675,6 +675,8 @@ public class EmployeeManager : MonoBehaviour
                 Debug.LogWarning($"[Stale] 서버에 row 없음 - 메모리에서 분리: {employee.employeeName}");
                 employee.rowInDate = null;
                 ownedEmployees.Remove(employee);
+                // 우기가 이 stale 정리로 사라졌다면 신의 축복 지속 효과도 즉시 정리 (재채용 부활 방지)
+                if (!CharacterUniqueEvents.HasUniqueUgi()) CharacterUniqueEvents.ClearGodBlessing();
             }
         });
     }
@@ -683,6 +685,9 @@ public class EmployeeManager : MonoBehaviour
     {
         if (countAsExit) RecordEmployeeExit();
         ownedEmployees.Remove(employee);
+        // 신의 축복(우기 전용) 지속 효과(2/3/6)는 grade>=Unique 우기가 있어야만 유지 — 우기 퇴장 시 즉시 해제 +
+        // 잔존 버프 정리(재채용 시 부활 방지). 우기가 남아 있으면(다수 보유) 유지. 아래 4-set 저장에 반영됨.
+        if (!CharacterUniqueEvents.HasUniqueUgi()) CharacterUniqueEvents.ClearGodBlessing();
         RandomEventManager.Instance?.CheckCoupleOnFire(employee.id);
         RandomEventManager.Instance?.ClearCoupleIfInvolved(employee.id);
         OfficeManager.Instance?.OnEmployeeFired(employee);

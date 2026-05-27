@@ -65,8 +65,8 @@ public static class TechTreeChartLoader
 
         // ── 채용 ────────────────────────────────────
         new() { id="hire_discount", category=TechCategory.Hiring, name="채용 비용 할인",
-                description="채용하는데 드는 비용이 20% 감소합니다",
-                logic="채용하는데 드는 비용 20% 할인",
+                description="채용 후보 목록을 뽑는 비용이 20% 감소합니다",
+                logic="채용 후보 목록 뽑기(티어 진입) 비용 20% 할인",
                 requiredPoints=5 },
         new() { id="hire_tier2",    category=TechCategory.Hiring, name="채용 2단계",
                 description="채용 등급이 2단계로 상승하여 더 좋은 직원이 등장할 확률이 높아집니다",

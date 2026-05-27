@@ -55,7 +55,10 @@ public class DialogUI : MonoBehaviour
     // ─── 공개 API ────────────────────────────────────────────────
     public void Show(DialogNodeData node, List<ChoiceData> choices)
     {
+        // 다이얼로그 패널이 처음 떠오를 때 시간 정지 (Hide 에서 1회 재개 — 노드 전환 시 중복 정지 방지)
+        bool wasActive = _dialogPanel.activeSelf;
         _dialogPanel.SetActive(true);
+        if (!wasActive) GameTimeManager.Instance?.StopTime();
         _hasChoiceOnDone = node.hasChoice;
         _pendingChoices = choices;
         string displayText = DialogManager.Instance.ReplacePlaceholders(node.dialogText);
@@ -113,6 +116,8 @@ public class DialogUI : MonoBehaviour
 
     public void Hide()
     {
+        // 패널이 떠 있던 경우에만 시간 재개 (Show 의 StopTime 과 1:1 균형)
+        if (_dialogPanel.activeSelf) GameTimeManager.Instance?.StartTime();
         _dialogPanel.SetActive(false);
         ClearChoices();
     }

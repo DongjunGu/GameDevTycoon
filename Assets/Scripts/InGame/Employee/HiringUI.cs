@@ -133,7 +133,7 @@ public class HiringUI : MonoBehaviour
 
         var (label, baseCost, range, weights) = Tiers[tierIndex];
 
-        // 테크트리 '채용 비용 할인(hire_discount)' — 티어 진입 비용도 20% 감소
+        // 테크트리 '채용 비용 할인(hire_discount)' — 후보 목록을 뽑는 티어 진입 비용 20% 감소 (개별 채용 비용에는 미적용)
         bool discounted = TechTreeManager.Instance != null && TechTreeManager.Instance.IsUnlocked("hire_discount");
         int cost = discounted ? Mathf.RoundToInt(baseCost * 0.8f) : baseCost;
         string costDisplay = discounted
@@ -265,10 +265,7 @@ public class HiringUI : MonoBehaviour
 
         int baseHireCost = EmployeeManager.GetExpectedEnhanceCost(employee.enhancementLevel);
         _hireCost = Mathf.RoundToInt(baseHireCost * UnityEngine.Random.Range(0.8f, 1.2f));
-        // 테크트리 '채용 비용 할인(hire_discount)' — 채용 비용 20% 감소 (취소선+할인가 표시)
-        bool hireDiscounted = TechTreeManager.Instance != null && TechTreeManager.Instance.IsUnlocked("hire_discount");
-        int prediscountHireCost = _hireCost;
-        if (hireDiscounted) _hireCost = Mathf.RoundToInt(_hireCost * 0.8f);
+        // 테크트리 '채용 비용 할인(hire_discount)' 은 후보 목록을 뽑는 티어 진입 비용에만 적용 — 개별 직원 채용 비용에는 적용 안 함.
 
         confirmNameText.text = employee.employeeName;
         confirmRoleText.text = employee.RoleToString();
@@ -283,14 +280,7 @@ public class HiringUI : MonoBehaviour
         confirmSalaryText.text = employee.SalaryRangeText();
         enhancementText.text = $"+{employee.enhancementLevel}";
         if (confirmHireCostText != null)
-        {
-            if (_hireCost <= 0)
-                confirmHireCostText.text = "무료";
-            else if (hireDiscounted)
-                confirmHireCostText.text = $"<s><color=#888888>{prediscountHireCost:N0}G</color></s>  <color=#FFD24A>{_hireCost:N0}G</color>  <size=70%>(-20%)</size>";
-            else
-                confirmHireCostText.text = $"{_hireCost:N0}G";
-        }
+            confirmHireCostText.text = _hireCost <= 0 ? "무료" : $"{_hireCost:N0}G";
         if (confirmSatisfactionText != null)
             confirmSatisfactionText.text = employee.SatisfactionText();
         else

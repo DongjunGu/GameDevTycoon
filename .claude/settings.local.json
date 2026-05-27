@@ -32,7 +32,8 @@
       "mcp__UnityMCP__execute_menu_item",
       "mcp__UnityMCP__manage_camera",
       "Bash(awk '/^--- !u!1 &2062941524/,/^--- /' \"C:/Users/PC/Documents/GitHub/GameDevTycoon/GameDevTycoon/Assets/Scenes/LoadingScene.unity\")",
-      "Bash(awk *)"
+      "Bash(awk *)",
+      "mcp__UnityMCP__unity_reflect"
     ]
   }
 }

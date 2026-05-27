@@ -22,6 +22,9 @@ public class BackendManager : MonoBehaviour
             FindAnyObjectByType<GPGSLogin>().StartLogin();
 #elif UNITY_IOS
             // iOS는 LoginButtonPanel의 버튼으로 시작
+#else
+            // 스탠드얼론(Windows 등) — GPGS/Apple 불가 → 기기별 게스트 로그인 (테스터 PC 마다 별도 유저)
+            GuestLoginAndEnter();
 #endif
         }
         else
@@ -121,6 +124,24 @@ public class BackendManager : MonoBehaviour
             {
                 Debug.LogError($"회원가입 실패: {signUp}");
             }
+        }
+    }
+
+    // 스탠드얼론(Windows 등) 전용 — 뒤끝 게스트 로그인.
+    // GuestLogin() 은 첫 실행 시 기기에 고유 게스트 계정을 자동 생성·로컬 저장하고, 재실행 시 같은 게스트로 로그인.
+    // → 테스터 PC 마다 별도 유저로 집계. (editor 는 TestLogin 단일 계정 유지)
+    void GuestLoginAndEnter()
+    {
+        var bro = Backend.BMember.GuestLogin();
+        if (bro.IsSuccess())
+        {
+            Debug.Log("게스트 로그인 성공 : " + bro);
+            FindAnyObjectByType<Progress>()?.SetLoginComplete();
+            LoadAllAndEnterGame();
+        }
+        else
+        {
+            Debug.LogError($"게스트 로그인 실패: {bro}");
         }
     }
 

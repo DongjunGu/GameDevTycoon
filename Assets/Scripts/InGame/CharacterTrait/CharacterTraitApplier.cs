@@ -8,15 +8,15 @@ using TMPro;
 // 공유 상태: EmployeeData 의 otakuFixedGenre 등 런타임 필드 (특수이벤트 CharacterUniqueEvents 와 공유).
 //
 // 구조: traitId 별로 분기. 효과는 발동 "시점" 이 제각각이라 시스템별 hook 진입점을 둠.
-//   - OnHire(emp)        : 채용 직후 1회        (오타쿠 = 선호 장르 고정)            ← EmployeeManager.HireEmployee
-//   - WeeklyTick(emp)    : 매주                 (유리멘탈 / 우주의 기운)             ← EmployeeManager.OnWeekPassed
-//   - [TODO 미연결 hook] : 팀장 점수 계산 시    (게으른 천재 / 훈수쟁이 / 오타쿠)    ← DevelopmentManager
-//                          연봉/협상 시          (금수저)                             ← SalaryNegotiationManager
-//                          매출 계산 시          (오타쿠 장르 보너스)                 ← SalesUI
-//   효과 명세는 [[project_character_trait_event_spec]] 참조. 현재 전부 TODO 스텁.
+//   - OnHire(emp)        : 채용 직후 1회        (오타쿠 = 선호 장르 고정 / 우기 = 초기 배율)  ← EmployeeManager.HireEmployee
+//   - WeeklyTick(emp)    : 매주                 (우주의 기운 재추첨. 유리멘탈은 패시브)        ← EmployeeManager.OnWeekPassed
+//   - 팀장 점수 계산 시   : 게으른 천재(×1.3) / 훈수쟁이(10%) / 오타쿠(×1.2)              ← DevelopmentManager.SetLeader
+//   - 연봉/협상 시        : 금수저(절반 + 협상 제외)                                       ← EmployeeManager / SalaryNegotiationManager
+//   - 매출 계산 시        : 오타쿠 장르 보너스(+20%)                                       ← SalesUI.bonusSum
+//   효과 명세는 [[project_character_trait_event_spec]] 참조.
 //
-// ⚠️ 등급 게이팅 미해결: 스펙상 maxGrade Normal/Rare 캐릭터(김아무개·천재·금수저·훈수쟁이)도 특성을 갖는데
-//    현재 GetActiveTrait 는 grade>=Epic 요구 → 영원히 미발동. 활성 규칙 확정 시 GetActiveTrait 수정.
+// 등급 게이팅 (확정): GetActiveTrait 는 grade>=Epic 요구 유지. CSV maxGrade 는 dead([[feedback_max_grade_source]]) —
+//    실제 maxGrade 는 cardsJson derived 라 Normal/Rare 표기 캐릭터도 카드로 Epic 도달 가능 → maxGrade 무시.
 public static class CharacterTraitApplier
 {
     // masterEmployeeId → (특성ID, 전용이벤트ID) fallback.
@@ -221,18 +221,20 @@ public static class CharacterTraitApplier
         {
             case "ctrait_kim":   // 유리멘탈 — 패시브로 EmployeeData.GetSatisfactionMultiplier 가 직접 분기 (IsGlassMental). 매주 처리 불필요.
                 break;
-            case "ctrait_ugi":   // 우주의 기운 — 매주 능력치 70~150% 변동
-                RerollCosmicEnergy(emp);
+            case "ctrait_ugi":   // 우주의 기운 — 매주 능력치 70~150% 변동 (단 신의 축복 주사위 2로 고정 중이면 재추첨 정지)
+                if (!emp.cosmicFrozen) RerollCosmicEnergy(emp);
                 break;
         }
     }
 
-    // 런 시작 시 일괄 (저장된 직원 복원 후 패시브 특성 재적용용). 현재 골격만.
+    // ⚠️ DEAD CODE — 호출처 없음 (NewRunInitializer 가 부르는 건 CEO용 OutGame/Trait/TraitEffectApplier.ApplyOnRunStart).
+    // 호출하면 안 됨: WeeklyTick 이 우주의 기운을 재추첨해 저장된 cosmicEnergyPercent(및 신의 축복 cosmicFrozen 고정값)를 덮어씀.
+    // 복원 시점 재적용이 필요해지면 패시브만 골라 적용하도록 새로 짤 것. 현재는 영속 필드 복원으로 충분해 미사용.
     public static void ApplyOnRunStart()
     {
         var em = EmployeeManager.Instance;
         if (em == null || em.ownedEmployees == null) return;
         foreach (var emp in em.ownedEmployees)
-            if (GetActiveTrait(emp) != null) WeeklyTick(emp); // TODO: 시점 정합성 검토
+            if (GetActiveTrait(emp) != null) WeeklyTick(emp);
     }
 }

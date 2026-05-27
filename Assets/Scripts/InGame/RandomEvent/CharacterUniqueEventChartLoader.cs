@@ -6,7 +6,7 @@ using UnityEngine;
 // 뒤끝 콘솔 차트 이름: "CharacterUniqueEvent"
 // 컬럼: eventType(string), title(string), description1~5(string), systemMessage(string), portraitId(string)
 // key = eventType. EmployeeData.uniqueEventType (grade >= Unique 일 때 발동 후보) 가 이 key 를 가리킴.
-// 발동 조건/확률은 RandomEventManager.CheckConditionEvents 의 TODO (현재 비활성).
+// 발동 조건/확률은 이벤트 타입별로 CharacterUniqueEvents 가 처리 (WeeklyCheck / dev hook / 아이템 hook).
 
 public class CharacterUniqueEventRow
 {
@@ -33,7 +33,7 @@ public static class CharacterUniqueEventChartLoader
         Debug.Log($"[CharacterUniqueEventChart] {(_cache?.Count ?? 0)}개 전용 이벤트 로드 / 키: {(_cache != null ? string.Join(", ", _cache.Keys) : "")} (fallback 비활성 — 0개면 뒤끝 차트 못 찾음)");
     }
 
-    // 차트 미업로드 시 fallback — 6 캐릭터 전용 이벤트. 설명은 player-facing 문구(상세 로직은 CharacterUniqueEvents TODO).
+    // 차트 미업로드 시 fallback — 6 캐릭터 전용 이벤트. 설명은 player-facing 문구(상세 로직은 CharacterUniqueEvents).
     static Dictionary<string, CharacterUniqueEventRow> GetFallback() => new()
     {
         ["KimUnique"]       = E("유리 멘탈 회복", "만족도가 80 이하일 때 낮은 확률로 100까지 회복합니다", "portrait_kim_01"),
