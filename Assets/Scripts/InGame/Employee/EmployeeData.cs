@@ -333,6 +333,18 @@ public class EmployeeData
         : ArtText();
     public string SatisfactionText() => $"만족도: {satisfaction}";
 
+    // 등급별 최대 강화 레벨 — TrainingUI.GetMaxEnhancement 와 단일 소스 공유.
+    public static int MaxEnhancementForGrade(EmployeeGrade g) => g switch
+    {
+        EmployeeGrade.Normal    => 15,
+        EmployeeGrade.Rare      => 15,
+        EmployeeGrade.Epic      => 20,
+        EmployeeGrade.Unique    => 25,
+        EmployeeGrade.Legendary => 30,
+        _                       => 15
+    };
+    public int MaxEnhancementLevel => MaxEnhancementForGrade(grade);
+
     public string RoleToString()
     {
         if (isCEO) return "CEO";

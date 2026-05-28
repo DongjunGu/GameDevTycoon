@@ -134,6 +134,17 @@ public static class CharacterUniqueEvents
         AlertUI.Instance.Show($"[{row.title}]\n{desc}");
     }
 
+    // 전용 이벤트 설명 문자열만 반환(제목 없이) — 이력서 패널 등 자체 표시용. 없으면 빈 문자열.
+    public static string GetEventDescription(EmployeeData emp)
+    {
+        if (emp == null || emp.grade < EmployeeGrade.Unique) return "";
+        string eventType = CharacterTraitApplier.ResolveEventType(emp);
+        CharacterUniqueEventRow row = null;
+        CharacterUniqueEventChartLoader.Cache?.TryGetValue(eventType, out row);
+        if (row == null) return "";
+        return (row.descriptions != null && row.descriptions.Length > 0) ? row.descriptions[0] : "";
+    }
+
     // 슬롯 프리팹용 — traitText 의 형제 "eventText"(TMP)를 찾아 세팅 (직렬화 필드 없이 형제 탐색).
     public static void SetupEventText(TMP_Text traitText, EmployeeData emp)
     {

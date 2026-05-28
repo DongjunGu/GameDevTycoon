@@ -47,15 +47,7 @@ public class TrainingUI : MonoBehaviour
     public TextMeshProUGUI resultOutcomeText;
     public TextMeshProUGUI resultSatisfactionText;
 
-    private static int GetMaxEnhancement(EmployeeGrade grade) => grade switch
-    {
-        EmployeeGrade.Normal    => 15,
-        EmployeeGrade.Rare      => 15,
-        EmployeeGrade.Epic      => 20,
-        EmployeeGrade.Unique    => 25,
-        EmployeeGrade.Legendary => 30,
-        _ => 15
-    };
+    private static int GetMaxEnhancement(EmployeeGrade grade) => EmployeeData.MaxEnhancementForGrade(grade);
 
     private EmployeeData _selectedEmployee;
     private struct EnhanceResult

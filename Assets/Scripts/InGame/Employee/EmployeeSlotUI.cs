@@ -15,7 +15,8 @@ public class EmployeeSlotUI : MonoBehaviour
     private static readonly Color ColorEpic = new Color(0.55f, 0.30f, 0.85f);
     private EmployeeGrade _pendingGrade;
 
-    public void Setup(EmployeeData data, HiringUI hiringUI)
+    // onSelect: 슬롯 클릭 시 콜백 (채용=HiringUI.OnSelectEmployee, 해고=EmployeeListUI.OnSelectEmployee 등 공용)
+    public void Setup(EmployeeData data, System.Action<EmployeeData> onSelect)
     {
         // 표시: 초상화 / 등급 배경색 / 이름 / 보유중 뱃지 만
         if (nameText != null) nameText.text = data.employeeName;
@@ -32,7 +33,7 @@ public class EmployeeSlotUI : MonoBehaviour
         if (ownedBadge != null) ownedBadge.SetActive(isOwned);
 
         selectButton.onClick.RemoveAllListeners();
-        selectButton.onClick.AddListener(() => hiringUI.OnSelectEmployee(data));
+        selectButton.onClick.AddListener(() => onSelect?.Invoke(data));
 
         // 새로고침 등 이미 활성 상태에서 재생성될 때는 OnEnable 이 Setup 보다 먼저 실행되어
         // _pendingGrade 가 기본값일 때 색이 칠해짐 → 활성 상태면 여기서 다시 적용.
