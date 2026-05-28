@@ -590,7 +590,9 @@ public class EmployeeManager : MonoBehaviour
                 HiringPendingWeeks = 0;
                 GameTimeManager.Instance?.SaveGameTime(); // pending 해제 영속화
                 var hiring = FindObjectOfType<HiringUI>(true); // 비활성 포함
-                if (hiring != null) hiring.RevealHiring(tier);
+                // 같은 주 퇴사/조건 이벤트(위 CheckLowSatisfaction/CheckConditionEvents 가 먼저 실행)가 모달로 떠 있으면
+                // 그 모달이 모두 닫힌 뒤 후보 리스트 공개 — 패널 겹침 + 시간 강제재개 충돌 방지.
+                if (hiring != null) ModalGate.I.WhenFree(() => hiring.RevealHiring(tier));
             }
         }
     }

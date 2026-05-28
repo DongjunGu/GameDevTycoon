@@ -59,7 +59,7 @@ public class OwnedEmployeeSlotUI : MonoBehaviour
 
         fireButton.onClick.RemoveAllListeners();
         if (_listUI != null)
-            fireButton.onClick.AddListener(() => _listUI.OnClickFire(_data));
+            fireButton.onClick.AddListener(() => _listUI.OnSelectEmployee(_data));
 
     }
 

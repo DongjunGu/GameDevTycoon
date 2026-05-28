@@ -1,0 +1,196 @@
+using System;
+using UnityEngine;
+using DG.Tweening;
+
+/// <summary>
+/// 이력서 캐러셀 — "회전문" 연출. 좌·중·우 3슬롯을 종이들이 돈다.
+/// - 다음(+1): 오른쪽 종이가 앞으로 나오며 가운데로, 가운데 카드는 뒤로 물러나며 왼쪽으로 (왼쪽 종이는 오른쪽으로 비켜남)
+/// - 이전(-1): 왼쪽 종이가 앞으로 나오며 가운데로, 가운데 카드는 뒤로 물러나며 오른쪽으로
+/// 좌·우 슬롯은 "가운데 카드 위치 + 인스펙터 오프셋(sideOffsetX/Y, sideScale, sideTiltZ)" 으로 계산한다.
+///   → 좌우로 벌어지는 정도/스케일/기울기를 인스펙터에서 바로 조절 가능. (에디터에서 값 변경 시 종이가 즉시 따라옴)
+/// 슬라이드 중간(교차점)에서 들어오는 종이의 sortingOrder 를 올려 "앞으로", 나가는 카드를 내려 "뒤로"(회전문 깊이 교체).
+///   → 깊이 교체에는 종이/가운데 카드에 Canvas(overrideSorting) 필요. 없으면 깊이 효과만 생략.
+/// 실제 이력서 내용은 가운데 카드(이 오브젝트)에만 있으므로, 끝나면 세 종이를 원 슬롯으로 복귀시키고 onSwap 으로 가운데 내용을 교체.
+/// 채용 패널은 게임시간 정지(timeScale=0 가능)라 모든 트윈은 SetUpdate(true).
+/// </summary>
+[ExecuteAlways]
+[RequireComponent(typeof(RectTransform))]
+public class ResumeFlipper : MonoBehaviour
+{
+    [Header("Carousel papers (siblings)")]
+    [Tooltip("왼쪽 슬롯 종이 (PaperBehindLeft)")]
+    [SerializeField] RectTransform leftPaper;
+    [Tooltip("오른쪽 슬롯 종이 (PaperBehindRight)")]
+    [SerializeField] RectTransform rightPaper;
+
+    [Header("Slot layout (가운데 기준 좌/우 종이 배치 — 인스펙터 조절)")]
+    [Tooltip("가운데에서 좌·우 종이까지의 가로 거리. 클수록 좌우로 더 벌어진다.")]
+    [SerializeField] float sideOffsetX = 140f;
+    [Tooltip("좌·우 종이의 세로 오프셋")]
+    [SerializeField] float sideOffsetY = 0f;
+    [Tooltip("좌·우 종이 스케일")]
+    [SerializeField] float sideScale = 0.9f;
+    [Tooltip("좌·우 종이 기울기(도). 왼쪽 +, 오른쪽 −")]
+    [SerializeField] float sideTiltZ = 12f;
+
+    [Header("Timing")]
+    [SerializeField] float slideDuration = 0.32f;
+    [SerializeField] Ease slideEase = Ease.InOutCubic;
+    [Tooltip("새 이력서가 가운데 안착 시 살짝 튕기는 정도(스케일 비율). 0이면 없음")]
+    [SerializeField] float settlePunch = 0.06f;
+    [SerializeField] float settleDuration = 0.12f;
+
+    RectTransform _center;
+    Vector2 _centerHome;          // 슬라이드 시작 시점(쉬는 상태)의 가운데 위치
+    Vector3 _centerScale = Vector3.one, _centerRot = Vector3.zero;
+    Canvas _centerCanvas, _leftCanvas, _rightCanvas;
+    int _centerSort = 1, _leftSort, _rightSort;
+    bool _init;
+    Tween _tween;
+
+    public bool IsFlipping { get; private set; }
+
+    // ── 슬롯 계산 (가운데 기준 상대) ──
+    Vector2 LeftSlot(Vector2 c)  => c + new Vector2(-sideOffsetX, sideOffsetY);
+    Vector2 RightSlot(Vector2 c) => c + new Vector2( sideOffsetX, sideOffsetY);
+    Vector3 SideScaleV => new Vector3(sideScale, sideScale, 1f);
+    Vector3 LeftRot    => new Vector3(0f, 0f,  sideTiltZ);
+    Vector3 RightRot   => new Vector3(0f, 0f, -sideTiltZ);
+
+    void Awake() => EnsureInit();
+
+    void EnsureInit()
+    {
+        if (_init) return;
+        _center = (RectTransform)transform;
+        _centerHome  = _center.anchoredPosition;
+        _centerScale = _center.localScale;
+        _centerRot   = _center.localEulerAngles;
+        _centerCanvas = GetComponent<Canvas>();
+        _centerSort = _centerCanvas != null ? _centerCanvas.sortingOrder : 1;
+        if (leftPaper  != null) { _leftCanvas  = leftPaper.GetComponent<Canvas>();  _leftSort  = _leftCanvas  != null ? _leftCanvas.sortingOrder  : 0; }
+        if (rightPaper != null) { _rightCanvas = rightPaper.GetComponent<Canvas>(); _rightSort = _rightCanvas != null ? _rightCanvas.sortingOrder : 0; }
+        _init = true;
+    }
+
+    // 세 종이를 홈/슬롯으로 (런타임 슬라이드 후 복귀용)
+    void ApplyHome()
+    {
+        if (_center == null) _center = (RectTransform)transform;
+        _center.anchoredPosition3D = new Vector3(_centerHome.x, _centerHome.y, 0f);
+        _center.localScale = _centerScale;
+        _center.localEulerAngles = _centerRot;
+        if (leftPaper  != null) { var p = LeftSlot(_centerHome);  leftPaper.anchoredPosition3D  = new Vector3(p.x, p.y, 0f); leftPaper.localScale  = SideScaleV; leftPaper.localEulerAngles  = LeftRot; }
+        if (rightPaper != null) { var p = RightSlot(_centerHome); rightPaper.anchoredPosition3D = new Vector3(p.x, p.y, 0f); rightPaper.localScale = SideScaleV; rightPaper.localEulerAngles = RightRot; }
+    }
+
+    void RestoreSorting()
+    {
+        if (_centerCanvas != null) _centerCanvas.sortingOrder = _centerSort;
+        if (_leftCanvas  != null) _leftCanvas.sortingOrder  = _leftSort;
+        if (_rightCanvas != null) _rightCanvas.sortingOrder = _rightSort;
+    }
+
+    /// <summary>
+    /// direction: +1 다음 / -1 이전. onSwap: 슬라이드 끝(가운데 복귀)에서 호출 — 이력서 데이터 교체.
+    /// </summary>
+    public void Flip(int direction, Action onSwap, Action onComplete = null)
+    {
+        EnsureInit();
+        _tween?.Kill();
+
+        // 현재(쉬는) 위치를 홈으로 갱신 후 정렬 초기화
+        _centerHome  = _center.anchoredPosition;
+        _centerScale = _center.localScale;
+        _centerRot   = _center.localEulerAngles;
+        ApplyHome();
+        RestoreSorting();
+        IsFlipping = true;
+
+        bool next = direction >= 0;
+        Canvas incomingCanvas = next ? _rightCanvas : _leftCanvas;
+
+        // 넘기는 즉시 들어오는 패널을 가운데보다 앞으로 → 누르자마자 기존 가운데가 가려지고 들어오는 게 앞으로 온다.
+        if (incomingCanvas != null) incomingCanvas.sortingOrder = _centerSort + 1;
+
+        Vector2 leftSlot  = LeftSlot(_centerHome);
+        Vector2 rightSlot = RightSlot(_centerHome);
+
+        Vector2 centerTo  = next ? leftSlot : rightSlot;
+        Vector3 centerToR = next ? LeftRot  : RightRot;
+
+        var seq = DOTween.Sequence();
+        Slide(seq, _center, centerTo, SideScaleV, centerToR);
+
+        if (next)
+        {
+            Slide(seq, rightPaper, _centerHome, _centerScale, _centerRot); // 오른쪽→가운데(앞으로)
+            Slide(seq, leftPaper,  rightSlot,   SideScaleV,   RightRot);   // 왼쪽→오른쪽(비켜남)
+        }
+        else
+        {
+            Slide(seq, leftPaper,  _centerHome, _centerScale, _centerRot); // 왼쪽→가운데(앞으로)
+            Slide(seq, rightPaper, leftSlot,    SideScaleV,   LeftRot);    // 오른쪽→왼쪽(비켜남)
+        }
+
+        seq.OnComplete(() =>
+        {
+            onSwap?.Invoke();
+            ApplyHome();
+            RestoreSorting();   // 들어왔던 패널 정렬을 원래(뒤)로 복구 — 가운데 패널이 다시 맨 앞
+            IsFlipping = false;
+            if (settlePunch > 0f)
+            {
+                _center.localScale = _centerScale * (1f - settlePunch);
+                _center.DOScale(_centerScale, settleDuration).SetEase(Ease.OutBack).SetUpdate(true);
+            }
+            onComplete?.Invoke();
+        });
+        seq.SetUpdate(true);
+        _tween = seq;
+    }
+
+    void Slide(Sequence seq, RectTransform rt, Vector2 pos, Vector3 scale, Vector3 rot)
+    {
+        if (rt == null) return;
+        seq.Join(rt.DOAnchorPos(pos, slideDuration).SetEase(slideEase));
+        seq.Join(rt.DOScale(scale, slideDuration).SetEase(slideEase));
+        seq.Join(rt.DOLocalRotate(rot, slideDuration, RotateMode.Fast).SetEase(slideEase));
+    }
+
+    // 패널이 열릴 때(혹은 컴파일/리로드 후) 옆 패널을 슬롯 위치/스케일/회전으로 즉시 배치 — 첫 넘김 전에도 올바른 캐러셀 구도.
+    void OnEnable()
+    {
+        EnsureInit();
+        _centerHome  = _center.anchoredPosition;
+        _centerScale = _center.localScale;
+        _centerRot   = _center.localEulerAngles;
+        ApplyHome();
+        RestoreSorting();
+    }
+
+    void OnDisable()
+    {
+        if (!Application.isPlaying) return;
+        _tween?.Kill();
+        IsFlipping = false;
+        ApplyHome();
+        RestoreSorting();
+    }
+
+    // ── 에디터 프리뷰: 인스펙터 값/가운데 위치 변화 시 종이를 슬롯으로 즉시 배치 (변화 있을 때만 적용) ──
+#if UNITY_EDITOR
+    Vector2 _lastCenter; float _lastOX, _lastOY, _lastS, _lastT; bool _previewValid;
+    void Update()
+    {
+        if (Application.isPlaying) return;
+        if (_center == null) _center = (RectTransform)transform;
+        Vector2 c = _center.anchoredPosition;
+        if (_previewValid && c == _lastCenter && _lastOX == sideOffsetX && _lastOY == sideOffsetY && _lastS == sideScale && _lastT == sideTiltZ)
+            return;
+        if (leftPaper  != null) { var pl = LeftSlot(c);  leftPaper.anchoredPosition3D  = new Vector3(pl.x, pl.y, 0f); leftPaper.localScale  = SideScaleV; leftPaper.localEulerAngles  = LeftRot; }
+        if (rightPaper != null) { var pr = RightSlot(c); rightPaper.anchoredPosition3D = new Vector3(pr.x, pr.y, 0f); rightPaper.localScale = SideScaleV; rightPaper.localEulerAngles = RightRot; }
+        _lastCenter = c; _lastOX = sideOffsetX; _lastOY = sideOffsetY; _lastS = sideScale; _lastT = sideTiltZ; _previewValid = true;
+    }
+#endif
+}

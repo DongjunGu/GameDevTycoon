@@ -56,6 +56,20 @@ public class HiringUI : MonoBehaviour
     public Button confirmButton;                // 채용하기 버튼
     public Button keepButton;                   // 유지하기 버튼
 
+    [Header("Resume Browse (NewEmployeeSlot)")]
+    [Tooltip("이력서(NewEmployeeSlot)에 부착된 페이지 넘김 컴포넌트")]
+    public ResumeFlipper resumeFlipper;
+    public Button prevCandidateButton;          // 왼쪽 화살표 (이전 후보)
+    public Button nextCandidateButton;          // 오른쪽 화살표 (다음 후보)
+
+    [Header("Resume Panels (EmployeeResumePanel x3 — 캐러셀 슬롯)")]
+    [Tooltip("가운데(현재 후보) 패널 — ResumeFlipper 가 붙은 그 패널")]
+    public EmployeeResumePanel resumeCenterPanel;
+    [Tooltip("왼쪽(이전 후보) 패널")]
+    public EmployeeResumePanel resumeLeftPanel;
+    [Tooltip("오른쪽(다음 후보) 패널")]
+    public EmployeeResumePanel resumeRightPanel;
+
     [Header("Settings")]
     public int candidateCount = 4;
     const int INTERVIEW_WEEKS = 3; // 채용 클릭 → 후보 리스트 공개까지 대기 주차
@@ -64,9 +78,12 @@ public class HiringUI : MonoBehaviour
     private EmployeeData _conflictingOwned;     // 동일 masterEmployeeId 보유 직원
     private List<EmployeeData> _currentCandidates = new();
     private int _hireCost;
+    private int _currentIndex = -1;                 // _currentCandidates 내 현재 표시 중인 후보
+    private readonly List<int> _hireCosts = new();  // 후보별 채용 비용 캐시 — 화살표로 넘길 때 재추첨 방지
 
     private int  _currentTierIndex = -1;        // hire_refresh 재로드용 — 마지막 OnClickTier 의 티어
     private bool _refreshUsed      = false;     // 같은 세션 1회 가드
+    private bool _candidateFlowActive = false;  // 채용 공개~리스트 종료 동안 시간 정지 유지 + ModalGate 점유
 
     // 티어 데이터 (강화 레벨 범위/가중치, 잠재력 확률은 EmployeeManager.PotentialWeightTable 참조)
     private static readonly (string label, int cost, int[] range, int[] weights)[] Tiers =
@@ -86,6 +103,10 @@ public class HiringUI : MonoBehaviour
     {
         if (refreshButton != null)
             refreshButton.onClick.AddListener(OnClickRefresh);
+        if (prevCandidateButton != null)
+            prevCandidateButton.onClick.AddListener(OnClickPrevCandidate);
+        if (nextCandidateButton != null)
+            nextCandidateButton.onClick.AddListener(OnClickNextCandidate);
     }
 
     // ── 티어 선택 패널 열기 ───────────────────
@@ -199,12 +220,42 @@ public class HiringUI : MonoBehaviour
     // 면접 대기 만료(EmployeeManager.OnWeekPassed) 시 호출 — "최종 리스트" 안내 후 후보 리스트 표시.
     public void RevealHiring(int tierIndex)
     {
-        GameTimeManager.Instance?.StopTime(); // 리스트 표시 동안 정지(후보 선택 완료/취소 시 StartTime 으로 해소)
+        BeginCandidateFlow(); // 시간 정지 + 흐름 중 외부 시간재개 방어 가드(퇴사 ForceStartTime 등)
         ShowSecretaryEvent("최종 리스트 전달드리겠습니다.", () => OpenCandidateList(tierIndex));
+    }
+
+    // 채용 공개 흐름 시작 — 시간 정지 + "흐름 중 외부가 시간을 재개하면 즉시 재정지" 가드 구독.
+    // (같은 주 퇴사 이벤트 확인의 ForceStartTime 등이 후보 리스트 도중 시간을 풀어버리는 것을 차단)
+    void BeginCandidateFlow()
+    {
+        if (_candidateFlowActive) return;
+        _candidateFlowActive = true;
+        GameTimeManager.Instance?.StopTime();
+        if (GameTimeManager.Instance != null)
+            GameTimeManager.Instance.OnTimeStopChanged += OnTimeChangedDuringFlow;
+    }
+
+    // 채용 공개 흐름 종료 — 가드 해제 + 시간 재개 + ModalGate 점유 해제. 모든 종료 경로(채용/유지/취소)에서 호출.
+    void EndCandidateFlow()
+    {
+        if (!_candidateFlowActive) return;
+        _candidateFlowActive = false;
+        if (GameTimeManager.Instance != null)
+            GameTimeManager.Instance.OnTimeStopChanged -= OnTimeChangedDuringFlow;
+        GameTimeManager.Instance?.StartTime();
+        ModalGate.I.Unregister(this);
+    }
+
+    // 흐름 도중 외부가 시간을 재개하면(StartTime/ForceStartTime) 즉시 다시 멈춤.
+    void OnTimeChangedDuringFlow(bool stopped)
+    {
+        if (_candidateFlowActive && !stopped)
+            GameTimeManager.Instance?.StopTime();
     }
 
     void OpenCandidateList(int tierIndex)
     {
+        ModalGate.I.Register(this); // 후보 리스트 표시 동안 다른 모달(퇴사 등) 차단·큐잉 (닫힐 때 EndCandidateFlow 에서 해제)
         gameObject.SetActive(true);
         tierPanel.SetActive(false);
         hiringPanel.SetActive(false);
@@ -309,6 +360,15 @@ public class HiringUI : MonoBehaviour
     void ShowCandidates(List<EmployeeData> candidates)
     {
         _currentCandidates = candidates;
+
+        // 후보별 채용 비용을 한 번만 추첨해 캐시 — 화살표로 이력서를 넘길 때마다 비용이 흔들리지 않게 고정.
+        _hireCosts.Clear();
+        foreach (var e in candidates)
+        {
+            int baseCost = EmployeeManager.GetExpectedEnhanceCost(e.enhancementLevel);
+            _hireCosts.Add(Mathf.RoundToInt(baseCost * UnityEngine.Random.Range(0.8f, 1.2f)));
+        }
+
         if (loadingPanel != null) loadingPanel.SetActive(false);
 
         confirmPanel.SetActive(false);
@@ -319,7 +379,7 @@ public class HiringUI : MonoBehaviour
         foreach (var employee in candidates)
         {
             var slot = Instantiate(employeeSlotPrefab, slotParent);
-            slot.GetComponent<EmployeeSlotUI>().Setup(employee, this);
+            slot.GetComponent<EmployeeSlotUI>().Setup(employee, OnSelectEmployee);
         }
 
         hiringPanel.SetActive(true);
@@ -328,37 +388,86 @@ public class HiringUI : MonoBehaviour
 
     public void OnSelectEmployee(EmployeeData employee)
     {
-        _selectedEmployee = employee;
+        int idx = _currentCandidates.IndexOf(employee);
+        _currentIndex = idx >= 0 ? idx : 0;
 
-        int baseHireCost = EmployeeManager.GetExpectedEnhanceCost(employee.enhancementLevel);
-        _hireCost = Mathf.RoundToInt(baseHireCost * UnityEngine.Random.Range(0.8f, 1.2f));
-        // 테크트리 '채용 비용 할인(hire_discount)' 은 후보 목록을 뽑는 티어 진입 비용에만 적용 — 개별 직원 채용 비용에는 적용 안 함.
+        // 패널을 먼저 활성화한 뒤 Populate — 비활성 상태에서 등급 셰머 코루틴 StartCoroutine 시 에러 방지.
+        hiringPanel.SetActive(false);
+        confirmPanel.SetActive(true);
+        PopulateConfirm();
+        UpdateArrowButtons();
+    }
 
-        confirmNameText.text = employee.employeeName;
-        confirmRoleText.text = employee.RoleToString();
-        confirmGradeText.text = employee.GradeToString();
-        CharacterTraitApplier.SetupTraitText(confirmTraitText, employee);
-        CharacterUniqueEvents.SetupEventText(confirmTraitText, employee);
-        confirmPotentialText.text = employee.PotentialToString();
-        confirmDevelopText.text = employee.DevelopDisplayText();
-        confirmPlanningText.text = employee.PlanningDisplayText();
-        confirmArtText.text = employee.ArtDisplayText();
-        confirmCreativityText.text = employee.CreativityText();
-        confirmSalaryText.text = employee.SalaryRangeText();
-        enhancementText.text = $"+{employee.enhancementLevel}";
+    // 오른쪽 화살표 — 다음 후보 이력서로 넘김
+    public void OnClickNextCandidate() => FlipTo(+1);
+    // 왼쪽 화살표 — 이전 후보 이력서로 넘김
+    public void OnClickPrevCandidate() => FlipTo(-1);
+
+    // 현재 채용 리스트에서 dir(+1 다음 / -1 이전)만큼 이동(양끝 순환).
+    // ResumeFlipper 가 있으면 페이지 넘김 연출 중간(엣지온)에 데이터를 교체한다.
+    void FlipTo(int dir)
+    {
+        if (_currentCandidates == null || _currentCandidates.Count <= 1) return;
+        if (resumeFlipper != null && resumeFlipper.IsFlipping) return;
+
+        int next = (_currentIndex + dir + _currentCandidates.Count) % _currentCandidates.Count;
+
+        if (resumeFlipper != null)
+            resumeFlipper.Flip(dir, () =>
+            {
+                _currentIndex = next;
+                PopulateConfirm();
+            });
+        else
+        {
+            _currentIndex = next;
+            PopulateConfirm();
+        }
+    }
+
+    // 후보가 2명 이상일 때만 화살표 + 좌/우 이력서 노출 (1명 이하면 가운데만).
+    void UpdateArrowButtons()
+    {
+        bool multi = _currentCandidates != null && _currentCandidates.Count > 1;
+        if (prevCandidateButton != null) prevCandidateButton.gameObject.SetActive(multi);
+        if (nextCandidateButton != null) nextCandidateButton.gameObject.SetActive(multi);
+        if (resumeLeftPanel  != null) resumeLeftPanel.gameObject.SetActive(multi);
+        if (resumeRightPanel != null) resumeRightPanel.gameObject.SetActive(multi);
+    }
+
+    // 캐러셀 3슬롯을 _currentIndex 기준으로 채운다 — 좌=이전 / 가운데=현재 / 우=다음 (양끝 순환).
+    // 미리 옆 패널에 이전/다음 후보를 띄워두므로, 넘기면 옆 패널이 그대로 가운데로 온다.
+    // 넘김 종료 콜백(ResumeFlipper onSwap)·최초 선택(OnSelectEmployee)에서 호출.
+    void PopulateConfirm()
+    {
+        if (_currentCandidates == null || _currentCandidates.Count == 0) return;
+        int n  = _currentCandidates.Count;
+        int ci = _currentIndex;
+        var center = _currentCandidates[ci];
+
+        _selectedEmployee = center;
+
+        // 후보별 캐시 비용 사용(넘겨도 고정). 캐시 미스 시에만 즉석 추첨.
+        // 테크트리 '채용 비용 할인(hire_discount)' 은 티어 진입 비용에만 적용 — 개별 직원 채용 비용에는 적용 안 함.
+        _hireCost = (ci >= 0 && ci < _hireCosts.Count)
+            ? _hireCosts[ci]
+            : Mathf.RoundToInt(EmployeeManager.GetExpectedEnhanceCost(center.enhancementLevel) * UnityEngine.Random.Range(0.8f, 1.2f));
+
+        // 좌:이전 / 중앙:현재 / 우:다음 후보 미리 표시
+        if (resumeCenterPanel != null) resumeCenterPanel.Setup(center);
+        if (resumeLeftPanel  != null) resumeLeftPanel.Setup(_currentCandidates[(ci - 1 + n) % n]);
+        if (resumeRightPanel != null) resumeRightPanel.Setup(_currentCandidates[(ci + 1) % n]);
+
         if (confirmHireCostText != null)
             confirmHireCostText.text = _hireCost <= 0 ? "무료" : $"{_hireCost:N0}G";
-        if (confirmSatisfactionText != null)
-            confirmSatisfactionText.text = employee.SatisfactionText();
-        else
-            Debug.LogError("confirmSatisfactionText가 null입니다. 인스펙터 할당 확인");
 
-        // 동일 직원 보유 여부 확인 (masterEmployeeId 공백이면 이름으로 대조)
+        // 동일 직원 보유 여부 확인 (중앙 후보 기준, masterEmployeeId 공백이면 이름으로 대조)
         _conflictingOwned = EmployeeManager.Instance.ownedEmployees
-            .Find(e => EmployeeSlotUI.IsSameEmployee(e, employee));
+            .Find(e => EmployeeSlotUI.IsSameEmployee(e, center));
 
         bool hasConflict = _conflictingOwned != null;
-        if (comparisonSection != null) comparisonSection.SetActive(hasConflict);
+        // 일단 보유 직원 비교 패널(OwnedEmployeeSlot) 활성화 주석 처리 — EmployeeResumePanel 개편 중 (지우지 말 것, 추후 복구)
+        // if (comparisonSection != null) comparisonSection.SetActive(hasConflict);
         if (keepButton != null) keepButton.gameObject.SetActive(hasConflict);
 
         if (hasConflict)
@@ -377,13 +486,25 @@ public class HiringUI : MonoBehaviour
             if (ownedSalaryText != null)     ownedSalaryText.text     = owned.SalaryText();
             if (ownedEnhancementText != null)ownedEnhancementText.text= $"+{owned.enhancementLevel}";
         }
-
-        hiringPanel.SetActive(false);
-        confirmPanel.SetActive(true);
     }
 
+    // 채용 버튼 — 즉시 채용하지 않고 확인 다이얼로그(ConfirmUI)를 띄운다.
     public void OnClickConfirmHire()
     {
+        if (_selectedEmployee == null) return;
+        ConfirmUI.Instance.Show(
+            $"{_selectedEmployee.employeeName}을(를) 채용하시겠습니까?",
+            onConfirm: DoHire,
+            onCancel: () => { },          // 아니오 — ConfirmUI 만 닫고 이력서 화면 유지
+            confirmText: "네",
+            cancelText: "아니오"
+        );
+    }
+
+    // 실제 채용 처리 (ConfirmUI 에서 '네' 선택 시)
+    void DoHire()
+    {
+        if (_selectedEmployee == null) return;
         if (_hireCost > 0 && !MoneyManager.Instance.CanAfford(_hireCost))
         {
             GameUIHelper.ShowLoanPrompt();
@@ -402,10 +523,10 @@ public class HiringUI : MonoBehaviour
             _conflictingOwned = null;
         }
 
-        GameTimeManager.Instance?.StartTime();
+        EndCandidateFlow();
         EmployeeManager.Instance.HireEmployee(_selectedEmployee);
         hiringPanel.SetActive(false);
-        confirmPanel.SetActive(false);
+        confirmPanel.SetActive(false);     // ConfirmHirePanel 비활성화
 
         DialogManager.Instance.Resume();
     }
@@ -413,7 +534,7 @@ public class HiringUI : MonoBehaviour
     // 보유 직원 유지하기 (비교 패널에서)
     public void OnClickKeep()
     {
-        GameTimeManager.Instance?.StartTime();
+        EndCandidateFlow();
         hiringPanel.SetActive(false);
         confirmPanel.SetActive(false);
         tierPanel.SetActive(false);
@@ -428,11 +549,12 @@ public class HiringUI : MonoBehaviour
 
     public void OnClickClose()
     {
-        GameTimeManager.Instance?.StartTime();
+        // 취소 확정 시에만 흐름 종료(시간 재개). "채용진행" 선택 시엔 리스트 유지 + 시간 정지 유지.
         ConfirmUI.Instance.Show(
             "채용을 취소하시겠습니까?",
             onConfirm: () =>
             {
+                EndCandidateFlow();
                 tierPanel.SetActive(false);
                 hiringPanel.SetActive(false);
                 confirmPanel.SetActive(false);

@@ -179,6 +179,17 @@ public static class CharacterTraitApplier
         AlertUI.Instance.Show(msg);
     }
 
+    // 특성 설명 문자열만 반환(이름 없이) — 이력서 패널 등 자체 표시용. 특성 없으면 빈 문자열.
+    public static string GetTraitDescription(EmployeeData emp)
+    {
+        var row = GetActiveTrait(emp);
+        if (row == null) return "";
+        string desc = row.description;
+        if (ResolveTraitId(emp) == "ctrait_otaku" && !string.IsNullOrEmpty(emp.otakuFixedGenre))
+            desc += $"\n\n고정 장르: {GenreKorName(emp.otakuFixedGenre)}";
+        return desc;
+    }
+
     // 저장된 enum 이름(RPG, VisualNovel 등)을 한글 표시명으로 변환 (ProjectData 의 canonical 매핑 재사용)
     static string GenreKorName(string genreEnumName)
         => System.Enum.TryParse<ProjectGenre>(genreEnumName, out var g)
