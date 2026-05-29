@@ -66,13 +66,10 @@ public class EmployeeData
     public int creativityMin, creativityMax;
     public int salaryMin, salaryMax;
 
-    // 강화로 인한 주스탯/부스탯 증가 (표시용)
+    // 강화로 인한 주스탯/부스탯 증가 (표시용). 부스탯 0.4 고정이라 min==max.
     public int mainStatEnhanceGain;
     public int subStatEnhanceMin;
     public int subStatEnhanceMax;
-
-    // 강화 단계별 실제 적용 수치 기록 (하락 시 정확한 롤백용)
-    public string enhancementRecordsJson = "[]";
 
     public string assignedDeskId = "";
     public string masterEmployeeId = ""; // 마스터 풀의 원본 ID (emp_01 등)
@@ -175,7 +172,6 @@ public class EmployeeData
         data.satisfaction = SafeInt(row, "satisfaction", 80);
         data.assignedDeskId = SafeString(row, "assignedDeskId", "");
         data.masterEmployeeId = SafeString(row, "masterEmployeeId", "");
-        data.enhancementRecordsJson = SafeString(row, "enhancementRecordsJson", "[]");
         data.hiredYear = SafeInt(row, "hiredYear", 0);
         data.isFemale  = SafeBool(row, "isFemale", false);
         data.epicTraitId     = SafeString(row, "epicTraitId", "");
@@ -228,7 +224,6 @@ public class EmployeeData
         param.Add("satisfaction", satisfaction);
         param.Add("assignedDeskId", assignedDeskId);
         param.Add("masterEmployeeId", masterEmployeeId);
-        param.Add("enhancementRecordsJson", enhancementRecordsJson);
         param.Add("hiredYear", hiredYear);
         param.Add("isFemale",  isFemale);
         param.Add("epicTraitId",     epicTraitId);

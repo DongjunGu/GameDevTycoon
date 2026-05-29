@@ -31,8 +31,9 @@ public class ConfirmUI : MonoBehaviour
         cancelButton.onClick.AddListener(OnClickCancel);
     }
 
+    // confirmInteractable=false 면 확인 버튼을 표시는 하되 비활성(터치 불가)으로 띄운다. 매 호출마다 리셋되므로 기본값 true 콜러는 영향 없음.
     public void Show(string message, System.Action onConfirm, System.Action onCancel = null,
-                     string confirmText = "확인", string cancelText = "취소")
+                     string confirmText = "확인", string cancelText = "취소", bool confirmInteractable = true)
     {
         GameTimeManager.Instance?.StopTime();
         messageText.text       = message;
@@ -40,6 +41,7 @@ public class ConfirmUI : MonoBehaviour
         _onCancel              = onCancel;
         if (confirmButtonText != null) confirmButtonText.text = confirmText;
         if (cancelButtonText  != null) cancelButtonText.text  = cancelText;
+        if (confirmButton     != null) confirmButton.interactable = confirmInteractable;
         confirmPanel.SetActive(true);
     }
 

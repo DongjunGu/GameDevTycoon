@@ -19,8 +19,10 @@ public class HiringUI : MonoBehaviour
     public GameObject[] tierButtons;
 
     [Header("Refresh")]
-    [Tooltip("후보 리스트 새로고침 버튼. 'hire_refresh' 해금 시 활성, 같은 세션 1회만 사용 가능.")]
+    [Tooltip("후보 리스트(HiringPanel) 새로고침 버튼. 'hire_refresh' 해금 시 활성, 같은 세션 1회만 사용 가능.")]
     public Button refreshButton;
+    [Tooltip("ConfirmHirePanel 새로고침 버튼. refreshButton 과 같은 1회 가드를 공유. 누르면 이력서 셔플 후 후보 재추첨(확정 화면 유지).")]
+    public Button confirmRefreshButton;
 
     [Header("Slots")]
     public Transform slotParent;
@@ -103,6 +105,8 @@ public class HiringUI : MonoBehaviour
     {
         if (refreshButton != null)
             refreshButton.onClick.AddListener(OnClickRefresh);
+        if (confirmRefreshButton != null)
+            confirmRefreshButton.onClick.AddListener(OnClickRefreshFromConfirm);
         if (prevCandidateButton != null)
             prevCandidateButton.onClick.AddListener(OnClickPrevCandidate);
         if (nextCandidateButton != null)
@@ -306,34 +310,73 @@ public class HiringUI : MonoBehaviour
         });
     }
 
-    // 테크트리 '한 번 더!(hire_refresh)' — 같은 세션 1회 한정 후보 전체 재추첨.
-    // ConfirmUI 로 확인받은 뒤 진행.
+    // 테크트리 '한 번 더!(hire_refresh)' — 같은 세션 1회 한정 후보 전체 재추첨. 확인창 없이 즉시 실행.
     public void OnClickRefresh()
     {
         if (_refreshUsed) return;
         if (TechTreeManager.Instance == null || !TechTreeManager.Instance.IsUnlocked("hire_refresh")) return;
         if (_currentTierIndex < 0) return;
 
-        ConfirmUI.Instance.Show(
-            "후보 리스트를 새로고침 하시겠습니까?\n(1회만 가능합니다)",
-            onConfirm: () =>
+        _refreshUsed = true;
+        if (loadingPanel != null) loadingPanel.SetActive(true);
+        LoadAndShowCandidates(_currentTierIndex);
+    }
+
+    // ConfirmHirePanel 의 새로고침 버튼 — refreshButton 과 같은 1회 가드(_refreshUsed)·해금(hire_refresh)을 공유.
+    // HiringPanel 새로고침과 달리 슬롯 리스트로 돌아가지 않고 확정 화면을 유지하며 이력서 셔플 연출을 보여준다. 확인창 없이 즉시 실행.
+    public void OnClickRefreshFromConfirm()
+    {
+        if (_refreshUsed) return;
+        if (TechTreeManager.Instance == null || !TechTreeManager.Instance.IsUnlocked("hire_refresh")) return;
+        if (_currentTierIndex < 0) return;
+
+        _refreshUsed = true;
+        RefreshCandidatesWithShuffle();
+    }
+
+    // 확정 화면에서 후보 재추첨 + 이력서 셔플. 데이터 교체는 셔플 가운데(스택된 순간)에 숨겨 자연스럽게 보이게 한다.
+    void RefreshCandidatesWithShuffle()
+    {
+        var (label, baseCost, range, weights) = Tiers[_currentTierIndex];
+        int recruitBonus  = TraitEffectApplier.GetRecruitApplicantsBonus();
+        int hiringPenalty = RandomEventManager.Instance?.HiringPenalty ?? 0;
+        int hireMoreBonus = (TechTreeManager.Instance != null && TechTreeManager.Instance.IsUnlocked("hire_more")) ? 1 : 0;
+        int effectiveCount = Mathf.Max(1, candidateCount + recruitBonus + hireMoreBonus - hiringPenalty);
+
+        EmployeeManager.Instance.LoadRandomCandidates(effectiveCount, _currentTierIndex, candidates =>
+        {
+            foreach (var employee in candidates)
+                ApplyEnhancementLevel(employee, RollWeighted(range, weights));
+
+            SetCandidates(candidates);
+
+            // 셔플 동안 좌/우 이력서도 함께 움직이도록, 후보가 多면 미리 활성화(없던 경우 대비).
+            bool multi = candidates.Count > 1;
+            if (resumeLeftPanel  != null) resumeLeftPanel.gameObject.SetActive(multi);
+            if (resumeRightPanel != null) resumeRightPanel.gameObject.SetActive(multi);
+
+            UpdateRefreshButton(); // _refreshUsed=true → 두 새로고침 버튼 모두 비활성
+
+            void SwapToNewCandidates()
             {
-                if (_refreshUsed) return; // ConfirmUI 대기 중 상태 변동 안전망
-                _refreshUsed = true;
-                if (loadingPanel != null) loadingPanel.SetActive(true);
-                LoadAndShowCandidates(_currentTierIndex);
-            },
-            onCancel: () => { },
-            confirmText: "예",
-            cancelText: "아니오"
-        );
+                _currentIndex = 0;
+                PopulateConfirm();
+                UpdateArrowButtons();
+            }
+
+            if (resumeFlipper != null)
+                resumeFlipper.Shuffle(onMidpoint: SwapToNewCandidates);
+            else
+                SwapToNewCandidates();
+        });
     }
 
     void UpdateRefreshButton()
     {
-        if (refreshButton == null) return;
         bool unlocked = TechTreeManager.Instance != null && TechTreeManager.Instance.IsUnlocked("hire_refresh");
-        refreshButton.interactable = unlocked && !_refreshUsed;
+        bool usable = unlocked && !_refreshUsed;
+        if (refreshButton != null)        refreshButton.interactable        = usable;
+        if (confirmRefreshButton != null) confirmRefreshButton.interactable = usable;
     }
 
     // 가중치 랜덤 롤
@@ -357,17 +400,22 @@ public class HiringUI : MonoBehaviour
         EmployeeManager.Instance.ApplyEnhancementExpected(employee, targetLevel);
     }
 
-    void ShowCandidates(List<EmployeeData> candidates)
+    // 후보 리스트 + 후보별 채용 비용 캐시 세팅 (슬롯 UI 갱신 없음 — ShowCandidates/RefreshCandidatesWithShuffle 공용).
+    // 비용은 한 번만 추첨해 캐시 — 화살표로 이력서를 넘길 때마다 비용이 흔들리지 않게 고정.
+    void SetCandidates(List<EmployeeData> candidates)
     {
         _currentCandidates = candidates;
-
-        // 후보별 채용 비용을 한 번만 추첨해 캐시 — 화살표로 이력서를 넘길 때마다 비용이 흔들리지 않게 고정.
         _hireCosts.Clear();
         foreach (var e in candidates)
         {
             int baseCost = EmployeeManager.GetExpectedEnhanceCost(e.enhancementLevel);
             _hireCosts.Add(Mathf.RoundToInt(baseCost * UnityEngine.Random.Range(0.8f, 1.2f)));
         }
+    }
+
+    void ShowCandidates(List<EmployeeData> candidates)
+    {
+        SetCandidates(candidates);
 
         if (loadingPanel != null) loadingPanel.SetActive(false);
 
@@ -396,6 +444,7 @@ public class HiringUI : MonoBehaviour
         confirmPanel.SetActive(true);
         PopulateConfirm();
         UpdateArrowButtons();
+        UpdateRefreshButton();   // ConfirmHirePanel 새로고침 버튼 상태 반영
     }
 
     // 오른쪽 화살표 — 다음 후보 이력서로 넘김

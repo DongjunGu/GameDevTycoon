@@ -804,45 +804,9 @@ public class EmployeeManager : MonoBehaviour
         (50,100),  // 24→25
     };
 
-    [System.Serializable]
-    private class EnhancementRecord
-    {
-        public int level;
-        public string sub0Stat;
-        public int sub0Gain;
-        public string sub1Stat;
-        public int sub1Gain;
-        public string sub2Stat;
-        public int sub2Gain;
-    }
-
-    [System.Serializable]
-    private class EnhancementRecordListWrapper
-    {
-        public List<EnhancementRecord> records = new();
-    }
-
-    private List<EnhancementRecord> ParseEnhancementRecords(EmployeeData employee)
-    {
-        if (string.IsNullOrEmpty(employee.enhancementRecordsJson) || employee.enhancementRecordsJson == "[]")
-            return new List<EnhancementRecord>();
-        try
-        {
-            var wrapper = JsonUtility.FromJson<EnhancementRecordListWrapper>(
-                "{\"records\":" + employee.enhancementRecordsJson + "}");
-            return wrapper?.records ?? new List<EnhancementRecord>();
-        }
-        catch { return new List<EnhancementRecord>(); }
-    }
-
-    private string SerializeRecords(List<EnhancementRecord> records)
-    {
-        var wrapper = new EnhancementRecordListWrapper { records = records };
-        string json = JsonUtility.ToJson(wrapper);
-        int start = json.IndexOf('[');
-        int end   = json.LastIndexOf(']');
-        return (start >= 0 && end >= 0) ? json.Substring(start, end - start + 1) : "[]";
-    }
+    // 부스탯 증가 배율 — 주스탯 증가량(잠재력 보너스 포함) 대비. 0.4 고정(이전 0.3~0.5 랜덤).
+    // 고정값이라 하락 시 테이블+잠재력으로 재계산 가능 → 강화 기록(enhancementRecordsJson) 저장 불필요.
+    const float SubStatRatio = 0.4f;
 
     public void ApplyEnhancement(EmployeeData employee)
     {
@@ -850,7 +814,6 @@ public class EmployeeManager : MonoBehaviour
         int tableIndex = Mathf.Clamp(employee.enhancementLevel - 1, 0, MainStatGainTable.Length - 1);
         var (mainMin, mainMax) = MainStatGainTable[tableIndex];
 
-        string mainStat = GetMainStatKey(employee.role);
         int mainGain = UnityEngine.Random.Range(mainMin, mainMax + 1);
 
         // Potential 보너스 적용 후 부스탯 계산 기준으로 사용
@@ -864,38 +827,19 @@ public class EmployeeManager : MonoBehaviour
         };
         int totalMainGain = mainGain + potentialBonus;
 
-        var subStats = GetSubStatKeys(employee.role);
-        Shuffle(subStats);
-        int subGain0 = Mathf.RoundToInt(totalMainGain * UnityEngine.Random.Range(0.3f, 0.5f));
-        int subGain1 = Mathf.RoundToInt(totalMainGain * UnityEngine.Random.Range(0.3f, 0.5f));
-        int subGain2 = Mathf.RoundToInt(totalMainGain * UnityEngine.Random.Range(0.3f, 0.5f));
-        int salaryGain = EnhanceSalaryTable[tableIndex];
+        // 부스탯: 주스탯 증가량의 0.4 고정 — 3개(비주스탯 2 + 창의성) 동일 적용
+        int subGain = Mathf.RoundToInt(totalMainGain * SubStatRatio);
 
-        ApplyStat(employee, mainStat, totalMainGain);
-        ApplyStat(employee, subStats[0], subGain0);
-        ApplyStat(employee, subStats[1], subGain1);
-        ApplyStat(employee, subStats[2], subGain2);
+        ApplyStat(employee, GetMainStatKey(employee.role), totalMainGain);
+        foreach (var key in GetSubStatKeys(employee.role))
+            ApplyStat(employee, key, subGain);
+
         // 금수저: 강화 연봉 상승량도 50% 감소
         employee.salary += CharacterTraitApplier.ApplyGoldspoonSalary(employee, EnhanceSalaryTable[tableIndex]);
-
-        // 부스탯 배정 기록 저장 (하락 시 롤백용, 주스탯/연봉은 테이블로 계산 가능)
-        var records = ParseEnhancementRecords(employee);
-        records.RemoveAll(r => r.level == employee.enhancementLevel); // 같은 레벨 재강화 시 덮어쓰기
-        records.Add(new EnhancementRecord
-        {
-            level    = employee.enhancementLevel,
-            sub0Stat = subStats[0],
-            sub0Gain = subGain0,
-            sub1Stat = subStats[1],
-            sub1Gain = subGain1,
-            sub2Stat = subStats[2],
-            sub2Gain = subGain2,
-        });
-        employee.enhancementRecordsJson = SerializeRecords(records);
     }
 
-    // 강화 하락 시 해당 레벨의 스탯/연봉을 되돌림
-    // 주스탯/연봉: 테이블 고정값으로 계산, 부스탯: 기록에서 조회
+    // 강화 하락 시 해당 레벨의 스탯/연봉을 되돌림.
+    // 부스탯 0.4 고정이라 기록 없이 테이블+잠재력으로 재계산 — 주스탯/부스탯/연봉 모두 동일 기준으로 롤백.
     public void ReverseEnhancement(EmployeeData employee, int levelToReverse)
     {
         int tableIndex = Mathf.Clamp(levelToReverse - 1, 0, MainStatGainTable.Length - 1);
@@ -909,27 +853,15 @@ public class EmployeeManager : MonoBehaviour
             EmployeePotential.S => 5,
             _ => 0
         };
-        int mainGain = (mainMin + mainMax) / 2 + potentialBonus; // 0~10강은 min==max
+        int totalMainGain = (mainMin + mainMax) / 2 + potentialBonus; // 0~10강은 min==max
+        int subGain = Mathf.RoundToInt(totalMainGain * SubStatRatio);
 
-        ApplyStat(employee, GetMainStatKey(employee.role), -mainGain);
+        ApplyStat(employee, GetMainStatKey(employee.role), -totalMainGain);
+        foreach (var key in GetSubStatKeys(employee.role))
+            ApplyStat(employee, key, -subGain);
+
         // 금수저: 강화 시 절반만 더했으므로 롤백도 절반만 차감 (가감 대칭)
         employee.salary = Mathf.Max(0, employee.salary - CharacterTraitApplier.ApplyGoldspoonSalary(employee, EnhanceSalaryTable[tableIndex]));
-
-        var records = ParseEnhancementRecords(employee);
-        var record  = records.Find(r => r.level == levelToReverse);
-        if (record != null)
-        {
-            ApplyStat(employee, record.sub0Stat, -record.sub0Gain);
-            ApplyStat(employee, record.sub1Stat, -record.sub1Gain);
-            if (!string.IsNullOrEmpty(record.sub2Stat))
-                ApplyStat(employee, record.sub2Stat, -record.sub2Gain);
-            records.Remove(record);
-            employee.enhancementRecordsJson = SerializeRecords(records);
-        }
-        else
-        {
-            Debug.LogWarning($"부스탯 강화 기록 없음 (lv {levelToReverse}), 부스탯 롤백 스킵");
-        }
     }
 
     // 강화 레벨별 누적 기댓값 비용 (0강=0원, 11강=4696원, ...)
@@ -975,29 +907,25 @@ public class EmployeeManager : MonoBehaviour
             _ => 0
         };
 
-        int mainGainTotal  = 0;
-        int subGainTotal   = 0;
-        int subGainMinTotal = 0;
-        int subGainMaxTotal = 0;
-        int salaryGain     = 0;
+        int mainGainTotal = 0;
+        int subGainTotal  = 0;
+        int salaryGain    = 0;
 
         for (int lv = 1; lv <= targetLevel; lv++)
         {
             int ti = Mathf.Clamp(lv - 1, 0, MainStatGainTable.Length - 1);
             var (minG, maxG) = MainStatGainTable[ti];
             int stepMain = (minG + maxG) / 2 + potentialBonus;
-            int stepSub  = Mathf.RoundToInt(stepMain * UnityEngine.Random.Range(0.3f, 0.5f));
+            int stepSub  = Mathf.RoundToInt(stepMain * SubStatRatio);
 
-            mainGainTotal   += stepMain;
-            subGainTotal    += stepSub;
-            subGainMinTotal += Mathf.RoundToInt(stepMain * 0.3f);
-            subGainMaxTotal += Mathf.RoundToInt(stepMain * 0.5f);
-            salaryGain      += EnhanceSalaryTable[ti];
+            mainGainTotal += stepMain;
+            subGainTotal  += stepSub;
+            salaryGain    += EnhanceSalaryTable[ti];
         }
 
         employee.mainStatEnhanceGain = mainGainTotal;
-        employee.subStatEnhanceMin = subGainMinTotal;
-        employee.subStatEnhanceMax = subGainMaxTotal;
+        employee.subStatEnhanceMin = subGainTotal; // 0.4 고정이라 min==max
+        employee.subStatEnhanceMax = subGainTotal;
 
         string mainStat  = GetMainStatKey(employee.role);
         var    subStats  = GetSubStatKeys(employee.role);
@@ -1037,15 +965,5 @@ public class EmployeeManager : MonoBehaviour
             case "creativity": e.creativitySkill += gain; break;
         }
     }
-
-    private void Shuffle(List<string> list)
-    {
-        for (int i = list.Count - 1; i > 0; i--)
-        {
-            int j = UnityEngine.Random.Range(0, i + 1);
-            (list[i], list[j]) = (list[j], list[i]);
-        }
-    }
-
 
 }
