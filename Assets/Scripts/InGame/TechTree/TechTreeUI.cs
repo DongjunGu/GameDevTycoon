@@ -87,7 +87,7 @@ public class TechTreeUI : MonoBehaviour
     void RefreshPointsLabel()
     {
         if (currentPointsText == null || TechTreeManager.Instance == null) return;
-        currentPointsText.text = $"{TechTreeManager.Instance.CurrentPoints} P";
+        currentPointsText.text = $"보유 포인트 {TechTreeManager.Instance.CurrentPoints}";
     }
 
     public void Open()
@@ -165,9 +165,9 @@ public class TechTreeUI : MonoBehaviour
             else
             {
                 costText.text = $"{node.requiredPoints} P";
-                img.color = new Color(0.85f, 0.85f, 0.85f, 0.5f); // 회색
+                img.color = new Color(0.85f, 0.85f, 0.85f, 0.5f); // 회색 (포인트 부족/선행 미해금)
                 if (badge != null) badge.SetActive(false);
-                btn.interactable = false;
+                btn.interactable = true; // 클릭하면 설명 팝업은 뜨되, 팝업 안 '해금' 버튼은 비활성
             }
 
             var captured = node;
@@ -227,23 +227,25 @@ public class TechTreeUI : MonoBehaviour
         scrollRect.horizontalNormalizedPosition = normalized;
     }
 
+    // 노드 클릭 — 포인트 유무와 상관없이 설명 팝업을 띄운다.
+    // 해금 가능(포인트 충분 + 선행 해금)하면 '해금' 버튼 활성, 아니면 표시는 하되 비활성(터치 불가).
     void OnClickNode(TechNodeData node)
     {
+        if (node.isUnlocked) return; // 이미 해금된 노드는 클릭 무시(안전망)
+
+        bool canUnlock = TechTreeManager.Instance.CanUnlock(node);
+
         ConfirmUI.Instance.Show(
-            $"{node.name}\n{node.description}\n\n필요 포인트: {node.requiredPoints} P\n해금하시겠습니까?",
+            $"{node.name}\n{node.description}\n\n필요 포인트: {node.requiredPoints} P\n보유 포인트: {TechTreeManager.Instance.CurrentPoints} P",
             onConfirm: () =>
             {
-                if (TechTreeManager.Instance.CurrentPoints < node.requiredPoints)
-                {
-                    AlertUI.Instance.Show("포인트가 부족합니다.");
-                    return;
-                }
-                TechTreeManager.Instance.Unlock(node);
+                TechTreeManager.Instance.Unlock(node); // 버튼이 활성일 때만 호출됨 + Unlock 내부 CanUnlock 재확인
                 // OnUnlockChanged → RefreshPointsAndCategory 에서 ShowCategory 재호출
             },
             onCancel: () => { },
             confirmText: "해금",
-            cancelText: "취소"
+            cancelText: "취소",
+            confirmInteractable: canUnlock
         );
     }
 }

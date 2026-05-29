@@ -40,6 +40,14 @@ public class ResumeFlipper : MonoBehaviour
     [SerializeField] float settlePunch = 0.06f;
     [SerializeField] float settleDuration = 0.12f;
 
+    [Header("Shuffle (후보 새로고침 연출)")]
+    [Tooltip("세 종이를 가운데로 모으는 시간")]
+    [SerializeField] float shuffleGatherDuration = 0.22f;
+    [Tooltip("모았을 때 스택 스케일 비율(가운데 기준). 작을수록 더 작게 겹친다")]
+    [SerializeField] float shuffleStackScale = 0.55f;
+    [Tooltip("모으는 동안 회전량(도). 카드를 섞는 느낌")]
+    [SerializeField] float shuffleSpin = 360f;
+
     RectTransform _center;
     Vector2 _centerHome;          // 슬라이드 시작 시점(쉬는 상태)의 가운데 위치
     Vector3 _centerScale = Vector3.one, _centerRot = Vector3.zero;
@@ -151,6 +159,77 @@ public class ResumeFlipper : MonoBehaviour
     }
 
     void Slide(Sequence seq, RectTransform rt, Vector2 pos, Vector3 scale, Vector3 rot)
+    {
+        if (rt == null) return;
+        seq.Join(rt.DOAnchorPos(pos, slideDuration).SetEase(slideEase));
+        seq.Join(rt.DOScale(scale, slideDuration).SetEase(slideEase));
+        seq.Join(rt.DOLocalRotate(rot, slideDuration, RotateMode.Fast).SetEase(slideEase));
+    }
+
+    /// <summary>
+    /// 후보 새로고침 셔플 연출 — 세 종이를 가운데로 모아 스택(서로 다른 방향 회전)했다가
+    /// onMidpoint 에서 내용 교체 후 다시 좌/중/우 슬롯으로 펼친다.
+    /// onMidpoint 에서 HiringUI 가 새 후보로 세 패널을 다시 채운다 → 스택돼 가려진 순간이라 교체가 안 보인다.
+    /// 채용 패널은 시간 정지라 모든 트윈 SetUpdate(true).
+    /// </summary>
+    public void Shuffle(Action onMidpoint, Action onComplete = null)
+    {
+        EnsureInit();
+        _tween?.Kill();
+
+        // 현재(쉬는) 위치를 홈으로 갱신 후 정렬/배치 초기화
+        _centerHome  = _center.anchoredPosition;
+        _centerScale = _center.localScale;
+        _centerRot   = _center.localEulerAngles;
+        ApplyHome();
+        RestoreSorting();
+        IsFlipping = true;
+
+        Vector3 stackScale = _centerScale * shuffleStackScale;
+
+        var seq = DOTween.Sequence();
+        // ── 모으기 ── 세 종이가 가운데로 겹치며 작아지고 서로 다른 방향으로 회전(섞는 느낌)
+        Gather(seq, _center,    _centerHome, stackScale,  shuffleSpin);
+        Gather(seq, leftPaper,  _centerHome, stackScale, -shuffleSpin);
+        Gather(seq, rightPaper, _centerHome, stackScale,  shuffleSpin);
+
+        // 스택돼 가려진 순간에 내용 교체 (보이지 않음)
+        seq.AppendCallback(() => onMidpoint?.Invoke());
+
+        // ── 펼치기 ── center 부터 Append 로 타임라인을 이어붙이고 좌/우는 Join 으로 동시에 홈 슬롯 복귀
+        seq.Append(_center.DOAnchorPos(_centerHome, slideDuration).SetEase(slideEase));
+        seq.Join(_center.DOScale(_centerScale, slideDuration).SetEase(slideEase));
+        seq.Join(_center.DOLocalRotate(_centerRot, slideDuration, RotateMode.Fast).SetEase(slideEase));
+        SpreadJoin(seq, leftPaper,  LeftSlot(_centerHome),  SideScaleV, LeftRot);
+        SpreadJoin(seq, rightPaper, RightSlot(_centerHome), SideScaleV, RightRot);
+
+        seq.OnComplete(() =>
+        {
+            ApplyHome();
+            RestoreSorting();
+            IsFlipping = false;
+            if (settlePunch > 0f)
+            {
+                _center.localScale = _centerScale * (1f - settlePunch);
+                _center.DOScale(_centerScale, settleDuration).SetEase(Ease.OutBack).SetUpdate(true);
+            }
+            onComplete?.Invoke();
+        });
+        seq.SetUpdate(true);
+        _tween = seq;
+    }
+
+    // 모으기 단계 — 가운데로 이동+축소+회전 (seq 시작에 Join, 동시 진행)
+    void Gather(Sequence seq, RectTransform rt, Vector2 pos, Vector3 scale, float spin)
+    {
+        if (rt == null) return;
+        seq.Join(rt.DOAnchorPos(pos, shuffleGatherDuration).SetEase(Ease.InCubic));
+        seq.Join(rt.DOScale(scale, shuffleGatherDuration).SetEase(Ease.InCubic));
+        seq.Join(rt.DOLocalRotate(new Vector3(0f, 0f, spin), shuffleGatherDuration, RotateMode.FastBeyond360).SetEase(Ease.InCubic));
+    }
+
+    // 펼치기 단계의 좌/우 종이 — center Append 와 같은 시점에 Join (동시 진행)
+    void SpreadJoin(Sequence seq, RectTransform rt, Vector2 pos, Vector3 scale, Vector3 rot)
     {
         if (rt == null) return;
         seq.Join(rt.DOAnchorPos(pos, slideDuration).SetEase(slideEase));
