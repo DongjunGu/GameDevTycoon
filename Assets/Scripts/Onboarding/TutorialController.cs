@@ -25,6 +25,8 @@ public class TutorialController : MonoBehaviour
     [Range(0f, 1f)] public float dimAlpha = 0.5f;
     [Tooltip("메뉴/서브 슬라이드 펼침 대기(초)")]
     public float settleDelay = 0.4f;
+    [Tooltip("게임씬 진입 후 DialogManager 준비를 기다리는 최대 시간(초). 준비되면 그 즉시 대사 표시.")]
+    public float startupTimeout = 5f;
 
     Canvas _dimCanvas;
     Coroutine _pulse;
@@ -37,19 +39,29 @@ public class TutorialController : MonoBehaviour
 
     IEnumerator Run()
     {
-        yield return new WaitForSecondsRealtime(0.5f); // 씬/HUD 정착 대기
-
-        // ── 1) 비서 대사 (그룹 있을 때만, 종료까지 대기) ──
-        var dm = DialogManager.Instance;
-        if (dm != null && !string.IsNullOrEmpty(dialogGroupId) && dm.HasGroup(dialogGroupId))
+        // ── 1) 비서 대사 — 고정 대기 없이 DialogManager/DialogUI 준비되는 즉시 재생 ──
+        // (게임씬 진입 직후 초기화가 한두 프레임 늦어도 "준비되면 바로" 띄워 빈 텀 최소화)
+        if (!string.IsNullOrEmpty(dialogGroupId))
         {
-            bool ended = false;
-            System.Action onEnd = () => ended = true;
-            dm.OnDialogEnd += onEnd;
-            dm.Play(dialogGroupId, triggerOnce: false);
-            float t = 0f;
-            while (!ended && t < 120f) { t += Time.unscaledDeltaTime; yield return null; } // 안전 타임아웃
-            dm.OnDialogEnd -= onEnd;
+            var dm = DialogManager.Instance;
+            float wait = 0f;
+            while ((dm == null || !dm.Initialized || !dm.HasDialogUI) && wait < startupTimeout)
+            {
+                wait += Time.unscaledDeltaTime;
+                yield return null;
+                dm = DialogManager.Instance;
+            }
+
+            if (dm != null && dm.Initialized && dm.HasDialogUI && dm.HasGroup(dialogGroupId))
+            {
+                bool ended = false;
+                System.Action onEnd = () => ended = true;
+                dm.OnDialogEnd += onEnd;
+                dm.Play(dialogGroupId, triggerOnce: false);
+                float t = 0f;
+                while (!ended && t < 120f) { t += Time.unscaledDeltaTime; yield return null; } // 안전 타임아웃
+                dm.OnDialogEnd -= onEnd;
+            }
         }
 
         // ── 2~4) 버튼 순차 강조 ──

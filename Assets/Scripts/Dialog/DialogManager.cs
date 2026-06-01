@@ -112,7 +112,11 @@ public class DialogManager : MonoBehaviour
         ShowNode(nodes[0]);
     }
 
-    public bool HasGroup(string dialogGroupId) => _groupCache.ContainsKey(dialogGroupId);
+    public bool HasGroup(string dialogGroupId) => _groupCache != null && _groupCache.ContainsKey(dialogGroupId);
+
+    // 차트 로드/초기화 완료 여부 + DialogUI 등록 여부 — 튜토리얼 등이 "준비되면 즉시 재생" 폴링에 사용.
+    public bool Initialized => _groupCache != null;
+    public bool HasDialogUI => _dialogUI != null;
 
     // ─── 진행 (DialogUI에서 호출) ────────────────────────────────
 

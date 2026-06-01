@@ -212,7 +212,14 @@ public class HiringUI : MonoBehaviour
         MoneyManager.Instance.SpendGold(cost);
 
         // pending 등록(INTERVIEW_WEEKS 주 후 리스트) + 즉시 저장 — 돈만 쓰고 리스트 못 받는 일 방지(복원 가능)
-        EmployeeManager.Instance.SetHiringPending(tierIndex, INTERVIEW_WEEKS);
+        // 온보딩 첫 채용은 1회만 1주로 단축(나머지는 3주)
+        int interviewWeeks = INTERVIEW_WEEKS;
+        if (!OnboardingState.FirstHireDone)
+        {
+            interviewWeeks = 1;
+            OnboardingState.MarkFirstHireDone();
+        }
+        EmployeeManager.Instance.SetHiringPending(tierIndex, interviewWeeks);
         GameTimeManager.Instance?.SaveGameTime();
 
         // 채용 UI 닫고 "면접 확정" 비서 안내 → 확인 시 시간 재개(OpenHiring 의 StopTime 해소). 이후 게임 진행하며 INTERVIEW_WEEKS 주 경과.
@@ -576,6 +583,9 @@ public class HiringUI : MonoBehaviour
         EmployeeManager.Instance.HireEmployee(_selectedEmployee);
         hiringPanel.SetActive(false);
         confirmPanel.SetActive(false);     // ConfirmHirePanel 비활성화
+
+        // 온보딩: 직원 획득 후 1주 뒤 프로젝트 튜토리얼 (1회만) — ProjectTutorialController 가 카운트다운/실행
+        OnboardingState.ArmProjectTutorial(1);
 
         DialogManager.Instance.Resume();
     }

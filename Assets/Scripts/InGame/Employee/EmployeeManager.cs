@@ -939,6 +939,39 @@ public class EmployeeManager : MonoBehaviour
         employee.salary += CharacterTraitApplier.ApplyGoldspoonSalary(employee, salaryGain);
     }
 
+    // 잠재력 보너스 (강화 주스탯 증가량에 가산)
+    private static int PotentialBonus(EmployeePotential p) => p switch
+    {
+        EmployeePotential.C => 0,
+        EmployeePotential.B => 1,
+        EmployeePotential.A => 3,
+        EmployeePotential.S => 5,
+        _ => 0
+    };
+
+    // 다음 강화(현재 레벨 → +1) 주스탯 증가 범위 (잠재력 보너스 포함). 예상수치 미리보기용.
+    public (int min, int max) GetNextMainStatGain(EmployeeData emp)
+    {
+        int ti = Mathf.Clamp(emp.enhancementLevel, 0, MainStatGainTable.Length - 1);
+        var (mn, mx) = MainStatGainTable[ti];
+        int pot = PotentialBonus(emp.potential);
+        return (mn + pot, mx + pot);
+    }
+
+    // 다음 강화 부스탯 증가 범위 (주스탯 증가량 × 0.4). 예상수치 미리보기용.
+    public (int min, int max) GetNextSubStatGain(EmployeeData emp)
+    {
+        var (mn, mx) = GetNextMainStatGain(emp);
+        return (Mathf.RoundToInt(mn * SubStatRatio), Mathf.RoundToInt(mx * SubStatRatio));
+    }
+
+    // 다음 강화 부스탯 평균(단일) 증가량 — 주스탯 범위 중앙값 × 0.4. 부스탯 단일 표시용.
+    public int GetNextSubStatGainAvg(EmployeeData emp)
+    {
+        var (mn, mx) = GetNextMainStatGain(emp);
+        return Mathf.RoundToInt((mn + mx) / 2f * SubStatRatio);
+    }
+
     private string GetMainStatKey(EmployeeRole role) => role switch
     {
         EmployeeRole.Planner => "planning",

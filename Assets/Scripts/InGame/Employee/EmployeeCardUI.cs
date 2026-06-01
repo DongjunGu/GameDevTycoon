@@ -175,11 +175,11 @@ public class EmployeeCardUI : MonoBehaviour
     }
 
     // 카드의 "강화하기" 버튼 OnClick에 연결
-    // → TrainingUI의 ListPanel 단계를 건너뛰고 현재 직원의 강화 패널을 바로 표시
+    // → 단일 화면 강화 패널(TrainingPanelUI)을 열고 현재 직원을 바로 선택
     public void OnClickEnhanceButton()
     {
         if (string.IsNullOrEmpty(_currentEmployeeId)) return;
-        if (TrainingUI.Instance == null) return;
+        if (TrainingPanelUI.Instance == null) return;
 
         var emp = EmployeeManager.Instance?.GetEmployee(_currentEmployeeId);
         if (emp == null) return;
@@ -188,7 +188,7 @@ public class EmployeeCardUI : MonoBehaviour
 
         if (cardPanel != null) cardPanel.SetActive(false);
 
-        TrainingUI.Instance.OpenTrainingForEmployee(emp, () => Show(savedEmpId));
+        TrainingPanelUI.Instance.OpenForEmployee(emp, () => Show(savedEmpId));
     }
 
     // 만족도 능력치 보정 구간(EmployeeData.GetSatisfactionMultiplier)에 맞춰 슬라이더 Fill 색상 변경

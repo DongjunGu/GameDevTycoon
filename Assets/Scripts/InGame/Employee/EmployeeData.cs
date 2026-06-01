@@ -328,7 +328,7 @@ public class EmployeeData
         : ArtText();
     public string SatisfactionText() => $"만족도: {satisfaction}";
 
-    // 등급별 최대 강화 레벨 — TrainingUI.GetMaxEnhancement 와 단일 소스 공유.
+    // 등급별 최대 강화 레벨 — EmployeeEnhancement.GetMaxLevel 와 단일 소스 공유.
     public static int MaxEnhancementForGrade(EmployeeGrade g) => g switch
     {
         EmployeeGrade.Normal    => 15,

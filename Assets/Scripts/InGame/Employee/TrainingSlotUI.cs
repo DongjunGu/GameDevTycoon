@@ -22,7 +22,18 @@ public class TrainingSlotUI : MonoBehaviour
     private static readonly Color ColorEpic = new Color(0.55f, 0.30f, 0.85f);
     public Image bgImage;
     private EmployeeGrade _pendingGrade;
-    public void Setup(EmployeeData data, TrainingUI trainingUI)
+    // 콜백 기반 Setup — TrainingPanelUI(단일 화면)가 슬롯 클릭 시 호출.
+    public void Setup(EmployeeData data, System.Action<EmployeeData> onSelect)
+    {
+        SetupVisuals(data);
+        selectButton.onClick.RemoveAllListeners();
+        selectButton.onClick.AddListener(() => onSelect?.Invoke(data));
+
+        // 이미 활성 상태에서 재생성될 때는 OnEnable 이 Setup 보다 먼저 실행되어 색이 어긋남 → 활성이면 재적용
+        if (isActiveAndEnabled) ApplyGradeColor(_pendingGrade);
+    }
+
+    void SetupVisuals(EmployeeData data)
     {
         nameText.text            = data.employeeName;
         roleText.text            = data.RoleToString();
@@ -45,12 +56,6 @@ public class TrainingSlotUI : MonoBehaviour
         enhancementText.text     = $"+{data.enhancementLevel}";
 
         _pendingGrade = data.grade;
-
-        selectButton.onClick.RemoveAllListeners();
-        selectButton.onClick.AddListener(() => trainingUI.OnSelectEmployee(data));
-
-        // 이미 활성 상태에서 재생성될 때는 OnEnable 이 Setup 보다 먼저 실행되어 색이 어긋남 → 활성이면 재적용
-        if (isActiveAndEnabled) ApplyGradeColor(_pendingGrade);
     }
 
     void OnEnable()
