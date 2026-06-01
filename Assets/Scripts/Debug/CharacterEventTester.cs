@@ -118,7 +118,9 @@ public class CharacterEventTester : MonoBehaviour
         GUILayout.Space(8);
         GUILayout.Label("<b>━━ 온보딩 ━━</b>", Rich());
         GUILayout.Label($"IntroDone: {OnboardingState.IntroDone} / TutorialDone: {OnboardingState.TutorialDone}");
+#if UNITY_EDITOR
         if (GUILayout.Button("온보딩 리셋 (컷씬/튜토리얼 재노출)")) { OnboardingState.ResetAll(); Set("온보딩 리셋 — LoadingScene부터 다시 실행"); }
+#endif
 
         GUILayout.Space(6);
         GUILayout.Label("<b>상태:</b> " + _status, Rich());
