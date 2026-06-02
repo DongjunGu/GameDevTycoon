@@ -82,7 +82,7 @@ public class OwnedCardManager : MonoBehaviour
         foreach (var emp in EmployeeManager.Instance.poolEmployees)
         {
             if (emp == null || string.IsNullOrEmpty(emp.id) || !emp.isDefault) continue;
-            var k = Key(emp.id, EmployeeGrade.Normal, 0);
+            var k = Key(emp.id, EmployeeGrade.Unique, 0);
             _cards[k] = (_cards.TryGetValue(k, out var n) ? n : 0) + 1;
         }
     }
