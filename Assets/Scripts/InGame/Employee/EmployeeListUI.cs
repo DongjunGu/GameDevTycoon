@@ -118,9 +118,10 @@ public class EmployeeListUI : MonoBehaviour
         int n = _list.Count, ci = _currentIndex;
         var center = _list[ci];
         _selectedEmployee = center;
-        if (resumeCenterPanel != null) resumeCenterPanel.Setup(center);
-        if (resumeLeftPanel  != null) resumeLeftPanel.Setup(_list[(ci - 1 + n) % n]);
-        if (resumeRightPanel != null) resumeRightPanel.Setup(_list[(ci + 1) % n]);
+        // 해고는 확정된 실제 수치 + 버프/디버프 색상 표시 (채용처럼 interval 아님).
+        if (resumeCenterPanel != null) resumeCenterPanel.Setup(center, showActualStats: true);
+        if (resumeLeftPanel  != null) resumeLeftPanel.Setup(_list[(ci - 1 + n) % n], showActualStats: true);
+        if (resumeRightPanel != null) resumeRightPanel.Setup(_list[(ci + 1) % n], showActualStats: true);
     }
 
     // confirmBtn("해고") — 즉시 해고하지 않고 확인 다이얼로그.

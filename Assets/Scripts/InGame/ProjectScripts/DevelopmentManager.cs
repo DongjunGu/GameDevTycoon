@@ -525,7 +525,8 @@ public class DevelopmentManager : MonoBehaviour
             }
             elapsed = 0f;
 
-            float bugFixChance = IsOvertimeMode ? 0.6f : 0.5f;
+            float bugFixChance = 0.8f; // [임시] 디버깅 성공률 80% 고정 — 테스트용, 나중에 삭제하고 아래 원본 복구할 것
+            // 원본: float bugFixChance = IsOvertimeMode ? 0.6f : 0.5f;
             // 테크트리 '버그 잡기 달인(money_bugmaster)' — 해결 확률 +10% (= 실패 확률 -10%)
             if (TechTreeManager.Instance != null && TechTreeManager.Instance.IsUnlocked("money_bugmaster"))
                 bugFixChance += 0.10f;

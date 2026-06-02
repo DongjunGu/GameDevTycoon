@@ -102,10 +102,19 @@ public class EmployeeCardUI : MonoBehaviour
         }
         if (satisfactionText != null) satisfactionText.text = $"{displayedSatisfaction}";
         if (enhancementText  != null) enhancementText.text  = $"Lv.{emp.enhancementLevel}";
-        if (planningText     != null) planningText.text     = $"{emp.EffectivePlanningSkill}";
-        if (developText      != null) developText.text      = $"{emp.EffectiveDevelopSkill}";
-        if (artText          != null) artText.text          = $"{emp.EffectiveArtSkill}";
-        if (creativityText   != null) creativityText.text   = $"{emp.EffectiveCreativitySkill}";
+        // 능력치 = 버프/디버프 적용된 실제값 + 색상(버프 빨강 / 디버프 파랑 / 변화 없음 흰색)
+        SetStatColored(planningText,   emp.planningSkill,   emp.EffectivePlanningSkill);
+        SetStatColored(developText,    emp.developSkill,    emp.EffectiveDevelopSkill);
+        SetStatColored(artText,        emp.artSkill,        emp.EffectiveArtSkill);
+        SetStatColored(creativityText, emp.creativitySkill, emp.EffectiveCreativitySkill);
+    }
+
+    // 능력치 텍스트에 버프/디버프 적용 실제값 + 색상을 한 번에 세팅 (EmployeeResumePanel 해고 모드와 공유).
+    public static void SetStatColored(TextMeshProUGUI label, int baseSkill, int effectiveSkill)
+    {
+        if (label == null) return;
+        label.text  = $"{effectiveSkill}";
+        label.color = EmployeeData.GetStatColor(baseSkill, effectiveSkill);
     }
 
     public void Hide()

@@ -27,7 +27,8 @@ public class LeaderSlotUI : MonoBehaviour
         nameText.text = data.employeeName;
         roleText.text = data.RoleToString();
         gradeText.text = data.GradeToString();
-        CharacterTraitApplier.SetupTraitText(traitText, data);
+        // 팀장 선택 슬롯에서는 특성 클릭 시 AlertUI 설명을 띄우지 않음 (클릭은 슬롯 선택으로 통과)
+        CharacterTraitApplier.SetupTraitText(traitText, data, clickable: false);
         CharacterUniqueEvents.SetupEventText(traitText, data);
         potentialText.text = data.PotentialToString();
         developSkillText.text = data.DevelopText();

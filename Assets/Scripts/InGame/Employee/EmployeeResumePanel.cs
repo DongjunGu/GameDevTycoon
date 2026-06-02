@@ -37,7 +37,9 @@ public class EmployeeResumePanel : MonoBehaviour
     [Header("Salary")]
     public TextMeshProUGUI salaryText;      // "연봉: {}G"
 
-    public void Setup(EmployeeData emp)
+    // showActualStats=false(채용): 주스탯 강화 반영 "범위"(interval) 표시.
+    // showActualStats=true(해고): 확정된 실제 수치 + 버프/디버프 색상(버프 빨강 / 디버프 파랑) 표시.
+    public void Setup(EmployeeData emp, bool showActualStats = false)
     {
         if (emp == null) return;
 
@@ -74,11 +76,21 @@ public class EmployeeResumePanel : MonoBehaviour
         }
         if (satisfactionText != null) satisfactionText.text = $"{emp.satisfaction}";
 
-        // 능력치 — 채용창과 동일(주스탯=강화 반영 범위, 부스탯·창의성=고정)이되, 라벨 없이 값만 표시 ("기획: 50~200" → "50~200")
-        if (planningText   != null) planningText.text   = ValueOnly(emp.PlanningDisplayText());
-        if (developText    != null) developText.text    = ValueOnly(emp.DevelopDisplayText());
-        if (artText        != null) artText.text        = ValueOnly(emp.ArtDisplayText());
-        if (creativityText != null) creativityText.text = ValueOnly(emp.CreativityText());
+        // 능력치 — 해고(actual): 확정 실제값 + 버프/디버프 색상 / 채용(interval): 강화 반영 범위, 라벨 없이 값만 ("기획: 50~200" → "50~200")
+        if (showActualStats)
+        {
+            EmployeeCardUI.SetStatColored(planningText,   emp.planningSkill,   emp.EffectivePlanningSkill);
+            EmployeeCardUI.SetStatColored(developText,    emp.developSkill,    emp.EffectiveDevelopSkill);
+            EmployeeCardUI.SetStatColored(artText,        emp.artSkill,        emp.EffectiveArtSkill);
+            EmployeeCardUI.SetStatColored(creativityText, emp.creativitySkill, emp.EffectiveCreativitySkill);
+        }
+        else
+        {
+            if (planningText   != null) planningText.text   = ValueOnly(emp.PlanningDisplayText());
+            if (developText    != null) developText.text    = ValueOnly(emp.DevelopDisplayText());
+            if (artText        != null) artText.text        = ValueOnly(emp.ArtDisplayText());
+            if (creativityText != null) creativityText.text = ValueOnly(emp.CreativityText());
+        }
 
         if (salaryText != null) salaryText.text = ValueOnly(emp.SalaryRangeText());  // "연봉: nG" → "nG"
     }

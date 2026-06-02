@@ -49,6 +49,12 @@ public class TechTreeUI : MonoBehaviour
     {
         for (int i = 0; i < tabButtons.Length; i++)
         {
+            // 광고(Ad) 카테고리 미구현 → 탭 자체를 숨김. 구현되면 이 분기만 제거.
+            if (i < CategoryOrder.Length && CategoryOrder[i] == TechCategory.Ad)
+            {
+                tabButtons[i].gameObject.SetActive(false);
+                continue;
+            }
             int captured = i;
             tabButtons[i].onClick.AddListener(() => OnClickTab(captured));
         }

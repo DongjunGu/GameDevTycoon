@@ -9966,7 +9966,7 @@ SpriteRenderer:
   m_GlobalIlluminationMeshLod: 0
   m_SortingLayerID: 502371653
   m_SortingLayer: -4
-  m_SortingOrder: 2100
+  m_SortingOrder: 1600
   m_MaskInteraction: 0
   m_Sprite: {fileID: -8077778254341843930, guid: 6c9da61b0a85b044fbf2f0572a0d56ca, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -47741,7 +47741,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 1, b: 1, a: 0.392}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -57721,6 +57721,7 @@ RectTransform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
+  - {fileID: 142244538}
   - {fileID: 480516637}
   - {fileID: 877883996}
   - {fileID: 310528300}
@@ -57732,7 +57733,6 @@ RectTransform:
   - {fileID: 1107420805}
   - {fileID: 1648780631}
   - {fileID: 2126517534}
-  - {fileID: 142244538}
   - {fileID: 1418154627}
   - {fileID: 1804232782}
   - {fileID: 1952665128}
@@ -69052,7 +69052,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 325, y: -30.804321}
+  m_AnchoredPosition: {x: 325, y: -30.804348}
   m_SizeDelta: {x: 650, y: 61.608696}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1008090324
@@ -76867,7 +76867,7 @@ SpriteRenderer:
   m_GlobalIlluminationMeshLod: 0
   m_SortingLayerID: 502371653
   m_SortingLayer: -4
-  m_SortingOrder: 1381
+  m_SortingOrder: 881
   m_MaskInteraction: 0
   m_Sprite: {fileID: -8077778254341843930, guid: 6c9da61b0a85b044fbf2f0572a0d56ca, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -93713,7 +93713,7 @@ SpriteRenderer:
   m_GlobalIlluminationMeshLod: 0
   m_SortingLayerID: 502371653
   m_SortingLayer: -4
-  m_SortingOrder: 2049
+  m_SortingOrder: 1549
   m_MaskInteraction: 0
   m_Sprite: {fileID: -8077778254341843930, guid: 6c9da61b0a85b044fbf2f0572a0d56ca, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -123863,7 +123863,7 @@ SpriteRenderer:
   m_GlobalIlluminationMeshLod: 0
   m_SortingLayerID: 502371653
   m_SortingLayer: -4
-  m_SortingOrder: 2847
+  m_SortingOrder: 2347
   m_MaskInteraction: 0
   m_Sprite: {fileID: -8077778254341843930, guid: 6c9da61b0a85b044fbf2f0572a0d56ca, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
