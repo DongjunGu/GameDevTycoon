@@ -149,17 +149,18 @@ public static class CharacterTraitApplier
 
     // 슬롯/카드 공통 — traitText 에 특성명 세팅 + 클릭 시 설명을 띄우는 버튼으로 만든다(런타임 컴포넌트 부착, 에디터 배선 불필요).
     // 특성 없음/CEO 면 빈 문자열 + raycastTarget off → 클릭이 슬롯 버튼으로 통과(가로채지 않음).
-    public static void SetupTraitText(TMP_Text traitText, EmployeeData emp)
+    // clickable=false 면 특성명은 표시하되 클릭→AlertUI 설명을 비활성(예: 팀장 선택 슬롯 — 클릭이 슬롯 선택으로 통과해야 함).
+    public static void SetupTraitText(TMP_Text traitText, EmployeeData emp, bool clickable = true)
     {
         if (traitText == null) return;
         string traitName = (emp != null && !emp.isCEO) ? GetTraitName(emp) : "";
         traitText.text = string.IsNullOrEmpty(traitName) ? "" : $"특성 : {traitName}";
 
         var btn = traitText.GetComponent<TraitDescriptionButton>();
-        if (string.IsNullOrEmpty(traitName))
+        if (string.IsNullOrEmpty(traitName) || !clickable)
         {
             if (btn != null) btn.Bind(null);
-            traitText.raycastTarget = false; // 특성 없으면 클릭 통과
+            traitText.raycastTarget = false; // 특성 없음/클릭 비활성 → 클릭이 슬롯 버튼으로 통과
             return;
         }
         if (btn == null) btn = traitText.gameObject.AddComponent<TraitDescriptionButton>();
