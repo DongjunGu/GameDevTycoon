@@ -129,6 +129,7 @@ GameObject:
   m_Component:
   - component: {fileID: 14625463}
   - component: {fileID: 14625462}
+  - component: {fileID: 14625464}
   m_Layer: 0
   m_Name: SoundManager
   m_TagString: Untagged
@@ -150,6 +151,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::SoundManager
   bgmSource: {fileID: 0}
   sfxSource: {fileID: 0}
+  sfxVoiceCount: 8
+  defaultBgm: {fileID: 0}
 --- !u!4 &14625463
 Transform:
   m_ObjectHideFlags: 0
@@ -165,6 +168,19 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &14625464
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 14625461}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e74a5b9500b5a6d4c9533660608bcc2f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::GlobalUiClickSfx
+  clickSound: {fileID: 11400000, guid: a0637ec55ccef3748bbb3f0d5da5c2dd, type: 2}
 --- !u!1 &46911841
 GameObject:
   m_ObjectHideFlags: 0
