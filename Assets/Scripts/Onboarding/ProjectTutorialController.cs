@@ -11,6 +11,8 @@ using UnityEngine.UI;
 [DisallowMultipleComponent]
 public class ProjectTutorialController : MonoBehaviour
 {
+    public static ProjectTutorialController Instance { get; private set; }
+
     [Header("강조할 버튼 (순서대로)")]
     public Button menuButton;          // 1) 메뉴 열기
     public Button projectSetupButton;  // 2) ProjectSetupMenuBtn (TopMenuContainer)
@@ -28,12 +30,14 @@ public class ProjectTutorialController : MonoBehaviour
     void Start()
     {
         if (OnboardingState.ProjectTutorialDone) { Destroy(gameObject); return; }
+        Instance = this;
         if (GameTimeManager.Instance != null) GameTimeManager.Instance.OnTimeChanged += OnWeek;
         TryFire(); // pending==0(직전 만료, 리로드 복구)이면 즉시 실행
     }
 
     void OnDestroy()
     {
+        if (Instance == this) Instance = null;
         if (GameTimeManager.Instance != null) GameTimeManager.Instance.OnTimeChanged -= OnWeek;
     }
 
@@ -50,7 +54,8 @@ public class ProjectTutorialController : MonoBehaviour
         if (p == 0) TryFire();
     }
 
-    void TryFire()
+    // 외부(채용 완료 직후 등)에서 호출 가능. pending==0(실행대기) + 모달 없을 때 실행.
+    public void TryFire()
     {
         if (_running || OnboardingState.ProjectTutorialDone) return;
         if (OnboardingState.ProjectTutorialPending != 0) return; // 실행대기(0) 일 때만
