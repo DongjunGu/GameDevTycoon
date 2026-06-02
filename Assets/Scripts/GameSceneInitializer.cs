@@ -2,8 +2,14 @@ using UnityEngine;
 
 public class GameSceneInitializer : MonoBehaviour
 {
+    [Header("이 씬에서만 재생할 BGM (GameScene 전용)")]
+    [SerializeField] private SoundData gameBgm;
+
     void Start()
     {
+        // GameScene 진입 시 BGM 시작. SoundManager 는 영속이지만 OnDestroy 에서 멈추므로 이 씬에서만 흐른다.
+        if (gameBgm != null) SoundManager.Instance?.Play(gameBgm);
+
         var dialogUI = FindAnyObjectByType<DialogUI>();
         if (dialogUI != null)
             DialogManager.Instance.SetDialogUI(dialogUI);
@@ -28,6 +34,12 @@ public class GameSceneInitializer : MonoBehaviour
         //         // 게임 시작 다이얼로그 (첫 시작 시)
         // if (DialogManager.Instance.HasGroup("event_game_start"))
         //     EventDialogTable.PlayManual("event_game_start");
+    }
+
+    void OnDestroy()
+    {
+        // GameScene 을 벗어날 때(아웃게임 복귀 등) BGM 정지 → GameScene 에서만 들리게.
+        if (gameBgm != null) SoundManager.Instance?.StopBGM();
     }
 
     public void TestGameStartDialog()
