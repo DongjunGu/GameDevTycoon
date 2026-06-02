@@ -584,8 +584,10 @@ public class HiringUI : MonoBehaviour
         hiringPanel.SetActive(false);
         confirmPanel.SetActive(false);     // ConfirmHirePanel 비활성화
 
-        // 온보딩: 직원 획득 후 1주 뒤 프로젝트 튜토리얼 (1회만) — ProjectTutorialController 가 카운트다운/실행
-        OnboardingState.ArmProjectTutorial(1);
+        // 온보딩: 직원 획득 후 채용창 닫히면 바로 프로젝트 튜토리얼 (1회만).
+        // pending=0(실행대기)로 무장 후 즉시 트리거 — ModalGate.WhenFree 가 채용창/다이얼로그 닫힘을 기다렸다 실행.
+        OnboardingState.ArmProjectTutorial(0);
+        ProjectTutorialController.Instance?.TryFire();
 
         DialogManager.Instance.Resume();
     }
