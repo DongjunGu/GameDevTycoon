@@ -159,7 +159,7 @@ public class TechTreeUI : MonoBehaviour
                 costText.text = "해금 완료";
                 img.color = new Color(0.91f, 0.96f, 0.87f); // 초록
                 if (badge != null) badge.SetActive(true);
-                btn.interactable = false;
+                btn.interactable = true; // 해금된 노드도 클릭 시 설명 표시
             }
             else if (canUnlock)
             {
@@ -237,7 +237,18 @@ public class TechTreeUI : MonoBehaviour
     // 해금 가능(포인트 충분 + 선행 해금)하면 '해금' 버튼 활성, 아니면 표시는 하되 비활성(터치 불가).
     void OnClickNode(TechNodeData node)
     {
-        if (node.isUnlocked) return; // 이미 해금된 노드는 클릭 무시(안전망)
+        // 이미 해금된 노드 — 설명만 표시(필요/보유 포인트는 공백), 해금 동작 없음.
+        if (node.isUnlocked)
+        {
+            ConfirmUI.Instance.Show(
+                $"{node.name}\n{node.description}",
+                onConfirm: () => { },
+                onCancel: () => { },
+                confirmText: "확인",
+                cancelText: "닫기"
+            );
+            return;
+        }
 
         bool canUnlock = TechTreeManager.Instance.CanUnlock(node);
 

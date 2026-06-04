@@ -126,6 +126,8 @@ public class MenuController : MonoBehaviour
     void OnTimeStopChanged(bool stopped)
     {
         if (menuButton == null) return;
+        // 튜토리얼 dim 중에는 시간이 멈춰도 메뉴 버튼을 숨기지 않음 (튜토리얼이 메뉴를 강조·클릭하게 하므로)
+        if (stopped && OnboardingState.TutorialActive) return;
         menuButton.gameObject.SetActive(!stopped);
         // 정지 시 펼쳐진 메뉴도 같이 닫음 (버튼이 사라지니 뒷정리)
         if (stopped && _topOpen) CloseTopMenu();
@@ -236,6 +238,16 @@ public class MenuController : MonoBehaviour
         // 메뉴 영역 내부 클릭은 무시 (각 버튼 onClick이 개별 처리)
         if (insideMenuBtn || insideTop || insideSub) return;
 
+        // 메뉴 위에 떠 있는 오버레이(튜토리얼 dim, 모달 블로커 등)가 클릭을 가로챘으면
+        // "외부 클릭"으로 보지 않고 무시 — 오버레이가 입력을 소유 중이므로 메뉴를 닫지 않는다.
+        // (튜토리얼: 하이라이트 안 한 곳을 눌러도 메뉴가 닫혀 dim 과 어긋나던 문제 방지)
+        if (_raycastResults.Count > 0)
+        {
+            var topCanvas = _raycastResults[0].gameObject.GetComponentInParent<Canvas>();
+            if (topCanvas != null && topCanvas.rootCanvas.sortingOrder > MenuCanvasOrder())
+                return;
+        }
+
         // 외부 클릭 →
         //  · sub가 펼쳐져 있으면 sub만 닫고 top은 유지
         //  · sub가 없으면 top까지 닫음
@@ -248,6 +260,16 @@ public class MenuController : MonoBehaviour
         {
             CloseTopMenu();
         }
+    }
+
+    // 메뉴가 올라간 캔버스의 정렬값 (오버레이 판별 기준). 1회 캐시.
+    int _menuCanvasOrder = int.MinValue;
+    int MenuCanvasOrder()
+    {
+        if (_menuCanvasOrder != int.MinValue) return _menuCanvasOrder;
+        var c = GetComponentInParent<Canvas>();
+        _menuCanvasOrder = c != null ? c.rootCanvas.sortingOrder : 0;
+        return _menuCanvasOrder;
     }
 
     static bool TryGetPressedPointerPosition(out Vector2 position)

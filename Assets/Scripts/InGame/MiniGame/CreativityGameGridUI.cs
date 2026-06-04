@@ -93,6 +93,21 @@ public class CreativityGameGridUI : MonoBehaviour, IBeginDragHandler, IDragHandl
             le.flexibleHeight  = -1;
         }
 
+        // GridLayoutGroup 을 쓰는 경우 셀 크기/간격/중앙정렬을 코드 값과 일치시킴.
+        // (없으면 CellAnchoredPos 로 수동 중앙 배치 — 두 방식 모두 같은 위치가 나오도록 맞춰둠)
+        var glg = GetComponent<GridLayoutGroup>();
+        if (glg != null)
+        {
+            glg.startCorner     = GridLayoutGroup.Corner.UpperLeft;
+            glg.startAxis       = GridLayoutGroup.Axis.Horizontal;
+            glg.constraint      = GridLayoutGroup.Constraint.FixedColumnCount;
+            glg.constraintCount = MaxSize;
+            glg.cellSize        = new Vector2(_cellSize, _cellSize);
+            glg.spacing         = new Vector2(_cellGap, _cellGap);
+            glg.childAlignment  = TextAnchor.MiddleCenter;
+            glg.padding         = new RectOffset(0, 0, 0, 0);
+        }
+
         for (int r = 0; r < MaxSize; r++)
         for (int c = 0; c < MaxSize; c++)
         {
@@ -107,15 +122,14 @@ public class CreativityGameGridUI : MonoBehaviour, IBeginDragHandler, IDragHandl
         var rt = go.AddComponent<RectTransform>();
         rt.SetParent(transform, false);
         rt.sizeDelta        = new Vector2(_cellSize, _cellSize);
-        rt.anchorMin        = rt.anchorMax = new Vector2(0f, 1f);
-        rt.pivot            = new Vector2(0f, 1f);
-        rt.anchoredPosition = CellAnchoredPos(r, c);
+        rt.anchorMin        = rt.anchorMax = new Vector2(0.5f, 0.5f);
+        rt.pivot            = new Vector2(0.5f, 0.5f);
+        rt.anchoredPosition = CellAnchoredPos(r, c); // GridLayoutGroup 있으면 덮어씀, 없으면 이 값 사용
 
+        // 무효 칸(구멍): 비활성화하지 않고 이미지 없는 빈 셀로 둔다.
+        // → GridLayoutGroup 이 슬롯 자리를 유지해 모양이 뭉치지 않음 (비활성 자식은 GLG가 건너뜀).
         if (!trackImage)
-        {
-            go.SetActive(false);
             return;
-        }
 
         var img = go.AddComponent<Image>();
         img.color         = color;
@@ -123,10 +137,14 @@ public class CreativityGameGridUI : MonoBehaviour, IBeginDragHandler, IDragHandl
         _cellImages[(r, c)] = img;
     }
 
+    // 그리드 중앙(anchor 0.5,0.5) 기준 셀 중심 좌표.
+    // 7×7 블록을 그리드 RT 크기와 무관하게 항상 중앙에 배치 → 중앙정렬.
     Vector2 CellAnchoredPos(int r, int c)
     {
         float step = CellStep;
-        return new Vector2(c * step, -(r * step));
+        float x = -(_totalW - _cellSize) * 0.5f + c * step;
+        float y =  (_totalH - _cellSize) * 0.5f - r * step;
+        return new Vector2(x, y);
     }
 
     // ── 스냅 계산 ─────────────────────────────────────────────────────────────
@@ -140,10 +158,9 @@ public class CreativityGameGridUI : MonoBehaviour, IBeginDragHandler, IDragHandl
 
         float step = CellStep;
 
-        // pivot에 무관하게 RT top-left 기준으로 계산
-        // rect.xMin = pivot.x 반영 offset, rect.yMax = 상단 offset
-        float relX = local.x - _rt.rect.xMin;
-        float relY = _rt.rect.yMax - local.y;
+        // 셀 블록은 그리드 중앙에 배치되므로, 블록 좌상단(중앙 - 절반 크기) 기준으로 계산
+        float relX = local.x - (_rt.rect.center.x - _totalW * 0.5f);
+        float relY = (_rt.rect.center.y + _totalH * 0.5f) - local.y;
 
         float fracCol = relX / step;
         float fracRow = relY / step;
@@ -195,9 +212,12 @@ public class CreativityGameGridUI : MonoBehaviour, IBeginDragHandler, IDragHandl
             var rt = go.AddComponent<RectTransform>();
             rt.SetParent(transform, false);
             rt.sizeDelta        = new Vector2(_cellSize, _cellSize);
-            rt.anchorMin        = rt.anchorMax = new Vector2(0f, 1f);
-            rt.pivot            = new Vector2(0f, 1f);
+            rt.anchorMin        = rt.anchorMax = new Vector2(0.5f, 0.5f);
+            rt.pivot            = new Vector2(0.5f, 0.5f);
             rt.anchoredPosition = CellAnchoredPos(r, c);
+
+            // GridLayoutGroup 이 ghost 를 셀로 취급해 밀어내지 않도록 레이아웃에서 제외
+            go.AddComponent<LayoutElement>().ignoreLayout = true;
             rt.SetAsLastSibling();
 
             var img = go.AddComponent<Image>();
@@ -240,8 +260,8 @@ public class CreativityGameGridUI : MonoBehaviour, IBeginDragHandler, IDragHandl
         if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(_rt, screenPos, _eventCam, out var local))
             return false;
 
-        float relX = local.x - _rt.rect.xMin;
-        float relY = _rt.rect.yMax - local.y;
+        float relX = local.x - (_rt.rect.center.x - _totalW * 0.5f);
+        float relY = (_rt.rect.center.y + _totalH * 0.5f) - local.y;
         int col = Mathf.FloorToInt(relX / CellStep);
         int row = Mathf.FloorToInt(relY / CellStep);
 

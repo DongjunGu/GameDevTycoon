@@ -266,14 +266,19 @@ public class MerchantManager : MonoBehaviour
         if (elapsed >= timeout)
             Debug.LogWarning("[Merchant] 도착 timeout — 강제 진행");
 
-        // ModalGate 큐잉 — 차단 UI 가 모두 닫히면 즉시 AlertUI. 차단 없으면 곧장.
+        // 도착했어도 (1) 다른 차단 모달이 떠 있거나(ModalGate) (2) 다른 패널로 시간이 멈춰 있으면(IsRunning=false)
+        // 모두 닫히고 시간이 재개될 때까지 대기 후 표시 → 열린 패널 위에 상인 팝업이 겹쳐 뜨지 않도록.
+        // (이동을 막는 게 아니라 도착 후 팝업만 미루는 방식 — 상인은 책상 앞에서 대기하다가 시간 재개 시 팝업)
         var gate = ModalGate.I;
         if (gate.IsBlocked)
         {
             string names = string.Join(", ", gate.GetActiveNames());
             Debug.Log($"[Merchant] ModalGate 대기 — 활성 모달: {names}");
         }
-        gate.WhenFree(ShowPrompt);
+        yield return new WaitUntil(() =>
+            !ModalGate.I.IsBlocked &&
+            (GameTimeManager.Instance == null || GameTimeManager.Instance.IsRunning));
+        ShowPrompt();
     }
 
     void ShowPrompt()

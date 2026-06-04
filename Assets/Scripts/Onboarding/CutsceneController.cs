@@ -63,6 +63,13 @@ public class CutsceneController : MonoBehaviour
 
         [Tooltip("대기할 Animator (비우면 image 에서 자동 탐색). 1회 재생 클립(Loop off) 권장.")]
         public Animator animator;
+
+        [Header("자동 넘김")]
+        [Tooltip("true 면 클릭 없이 일정 시간 뒤 자동으로 다음 단계로 넘어감")]
+        public bool autoAdvance;
+
+        [Tooltip("자동 넘김까지 대기 시간(초). 대사 타이핑이 끝난 뒤부터 카운트. (대사 없으면 표시 직후부터)")]
+        public float autoAdvanceDelay = 2f;
     }
 
     [Tooltip("컷씬 전체를 감싸는 풀스크린 루트(시작 시 비활성). 비우면 이 GameObject 사용.")]
@@ -96,6 +103,7 @@ public class CutsceneController : MonoBehaviour
     Coroutine _panCo;
     Coroutine _zoomCo;
     Coroutine _typeCo;
+    Coroutine _autoCo;  // 자동 넘김 대기
     bool      _typing;
     string    _currentLine;
     bool      _panning;  // 팬 진행 중(대사 시작 전)
@@ -242,6 +250,21 @@ public class CutsceneController : MonoBehaviour
 
         // 하단 대사 타이핑
         StartTyping(step.line);
+
+        // 자동 넘김: 대사 타이핑 완료 후 delay 초 뒤 클릭 없이 다음 단계로 (그 전에 클릭하면 수동 진행)
+        if (step.autoAdvance)
+            _autoCo = StartCoroutine(AutoAdvanceAfter(step.autoAdvanceDelay));
+    }
+
+    // 타이핑이 끝난 뒤 delay 초 대기 후 자동 진행. (StopEffects/Advance 가 호출되면 취소됨)
+    IEnumerator AutoAdvanceAfter(float delay)
+    {
+        while (_typing) yield return null;            // 대사 다 나올 때까지 대기
+        float t = 0f;
+        float d = Mathf.Max(0f, delay);
+        while (t < d) { t += Time.unscaledDeltaTime; yield return null; }
+        _autoCo = null;
+        Advance();
     }
 
     // Animator 의 현재(레이어0) 1회 재생 클립이 끝날 때까지 대기. 클릭(_skipPan)/루프/타임아웃 시 조기 종료.
@@ -338,6 +361,7 @@ public class CutsceneController : MonoBehaviour
     {
         if (_panCo != null)  { StopCoroutine(_panCo);  _panCo = null; }
         if (_zoomCo != null) { StopCoroutine(_zoomCo); _zoomCo = null; }
+        if (_autoCo != null) { StopCoroutine(_autoCo); _autoCo = null; } // 수동 진행/종료 시 자동 넘김 취소
     }
 
     // ── 대사 타이핑 ───────────────────────────

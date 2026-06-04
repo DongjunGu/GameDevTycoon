@@ -43,6 +43,7 @@ public class SettingsUI : MonoBehaviour
     public void SettingOpen()
     {
         Panel.SetActive(true);
+        GameTimeManager.Instance?.StopTime(); // 설정창 동안 시간 정지 (SettingClose 의 StartTime 과 1:1)
 
         // 현재 저장된 볼륨으로 슬라이더 표시값 동기화 (리스너는 Awake 에서 이미 연결됨)
         var sm = SoundManager.Instance;
@@ -53,6 +54,7 @@ public class SettingsUI : MonoBehaviour
     public void SettingClose()
     {
         Panel.SetActive(false);
+        GameTimeManager.Instance?.StartTime(); // SettingOpen 의 StopTime 해소
     }
 
     void OnBgmVolumeChanged(float v) => SoundManager.Instance?.SetBgmVolume(v);

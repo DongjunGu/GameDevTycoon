@@ -39,6 +39,26 @@ public class ProjectTutorialController : MonoBehaviour
     {
         if (Instance == this) Instance = null;
         if (GameTimeManager.Instance != null) GameTimeManager.Instance.OnTimeChanged -= OnWeek;
+        EndDimTimeStop(); // 중간에 파괴돼도 시간 정지 누수 방지
+    }
+
+    // ── dim 동안 시간 정지 (패널 켜는 것과 동일) ──────────────────────────────
+    bool _timeStopped;
+
+    void BeginDimTimeStop()
+    {
+        if (_timeStopped) return;
+        _timeStopped = true;
+        OnboardingState.TutorialActive = true;            // MenuController 가 메뉴 숨김을 건너뛰도록 먼저 set
+        GameTimeManager.Instance?.StopTime();
+    }
+
+    void EndDimTimeStop()
+    {
+        if (!_timeStopped) return;
+        _timeStopped = false;
+        OnboardingState.TutorialActive = false;
+        GameTimeManager.Instance?.StartTime();
     }
 
     // 주차 경과마다 카운트다운
@@ -71,6 +91,7 @@ public class ProjectTutorialController : MonoBehaviour
 
         EnsureDim();
         _dimCanvas.enabled = true;
+        BeginDimTimeStop(); // 패널 켜는 것과 동일하게 dim 동안 시간 정지
 
         yield return Highlight(menuButton);
         yield return new WaitForSecondsRealtime(settleDelay);
@@ -79,6 +100,7 @@ public class ProjectTutorialController : MonoBehaviour
         yield return Highlight(projectStartButton);
 
         _dimCanvas.enabled = false;
+        EndDimTimeStop();
         OnboardingState.MarkProjectTutorialDone();
         Destroy(gameObject);
     }
