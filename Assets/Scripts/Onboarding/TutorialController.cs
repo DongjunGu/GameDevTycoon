@@ -67,6 +67,7 @@ public class TutorialController : MonoBehaviour
         // ── 2~4) 버튼 순차 강조 ──
         EnsureDim();
         _dimCanvas.enabled = true;
+        BeginDimTimeStop(); // 패널 켜는 것과 동일하게 dim 동안 시간 정지
 
         yield return Highlight(menuButton);
         yield return new WaitForSecondsRealtime(settleDelay); // 상위 메뉴 펼침
@@ -75,9 +76,31 @@ public class TutorialController : MonoBehaviour
         yield return Highlight(hireButton);
 
         _dimCanvas.enabled = false;
+        EndDimTimeStop();
         OnboardingState.MarkTutorialDone();
         Destroy(gameObject);
     }
+
+    // ── dim 동안 시간 정지 (패널 켜는 것과 동일) ──────────────────────────────
+    bool _timeStopped;
+
+    void BeginDimTimeStop()
+    {
+        if (_timeStopped) return;
+        _timeStopped = true;
+        OnboardingState.TutorialActive = true;            // MenuController 가 메뉴 숨김을 건너뛰도록 먼저 set
+        GameTimeManager.Instance?.StopTime();
+    }
+
+    void EndDimTimeStop()
+    {
+        if (!_timeStopped) return;
+        _timeStopped = false;
+        OnboardingState.TutorialActive = false;
+        GameTimeManager.Instance?.StartTime();
+    }
+
+    void OnDestroy() => EndDimTimeStop(); // 중간에 파괴돼도 시간 정지 누수 방지
 
     // 대상 버튼을 dim 위로 올려 강조 + 펄스 + 클릭 대기. 클릭되면 정리하고 반환.
     IEnumerator Highlight(Button target)

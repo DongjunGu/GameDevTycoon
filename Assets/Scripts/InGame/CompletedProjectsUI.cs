@@ -20,16 +20,9 @@ public class CompletedProjectsUI : MonoBehaviour
     public TextMeshProUGUI detailScaleText;
     public TextMeshProUGUI detailGenreText;
     public TextMeshProUGUI detailPlatformText;
-    public TextMeshProUGUI detailPlanningText;
-    public TextMeshProUGUI detailDevelopText;
-    public TextMeshProUGUI detailArtText;
-    public TextMeshProUGUI detailCreativityText;
-    public TextMeshProUGUI detailBugText;
-    public TextMeshProUGUI detailUnitsText;
     public TextMeshProUGUI detailRevenueText;
-    public TextMeshProUGUI detailDateText;
-    public TextMeshProUGUI detailQualityScoreText;
-    public TextMeshProUGUI detailCriticTotalText;
+    public TextMeshProUGUI detailCriticTotalText;   // 평점 (점수 박스 안의 큰 숫자, 라벨은 별도 정적 텍스트)
+    public TextMeshProUGUI detailBestRankText;      // 최고 순위
 
     void Awake()
     {
@@ -57,7 +50,8 @@ public class CompletedProjectsUI : MonoBehaviour
         if (projects.Count == 0)
         {
             var empty = Instantiate(projectListItemPrefab, listContent);
-            empty.GetComponentInChildren<TextMeshProUGUI>().text = "완료된 프로젝트가 없습니다.";
+            empty.transform.Find("NameText").GetComponent<TextMeshProUGUI>().text = "완료된 프로젝트가 없습니다.";
+            empty.transform.Find("RevenueText").GetComponent<TextMeshProUGUI>().text = "";
             empty.GetComponent<Button>().interactable = false;
         }
         else
@@ -74,8 +68,8 @@ public class CompletedProjectsUI : MonoBehaviour
             foreach (var project in sorted)
             {
                 var item = Instantiate(projectListItemPrefab, listContent);
-                item.GetComponentInChildren<TextMeshProUGUI>().text =
-                    $"{project.projectName}  ({project.year}년 {project.month}월 {project.week}주)";
+                item.transform.Find("NameText").GetComponent<TextMeshProUGUI>().text = project.projectName;
+                item.transform.Find("RevenueText").GetComponent<TextMeshProUGUI>().text = $"{project.totalRevenue:N0}G";
 
                 var captured = project;
                 item.GetComponent<Button>().onClick.AddListener(() => ShowDetail(captured));
@@ -91,18 +85,11 @@ public class CompletedProjectsUI : MonoBehaviour
         detailScaleText.text = $"규모: {ScaleToString((ProjectScale)data.scale)}";
         detailGenreText.text = $"장르: {GenreToString((ProjectGenre)data.genre)}";
         detailPlatformText.text = $"플랫폼: {PlatformToString((ProjectPlatform)data.platform)}";
-        detailPlanningText.text = $"기획: {Mathf.RoundToInt(data.planning)}";
-        detailDevelopText.text = $"개발: {Mathf.RoundToInt(data.develop)}";
-        detailArtText.text = $"아트: {Mathf.RoundToInt(data.art)}";
-        detailCreativityText.text = $"창의성: {Mathf.RoundToInt(data.creativity)}";
-        detailBugText.text = $"버그: {Mathf.RoundToInt(data.bug)}";
-        if (detailUnitsText != null) detailUnitsText.gameObject.SetActive(false); // 판매량 표시 제거 — 매출 단일화
         detailRevenueText.text = $"매출: {data.totalRevenue:N0}G";
-        detailDateText.text = $"출시일: {data.year}년 {data.month}월 {data.week}주";
-        if (detailQualityScoreText != null)
-            detailQualityScoreText.text = $"품질 점수: {data.qualityScore:F1}";
         if (detailCriticTotalText != null)
-            detailCriticTotalText.text = $"평론가 총점: {data.criticTotalScore}";
+            detailCriticTotalText.text = $"{data.criticTotalScore}";
+        if (detailBestRankText != null)
+            detailBestRankText.text = data.bestRank > 0 ? $"최고 순위: {data.bestRank}위" : "최고 순위: 순위권 밖";
 
         listPanel.SetActive(false);
         detailPanel.SetActive(true);

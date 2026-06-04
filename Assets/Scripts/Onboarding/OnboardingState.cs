@@ -11,6 +11,10 @@ public static class OnboardingState
     const string KEY_PROJ_TUT   = "onboarding_project_tutorial_done";    // 프로젝트 튜토리얼 완료
     const string KEY_PROJ_PEND  = "onboarding_project_tutorial_pending"; // 프로젝트 튜토리얼 카운트다운(-1 없음/0 실행대기/>0 남은주차)
 
+    // 튜토리얼 dim 이 떠 있는 동안 true (세션 전용, 저장 안 함).
+    // 시간 정지 중에도 메뉴 버튼을 숨기지 않도록 MenuController 가 참조.
+    public static bool TutorialActive { get; set; }
+
     public static bool IntroDone => PlayerPrefs.GetInt(KEY_INTRO, 0) == 1;
     public static void MarkIntroDone()
     {

@@ -18,6 +18,7 @@ public class CompletedProjectData
     public int    week;
     public float  qualityScore;
     public int    criticTotalScore;
+    public int    bestRank;          // Sales 중 도달한 가장 높은(작은 숫자) 순위. 0 = 순위권 밖
 
     public BackEnd.Param ToParam()
     {
@@ -37,6 +38,7 @@ public class CompletedProjectData
         param.Add("week",             week);
         param.Add("qualityScore",     qualityScore);
         param.Add("criticTotalScore", criticTotalScore);
+        param.Add("bestRank",         bestRank);
         return param;
     }
 
@@ -59,6 +61,7 @@ public class CompletedProjectData
         data.week             = SafeInt(row,   "week",             1);
         data.qualityScore     = SafeFloat(row, "qualityScore",     0f);
         data.criticTotalScore = SafeInt(row,   "criticTotalScore", 0);
+        data.bestRank         = SafeInt(row,   "bestRank",         0);
         return data;
     }
 

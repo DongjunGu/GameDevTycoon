@@ -548,7 +548,7 @@ MonoBehaviour:
   - image: {fileID: 699180605}
     clearBefore: 0
     line: "\uB0B4\uAC00 \uD53C\uB540\uC744 \uD758\uB824\uC11C \uB9CC\uB4E0 \uC138\uACC4
-      \uCD5C\uACE0\uC758 \uAC8C\uC784 \uD68C\uC0AC  \uC870\uC870 \uAC8C\uC784\uC988"
+      \uCD5C\uACE0\uC758 \uAC8C\uC784 \uD68C\uC0AC \uC870\uC870 \uAC8C\uC784\uC988"
     autoPan: 1
     panDuration: 2.5
     autoZoom: 0
@@ -558,6 +558,8 @@ MonoBehaviour:
     zoomFadeChild: {fileID: 0}
     waitForAnim: 0
     animator: {fileID: 0}
+    autoAdvance: 0
+    autoAdvanceDelay: 2
   - image: {fileID: 1708937007}
     clearBefore: 1
     line: "\uC815\uC810\uC5D0\uC11C \uAC00\uC7A5 \uBBFF\uC5C8\uB358 \uCE5C\uAD6C\uAC00
@@ -571,6 +573,8 @@ MonoBehaviour:
     zoomFadeChild: {fileID: 0}
     waitForAnim: 1
     animator: {fileID: 0}
+    autoAdvance: 0
+    autoAdvanceDelay: 2
   - image: {fileID: 303565566}
     clearBefore: 1
     line: 
@@ -583,6 +587,8 @@ MonoBehaviour:
     zoomFadeChild: {fileID: 0}
     waitForAnim: 1
     animator: {fileID: 0}
+    autoAdvance: 1
+    autoAdvanceDelay: 1
   - image: {fileID: 2122676338}
     clearBefore: 1
     line: "\uCE5C\uAD6C\uB77C\uC11C \uBAA8\uB4E0\uAC78 \uB2E4 \uBBFF\uC5C8\uB358\uAC8C
@@ -596,6 +602,8 @@ MonoBehaviour:
     zoomFadeChild: {fileID: 0}
     waitForAnim: 1
     animator: {fileID: 0}
+    autoAdvance: 0
+    autoAdvanceDelay: 2
   - image: {fileID: 657707849}
     clearBefore: 1
     line: "\uB0B4 \uBAA8\uB4E0 \uAC78 \uBC14\uCE5C \uD68C\uC0AC\uAC00 \uC0AC\uB77C\uC84C\uC73C\uB2C8,
@@ -609,6 +617,8 @@ MonoBehaviour:
     zoomFadeChild: {fileID: 0}
     waitForAnim: 0
     animator: {fileID: 0}
+    autoAdvance: 0
+    autoAdvanceDelay: 2
   - image: {fileID: 950951755}
     clearBefore: 1
     line: 
@@ -617,10 +627,12 @@ MonoBehaviour:
     autoZoom: 1
     zoomDuration: 3
     zoomFrom: 1
-    zoomTo: 3
+    zoomTo: 1
     zoomFadeChild: {fileID: 1337154572}
-    waitForAnim: 0
+    waitForAnim: 1
     animator: {fileID: 0}
+    autoAdvance: 1
+    autoAdvanceDelay: 2
   - image: {fileID: 1010676472}
     clearBefore: 1
     line: "\uC5EC\uAE34 \uC5B4\uB514\uC9C0...? \uB09C \uBD84\uBA85 \uBE4C\uB529 \uC625\uC0C1\uC5D0\uC11C
@@ -634,6 +646,8 @@ MonoBehaviour:
     zoomFadeChild: {fileID: 0}
     waitForAnim: 0
     animator: {fileID: 0}
+    autoAdvance: 1
+    autoAdvanceDelay: 2
   - image: {fileID: 926551319}
     clearBefore: 1
     line: "???: \uB300\uD45C\uB2D8! \uCCAB\uB0A0\uBD80\uD130 \uC8FC\uBB34\uC2DC\uBA74
@@ -647,6 +661,8 @@ MonoBehaviour:
     zoomFadeChild: {fileID: 0}
     waitForAnim: 0
     animator: {fileID: 0}
+    autoAdvance: 1
+    autoAdvanceDelay: 2
   clickLockSeconds: 1.2
   fadeDuration: 0.4
   dialogueBox: {fileID: 50539217}
@@ -2466,7 +2482,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: 0b1b193b0f193834e828d176c12b7b1d, type: 3}
+  m_Sprite: {fileID: 21300000, guid: f7901dd320ad63d4abffa340d61be79e, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1

@@ -270,6 +270,7 @@ public class SalesUI : MonoBehaviour
                 valueLabel.text = $"{revenuePerPeriod[i]:N0}G";
                 cumulativeRevenue = endRevenue;
                 totalRevenueText.text = $"총 매출: {cumulativeRevenue:N0}G";
+                UpdateBestRank(CalcRank(revenuePerPeriod[i])); // 복원 시에도 최고순위 누적
                 continue;
             }
 
@@ -309,6 +310,7 @@ public class SalesUI : MonoBehaviour
             if (firstSaleBonusPct > 0)
                 weeklyRevenue = Mathf.RoundToInt(weeklyRevenue * (1f + firstSaleBonusPct / 100f));
             int rank = CalcRank(weeklyRevenue);
+            UpdateBestRank(rank);
             valueLabel.text = $"{revenuePerPeriod[i]:N0}G";
             if (rankText != null)
                 rankText.text = rank > 0 ? $"{rank}위" : "순위권 밖";
@@ -376,6 +378,14 @@ public class SalesUI : MonoBehaviour
             ProjectSaveManager.Instance.SaveProject();
             GameTimeManager.Instance.SaveGameTime();
         }
+    }
+
+    // 판매 기간 중 도달한 가장 높은(작은 숫자) 순위를 현재 프로젝트에 기록
+    void UpdateBestRank(int rank)
+    {
+        if (rank <= 0 || _currentSalesProject == null) return;
+        if (_currentSalesProject.bestRank == 0 || rank < _currentSalesProject.bestRank)
+            _currentSalesProject.bestRank = rank;
     }
 
     int CalcRank(int weeklyRevenue)

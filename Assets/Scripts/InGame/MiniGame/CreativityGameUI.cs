@@ -13,7 +13,6 @@ using TMPro;
 //        ├─ TitleText (TMP)
 //        ├─ BodyLayout (HorizontalLayoutGroup, spacing 20)
 //        │  ├─ GridArea
-//        │  │  ├─ GridNameText (TMP)   ← [_gridNameText]
 //        │  │  └─ Grid (CreativityGameGridUI) ← [_gridUI]
 //        │  └─ BlockTrayArea (VerticalLayoutGroup, spacing 16)
 //        │     ├─ ScoreText (TMP)        ← [_scoreText]
@@ -60,12 +59,17 @@ public class CreativityGameUI : MonoBehaviour
 
     [Header("UI")]
     [SerializeField] TextMeshProUGUI _scoreText;
-    [SerializeField] TextMeshProUGUI _gridNameText;
     [SerializeField] Button          _confirmBtn;
 
+    [Header("테크트리 단계 표시")]
+    [Tooltip("창의성 단계 (creat_box2/3)")]
+    [SerializeField] TextMeshProUGUI _gridBagLevelText;
+    [Tooltip("블록 가치 단계 (creat_value1/2/3)")]
+    [SerializeField] TextMeshProUGUI _gridBlockLevelText;
+
     [Header("퍼펙트 보너스")]
-    [Tooltip("그리드를 전부 채우면 활성화되는 텍스트 (씬에서 비활성 상태로 배치)")]
-    [SerializeField] GameObject _perfectBonusText;
+    [Tooltip("그리드를 전부 채우면 텍스트가 채워지는 라벨 (항상 활성, 보너스 없으면 공백)")]
+    [SerializeField] TextMeshProUGUI _perfectBonusText;
 
     [Header("아이템 (랜덤/전설 블록)")]
     [Tooltip("랜덤 블록 보유 개수 텍스트 (예: x3)")]
@@ -110,6 +114,19 @@ public class CreativityGameUI : MonoBehaviour
         }
     }
 
+    // 블록 가치 단계: 기본 1, creat_value1/2/3 해금에 따라 2/3/4
+    public int BlockValueLevel
+    {
+        get
+        {
+            if (TechTreeManager.Instance == null) return 1;
+            if (TechTreeManager.Instance.IsUnlocked("creat_value3")) return 4;
+            if (TechTreeManager.Instance.IsUnlocked("creat_value2")) return 3;
+            if (TechTreeManager.Instance.IsUnlocked("creat_value1")) return 2;
+            return 1;
+        }
+    }
+
     // ── 런타임 ───────────────────────────────────────────────────────────────
     private int _score;
     private readonly List<CreativityGameBlockUI> _activeBlocks = new();
@@ -146,16 +163,24 @@ public class CreativityGameUI : MonoBehaviour
         _onClose = onClose;
         _score   = 0;
         _panel.SetActive(true);
+        GameTimeManager.Instance?.StopTime(); // 미니게임 동안 시간 정지 (OnClickConfirm 의 StartTime 과 1:1)
 
         var gridShape = _fixedGrid ?? CreativityGameData.Grids[Random.Range(0, CreativityGameData.Grids.Length)];
         _gridUI.BuildGrid(gridShape);
 
-        if (_gridNameText != null)
-            _gridNameText.text = $"그리드: {gridShape.name}";
-
         UpdateScore();
         SpawnEarnedBlocks();
         RefreshItemControls();
+        RefreshLevelTexts();
+    }
+
+    // 테크트리 창의성/블록 가치 단계 표시 갱신
+    void RefreshLevelTexts()
+    {
+        if (_gridBagLevelText != null)
+            _gridBagLevelText.text = $"창의성 {CreativityLevel}단계";
+        if (_gridBlockLevelText != null)
+            _gridBlockLevelText.text = $"블록 가치 {BlockValueLevel}단계";
     }
 
     // ── 아이템 (랜덤/전설 블록) ─────────────────────────────────────────────
@@ -168,6 +193,8 @@ public class CreativityGameUI : MonoBehaviour
         if (_blockLegendaryCountText != null) _blockLegendaryCountText.text = $"x{legCount}";
         if (_blockRandomUseBtn       != null) _blockRandomUseBtn.interactable    = rndCount > 0;
         if (_blockLegendaryUseBtn    != null) _blockLegendaryUseBtn.interactable = legCount > 0;
+
+        BlockItemPanelUI.Instance?.Refresh();
     }
 
     void OnClickUseItem(string itemId)
@@ -196,7 +223,7 @@ public class CreativityGameUI : MonoBehaviour
         var glg = _blockTray.GetComponent<GridLayoutGroup>();
         if (glg == null) glg = _blockTray.gameObject.AddComponent<GridLayoutGroup>();
         glg.constraint      = GridLayoutGroup.Constraint.FixedColumnCount;
-        glg.constraintCount = 5;
+        glg.constraintCount = 4;
         glg.cellSize        = new Vector2(slotSz, slotSz);
         glg.spacing         = new Vector2(20f, 20f);
         glg.childAlignment  = TextAnchor.MiddleCenter;
@@ -226,7 +253,7 @@ public class CreativityGameUI : MonoBehaviour
         var (slotSz, _) = CalcSlotAndPreviewCell(10);
 
         var glg = _blockTray.GetComponent<GridLayoutGroup>();
-        if (glg != null) { glg.constraintCount = 5; glg.cellSize = new Vector2(slotSz, slotSz); glg.spacing = new Vector2(20, 20); glg.childAlignment = TextAnchor.MiddleCenter; }
+        if (glg != null) { glg.constraintCount = 4; glg.cellSize = new Vector2(slotSz, slotSz); glg.spacing = new Vector2(20, 20); glg.childAlignment = TextAnchor.MiddleCenter; }
 
         for (int i = 0; i < 10; i++)
         {
@@ -240,16 +267,13 @@ public class CreativityGameUI : MonoBehaviour
     {
         var trayRT = _blockTray.GetComponent<RectTransform>();
         float trayW = trayRT.rect.width;
-        float trayH = trayRT.rect.height;
 
-        int cols    = 5;
-        int rows    = Mathf.CeilToInt((float)count / cols);
+        int cols    = 4;
         float space = 20f;
 
+        // 세로 스크롤: 셀 크기는 너비(5열)에 맞춰 고정, 행이 늘면 ContentSizeFitter가 높이를 늘려 스크롤됨
         float byW = (trayW - space * (cols - 1)) / cols;
-        float byH = trayH > 0f ? (trayH - space * (rows - 1)) / rows : byW;
-
-        float slotSz     = Mathf.Max(Mathf.Min(byW, byH), 60f);
+        float slotSz     = Mathf.Max(byW, 60f);
         float previewCell = Mathf.Floor(slotSz / 5f);
         return (slotSz, previewCell);
     }
@@ -268,7 +292,7 @@ public class CreativityGameUI : MonoBehaviour
         var glg = _blockTray.GetComponent<GridLayoutGroup>();
         if (glg == null) glg = _blockTray.gameObject.AddComponent<GridLayoutGroup>();
         glg.constraint      = GridLayoutGroup.Constraint.FixedColumnCount;
-        glg.constraintCount = 5;
+        glg.constraintCount = 4;
         glg.cellSize        = new Vector2(slotSz, slotSz);
         glg.spacing         = new Vector2(20f, 20f);
         glg.childAlignment  = TextAnchor.MiddleCenter;
@@ -311,7 +335,7 @@ public class CreativityGameUI : MonoBehaviour
         var glg = _blockTray.GetComponent<GridLayoutGroup>();
         if (glg == null) glg = _blockTray.gameObject.AddComponent<GridLayoutGroup>();
         glg.constraint      = GridLayoutGroup.Constraint.FixedColumnCount;
-        glg.constraintCount = 5;
+        glg.constraintCount = 4;
         glg.cellSize        = new Vector2(slotSz, slotSz);
         glg.spacing         = new Vector2(20f, 20f);
         glg.childAlignment  = TextAnchor.MiddleCenter;
@@ -409,7 +433,7 @@ public class CreativityGameUI : MonoBehaviour
                 : $"창의성 +{_score}";
         }
         if (_perfectBonusText != null)
-            _perfectBonusText.SetActive(bonus > 0);
+            _perfectBonusText.text = bonus > 0 ? "퍼펙트 보너스!" : "";
     }
 
     // 디버그: 그리드 전부 강제 채움 → 퍼펙트 보너스 표시 테스트
@@ -436,6 +460,7 @@ public class CreativityGameUI : MonoBehaviour
             DevelopmentPanelUI.Instance.AddValuesInstant(0f, 0f, 0f, 0f, score);
 
         _panel.SetActive(false);
+        GameTimeManager.Instance?.StartTime(); // Open 의 StopTime 해소 (이후 콜백의 AlertUI 가 자체적으로 다시 정지)
         var cb = _onClose;
         _onClose = null;
         cb?.Invoke();

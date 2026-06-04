@@ -69,6 +69,7 @@ public class CompletedProjectManager : MonoBehaviour
     {
         var param = new BackEnd.Param();
         param.Add("totalRevenue", data.totalRevenue);
+        param.Add("bestRank",     data.bestRank);
 
         Backend.GameData.UpdateV2("CompletedProjects", data.rowInDate, Backend.UserInDate, param, bro =>
         {
