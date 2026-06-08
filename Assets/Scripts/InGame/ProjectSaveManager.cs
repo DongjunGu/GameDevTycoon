@@ -77,6 +77,7 @@ public class ProjectSaveManager : MonoBehaviour
     private bool   _loadedPendingCreativityGame;
     private bool   _loadedPendingDebuggingAlert;
     private string _loadedUsedGameUpgrades = "";
+    private string _loadedContributionJson = "";
 
     private string _loadedProjectName = "프로젝트명";
     public string GetLoadedProjectName() => _loadedProjectName;
@@ -161,6 +162,7 @@ public class ProjectSaveManager : MonoBehaviour
         param.Add("pendingCreativityGame", dm.IsPendingCreativityGame);
         param.Add("pendingDebuggingAlert", dm.IsPendingDebuggingAlert);
         param.Add("usedGameUpgrades", dm.GetUsedGameUpgradesString());
+        param.Add("contributionJson", dm.GetContributionJson());
 
         if (!string.IsNullOrEmpty(_rowInDate))
         {
@@ -298,6 +300,7 @@ public class ProjectSaveManager : MonoBehaviour
             _loadedPendingCreativityGame         = SafeBool(row, "pendingCreativityGame", false);
             _loadedPendingDebuggingAlert         = SafeBool(row, "pendingDebuggingAlert", false);
             _loadedUsedGameUpgrades              = SafeString(row, "usedGameUpgrades", "");
+            _loadedContributionJson             = SafeString(row, "contributionJson", "");
 
             Debug.Log($"프로젝트 로드 완료: stage={_loadedStage} elapsed={_loadedElapsed:F1}");
             onComplete?.Invoke();
@@ -346,6 +349,7 @@ public class ProjectSaveManager : MonoBehaviour
         CreativityGameUI.Instance?.RestoreEarnedBlocks(_loadedEarnedBlocks);
         CreativityGameUI.Instance?.RestoreFixedGrid(_loadedFixedGridName);
         DevelopmentManager.Instance.RestoreUsedGameUpgrades(_loadedUsedGameUpgrades);
+        DevelopmentManager.Instance.RestoreContribution(_loadedContributionJson);
         RandomEventManager.Instance.InvestmentAccepted  = _loadedInvestmentAccepted;
         RandomEventManager.Instance.InvestmentStat      = _loadedInvestmentStat;
         RandomEventManager.Instance.InvestmentStatName  = _loadedInvestmentStatName;

@@ -21,6 +21,87 @@ public class DevelopmentManager : MonoBehaviour
     public EmployeeData artistLeader;
     public float GetElapsed() => _elapsed;
 
+    // 직원별 프로젝트 기여도 (팀장점수 + 상시개발값 누적) — ResetProject 시 초기화
+    private readonly System.Collections.Generic.Dictionary<string, float> _employeeContribution = new();
+
+    public void AddEmployeeContribution(string empId, float amount)
+    {
+        if (string.IsNullOrEmpty(empId) || amount <= 0f) return;
+        _employeeContribution.TryGetValue(empId, out float cur);
+        _employeeContribution[empId] = cur + amount;
+    }
+
+    // 기여도 1등 직원과 전체 대비 퍼센트(0~100) 반환. 기여 기록 없으면 (null, 0).
+    public (EmployeeData emp, float percent) GetTopContributor()
+    {
+        if (_employeeContribution.Count == 0) return (null, 0f);
+        float total = 0f;
+        foreach (var v in _employeeContribution.Values) total += v;
+        if (total <= 0f) return (null, 0f);
+
+        string topId = null; float topVal = -1f;
+        foreach (var kv in _employeeContribution)
+            if (kv.Value > topVal) { topVal = kv.Value; topId = kv.Key; }
+
+        var emp = EmployeeManager.Instance?.ownedEmployees.Find(e => e.id == topId);
+        // CEO 는 ownedEmployees 에 없으므로 별도 매칭
+        if (emp == null && EmployeeManager.Instance?.CEO != null && EmployeeManager.Instance.CEO.id == topId)
+            emp = EmployeeManager.Instance.CEO;
+        return (emp, topVal / total * 100f);
+    }
+
+    // 기여도 내림차순 순위 리스트 (직원/CEO, 퍼센트). 기여 없으면 빈 리스트.
+    public System.Collections.Generic.List<(EmployeeData emp, float percent)> GetContributionRanking()
+    {
+        var result = new System.Collections.Generic.List<(EmployeeData, float)>();
+        if (_employeeContribution.Count == 0) return result;
+
+        float total = 0f;
+        foreach (var v in _employeeContribution.Values) total += v;
+        if (total <= 0f) return result;
+
+        var sorted = new System.Collections.Generic.List<System.Collections.Generic.KeyValuePair<string, float>>(_employeeContribution);
+        sorted.Sort((a, b) => b.Value.CompareTo(a.Value));
+
+        foreach (var kv in sorted)
+        {
+            var emp = EmployeeManager.Instance?.ownedEmployees.Find(e => e.id == kv.Key);
+            if (emp == null && EmployeeManager.Instance?.CEO != null && EmployeeManager.Instance.CEO.id == kv.Key)
+                emp = EmployeeManager.Instance.CEO;
+            result.Add((emp, kv.Value / total * 100f));
+        }
+        return result;
+    }
+
+    // 직원별 기여도 직렬화/복원 ("id:score|id:score..."). id 는 GUID 라 콜론/파이프 없음.
+    public string GetContributionJson()
+    {
+        if (_employeeContribution.Count == 0) return "";
+        var sb = new System.Text.StringBuilder();
+        foreach (var kv in _employeeContribution)
+        {
+            if (sb.Length > 0) sb.Append('|');
+            sb.Append(kv.Key).Append(':')
+              .Append(kv.Value.ToString("F2", System.Globalization.CultureInfo.InvariantCulture));
+        }
+        return sb.ToString();
+    }
+
+    public void RestoreContribution(string data)
+    {
+        _employeeContribution.Clear();
+        if (string.IsNullOrEmpty(data)) return;
+        foreach (var part in data.Split('|'))
+        {
+            int idx = part.LastIndexOf(':');
+            if (idx <= 0) continue;
+            string id = part.Substring(0, idx);
+            if (float.TryParse(part.Substring(idx + 1), System.Globalization.NumberStyles.Float,
+                               System.Globalization.CultureInfo.InvariantCulture, out float val))
+                _employeeContribution[id] = val;
+        }
+    }
+
     [Header("Leader Settings")]
     public float leaderTickDelay = 0.5f;
 
@@ -718,6 +799,8 @@ public class DevelopmentManager : MonoBehaviour
             scores[i] = total * weights[i] / weightSum;
 
         int leaderCount = employee.consecutiveLeaderCount;
+        // 기여도: 팀장점수(total)를 팀장 직원에게 누적
+        AddEmployeeContribution(employee.id, total);
         GameTimeManager.Instance.StopTime();
         LeaderScoreUI.Instance.Show(employee, type, scores, leaderTickDelay, hunsuBonus, hunsuBonusTarget, () =>
         {
@@ -1171,6 +1254,8 @@ public class DevelopmentManager : MonoBehaviour
                 var earnedBlock = CreativityGameData.DrawRandomBlock();
                 CreativityGameUI.Instance?.AddEarnedBlock(earnedBlock);
                 OfficeManager.Instance?.ShowBlockPopup(employee.id, earnedBlock.cells, earnedBlock.color);
+                // 기여도: 블록 획득 = 창의성 5점으로 간주
+                AddEmployeeContribution(employee.id, 5f);
                 break;
             }
 
@@ -1195,6 +1280,8 @@ public class DevelopmentManager : MonoBehaviour
         }
 
         DevelopmentPanelUI.Instance.AddValues(planning, develop, art, bug, creativity);
+        // 기여도: 양수 개발 산출(기획/개발/아트)을 직원별 누적 (버그/창의성 제외)
+        AddEmployeeContribution(employee.id, planning + develop + art);
         UpdateInvestmentProgress();
     }
     public void ResetProject()
@@ -1234,6 +1321,7 @@ public class DevelopmentManager : MonoBehaviour
         _tickOrderMap.Clear();
         _midDevSeeds.Clear();
         _midDevElapsed.Clear();
+        _employeeContribution.Clear();
 
         if (_bugFixCoroutine != null)
         {

@@ -78,6 +78,12 @@ public class MarketingUI : MonoBehaviour
     }
     void OnClickMarketing(string name, int cost)
     {
+        string msg = $"{cost:N0}G를 사용하여\n{name} 마케팅을\n하시겠습니까?";
+        ConfirmUI.Instance.Show(msg, () => ApplyMarketing(name, cost), null, "네", "아니오");
+    }
+
+    void ApplyMarketing(string name, int cost)
+    {
         if (cost > 0 && !MoneyManager.Instance.CanAfford(cost))
         {
             GameUIHelper.ShowLoanPrompt();
@@ -90,7 +96,6 @@ public class MarketingUI : MonoBehaviour
         _countMap[name]++;
         _totalCost += cost;
         UpdateUI();
-        MarketingNoticeUI.Instance.Show(name);
     }
 
     public void OnClickComplete()

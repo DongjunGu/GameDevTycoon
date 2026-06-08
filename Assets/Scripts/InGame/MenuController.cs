@@ -4,6 +4,7 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
+using DG.Tweening;
 
 // ═══════════════════════════════════════════════════════════════════════════
 // 씬 세팅 가이드
@@ -144,9 +145,13 @@ public class MenuController : MonoBehaviour
     {
         if (_topOpen || topMenuContainer == null) return;
         _topOpen = true;
+        if (_topAnim != null) { StopCoroutine(_topAnim); _topAnim = null; }
+        topMenuContainer.DOKill();
         topMenuContainer.gameObject.SetActive(true);
-        topMenuContainer.anchoredPosition = _topOpenPos + topClosedOffset;
-        StartTopAnim(_topOpenPos, null);
+        topMenuContainer.anchoredPosition = _topOpenPos;
+        // 촤르륵 펼침 — 세로로 접힌 상태에서 OutBack 으로 펴짐
+        topMenuContainer.localScale = new Vector3(1f, 0f, 1f);
+        topMenuContainer.DOScaleY(1f, slideDuration).SetEase(Ease.OutBack).SetUpdate(true);
     }
 
     public void CloseTopMenu()
@@ -161,8 +166,14 @@ public class MenuController : MonoBehaviour
             _activeSub = null;
         }
 
-        StartTopAnim(_topOpenPos + topClosedOffset,
-            () => topMenuContainer.gameObject.SetActive(false));
+        if (_topAnim != null) { StopCoroutine(_topAnim); _topAnim = null; }
+        topMenuContainer.DOKill();
+        topMenuContainer.DOScaleY(0f, slideDuration).SetEase(Ease.InBack).SetUpdate(true)
+            .OnComplete(() =>
+            {
+                topMenuContainer.gameObject.SetActive(false);
+                topMenuContainer.localScale = Vector3.one;
+            });
     }
 
     // ── 내부 ─────────────────────────────────────────────────────────────────
@@ -205,12 +216,6 @@ public class MenuController : MonoBehaviour
         var rt      = tm.subMenu;
         _subAnims[tm] = StartCoroutine(SlideTo(rt, openPos + subClosedOffset, slideDuration,
             () => rt.gameObject.SetActive(false)));
-    }
-
-    void StartTopAnim(Vector2 target, System.Action onDone)
-    {
-        if (_topAnim != null) StopCoroutine(_topAnim);
-        _topAnim = StartCoroutine(SlideTo(topMenuContainer, target, slideDuration, onDone));
     }
 
     // ── 외부 클릭 감지 (열려있을 때 다른 곳 누르면 닫음) ───────────────────

@@ -38,7 +38,8 @@
       "Bash(grep -niE \"public void Show|public.*Show\\\\\\(\" Assets/Scripts/**/ConfirmUI.cs)",
       "Bash(grep -niE \"EndRun|IsPlaying|SetPlaying|playing|public void\" Assets/Scripts/**/RunStateManager.cs)",
       "Bash(grep -viE \"MoneyManager|class |public bool Spend|public void|//|=> _gold|=> _diamond\")",
-      "mcp__UnityMCP__manage_scriptable_object"
+      "mcp__UnityMCP__manage_scriptable_object",
+      "mcp__UnityMCP__delete_script"
     ]
   }
 }

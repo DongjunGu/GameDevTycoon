@@ -17,8 +17,15 @@ public class CriticReviewUI : MonoBehaviour
     public TextMeshProUGUI[] criticCommentTexts; // 한줄평
 
     [Header("Total Score")]
-    public GameObject totalScoreObject;       // 총점 오브젝트 (확인 버튼 위에 배치)
-    public TextMeshProUGUI totalScoreText;    // "총점: XX / 40"
+    public GameObject totalScoreObject;       // 점수 패널 오브젝트 (게임명 + 평점)
+    public TextMeshProUGUI nameText;          // "게임명: {게임명}"
+    public TextMeshProUGUI totalScoreText;    // "유저 평점: {점수}"
+
+    [Header("Stamp")]
+    public GameObject stampImage;             // 평점 뒤 "쾅" 찍히는 도장
+    public float stampDelay = 0.3f;           // 평점 출력 후 도장까지 대기
+    public float stampPunchDuration = 0.12f;  // 도장 축소 연출 시간
+    public float stampStartScale = 2.5f;      // 도장 시작 배율 (크게 → 1배)
 
     [Header("Settings")]
     public float criticRevealDelay = 1.5f; // 평론가 등장 간격
@@ -30,7 +37,9 @@ public class CriticReviewUI : MonoBehaviour
 
     private static readonly string[] CriticNames =
     {
-        "김게임 (게임월드)"
+        "김게임 (게임월드)",
+        "이리뷰 (게임인사이드)",
+        "박평점 (겜스코어)"
     };
 
     // 점수별 멘트 풀
@@ -119,16 +128,18 @@ public class CriticReviewUI : MonoBehaviour
     {
         _onComplete = onComplete;
 
-        criticSlots[0].SetActive(true);
-        criticNameTexts[0].text    = "";
-        criticScoreTexts[0].text   = "";
-        criticCommentTexts[0].text = "";
+        // 점수 패널은 계속 활성 — 텍스트만 라벨 상태로 비워둔다
+        if (totalScoreObject != null) totalScoreObject.SetActive(true);
+        if (nameText != null)       nameText.text       = "게임명: ";
+        if (totalScoreText != null) totalScoreText.text = "유저 평점: ";
 
-        for (int i = 1; i < criticSlots.Length; i++)
-            criticSlots[i].SetActive(false);
+        // 도장 숨김 (평점 출력 후 찍힘)
+        if (stampImage != null) stampImage.SetActive(false);
 
-        if (totalScoreObject != null) totalScoreObject.SetActive(false);
-        confirmButton.gameObject.SetActive(false);
+        // 슬롯은 전부 비활성화 → 순차 활성화 준비
+        for (int i = 0; i < criticSlots.Length; i++)
+            if (criticSlots[i] != null) criticSlots[i].SetActive(false);
+
         GameTimeManager.Instance?.StopTime();
         reviewPanel.SetActive(true);
 
@@ -139,24 +150,62 @@ public class CriticReviewUI : MonoBehaviour
     {
         int variation = UnityEngine.Random.Range(-3, 4);
         int score = Mathf.Clamp(CalcCriticScore(rawScore) + variation, 0, 100);
+        LastCriticTotal = score;
+
+        string gameName = DevelopmentResultUI.Instance != null
+            ? DevelopmentResultUI.Instance.LastProjectName : "";
 
         yield return new WaitForSeconds(criticRevealDelay);
 
-        criticNameTexts[0].text    = CriticNames[0];
-        criticScoreTexts[0].text   = $"{score}점";
-        criticCommentTexts[0].text = GetComment(score, 0);
-
+        // 게임명 출력
+        if (nameText != null) nameText.text = $"게임명: {gameName}";
         yield return new WaitForSeconds(0.5f);
 
-        LastCriticTotal = score;
-        if (totalScoreObject != null && totalScoreText != null)
-        {
-            totalScoreText.text = $"총점: {score} / 100";
-            totalScoreObject.SetActive(true);
-        }
+        // 유저 평점 출력
+        if (totalScoreText != null) totalScoreText.text = $"유저 평점: {score}점";
 
-        yield return new WaitForSeconds(0.3f);
-        confirmButton.gameObject.SetActive(true);
+        // 평점 출력 후 도장 "쾅"
+        yield return new WaitForSeconds(stampDelay);
+        yield return StartCoroutine(StampPunch());
+
+        // 슬롯 순서대로 활성화 (각 슬롯에 이름/점수/코멘트 분배)
+        for (int i = 0; i < criticSlots.Length; i++)
+        {
+            if (i < criticNameTexts.Length && criticNameTexts[i] != null)
+                criticNameTexts[i].text = CriticNames[i % CriticNames.Length];
+            if (i < criticScoreTexts.Length && criticScoreTexts[i] != null)
+                criticScoreTexts[i].text = $"{score}점";
+            if (i < criticCommentTexts.Length && criticCommentTexts[i] != null)
+                criticCommentTexts[i].text = GetComment(score, i);
+
+            if (criticSlots[i] != null) criticSlots[i].SetActive(true);
+            yield return new WaitForSeconds(0.5f);
+        }
+    }
+
+    IEnumerator StampPunch()
+    {
+        if (stampImage == null) yield break;
+
+        Transform t = stampImage.transform;
+        Vector3 from = Vector3.one * stampStartScale;
+        Vector3 to   = Vector3.one;
+
+        t.localScale = from;
+        stampImage.SetActive(true);
+
+        float dur = Mathf.Max(0.01f, stampPunchDuration);
+        float el = 0f;
+        while (el < dur)
+        {
+            el += Time.deltaTime;
+            float k = Mathf.Clamp01(el / dur);
+            // ease-out — 빠르게 줄어들며 "쾅" 찍히는 느낌
+            float eased = 1f - (1f - k) * (1f - k);
+            t.localScale = Vector3.LerpUnclamped(from, to, eased);
+            yield return null;
+        }
+        t.localScale = to;
     }
 
 int CalcCriticScore(float x)
