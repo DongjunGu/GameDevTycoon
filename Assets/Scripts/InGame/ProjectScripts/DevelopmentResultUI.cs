@@ -20,6 +20,17 @@ public class DevelopmentResultUI : MonoBehaviour
     public TextMeshProUGUI scaleResultText;
     public TextMeshProUGUI genreResultText;
     public TextMeshProUGUI platformResultText;
+
+    [Header("Contribution (기여도 1등)")]
+    public Image contributorPortrait;          // Row2/PortraitPanel/portraitImage
+    public TextMeshProUGUI contributorNameText;// Row2/ContributionPanel/nameText
+    public TextMeshProUGUI contributorRateText;// Row2/ContributionPanel/contributionRateText
+
+    [Header("Contribution Detail (전체 순위)")]
+    public GameObject contributionDetailPanel; // 중앙 순위 패널 (closeBtn 자식)
+    public Button contributionCheckBtn;        // 상세 열기 버튼
+    public Button contributionCloseBtn;        // 전체화면 백드롭 닫기 버튼 (CEOInfoUI 방식)
+    public GameObject[] contributionRows;      // RowPanel1~N (numberPanel/namePanel/contriPanel)
     [Header("Project Name")]
     public TextMeshProUGUI projectNameText;
     public TMP_InputField projectNameInput;
@@ -78,6 +89,59 @@ public class DevelopmentResultUI : MonoBehaviour
         Instance = this;
         resultPanel.SetActive(false);
         editNamePanel.SetActive(false);
+        if (contributionDetailPanel != null) contributionDetailPanel.SetActive(false);
+        if (contributionCloseBtn != null) contributionCloseBtn.gameObject.SetActive(false);
+        if (contributionCheckBtn != null)
+        {
+            contributionCheckBtn.onClick.RemoveAllListeners();
+            contributionCheckBtn.onClick.AddListener(OnClickContributionDetail);
+        }
+        if (contributionCloseBtn != null)
+        {
+            contributionCloseBtn.onClick.RemoveAllListeners();
+            contributionCloseBtn.onClick.AddListener(OnCloseContributionDetail);
+        }
+    }
+
+    // 닫기 — 전체화면 백드롭 + 순위 패널 끄고 메인 복귀 (CEOInfoUI.OnClickClose 방식)
+    public void OnCloseContributionDetail()
+    {
+        if (contributionDetailPanel != null) contributionDetailPanel.SetActive(false);
+        if (contributionCloseBtn != null) contributionCloseBtn.gameObject.SetActive(false);
+        resultPanel.SetActive(true);
+    }
+
+    // 기여도 상세 — 메인 끄고 백드롭 + 순위 패널 켜기, 직원 수만큼 RowPanel 채움
+    public void OnClickContributionDetail()
+    {
+        if (contributionDetailPanel == null || contributionRows == null) return;
+
+        resultPanel.SetActive(false);
+        if (contributionCloseBtn != null) contributionCloseBtn.gameObject.SetActive(true);
+        contributionDetailPanel.SetActive(true);
+
+        var ranking = DevelopmentManager.Instance.GetContributionRanking();
+        for (int i = 0; i < contributionRows.Length; i++)
+        {
+            var row = contributionRows[i];
+            if (row == null) continue;
+            if (i < ranking.Count)
+            {
+                row.SetActive(true);
+                SetContributionRow(row, i + 1, ranking[i].emp, ranking[i].percent);
+            }
+            else row.SetActive(false);
+        }
+    }
+
+    void SetContributionRow(GameObject row, int rank, EmployeeData emp, float percent)
+    {
+        var numberText = row.transform.Find("numberPanel")?.GetComponentInChildren<TextMeshProUGUI>();
+        var nameText   = row.transform.Find("namePanel")?.GetComponentInChildren<TextMeshProUGUI>();
+        var rateText   = row.transform.Find("contriPanel")?.GetComponentInChildren<TextMeshProUGUI>();
+        if (numberText != null) numberText.text = rank.ToString();
+        if (nameText != null)   nameText.text   = emp != null ? emp.employeeName : "?";
+        if (rateText != null)   rateText.text   = $"{percent:F0}%";
     }
 
     public void Show(float planning, float develop, float art, float bug, float creativity)
@@ -89,18 +153,34 @@ public class DevelopmentResultUI : MonoBehaviour
         _lastArt = art;
         _lastBug = bug;
         _lastCreativity = creativity;
-        planningText.text = $"기획: {Mathf.RoundToInt(planning)}";
-        developText.text = $"개발: {Mathf.RoundToInt(develop)}";
-        artText.text = $"아트: {Mathf.RoundToInt(art)}";
-        bugText.text = $"버그: {Mathf.RoundToInt(bug)}";
-        creativityText.text = $"창의성: {Mathf.RoundToInt(creativity)}";
+        if (planningText != null)   planningText.text = $"{Mathf.RoundToInt(planning)}";
+        if (developText != null)    developText.text = $"{Mathf.RoundToInt(develop)}";
+        if (artText != null)        artText.text = $"{Mathf.RoundToInt(art)}";
+        if (bugText != null)        bugText.text = $"{Mathf.RoundToInt(bug)}";
+        if (creativityText != null) creativityText.text = $"{Mathf.RoundToInt(creativity)}";
 
-        scaleResultText.text = GetScaleString(ProjectSetupUI.SelectedScale);
-        genreResultText.text = GetGenreString(ProjectSetupUI.SelectedGenre);
-        platformResultText.text = GetPlatformString(ProjectSetupUI.SelectedPlatform);
+        // Row1 — 규모/장르/플랫폼을 각 텍스트에 개별 출력
+        if (scaleResultText != null)    scaleResultText.text    = $"규모: {GetScaleString(ProjectSetupUI.SelectedScale)}";
+        if (genreResultText != null)    genreResultText.text    = $"장르: {GetGenreString(ProjectSetupUI.SelectedGenre)}";
+        if (platformResultText != null) platformResultText.text = $"플랫폼: {GetPlatformString(ProjectSetupUI.SelectedPlatform)}";
+
+        // Row2 — 기여도 1등 직원 초상화 + 이름 + 기여도%
+        var (topEmp, percent) = DevelopmentManager.Instance.GetTopContributor();
+        if (topEmp != null)
+        {
+            if (contributorPortrait != null && !string.IsNullOrEmpty(topEmp.portraitId))
+            {
+                var sprite = Resources.Load<Sprite>($"Portraits/{topEmp.portraitId}");
+                if (sprite != null) contributorPortrait.sprite = sprite;
+            }
+            if (contributorNameText != null) contributorNameText.text = topEmp.employeeName;
+            if (contributorRateText != null) contributorRateText.text = $"기여도 {percent:F0}%";
+        }
 
         projectNameText.text = "프로젝트명";
         GameTimeManager.Instance?.StopTime();
+        if (contributionDetailPanel != null) contributionDetailPanel.SetActive(false);
+        if (contributionCloseBtn != null) contributionCloseBtn.gameObject.SetActive(false);
         resultPanel.SetActive(true);
     }
 

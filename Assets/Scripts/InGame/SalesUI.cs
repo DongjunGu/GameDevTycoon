@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using System.Collections;
+using DG.Tweening;
 
 public class SalesUI : MonoBehaviour
 {
@@ -10,6 +11,15 @@ public class SalesUI : MonoBehaviour
     [Header("Panel")]
     public GameObject salesPanel;
 
+    [Header("Fold Animation")]
+    public GameObject salesPanelOpenBtn;     // 우측하단 펼치기 버튼 (판매중 & 패널 닫힘일 때만 활성)
+    public float foldDuration = 0.3f;        // 접기 시간
+    public float unfoldDuration = 0.35f;     // 펼치기 시간
+    private RectTransform panelRT;
+    private Vector3 _panelOpenLocalPos;
+    private Vector3 _panelOpenScale;
+    private bool _salesInProgress = false;
+
     [Header("Chart")]
     public RectTransform chartArea;   // HorizontalLayoutGroup 오브젝트
     public GameObject barPrefab;      // Bar 프리팹
@@ -17,7 +27,6 @@ public class SalesUI : MonoBehaviour
 
     [Header("UI")]
     public TextMeshProUGUI totalRevenueText;
-    public TextMeshProUGUI qualityScoreText;
     public TextMeshProUGUI rankText;
     private int barCount;
     private ProjectScale _cachedScale;
@@ -45,8 +54,30 @@ public class SalesUI : MonoBehaviour
     {
         if (Instance != null) { Destroy(gameObject); return; }
         Instance = this;
+
+        panelRT = salesPanel.GetComponent<RectTransform>();
+        _panelOpenLocalPos = panelRT.localPosition;
+        _panelOpenScale = panelRT.localScale;
+
+        if (salesPanelOpenBtn != null)
+        {
+            var btn = salesPanelOpenBtn.GetComponent<Button>();
+            if (btn != null) { btn.onClick.RemoveAllListeners(); btn.onClick.AddListener(OnClickOpenPanel); }
+            salesPanelOpenBtn.SetActive(false);
+        }
+
         salesPanel.SetActive(false);
     }
+
+    // 판매중 && 패널 닫힘일 때만 OpenBtn 노출 (패널/버튼 상호 배타)
+    void UpdateOpenBtn()
+    {
+        if (salesPanelOpenBtn != null)
+            salesPanelOpenBtn.SetActive(_salesInProgress && !salesPanel.activeSelf);
+    }
+
+    Vector3 FoldTargetPos()
+        => salesPanelOpenBtn != null ? salesPanelOpenBtn.transform.localPosition : _panelOpenLocalPos;
 
     public void Show(float qualityScore, ProjectScale scale)
     {
@@ -137,8 +168,6 @@ public class SalesUI : MonoBehaviour
 
         foreach (Transform child in chartArea)
             Destroy(child.gameObject);
-
-        qualityScoreText.text = $"품질: {qualityScore:F1}점";
 
         int scaleMultiplier = scale switch
         {
@@ -237,13 +266,22 @@ public class SalesUI : MonoBehaviour
         foreach (var r in revenuePerPeriod) adjustedTotalRevenue += r;
         totalRevenueText.text = $"총 매출: {adjustedTotalRevenue:N0}G";
 
+        // 폴드 잔재 복원 후 활성화
+        panelRT.DOKill();
+        panelRT.localPosition = _panelOpenLocalPos;
+        panelRT.localScale = _panelOpenScale;
         salesPanel.SetActive(true);
+        _salesInProgress = true;
+        UpdateOpenBtn(); // 패널 열림 → OpenBtn 비활성
         StartCoroutine(ShowBarsSequentially(revenuePerPeriod, maxRevenue, completedWeeks));
     }
     IEnumerator ShowBarsSequentially(int[] revenuePerPeriod, int maxRevenue, int completedWeeks = 0)
     {
         yield return null; // ← 한 프레임 대기 후 높이 계산
-        maxBarHeight = chartArea.rect.height * 0.9f;
+        maxBarHeight = chartArea.rect.height * 0.8f;
+
+        // bar 너비 — Small/Medium은 85 고정, Large(9개)만 ChartArea 너비에 맞춰 축소
+        float barWidth = barCount >= 9 ? chartArea.rect.width / barCount - 20f : 85f;
 
         int cumulativeRevenue = 0;
 
@@ -258,6 +296,8 @@ public class SalesUI : MonoBehaviour
             int endRevenue = cumulativeRevenue + revenuePerPeriod[i];
 
             var barObj = Instantiate(barPrefab, chartArea);
+            var barRT = barObj.GetComponent<RectTransform>();
+            barRT.sizeDelta = new Vector2(barWidth, barRT.sizeDelta.y);
             var barImage = barObj.transform.Find("BarImage").GetComponent<RectTransform>();
             var valueLabel = barObj.transform.Find("ValueLabel").GetComponent<TMPro.TextMeshProUGUI>();
             var periodLabel = barObj.transform.Find("PeriodLabel").GetComponent<TMPro.TextMeshProUGUI>();
@@ -354,7 +394,12 @@ public class SalesUI : MonoBehaviour
 
     void OnSalesComplete(int cumulativeRevenue)
     {
+        panelRT.DOKill();
+        panelRT.localPosition = _panelOpenLocalPos;
+        panelRT.localScale = _panelOpenScale;
         salesPanel.SetActive(false);
+        _salesInProgress = false;
+        UpdateOpenBtn(); // 판매 종료 → OpenBtn 비활성
 
         if (_currentSalesProject != null)
         {
@@ -421,9 +466,34 @@ public class SalesUI : MonoBehaviour
         };
     }
 
+    // 확인(닫기) — 우측하단으로 압축되며 접힘
     public void OnClickClose()
     {
-        salesPanel.SetActive(false);
+        panelRT.DOKill();
+        Sequence seq = DOTween.Sequence();
+        seq.Append(panelRT.DOScale(0.05f, foldDuration).SetEase(Ease.InBack));
+        seq.Join(panelRT.DOLocalMove(FoldTargetPos(), foldDuration).SetEase(Ease.InBack));
+        seq.OnComplete(() =>
+        {
+            salesPanel.SetActive(false);
+            panelRT.localPosition = _panelOpenLocalPos;
+            panelRT.localScale = _panelOpenScale;
+            UpdateOpenBtn(); // 닫힘 → (판매중이면) OpenBtn 활성
+        });
+    }
+
+    // 우측하단 버튼 — 압축이 풀리듯 촤라락 펼쳐짐
+    public void OnClickOpenPanel()
+    {
+        panelRT.DOKill();
+        panelRT.localPosition = FoldTargetPos();
+        panelRT.localScale = Vector3.one * 0.05f;
+        salesPanel.SetActive(true);
+        UpdateOpenBtn(); // 열림 → OpenBtn 비활성
+
+        Sequence seq = DOTween.Sequence();
+        seq.Append(panelRT.DOScale(_panelOpenScale, unfoldDuration).SetEase(Ease.OutBack));
+        seq.Join(panelRT.DOLocalMove(_panelOpenLocalPos, unfoldDuration).SetEase(Ease.OutBack));
     }
 
 
