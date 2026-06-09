@@ -228,10 +228,21 @@ public class HiringUI : MonoBehaviour
         ShowSecretaryEvent("면접 확정 후 알려드리겠습니다.", () => GameTimeManager.Instance?.StartTime());
     }
 
-    // 면접 대기 만료(EmployeeManager.OnWeekPassed) 시 호출 — "최종 리스트" 안내 후 후보 리스트 표시.
+    // 면접 대기 만료(EmployeeManager.OnWeekPassed) 또는 재접속 복원 시 호출 — "최종 리스트" 안내 후 후보 리스트 표시.
     public void RevealHiring(int tierIndex)
     {
         BeginCandidateFlow(); // 시간 정지 + 흐름 중 외부 시간재개 방어 가드(퇴사 ForceStartTime 등)
+
+        // 공개 시 1회만 초기(A)·리롤(B) 리스트를 확정·저장 → 재접속해도 동일 리스트(악용 방지).
+        // 이미 확정돼 있으면(재접속 복원) 그대로 재사용.
+        if (!EmployeeManager.Instance.HasHiringLists)
+        {
+            var listA = GenerateCandidateList(tierIndex);
+            var listB = GenerateCandidateList(tierIndex);
+            EmployeeManager.Instance.SetHiringLists(listA, listB);
+            GameTimeManager.Instance?.SaveGameTime(); // 리스트 영속화 (pending 은 유지)
+        }
+
         ShowSecretaryEvent("최종 리스트 전달드리겠습니다.", () => OpenCandidateList(tierIndex));
     }
 
@@ -274,8 +285,8 @@ public class HiringUI : MonoBehaviour
         if (loadingPanel != null) loadingPanel.SetActive(true);
 
         _currentTierIndex = tierIndex;
-        _refreshUsed = false; // 새 진입 시 새로고침 권리 부여
-        LoadAndShowCandidates(tierIndex);
+        _refreshUsed = false; // 새 진입(재접속 복원 포함) 시 새로고침 권리 부여 — 리롤은 무를 수 있음
+        ShowCandidates(EmployeeManager.Instance.GetHiringListA()); // 저장된 초기 리스트
     }
 
     // 비서 초상화 RandomEventUI 안내(EventPanel). 확인 시 onConfirm. type=Recruit 라 시간 강제재개(ResumeFromEvent) 안 함.
@@ -294,27 +305,29 @@ public class HiringUI : MonoBehaviour
         });
     }
 
-    // OnClickTier / OnClickRefresh 공용 — 마지막 진입 티어 기준으로 후보 재로드 후 ShowCandidates.
-    void LoadAndShowCandidates(int tierIndex)
+    // 후보 리스트 1세트 생성(동기) — 등급/능력치/연봉 + 강화 + 확정 채용비용까지. 공개 시 A/B 각각 생성용.
+    List<EmployeeData> GenerateCandidateList(int tierIndex)
     {
         var (label, baseCost, range, weights) = Tiers[tierIndex];
-
-        _currentCandidates.Clear();
         int recruitBonus  = TraitEffectApplier.GetRecruitApplicantsBonus();
         int hiringPenalty = RandomEventManager.Instance?.HiringPenalty ?? 0;
         // 테크트리 '한 명 더!(hire_more)' — 후보 +1
         int hireMoreBonus = (TechTreeManager.Instance != null && TechTreeManager.Instance.IsUnlocked("hire_more")) ? 1 : 0;
         int effectiveCount = Mathf.Max(1, candidateCount + recruitBonus + hireMoreBonus - hiringPenalty);
 
+        List<EmployeeData> result = null;
         EmployeeManager.Instance.LoadRandomCandidates(effectiveCount, tierIndex, candidates =>
         {
             foreach (var employee in candidates)
             {
-                int enhLevel = RollWeighted(range, weights);
-                ApplyEnhancementLevel(employee, enhLevel);
+                ApplyEnhancementLevel(employee, RollWeighted(range, weights));
+                // 채용 비용도 이 시점에 확정(재접속에도 고정) — 후보에 저장.
+                int b = EmployeeManager.GetExpectedEnhanceCost(employee.enhancementLevel);
+                employee.hireCost = Mathf.RoundToInt(b * UnityEngine.Random.Range(0.8f, 1.2f));
             }
-            ShowCandidates(candidates);
+            result = candidates;
         });
+        return result ?? new List<EmployeeData>();
     }
 
     // 테크트리 '한 번 더!(hire_refresh)' — 같은 세션 1회 한정 후보 전체 재추첨. 확인창 없이 즉시 실행.
@@ -326,7 +339,7 @@ public class HiringUI : MonoBehaviour
 
         _refreshUsed = true;
         if (loadingPanel != null) loadingPanel.SetActive(true);
-        LoadAndShowCandidates(_currentTierIndex);
+        ShowCandidates(EmployeeManager.Instance.GetHiringListB()); // 미리 확정된 리롤 리스트
     }
 
     // ConfirmHirePanel 의 새로고침 버튼 — refreshButton 과 같은 1회 가드(_refreshUsed)·해금(hire_refresh)을 공유.
@@ -344,38 +357,27 @@ public class HiringUI : MonoBehaviour
     // 확정 화면에서 후보 재추첨 + 이력서 셔플. 데이터 교체는 셔플 가운데(스택된 순간)에 숨겨 자연스럽게 보이게 한다.
     void RefreshCandidatesWithShuffle()
     {
-        var (label, baseCost, range, weights) = Tiers[_currentTierIndex];
-        int recruitBonus  = TraitEffectApplier.GetRecruitApplicantsBonus();
-        int hiringPenalty = RandomEventManager.Instance?.HiringPenalty ?? 0;
-        int hireMoreBonus = (TechTreeManager.Instance != null && TechTreeManager.Instance.IsUnlocked("hire_more")) ? 1 : 0;
-        int effectiveCount = Mathf.Max(1, candidateCount + recruitBonus + hireMoreBonus - hiringPenalty);
+        var candidates = EmployeeManager.Instance.GetHiringListB(); // 미리 확정된 리롤 리스트
+        SetCandidates(candidates);
 
-        EmployeeManager.Instance.LoadRandomCandidates(effectiveCount, _currentTierIndex, candidates =>
+        // 셔플 동안 좌/우 이력서도 함께 움직이도록, 후보가 多면 미리 활성화(없던 경우 대비).
+        bool multi = candidates.Count > 1;
+        if (resumeLeftPanel  != null) resumeLeftPanel.gameObject.SetActive(multi);
+        if (resumeRightPanel != null) resumeRightPanel.gameObject.SetActive(multi);
+
+        UpdateRefreshButton(); // _refreshUsed=true → 두 새로고침 버튼 모두 비활성
+
+        void SwapToNewCandidates()
         {
-            foreach (var employee in candidates)
-                ApplyEnhancementLevel(employee, RollWeighted(range, weights));
+            _currentIndex = 0;
+            PopulateConfirm();
+            UpdateArrowButtons();
+        }
 
-            SetCandidates(candidates);
-
-            // 셔플 동안 좌/우 이력서도 함께 움직이도록, 후보가 多면 미리 활성화(없던 경우 대비).
-            bool multi = candidates.Count > 1;
-            if (resumeLeftPanel  != null) resumeLeftPanel.gameObject.SetActive(multi);
-            if (resumeRightPanel != null) resumeRightPanel.gameObject.SetActive(multi);
-
-            UpdateRefreshButton(); // _refreshUsed=true → 두 새로고침 버튼 모두 비활성
-
-            void SwapToNewCandidates()
-            {
-                _currentIndex = 0;
-                PopulateConfirm();
-                UpdateArrowButtons();
-            }
-
-            if (resumeFlipper != null)
-                resumeFlipper.Shuffle(onMidpoint: SwapToNewCandidates);
-            else
-                SwapToNewCandidates();
-        });
+        if (resumeFlipper != null)
+            resumeFlipper.Shuffle(onMidpoint: SwapToNewCandidates);
+        else
+            SwapToNewCandidates();
     }
 
     void UpdateRefreshButton()
@@ -414,10 +416,7 @@ public class HiringUI : MonoBehaviour
         _currentCandidates = candidates;
         _hireCosts.Clear();
         foreach (var e in candidates)
-        {
-            int baseCost = EmployeeManager.GetExpectedEnhanceCost(e.enhancementLevel);
-            _hireCosts.Add(Mathf.RoundToInt(baseCost * UnityEngine.Random.Range(0.8f, 1.2f)));
-        }
+            _hireCosts.Add(e.hireCost); // 공개 시 확정된 비용 사용 (재접속에도 고정)
     }
 
     void ShowCandidates(List<EmployeeData> candidates)
@@ -581,6 +580,8 @@ public class HiringUI : MonoBehaviour
 
         EndCandidateFlow();
         EmployeeManager.Instance.HireEmployee(_selectedEmployee);
+        EmployeeManager.Instance.ClearHiring();        // 채용 완료 → pending/확정 리스트 해제
+        GameTimeManager.Instance?.SaveGameTime();
         hiringPanel.SetActive(false);
         confirmPanel.SetActive(false);     // ConfirmHirePanel 비활성화
 
@@ -592,10 +593,12 @@ public class HiringUI : MonoBehaviour
         DialogManager.Instance.Resume();
     }
 
-    // 보유 직원 유지하기 (비교 패널에서)
+    // 보유 직원 유지하기 (비교 패널에서) — 채용 안 함, 모집 1회 소모
     public void OnClickKeep()
     {
         EndCandidateFlow();
+        EmployeeManager.Instance.ClearHiring();        // 모집 종료 → pending/확정 리스트 해제
+        GameTimeManager.Instance?.SaveGameTime();
         hiringPanel.SetActive(false);
         confirmPanel.SetActive(false);
         tierPanel.SetActive(false);
@@ -616,6 +619,8 @@ public class HiringUI : MonoBehaviour
             onConfirm: () =>
             {
                 EndCandidateFlow();
+                EmployeeManager.Instance.ClearHiring();        // 채용 취소 → pending/확정 리스트 해제
+                GameTimeManager.Instance?.SaveGameTime();
                 tierPanel.SetActive(false);
                 hiringPanel.SetActive(false);
                 confirmPanel.SetActive(false);
