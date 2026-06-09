@@ -44,6 +44,7 @@ public class EmployeeData
     public int creativitySkill;
     public int salary;
     public int enhancementLevel;
+    public int hireCost;   // 채용 후보 전용 — 공개 시 확정된 채용 비용(재접속에도 고정). 보유 직원엔 미사용.
     public int satisfaction = 80;
     // 임시 능력치 디버프 — 발동마다 entry 추가, 각 entry 가 남은 주차. Count 가 곧 활성 디버프 개수.
     // 예: 감기(5주) + 번아웃(8주) → [5, 8] → 매주 -20% × 2 누적 적용.

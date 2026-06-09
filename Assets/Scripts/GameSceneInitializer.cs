@@ -31,6 +31,18 @@ public class GameSceneInitializer : MonoBehaviour
         if (stage == ProjectStage.Developing || stage == ProjectStage.BugFixing)
             GameTimeManager.Instance.SetProjectSpeed(ProjectSetupUI.SelectedScale);
 
+        // 재접속 복원 — 면접 완료(주차 0)된 채로 종료했던 채용은 후보 리스트를 다시 공개.
+        // (데이터 로드는 LoadingScene 에서 끝나고, HiringUI 는 GameScene 에 있으므로 여기서 트리거)
+        var em = EmployeeManager.Instance;
+        if (em != null && em.HiringPendingTier >= 0 && em.HiringPendingWeeks <= 0)
+        {
+            int tier = em.HiringPendingTier;
+            var hiringUI = HiringUI.Instance != null
+                ? HiringUI.Instance
+                : FindAnyObjectByType<HiringUI>(FindObjectsInactive.Include);
+            if (hiringUI != null) ModalGate.I.WhenFree(() => hiringUI.RevealHiring(tier));
+        }
+
         //         // 게임 시작 다이얼로그 (첫 시작 시)
         // if (DialogManager.Instance.HasGroup("event_game_start"))
         //     EventDialogTable.PlayManual("event_game_start");

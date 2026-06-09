@@ -77,7 +77,7 @@ public static class RandomEvents_Condition
         RandomEventConditionChartRow row = null;
         Chart?.TryGetValue("BadRumor", out row);
 
-        EventUI.Instance.Show(
+        RandomEventUI.Instance.Show(
             row?.title ?? "",
             row?.portraitId ?? "",
             row?.descriptions?.Length > 0 ? row.descriptions[0] : "",
@@ -109,7 +109,7 @@ public static class RandomEvents_Condition
         string sysMsg = !string.IsNullOrEmpty(row?.systemMessage)
             ? row.systemMessage.Replace("{직원이름}", emp.employeeName) : "";
 
-        EventUI.Instance.Show(
+        RandomEventUI.Instance.Show(
             row?.title ?? "",
             emp.portraitId,
             row?.descriptions?.Length > 0 ? row.descriptions[0] : "",
@@ -141,7 +141,7 @@ public static class RandomEvents_Condition
         RandomEventConditionChartRow row = null;
         Chart?.TryGetValue("CompanyBadReview", out row);
 
-        EventUI.Instance.Show(
+        RandomEventUI.Instance.Show(
             row?.title ?? "",
             row?.portraitId ?? "",
             row?.descriptions?.Length > 0 ? row.descriptions[0] : "",
@@ -179,7 +179,7 @@ public static class RandomEvents_Condition
 
         mgr.SetActiveCouple(newEmpId, existingEmpId);
 
-        EventUI.Instance.Show(row?.title ?? "", existingEmp.portraitId, desc, () =>
+        RandomEventUI.Instance.Show(row?.title ?? "", existingEmp.portraitId, desc, () =>
         {
             existingEmp.ChangeSatisfaction(10);
             newEmp.ChangeSatisfaction(10);
@@ -206,7 +206,7 @@ public static class RandomEvents_Condition
 
         string sysMsg = (row?.systemMessage ?? "").Replace("{이름}", partner.employeeName);
 
-        EventUI.Instance.Show(
+        RandomEventUI.Instance.Show(
             row?.title ?? "",
             partner.portraitId,
             row?.descriptions?.Length > 0 ? row.descriptions[0] : "",
@@ -239,7 +239,7 @@ public static class RandomEvents_Condition
 
         mgr.ClearCoupleIfInvolved(empId1);
 
-        EventUI.Instance.Show(
+        RandomEventUI.Instance.Show(
             row?.title ?? "",
             emp1.portraitId,
             row?.descriptions?.Length > 0 ? row.descriptions[0] : "",
@@ -271,7 +271,7 @@ public static class RandomEvents_Condition
 
         DevelopmentManager.Instance.SetVoluntaryOvertime(true);
 
-        EventUI.Instance.Show(
+        RandomEventUI.Instance.Show(
             row?.title ?? "자발적 야근",
             emp.portraitId,
             desc,
@@ -304,7 +304,7 @@ public static class RandomEvents_Condition
         emp.ApplyStatDebuff(8);
         EmployeeManager.Instance.UpdateEmployee(emp);
 
-        EventUI.Instance.Show(
+        RandomEventUI.Instance.Show(
             row?.title ?? "팀장 멈춰!",
             emp.portraitId,
             desc,
@@ -328,7 +328,7 @@ public static class RandomEvents_Condition
         emp.ChangeSatisfaction(-20);
         EmployeeManager.Instance.UpdateEmployee(emp);
 
-        EventUI.Instance.Show(
+        RandomEventUI.Instance.Show(
             row?.title ?? "나도 팀장...",
             emp.portraitId,
             desc,

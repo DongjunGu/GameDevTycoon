@@ -192,7 +192,7 @@ public class RandomEventManager : MonoBehaviour
                 PendingHackyCodePortraitId = "";
                 PendingHackyCodeWeeksLeft  = 0;
                 DevelopmentPanelUI.Instance.AddValues(0f, -penalty, 0f, 0f, 0f);
-                EventUI.Instance.Show(
+                RandomEventUI.Instance.Show(
                     "야매 코드 문제 발생",
                     portraitId,
                     $"임시 처리 해둔 코드가 문제가 생겼습니다!\n개발 점수 -{Mathf.RoundToInt(penalty)}"
@@ -1036,8 +1036,8 @@ public class RandomEventManager : MonoBehaviour
     {
         EmployeeManager.Instance.FireEmployee(emp);
 
-        // 즉시 EventUI — 제목 없음, 직원 portrait, 랜덤 도망 메시지
-        EventUI.Instance.Show("", emp.portraitId, RandomEvents_Condition.GetRunAwayMessage());
+        // 즉시 대사 표시 — 제목 없음, 직원 portrait, 랜덤 도망 메시지
+        RandomEventUI.Instance.Show("", emp.portraitId, RandomEvents_Condition.GetRunAwayMessage());
 
         // 2주 후 AlertUI 예약
         RandomEventConditionChartRow runRow = null;

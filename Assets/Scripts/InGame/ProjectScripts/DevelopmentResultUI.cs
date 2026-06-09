@@ -1,6 +1,7 @@
 using UnityEngine;
 using TMPro;
 using UnityEngine.UI;
+using System.Collections.Generic;
 
 public class DevelopmentResultUI : MonoBehaviour
 {
@@ -30,7 +31,10 @@ public class DevelopmentResultUI : MonoBehaviour
     public GameObject contributionDetailPanel; // 중앙 순위 패널 (closeBtn 자식)
     public Button contributionCheckBtn;        // 상세 열기 버튼
     public Button contributionCloseBtn;        // 전체화면 백드롭 닫기 버튼 (CEOInfoUI 방식)
-    public GameObject[] contributionRows;      // RowPanel1~N (numberPanel/namePanel/contriPanel)
+    public GameObject rowPrefab;               // RowPanel 프리팹 (numberPanel/namePanel/contriPanel)
+    public Transform contributionContent;      // 행이 생성될 부모 (Content)
+    public int defaultRowCount = 10;           // 기본 확보 행 수 (부족하면 추가 생성)
+    private readonly List<GameObject> _rowPool = new();
     [Header("Project Name")]
     public TextMeshProUGUI projectNameText;
     public TMP_InputField projectNameInput;
@@ -111,37 +115,54 @@ public class DevelopmentResultUI : MonoBehaviour
         resultPanel.SetActive(true);
     }
 
-    // 기여도 상세 — 메인 끄고 백드롭 + 순위 패널 켜기, 직원 수만큼 RowPanel 채움
+    // 기여도 상세 — 메인 끄고 백드롭 + 순위 패널 켜기. 기본 defaultRowCount 행 확보, 부족하면 추가 생성.
     public void OnClickContributionDetail()
     {
-        if (contributionDetailPanel == null || contributionRows == null) return;
+        if (contributionDetailPanel == null || rowPrefab == null || contributionContent == null) return;
 
         resultPanel.SetActive(false);
         if (contributionCloseBtn != null) contributionCloseBtn.gameObject.SetActive(true);
         contributionDetailPanel.SetActive(true);
 
         var ranking = DevelopmentManager.Instance.GetContributionRanking();
-        for (int i = 0; i < contributionRows.Length; i++)
+        int rowCount = Mathf.Max(defaultRowCount, ranking.Count); // 기본 10행 활성, 부족하면 빈 행
+        EnsureRowPool(rowCount);
+
+        for (int i = 0; i < _rowPool.Count; i++)
         {
-            var row = contributionRows[i];
+            var row = _rowPool[i];
             if (row == null) continue;
-            if (i < ranking.Count)
+            if (i < rowCount)
             {
                 row.SetActive(true);
-                SetContributionRow(row, i + 1, ranking[i].emp, ranking[i].percent);
+                if (i < ranking.Count)
+                    SetContributionRow(row, i + 1, ranking[i].name, $"{ranking[i].percent:F0}%");
+                else
+                    SetContributionRow(row, i + 1, "", ""); // 빈 슬롯 — 번호만, 이름·기여도 공백
             }
             else row.SetActive(false);
         }
     }
 
-    void SetContributionRow(GameObject row, int rank, EmployeeData emp, float percent)
+    // Content 아래 행 풀을 count 개 이상 확보 (모자라면 프리팹 생성)
+    void EnsureRowPool(int count)
+    {
+        while (_rowPool.Count < count)
+        {
+            var go = Instantiate(rowPrefab);
+            go.transform.SetParent(contributionContent, false); // 로컬 트랜스폼 보존(스케일 깨짐 방지)
+            _rowPool.Add(go);
+        }
+    }
+
+    void SetContributionRow(GameObject row, int rank, string name, string rate)
     {
         var numberText = row.transform.Find("numberPanel")?.GetComponentInChildren<TextMeshProUGUI>();
         var nameText   = row.transform.Find("namePanel")?.GetComponentInChildren<TextMeshProUGUI>();
         var rateText   = row.transform.Find("contriPanel")?.GetComponentInChildren<TextMeshProUGUI>();
         if (numberText != null) numberText.text = rank.ToString();
-        if (nameText != null)   nameText.text   = emp != null ? emp.employeeName : "?";
-        if (rateText != null)   rateText.text   = $"{percent:F0}%";
+        if (nameText != null)   nameText.text   = name;
+        if (rateText != null)   rateText.text   = rate;
     }
 
     public void Show(float planning, float develop, float art, float bug, float creativity)
@@ -164,17 +185,17 @@ public class DevelopmentResultUI : MonoBehaviour
         if (genreResultText != null)    genreResultText.text    = $"장르: {GetGenreString(ProjectSetupUI.SelectedGenre)}";
         if (platformResultText != null) platformResultText.text = $"플랫폼: {GetPlatformString(ProjectSetupUI.SelectedPlatform)}";
 
-        // Row2 — 기여도 1등 직원 초상화 + 이름 + 기여도%
-        var (topEmp, percent) = DevelopmentManager.Instance.GetTopContributor();
-        if (topEmp != null)
+        // Row2 — 기여도 1등 초상화 + 이름(퇴사면 "(퇴사)") + 기여도%
+        var top = DevelopmentManager.Instance.GetTopContributor();
+        if (!string.IsNullOrEmpty(top.name))
         {
-            if (contributorPortrait != null && !string.IsNullOrEmpty(topEmp.portraitId))
+            if (contributorPortrait != null && !string.IsNullOrEmpty(top.portraitId))
             {
-                var sprite = Resources.Load<Sprite>($"Portraits/{topEmp.portraitId}");
+                var sprite = Resources.Load<Sprite>($"Portraits/{top.portraitId}");
                 if (sprite != null) contributorPortrait.sprite = sprite;
             }
-            if (contributorNameText != null) contributorNameText.text = topEmp.employeeName;
-            if (contributorRateText != null) contributorRateText.text = $"기여도 {percent:F0}%";
+            if (contributorNameText != null) contributorNameText.text = top.name;
+            if (contributorRateText != null) contributorRateText.text = $"기여도 {top.percent:F0}%";
         }
 
         projectNameText.text = "프로젝트명";

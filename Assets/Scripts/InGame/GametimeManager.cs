@@ -117,9 +117,15 @@ public class GameTimeManager : MonoBehaviour
                         SafeString(row, "merchantItems", ""),
                         SafeInt(row, "merchantVisitedYear", 0)
                     );
+                    // 데이터만 복원 — 재공개 트리거는 GameScene 진입 후 GameSceneInitializer.Start 에서 처리
+                    // (여기는 LoadingScene 단계라 HiringUI 가 아직 없음).
                     EmployeeManager.Instance?.LoadHiringPending(
                         SafeInt(row, "hiringPendingTier", -1),
                         SafeInt(row, "hiringPendingWeeks", 0)
+                    );
+                    EmployeeManager.Instance?.LoadHiringLists(
+                        SafeString(row, "hiringListA", ""),
+                        SafeString(row, "hiringListB", "")
                     );
 
                     Debug.Log($"로드 완료: {Year}년 {Month}월 {Week}주 / rowInDate: {_rowInDate}");
@@ -231,6 +237,8 @@ public class GameTimeManager : MonoBehaviour
         param.Add("hiringPenaltyEndYear", RandomEventManager.Instance?.HiringPenaltyEndYear ?? -1);
         param.Add("hiringPendingTier",    EmployeeManager.Instance?.HiringPendingTier   ?? -1);
         param.Add("hiringPendingWeeks",   EmployeeManager.Instance?.HiringPendingWeeks  ?? 0);
+        param.Add("hiringListA",          EmployeeManager.Instance?.HiringListAJson      ?? "");
+        param.Add("hiringListB",          EmployeeManager.Instance?.HiringListBJson      ?? "");
         param.Add("activeCoupleIds",            RandomEventManager.Instance?.GetActiveCoupleString()           ?? "");
         param.Add("pendingRomance",             RandomEventManager.Instance?.GetPendingRomanceString()          ?? "");
         param.Add("unstableCompanyWeeksLeft",   RandomEventManager.Instance?.GetUnstableCompanyWeeksLeft()     ?? -1);

@@ -5,6 +5,16 @@ using UnityEngine;
 
 public enum LeaderType { Planner, Programmer, Artist }
 
+// 기여도 순위 한 항목 — 퇴사자도 캐시된 이름/초상화로 표시.
+public struct ContributionEntry
+{
+    public EmployeeData emp;     // 재직 중이면 참조, 퇴사면 null
+    public string name;          // 표시명 (퇴사면 "이름(퇴사)")
+    public string portraitId;    // 초상화 로드용 (재직 emp 우선, 없으면 캐시)
+    public float  percent;       // 0~100
+    public bool   resigned;
+}
+
 public class DevelopmentManager : MonoBehaviour
 {
     public static DevelopmentManager Instance { get; private set; }
@@ -22,58 +32,96 @@ public class DevelopmentManager : MonoBehaviour
     public float GetElapsed() => _elapsed;
 
     // 직원별 프로젝트 기여도 (팀장점수 + 상시개발값 누적) — ResetProject 시 초기화
-    private readonly System.Collections.Generic.Dictionary<string, float> _employeeContribution = new();
+    private readonly Dictionary<string, float> _employeeContribution = new();
+    // 퇴사 후에도 표시할 수 있도록 id별 이름/초상화 캐시 (재직 중일 때 최신값 갱신, 저장에도 포함)
+    private readonly Dictionary<string, (string name, string portraitId)> _contributionInfo = new();
 
     public void AddEmployeeContribution(string empId, float amount)
     {
         if (string.IsNullOrEmpty(empId) || amount <= 0f) return;
         _employeeContribution.TryGetValue(empId, out float cur);
         _employeeContribution[empId] = cur + amount;
+
+        // 재직 중일 때 이름/초상화 스냅샷 — 퇴사하면 ownedEmployees 에서 사라지므로 여기서 캐시.
+        var e = FindEmployeeById(empId);
+        if (e != null) _contributionInfo[empId] = (e.employeeName, e.portraitId);
     }
 
-    // 기여도 1등 직원과 전체 대비 퍼센트(0~100) 반환. 기여 기록 없으면 (null, 0).
-    public (EmployeeData emp, float percent) GetTopContributor()
+    EmployeeData FindEmployeeById(string id)
     {
-        if (_employeeContribution.Count == 0) return (null, 0f);
+        var em = EmployeeManager.Instance;
+        if (em == null || string.IsNullOrEmpty(id)) return null;
+        var e = em.ownedEmployees.Find(x => x.id == id);
+        if (e == null && em.CEO != null && em.CEO.id == id) e = em.CEO; // CEO 는 ownedEmployees 에 없음
+        return e;
+    }
+
+    // id → 표시용 엔트리. 재직 중이면 최신 이름/초상화, 퇴사면 캐시 + "(퇴사)" 접미.
+    ContributionEntry BuildEntry(string id, float value, float total)
+    {
+        var emp = FindEmployeeById(id);
+        _contributionInfo.TryGetValue(id, out var info);
+
+        string baseName   = emp != null ? emp.employeeName
+                                        : (!string.IsNullOrEmpty(info.name) ? info.name : "?");
+        string portraitId = emp != null ? emp.portraitId : info.portraitId;
+        bool   resigned   = emp == null;
+
+        return new ContributionEntry
+        {
+            emp        = emp,
+            name       = resigned ? $"{baseName}(퇴사)" : baseName,
+            portraitId = portraitId,
+            percent    = total > 0f ? value / total * 100f : 0f,
+            resigned   = resigned
+        };
+    }
+
+    // 기여도 1등 엔트리 반환. 기여 기록 없으면 default(ContributionEntry) (name == null).
+    public ContributionEntry GetTopContributor()
+    {
+        if (_employeeContribution.Count == 0) return default;
         float total = 0f;
         foreach (var v in _employeeContribution.Values) total += v;
-        if (total <= 0f) return (null, 0f);
+        if (total <= 0f) return default;
 
         string topId = null; float topVal = -1f;
         foreach (var kv in _employeeContribution)
             if (kv.Value > topVal) { topVal = kv.Value; topId = kv.Key; }
 
-        var emp = EmployeeManager.Instance?.ownedEmployees.Find(e => e.id == topId);
-        // CEO 는 ownedEmployees 에 없으므로 별도 매칭
-        if (emp == null && EmployeeManager.Instance?.CEO != null && EmployeeManager.Instance.CEO.id == topId)
-            emp = EmployeeManager.Instance.CEO;
-        return (emp, topVal / total * 100f);
+        return BuildEntry(topId, topVal, total);
     }
 
-    // 기여도 내림차순 순위 리스트 (직원/CEO, 퍼센트). 기여 없으면 빈 리스트.
-    public System.Collections.Generic.List<(EmployeeData emp, float percent)> GetContributionRanking()
+    // 기여도 내림차순 순위 리스트.
+    // - 기여 기록이 있는 퇴사자 포함(분모 유지) → 표시명 "(퇴사)"
+    // - 현재 보유 직원 전원 포함(기여 0이어도 0%로 표시) — 언제 채용됐든 항상 노출
+    public List<ContributionEntry> GetContributionRanking()
     {
-        var result = new System.Collections.Generic.List<(EmployeeData, float)>();
-        if (_employeeContribution.Count == 0) return result;
+        var result = new List<ContributionEntry>();
 
         float total = 0f;
         foreach (var v in _employeeContribution.Values) total += v;
-        if (total <= 0f) return result;
 
-        var sorted = new System.Collections.Generic.List<System.Collections.Generic.KeyValuePair<string, float>>(_employeeContribution);
+        // 기여 기록 + 보유 직원 전원 병합 (보유 직원은 없으면 0)
+        var values = new Dictionary<string, float>(_employeeContribution);
+        var em = EmployeeManager.Instance;
+        if (em != null)
+            foreach (var e in em.ownedEmployees)
+                if (e != null && !values.ContainsKey(e.id))
+                    values[e.id] = 0f;
+
+        if (values.Count == 0) return result;
+
+        var sorted = new List<KeyValuePair<string, float>>(values);
         sorted.Sort((a, b) => b.Value.CompareTo(a.Value));
 
         foreach (var kv in sorted)
-        {
-            var emp = EmployeeManager.Instance?.ownedEmployees.Find(e => e.id == kv.Key);
-            if (emp == null && EmployeeManager.Instance?.CEO != null && EmployeeManager.Instance.CEO.id == kv.Key)
-                emp = EmployeeManager.Instance.CEO;
-            result.Add((emp, kv.Value / total * 100f));
-        }
+            result.Add(BuildEntry(kv.Key, kv.Value, total)); // total==0 이면 BuildEntry 가 0% 처리
         return result;
     }
 
-    // 직원별 기여도 직렬화/복원 ("id:score|id:score..."). id 는 GUID 라 콜론/파이프 없음.
+    // 직원별 기여도 직렬화/복원 ("id:score:portraitId:name|..."). id/portraitId 는 콜론·파이프 없음.
+    // name 은 마지막 필드라 콜론 포함 가능(Split limit 4). 구버전("id:score")도 복원 호환.
     public string GetContributionJson()
     {
         if (_employeeContribution.Count == 0) return "";
@@ -81,8 +129,11 @@ public class DevelopmentManager : MonoBehaviour
         foreach (var kv in _employeeContribution)
         {
             if (sb.Length > 0) sb.Append('|');
+            _contributionInfo.TryGetValue(kv.Key, out var info);
             sb.Append(kv.Key).Append(':')
-              .Append(kv.Value.ToString("F2", System.Globalization.CultureInfo.InvariantCulture));
+              .Append(kv.Value.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)).Append(':')
+              .Append(info.portraitId ?? "").Append(':')
+              .Append(info.name ?? "");
         }
         return sb.ToString();
     }
@@ -90,15 +141,20 @@ public class DevelopmentManager : MonoBehaviour
     public void RestoreContribution(string data)
     {
         _employeeContribution.Clear();
+        _contributionInfo.Clear();
         if (string.IsNullOrEmpty(data)) return;
         foreach (var part in data.Split('|'))
         {
-            int idx = part.LastIndexOf(':');
-            if (idx <= 0) continue;
-            string id = part.Substring(0, idx);
-            if (float.TryParse(part.Substring(idx + 1), System.Globalization.NumberStyles.Float,
-                               System.Globalization.CultureInfo.InvariantCulture, out float val))
-                _employeeContribution[id] = val;
+            var f = part.Split(new[] { ':' }, 4);
+            if (f.Length < 2 || string.IsNullOrEmpty(f[0])) continue;
+            if (!float.TryParse(f[1], System.Globalization.NumberStyles.Float,
+                                System.Globalization.CultureInfo.InvariantCulture, out float val)) continue;
+            _employeeContribution[f[0]] = val;
+
+            string portraitId = f.Length >= 3 ? f[2] : "";
+            string name       = f.Length >= 4 ? f[3] : "";
+            if (!string.IsNullOrEmpty(name) || !string.IsNullOrEmpty(portraitId))
+                _contributionInfo[f[0]] = (name, portraitId);
         }
     }
 
@@ -1322,6 +1378,7 @@ public class DevelopmentManager : MonoBehaviour
         _midDevSeeds.Clear();
         _midDevElapsed.Clear();
         _employeeContribution.Clear();
+        _contributionInfo.Clear();
 
         if (_bugFixCoroutine != null)
         {

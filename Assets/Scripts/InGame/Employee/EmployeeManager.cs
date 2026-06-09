@@ -39,6 +39,45 @@ public class EmployeeManager : MonoBehaviour
     public void SetHiringPending(int tier, int weeks)  { HiringPendingTier = tier; HiringPendingWeeks = weeks; }
     public void LoadHiringPending(int tier, int weeks) { HiringPendingTier = tier; HiringPendingWeeks = weeks; }
 
+    // 공개 시점에 확정된 후보 리스트(초기 A / 리롤 B) — 재접속해도 동일 유지(악용 방지). 채용/끝내기 때만 해제.
+    public string HiringListAJson { get; private set; } = "";
+    public string HiringListBJson { get; private set; } = "";
+    public bool HasHiringLists => !string.IsNullOrEmpty(HiringListAJson);
+
+    [System.Serializable]
+    class CandidateListDTO { public List<EmployeeData> items = new(); }
+
+    public void SetHiringLists(List<EmployeeData> a, List<EmployeeData> b)
+    {
+        HiringListAJson = JsonUtility.ToJson(new CandidateListDTO { items = a ?? new() });
+        HiringListBJson = JsonUtility.ToJson(new CandidateListDTO { items = b ?? new() });
+    }
+
+    public void LoadHiringLists(string aJson, string bJson)
+    {
+        HiringListAJson = aJson ?? "";
+        HiringListBJson = bJson ?? "";
+    }
+
+    public List<EmployeeData> GetHiringListA() => DeserializeCandidates(HiringListAJson);
+    public List<EmployeeData> GetHiringListB() => DeserializeCandidates(HiringListBJson);
+
+    static List<EmployeeData> DeserializeCandidates(string json)
+    {
+        if (string.IsNullOrEmpty(json)) return new();
+        var dto = JsonUtility.FromJson<CandidateListDTO>(json);
+        return dto?.items ?? new();
+    }
+
+    // 채용 완료/끝내기/취소 시 — pending + 확정 리스트 모두 해제.
+    public void ClearHiring()
+    {
+        HiringPendingTier  = -1;
+        HiringPendingWeeks = 0;
+        HiringListAJson    = "";
+        HiringListBJson    = "";
+    }
+
     public void RecordEmployeeExit()
     {
         int currentYear = GameTimeManager.Instance?.Year ?? 0;
@@ -463,6 +502,8 @@ public class EmployeeManager : MonoBehaviour
         ExitCountYear   = 0;
         HiringPendingTier  = -1;
         HiringPendingWeeks = 0;
+        HiringListAJson    = "";
+        HiringListBJson    = "";
         _satisfactionDroppedThisCycle = false;
 
         // 메모리 List 대신 서버에서 직접 fetch → 모든 row 삭제. inFlight Insert 가 늦게 도착해도 epoch 가드가 자체 정리.
@@ -580,15 +621,16 @@ public class EmployeeManager : MonoBehaviour
         RandomEventManager.Instance?.CheckConditionEvents();
 
         // 채용 면접 대기 카운트다운 — 0 되면 후보 리스트 공개 (HiringUI 가 비활성이어도 동작)
-        if (HiringPendingTier >= 0)
+        // 면접 대기 카운트다운 — 0 되면 후보 리스트 공개. pending(tier)은 유지(채용/끝내기 때만 해제),
+        // 공개 시 RevealHiring 이 리스트를 1회 확정·저장해 재접속에도 동일 리스트 유지.
+        if (HiringPendingTier >= 0 && HiringPendingWeeks > 0)
         {
             HiringPendingWeeks--;
             if (HiringPendingWeeks <= 0)
             {
-                int tier = HiringPendingTier;
-                HiringPendingTier = -1;
                 HiringPendingWeeks = 0;
-                GameTimeManager.Instance?.SaveGameTime(); // pending 해제 영속화
+                GameTimeManager.Instance?.SaveGameTime(); // weeks=0 영속(tier 유지)
+                int tier = HiringPendingTier;
                 var hiring = FindObjectOfType<HiringUI>(true); // 비활성 포함
                 // 같은 주 퇴사/조건 이벤트(위 CheckLowSatisfaction/CheckConditionEvents 가 먼저 실행)가 모달로 떠 있으면
                 // 그 모달이 모두 닫힌 뒤 후보 리스트 공개 — 패널 겹침 + 시간 강제재개 충돌 방지.
