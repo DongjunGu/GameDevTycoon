@@ -588,6 +588,7 @@ public class EmployeeManager : MonoBehaviour
 
             foreach (var emp in ownedEmployees)
             {
+                if (DispatchManager.Instance != null && DispatchManager.Instance.IsDispatched(emp.id)) continue; // 파견중 제외
                 int dropAmount = (globalOvertime || emp.isOvertimeWorker) ? 10 : 5;
                 dropAmount = Mathf.Max(0, dropAmount - mentalCare);
                 emp.satisfaction = Mathf.Clamp(emp.satisfaction - dropAmount, 0, 100);
@@ -596,6 +597,7 @@ public class EmployeeManager : MonoBehaviour
 
         foreach (var emp in ownedEmployees)
         {
+            if (DispatchManager.Instance != null && DispatchManager.Instance.IsDispatched(emp.id)) continue; // 파견중 제외
             // 디버프 스택: 각 entry 1주씩 감소, 만료(≤0) 시 제거
             for (int i = emp.statDebuffStacks.Count - 1; i >= 0; i--)
             {
@@ -643,6 +645,7 @@ public class EmployeeManager : MonoBehaviour
     {
         foreach (var emp in ownedEmployees)
         {
+            if (DispatchManager.Instance != null && DispatchManager.Instance.IsDispatched(emp.id)) continue; // 파견중 제외
             // 만족도 40 이상 회복 시 플래그 리셋 — 다음 진입 때 재적용 가능
             if (emp.satisfaction >= 40)
             {
@@ -750,6 +753,11 @@ public class EmployeeManager : MonoBehaviour
 
     public void FireEmployee(EmployeeData employee, bool countAsExit = true)
     {
+        if (employee != null && DispatchManager.Instance != null && DispatchManager.Instance.IsDispatched(employee.id))
+        {
+            AlertUI.Instance?.Show("파견중인 직원은 해고할 수 없습니다.");
+            return;
+        }
         if (countAsExit) RecordEmployeeExit();
         ownedEmployees.Remove(employee);
         // 신의 축복(우기 전용) 지속 효과(2/3/6)는 grade>=Unique 우기가 있어야만 유지 — 우기 퇴장 시 즉시 해제 +
@@ -1041,4 +1049,24 @@ public class EmployeeManager : MonoBehaviour
         }
     }
 
+    // ── 파견(Dispatch) 연동 ───────────────────────────────────
+    // 파견 강화 적용 — 다운그레이드/유지 없이 oldLevel→targetLevel 까지 확정 강화.
+    // 구간별 강화량은 DispatchManager 가 파견 시점에 사전 계산(targetLevel)해 둔다.
+    public void ApplyDispatchEnhancement(EmployeeData emp, int targetLevel)
+    {
+        if (emp == null) return;
+        while (emp.enhancementLevel < targetLevel)
+        {
+            emp.enhancementLevel++;
+            ApplyEnhancement(emp);
+        }
+    }
+
+    // 만족도를 특정 값으로 회복 (파견 복귀 등). 40 이상이면 저만족 페널티 플래그도 리셋.
+    public void RecoverSatisfaction(EmployeeData emp, int value)
+    {
+        if (emp == null) return;
+        emp.satisfaction = Mathf.Clamp(value, 0, 100);
+        if (emp.satisfaction >= 40) emp.lowSatisfactionPenaltyApplied = false;
+    }
 }

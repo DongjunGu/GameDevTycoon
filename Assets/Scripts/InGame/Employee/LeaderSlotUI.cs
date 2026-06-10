@@ -17,6 +17,7 @@ public class LeaderSlotUI : MonoBehaviour
     public TextMeshProUGUI creativitySkillText;
     public TextMeshProUGUI satisfactionText;
     public Button selectButton;
+    public GameObject dispatchedBadge; // 파견중 뱃지 (옵션)
     private static readonly Color ColorNormal = new Color(0.92f, 0.92f, 0.92f);
     private static readonly Color ColorRare = new Color(0.75f, 0.88f, 0.95f);
     private static readonly Color ColorEpic = new Color(0.55f, 0.30f, 0.85f);
@@ -49,6 +50,9 @@ public class LeaderSlotUI : MonoBehaviour
 
         selectButton.onClick.RemoveAllListeners();
         selectButton.onClick.AddListener(() => leaderSelectUI.OnSelectLeader(data));
+
+        // 파견중이면 희미하게 + badge + 선택 차단
+        DispatchSlotVisual.Apply(this, dispatchedBadge, data.id, blockSelect: true);
 
         // 이미 활성 상태에서 재생성될 때는 OnEnable 이 Setup 보다 먼저 실행되어 색이 어긋남 → 활성이면 재적용
         if (isActiveAndEnabled) ApplyGradeColor(_pendingGrade);

@@ -147,6 +147,72 @@ public class OfficeManager : MonoBehaviour
         Destroy(oc.gameObject);
     }
 
+    // ── 파견(Dispatch) ───────────────────────────────────────
+    // 파견 출발 — 데이터/슬롯 유지. 데스크는 비우지 않고 그대로 예약(보존)해 복귀 시 원래 자리로 돌아오게 한다.
+    // 캐릭터만 SpawnPoint 로 퇴장 후 소멸.
+    public void SendOnDispatch(string employeeId)
+    {
+        // assignedDeskId / DeskManager 배정은 그대로 둠 (다른 직원이 못 쓰게 자리 예약 유지)
+        if (!_characters.TryGetValue(employeeId, out var oc)) return;
+        _characters.Remove(employeeId);
+        oc.PrepareToLeave();
+        StartCoroutine(WalkOutAndDestroy(oc));
+    }
+
+    // 파견 복귀 — SpawnPoint 에서 스폰해 master_desk 로 이동, 도착하면 onArrivedAtMaster 호출(보고 모달)
+    public void ReturnFromDispatch(string employeeId, System.Action onArrivedAtMaster)
+    {
+        var emp = EmployeeManager.Instance != null ? EmployeeManager.Instance.GetEmployee(employeeId) : null;
+        if (emp == null || spawnPoint == null) { onArrivedAtMaster?.Invoke(); return; }
+
+        var obj = Instantiate(GetPrefab(emp.portraitId), spawnPoint.position, Quaternion.identity);
+        var oc  = obj.GetComponent<OfficeCharacter>();
+        oc.Init(employeeId, null);
+        _characters[employeeId] = oc;
+
+        StartCoroutine(WalkToPointAndReport(oc, "master_desk", onArrivedAtMaster));
+    }
+
+    IEnumerator WalkToPointAndReport(OfficeCharacter oc, string pointId, System.Action onArrived)
+    {
+        _patrolPoints ??= FindObjectsByType<PatrolPoint>(FindObjectsSortMode.None);
+        var point = _patrolPoints != null ? System.Array.Find(_patrolPoints, p => p.pointId == pointId) : null;
+
+        var controller = oc.GetComponent<CharacterController>();
+        var mover      = oc.GetComponent<CharacterMover>();
+
+        if (point != null && controller != null && mover != null)
+        {
+            Vector3 pos = new Vector3(point.transform.position.x, point.transform.position.y, 0);
+            Vector3Int cell = GridManager.Instance.WorldToCell(pos);
+            controller.MoveTo(cell, pos);
+
+            yield return null; // 이동 시작 대기
+            yield return new WaitUntil(() => !mover.IsMoving);
+        }
+
+        onArrived?.Invoke();
+    }
+
+    // 보고 종료 후 — 원래 자리로 복귀(예약돼 있던 assignedDeskId). 없거나 못 찾으면 빈 자리.
+    public void AssignDeskAndReturn(string employeeId)
+    {
+        if (!_characters.TryGetValue(employeeId, out var oc)) return;
+        var emp = EmployeeManager.Instance != null ? EmployeeManager.Instance.GetEmployee(employeeId) : null;
+        if (emp == null) return;
+
+        WorkStation desk = null;
+        if (!string.IsNullOrEmpty(emp.assignedDeskId))
+            desk = DeskManager.Instance.GetDeskById(emp.assignedDeskId); // 원래 자리 (출발 시 예약 보존됨)
+        if (desk == null) desk = DeskManager.Instance.GetEmptyDesk();
+        if (desk == null) { Debug.LogWarning("[Dispatch] 복귀 배정할 데스크 없음"); return; }
+
+        DeskManager.Instance.AssignDesk(desk.deskId, employeeId);
+        emp.assignedDeskId = desk.deskId;
+        oc.Init(employeeId, desk);
+        oc.GoToDesk();
+    }
+
     // 씬 로드 시 기존 직원 복원
     public void RestoreEmployees()
     {
@@ -158,8 +224,29 @@ public class OfficeManager : MonoBehaviour
         string ceoDeskId       = CEOManager.Instance != null ? CEOManager.Instance.ceoDeskId : "";
         string secretaryDeskId = !string.IsNullOrEmpty(this.secretaryDeskId) ? this.secretaryDeskId : "";
 
+        // 파견중 직원의 원래 자리를 먼저 예약(점유) — 캐릭터는 스폰 안 하되 다른 직원이 그 자리를 못 앉게(항상 비워둠).
+        // 자리는 DispatchManager.DispatchDeskId(영속) 기준, 비어 있으면 직원 assignedDeskId 폴백. 복귀 시 같은 자리로 돌아감.
+        if (DispatchManager.Instance != null && DispatchManager.Instance.IsActive)
+        {
+            string dEmpId  = DispatchManager.Instance.DispatchEmployeeId;
+            string dDeskId = DispatchManager.Instance.DispatchDeskId;
+            if (string.IsNullOrEmpty(dDeskId))
+            {
+                var dEmp = EmployeeManager.Instance.ownedEmployees.Find(e => e.id == dEmpId);
+                if (dEmp != null) dDeskId = dEmp.assignedDeskId;
+            }
+            if (!string.IsNullOrEmpty(dDeskId)
+                && (string.IsNullOrEmpty(ceoDeskId)       || dDeskId != ceoDeskId)
+                && (string.IsNullOrEmpty(secretaryDeskId) || dDeskId != secretaryDeskId)
+                && DeskManager.Instance.GetDeskById(dDeskId) != null)
+                DeskManager.Instance.AssignDesk(dDeskId, dEmpId);
+        }
+
         foreach (var employee in EmployeeManager.Instance.ownedEmployees)
         {
+            // 파견중 직원은 사무실에 없음 — 자리는 위에서 예약됨. 복귀 시 ReturnFromDispatch 가 스폰
+            if (DispatchManager.Instance != null && DispatchManager.Instance.IsDispatched(employee.id)) continue;
+
             WorkStation desk;
             if (string.IsNullOrEmpty(employee.assignedDeskId))
                 desk = DeskManager.Instance.GetEmptyDesk();

@@ -43,6 +43,9 @@ public class GameSceneInitializer : MonoBehaviour
             if (hiringUI != null) ModalGate.I.WhenFree(() => hiringUI.RevealHiring(tier));
         }
 
+        // 재접속 복원 — 파견 5주가 끝난(주차 0) 채로 종료했던 직원은 복귀 보고 재개
+        DispatchManager.Instance?.CheckReturnOnReconnect();
+
         //         // 게임 시작 다이얼로그 (첫 시작 시)
         // if (DialogManager.Instance.HasGroup("event_game_start"))
         //     EventDialogTable.PlayManual("event_game_start");

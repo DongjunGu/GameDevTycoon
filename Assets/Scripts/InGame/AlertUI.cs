@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.UI;
 using TMPro;
 using System.Collections.Generic;
 
@@ -42,8 +43,22 @@ public class AlertUI : MonoBehaviour
         GameTimeManager.Instance?.StopTime();
         messageText.text = msg;
         _onConfirm = cb;
+        EnsureTopMost();
         alertPanel.SetActive(true);
         ModalGate.I.Register(this); // 표시 시점에 차단 모달로 등록
+    }
+
+    // 항상 최상단에 표시 — 전용 Canvas 의 overrideSorting + 매우 높은 sortingOrder 로 다른 모달/블로커 위에.
+    void EnsureTopMost()
+    {
+        if (alertPanel == null) return;
+        var canvas = alertPanel.GetComponent<Canvas>();
+        if (canvas == null) canvas = alertPanel.AddComponent<Canvas>();
+        canvas.overrideSorting = true;
+        canvas.sortingOrder    = 32000;
+        if (alertPanel.GetComponent<GraphicRaycaster>() == null)
+            alertPanel.AddComponent<GraphicRaycaster>();
+        alertPanel.transform.SetAsLastSibling();
     }
 
     public void OnClickConfirm()

@@ -484,17 +484,93 @@ MonoBehaviour:
   steps:
   - image: {fileID: 66575185}
     clearBefore: 0
+    line: 
+    autoPan: 0
+    panDuration: 3
+    autoZoom: 0
+    zoomDuration: 3
+    zoomFrom: 1
+    zoomTo: 3
+    zoomFadeChild: {fileID: 0}
+    waitForAnim: 0
+    animator: {fileID: 0}
+    autoAdvance: 0
+    autoAdvanceDelay: 2
   - image: {fileID: 657707849}
     clearBefore: 0
+    line: 
+    autoPan: 0
+    panDuration: 3
+    autoZoom: 0
+    zoomDuration: 3
+    zoomFrom: 1
+    zoomTo: 3
+    zoomFadeChild: {fileID: 0}
+    waitForAnim: 0
+    animator: {fileID: 0}
+    autoAdvance: 0
+    autoAdvanceDelay: 2
   - image: {fileID: 87694489}
     clearBefore: 1
+    line: 
+    autoPan: 0
+    panDuration: 3
+    autoZoom: 0
+    zoomDuration: 3
+    zoomFrom: 1
+    zoomTo: 3
+    zoomFadeChild: {fileID: 0}
+    waitForAnim: 0
+    animator: {fileID: 0}
+    autoAdvance: 0
+    autoAdvanceDelay: 2
   - image: {fileID: 1989811366}
     clearBefore: 0
+    line: 
+    autoPan: 0
+    panDuration: 3
+    autoZoom: 0
+    zoomDuration: 3
+    zoomFrom: 1
+    zoomTo: 3
+    zoomFadeChild: {fileID: 0}
+    waitForAnim: 0
+    animator: {fileID: 0}
+    autoAdvance: 0
+    autoAdvanceDelay: 2
   - image: {fileID: 117730434}
     clearBefore: 1
+    line: 
+    autoPan: 0
+    panDuration: 3
+    autoZoom: 0
+    zoomDuration: 3
+    zoomFrom: 1
+    zoomTo: 3
+    zoomFadeChild: {fileID: 0}
+    waitForAnim: 0
+    animator: {fileID: 0}
+    autoAdvance: 0
+    autoAdvanceDelay: 2
   - image: {fileID: 2102131731}
     clearBefore: 1
+    line: 
+    autoPan: 0
+    panDuration: 3
+    autoZoom: 0
+    zoomDuration: 3
+    zoomFrom: 1
+    zoomTo: 3
+    zoomFadeChild: {fileID: 0}
+    waitForAnim: 0
+    animator: {fileID: 0}
+    autoAdvance: 0
+    autoAdvanceDelay: 2
   clickLockSeconds: 0.5
+  fadeDuration: 0.4
+  dialogueBox: {fileID: 0}
+  dialogueText: {fileID: 0}
+  charInterval: 0.04
 --- !u!114 &232060312
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1162,8 +1238,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: "Apple\uB85C \uB85C\uADF8\uC778"
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 9239daead878ef748b19445c1f56505d, type: 2}
-  m_sharedMaterial: {fileID: 9203089757098624218, guid: 9239daead878ef748b19445c1f56505d, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 0762af7de54282a498c99314c894507c, type: 2}
+  m_sharedMaterial: {fileID: -3318507174629680496, guid: 0762af7de54282a498c99314c894507c, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -1537,8 +1613,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: Now Loading...
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 0762af7de54282a498c99314c894507c, type: 2}
+  m_sharedMaterial: {fileID: -3318507174629680496, guid: 0762af7de54282a498c99314c894507c, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []

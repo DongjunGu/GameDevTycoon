@@ -83,6 +83,7 @@ public static class NewRunInitializer
         RandomEventManager.Instance?.ResetForNewRun();
         TraitEffectApplier.ResetForNewRun();  // _firstSaleConsumed / _brokeRescueFired 등 1회성 플래그 리셋
         MerchantManager.Instance?.ResetForNewRun();
+        DispatchManager.Instance?.ResetForNewRun();
     }
 
     static void FinalizeRun(Action onComplete)
