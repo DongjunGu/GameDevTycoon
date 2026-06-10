@@ -24,6 +24,8 @@ public class EmployeeCardUI : MonoBehaviour
     public TextMeshProUGUI enhancementText;
     public Slider satisfactionSlider;
     public TextMeshProUGUI satisfactionText;
+    [Tooltip("파견중일 때 표시할 badge (옵션)")]
+    public GameObject dispatchedBadge;
     public TextMeshProUGUI planningText;
     public TextMeshProUGUI developText;
     public TextMeshProUGUI artText;
@@ -78,6 +80,10 @@ public class EmployeeCardUI : MonoBehaviour
             // 첫 표시 시 슬라이더 값은 즉시 세팅 (애니메이션 시작점)
             satisfactionSlider.value = emp.satisfaction;
         }
+
+        // 파견중 badge
+        if (dispatchedBadge != null)
+            dispatchedBadge.SetActive(DispatchManager.Instance != null && DispatchManager.Instance.IsDispatched(emp.id));
 
         // 동적 수치(능력치 텍스트 등) 즉시 반영
         RefreshDynamic(emp);
@@ -174,6 +180,11 @@ public class EmployeeCardUI : MonoBehaviour
     {
         if (string.IsNullOrEmpty(_currentEmployeeId)) return;
         if (ItemPanelUI.Instance == null) return;
+        if (DispatchManager.Instance != null && DispatchManager.Instance.IsDispatched(_currentEmployeeId))
+        {
+            AlertUI.Instance?.Show("파견중인 직원에게는 사용할 수 없습니다.");
+            return;
+        }
 
         string savedEmpId = _currentEmployeeId;
 
@@ -189,6 +200,11 @@ public class EmployeeCardUI : MonoBehaviour
     {
         if (string.IsNullOrEmpty(_currentEmployeeId)) return;
         if (TrainingPanelUI.Instance == null) return;
+        if (DispatchManager.Instance != null && DispatchManager.Instance.IsDispatched(_currentEmployeeId))
+        {
+            AlertUI.Instance?.Show("파견중인 직원은 강화할 수 없습니다.");
+            return;
+        }
 
         var emp = EmployeeManager.Instance?.GetEmployee(_currentEmployeeId);
         if (emp == null) return;

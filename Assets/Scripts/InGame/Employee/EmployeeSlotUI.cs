@@ -10,6 +10,7 @@ public class EmployeeSlotUI : MonoBehaviour
     public TextMeshProUGUI nameText;
     public Button selectButton;    // 슬롯 선택(채용 후보 클릭)
     public GameObject ownedBadge;  // 보유중 뱃지 이미지
+    public GameObject dispatchedBadge; // 파견중 뱃지 (해고 리스트 등 — 후보엔 항상 비활성)
     private static readonly Color ColorNormal = new Color(0.92f, 0.92f, 0.92f);
     private static readonly Color ColorRare = new Color(0.75f, 0.88f, 0.95f);
     private static readonly Color ColorEpic = new Color(0.55f, 0.30f, 0.85f);
@@ -34,6 +35,9 @@ public class EmployeeSlotUI : MonoBehaviour
 
         selectButton.onClick.RemoveAllListeners();
         selectButton.onClick.AddListener(() => onSelect?.Invoke(data));
+
+        // 파견중(보유 직원 리스트)이면 희미하게 + badge + 선택 차단. 채용 후보는 파견중일 수 없어 무영향.
+        DispatchSlotVisual.Apply(this, dispatchedBadge, data.id, blockSelect: true);
 
         // 새로고침 등 이미 활성 상태에서 재생성될 때는 OnEnable 이 Setup 보다 먼저 실행되어
         // _pendingGrade 가 기본값일 때 색이 칠해짐 → 활성 상태면 여기서 다시 적용.

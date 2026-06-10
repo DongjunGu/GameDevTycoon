@@ -117,6 +117,13 @@ public class GameTimeManager : MonoBehaviour
                         SafeString(row, "merchantItems", ""),
                         SafeInt(row, "merchantVisitedYear", 0)
                     );
+                    DispatchManager.Instance?.LoadDispatch(
+                        SafeString(row, "dispatchEmployeeId", ""),
+                        SafeString(row, "dispatchEmployeeName", ""),
+                        SafeString(row, "dispatchDeskId", ""),
+                        SafeInt(row, "dispatchWeeksLeft", 0),
+                        SafeString(row, "dispatchOutcome", "")
+                    );
                     // 데이터만 복원 — 재공개 트리거는 GameScene 진입 후 GameSceneInitializer.Start 에서 처리
                     // (여기는 LoadingScene 단계라 HiringUI 가 아직 없음).
                     EmployeeManager.Instance?.LoadHiringPending(
@@ -247,6 +254,11 @@ public class GameTimeManager : MonoBehaviour
         param.Add("merchantSchedule",             MerchantManager.Instance?.GetScheduleString()                     ?? "");
         param.Add("merchantItems",                MerchantManager.Instance?.GetItemsString()                        ?? "");
         param.Add("merchantVisitedYear",          MerchantManager.Instance?.VisitedYear                             ?? 0);
+        param.Add("dispatchEmployeeId",           DispatchManager.Instance?.DispatchEmployeeId                      ?? "");
+        param.Add("dispatchEmployeeName",         DispatchManager.Instance?.DispatchEmployeeName                    ?? "");
+        param.Add("dispatchDeskId",               DispatchManager.Instance?.DispatchDeskId                          ?? "");
+        param.Add("dispatchWeeksLeft",            DispatchManager.Instance?.DispatchWeeksLeft                       ?? 0);
+        param.Add("dispatchOutcome",              DispatchManager.Instance?.GetOutcomeJson()                        ?? "");
 
         if (!string.IsNullOrEmpty(_rowInDate))
         {

@@ -11,6 +11,8 @@ public class TrainingEmployeeSlotUI : MonoBehaviour
     public Image employeePortraitImage; // 초상화 컨테이너 (자식 bgImage/portraitImage 의 탐색 기준)
     public TextMeshProUGUI nameText;
     public Button selectButton;
+    [Header("파견중 표시 (옵션)")]
+    public GameObject dispatchedBadge;
 
     [Header("선택 — 비우면 employeePortraitImage 자식에서 자동 탐색")]
     public Image portraitImage; // 초상화 sprite 대상 (앞)
@@ -34,6 +36,9 @@ public class TrainingEmployeeSlotUI : MonoBehaviour
             selectButton.onClick.RemoveAllListeners();
             selectButton.onClick.AddListener(() => onSelect?.Invoke(data));
         }
+
+        // 파견중이면 희미하게 + badge + 선택 차단
+        DispatchSlotVisual.Apply(this, dispatchedBadge, data.id, blockSelect: true);
 
         ApplyGrade(data.grade);
     }

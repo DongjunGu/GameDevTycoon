@@ -547,6 +547,15 @@ public class HiringUI : MonoBehaviour
     public void OnClickConfirmHire()
     {
         if (_selectedEmployee == null) return;
+
+        // 동명 직원이 파견중이면 해고 후 채용이 불가(파견중 해고 차단) → 채용 자체를 막고 안내
+        if (_conflictingOwned != null && DispatchManager.Instance != null
+            && DispatchManager.Instance.IsDispatched(_conflictingOwned.id))
+        {
+            AlertUI.Instance?.Show($"{_conflictingOwned.employeeName}이 파견중입니다.");
+            return;
+        }
+
         ConfirmUI.Instance.Show(
             $"{_selectedEmployee.employeeName}을(를) 채용하시겠습니까?",
             onConfirm: DoHire,
@@ -560,6 +569,13 @@ public class HiringUI : MonoBehaviour
     void DoHire()
     {
         if (_selectedEmployee == null) return;
+        // 방어 — 파견중 동명 직원은 해고 불가라 중복 보유가 되어버림. 채용 중단.
+        if (_conflictingOwned != null && DispatchManager.Instance != null
+            && DispatchManager.Instance.IsDispatched(_conflictingOwned.id))
+        {
+            AlertUI.Instance?.Show($"{_conflictingOwned.employeeName}이 파견중입니다.");
+            return;
+        }
         if (_hireCost > 0 && !MoneyManager.Instance.CanAfford(_hireCost))
         {
             GameUIHelper.ShowLoanPrompt();

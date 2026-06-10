@@ -11,6 +11,8 @@ public class EmployeeSatisfactionSlider : MonoBehaviour, IPointerClickHandler
     [Header("References")]
     public Image portraitImage;
     public Slider slider;
+    [Header("파견중 표시 (옵션)")]
+    public GameObject dispatchedBadge;
 
     [Header("Animation")]
     [Tooltip("1초당 변화할 만족도 단위 (값이 클수록 빠름)")]
@@ -67,6 +69,26 @@ public class EmployeeSatisfactionSlider : MonoBehaviour, IPointerClickHandler
             slider.value = emp.satisfaction; // 첫 표시 즉시 세팅 (애니메이션 없이)
             EmployeeCardUI.ApplySatisfactionColor(slider, emp.satisfaction);
         }
+
+        RefreshDispatchVisual();
+    }
+
+    // 파견 시작/복귀 시 실시간으로 희미하게/원복 + badge 갱신 (슬롯은 재생성되지 않으므로 구독 필요)
+    void OnEnable()
+    {
+        if (DispatchManager.Instance != null) DispatchManager.Instance.OnDispatchChanged += RefreshDispatchVisual;
+        RefreshDispatchVisual();
+    }
+
+    void OnDisable()
+    {
+        if (DispatchManager.Instance != null) DispatchManager.Instance.OnDispatchChanged -= RefreshDispatchVisual;
+    }
+
+    void RefreshDispatchVisual()
+    {
+        // 상태바는 파견중이어도 카드 열람은 허용 (blockSelect=false)
+        DispatchSlotVisual.Apply(this, dispatchedBadge, _employeeId, blockSelect: false);
     }
 
     void Update()
