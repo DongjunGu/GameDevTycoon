@@ -99,8 +99,14 @@ public static class RandomEvents_Condition
     // sys:   "직원이 불안에 떨고 있습니다\n만족도 -5 / {직원이름} 능력치 -20%"
     public static void TriggerAnxietyInducingEvent()
     {
-        var employees = EmployeeManager.Instance?.ownedEmployees;
-        if (employees == null || employees.Count == 0) return;
+        var all = EmployeeManager.Instance?.ownedEmployees;
+        if (all == null || all.Count == 0) return;
+
+        // 파견중(부재) 직원 제외 — 자리에 없는 직원에게 불안감 이벤트가 뜨면 안 됨
+        var employees = new List<EmployeeData>();
+        foreach (var e in all)
+            if (DispatchManager.Instance == null || !DispatchManager.Instance.IsDispatched(e.id)) employees.Add(e);
+        if (employees.Count == 0) return;
 
         var emp = employees[Random.Range(0, employees.Count)];
 

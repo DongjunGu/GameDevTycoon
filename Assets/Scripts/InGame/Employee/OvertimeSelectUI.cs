@@ -35,6 +35,7 @@ public class OvertimeSelectUI : MonoBehaviour
 
         foreach (var emp in EmployeeManager.Instance.ownedEmployees)
         {
+            if (DispatchManager.Instance != null && DispatchManager.Instance.IsDispatched(emp.id)) continue; // 파견중 직원은 야근 선택 제외
             var go   = Instantiate(overtimeEmployeeSlotPrefab, slotParent);
             var slot = go.GetComponent<OvertimeEmployeeSlotUI>();
             slot.Setup(emp);

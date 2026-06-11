@@ -163,6 +163,9 @@ public class DispatchManager : MonoBehaviour
     }
 
     // ── 복귀 + 보고 ───────────────────────────────────────────
+    // 복귀는 다른 진행(개발/이벤트/팀장점수)을 막지 않는다. 25%/75% 등 마일스톤은 그대로 진행되고,
+    // 파견은 성과보고(ApplyOutcomeAndAlert → Clear)를 완료해야만 확정된다. 보고 전에 종료/재접속하면
+    // weeks=0 + employeeId 가 영속돼 있어 GameSceneInitializer → CheckReturnOnReconnect 가 다시 복귀시킨다.
     void BeginReturn()
     {
         if (!IsActive) return;
@@ -250,7 +253,7 @@ public class DispatchManager : MonoBehaviour
 
         string summary =
             $"테크트리 포인트 {techPoints}P 획득\n" +
-            $"{empName} {oldLevel} → {newLevel}\n" +
+            $"{empName} {oldLevel} -> {newLevel}\n" +
             "만족도 회복";
 
         if (AlertUI.Instance != null)

@@ -73,6 +73,12 @@ public class RandomEventManager : MonoBehaviour
     // _pendingEvent 이동 중 OR 도착 후 UI가 닫힐 때까지 true
     public bool HasPendingEvent => _pendingEvent != null || _pendingChoiceEvent != null || _eventInProgress;
 
+    // 파견중(사무실 부재) 직원 ID 인지 — patrol 이벤트 타깃이면 강제이동이 불가하므로 스킵 판단에 사용.
+    static bool IsTargetDispatched(string empId)
+        => !string.IsNullOrEmpty(empId)
+           && DispatchManager.Instance != null
+           && DispatchManager.Instance.IsDispatched(empId);
+
     // ── 디버그 ────────────────────────────────────────────────
     [Header("Debug - 테스트 이벤트")]
     public bool            debugMode      = false;
@@ -409,6 +415,9 @@ public class RandomEventManager : MonoBehaviour
 
             if (choiceData.requiresPatrol)
             {
+                // 파견중(사무실 부재) 직원이 타깃이면 강제이동이 no-op → 영원히 도착 못 해 _pendingEvent 가
+                // 영구히 남아 개발 마일스톤(25/75% 팀장점수)까지 hang. 그런 경우 이벤트를 스킵해 진행 보장.
+                if (IsTargetDispatched(choiceData.targetEmployeeId)) return;
                 _pendingChoiceEvent = choiceData;
                 if (!string.IsNullOrEmpty(choiceData.targetEmployeeId) &&
                     !string.IsNullOrEmpty(choiceData.requiredPatrolPointId))
@@ -419,6 +428,7 @@ public class RandomEventManager : MonoBehaviour
             }
             else
             {
+                if (IsTargetDispatched(choiceData.targetEmployeeId)) return; // 파견중 직원 대상 이벤트는 발동 안 함
                 DevelopmentManager.Instance.PauseForEvent();
                 RandomEventChoiceUI.Instance.Show(choiceData);
             }
@@ -436,6 +446,8 @@ public class RandomEventManager : MonoBehaviour
             evt.cancelled = false;
             evt.onSetup?.Invoke();
             if (evt.cancelled) return;
+            // 파견중(부재) 직원 타깃이면 강제이동 no-op → 영구 hang. 스킵해 개발 마일스톤 진행 보장.
+            if (IsTargetDispatched(evt.targetEmployeeId)) return;
             _pendingEvent = evt;
 
             // 특정 직원 + 특정 지점이 설정된 경우 즉시 강제 이동
@@ -453,6 +465,7 @@ public class RandomEventManager : MonoBehaviour
             evt.cancelled = false;
             evt.onSetup?.Invoke();
             if (evt.cancelled) return;
+            if (IsTargetDispatched(evt.targetEmployeeId)) return; // 파견중 직원 대상 이벤트는 발동 안 함
             DevelopmentManager.Instance.PauseForEvent();
             RandomEventUI.Instance.Show(evt);
         }
@@ -545,7 +558,8 @@ public class RandomEventManager : MonoBehaviour
         var employees = EmployeeManager.Instance?.ownedEmployees;
         if (employees == null) return;
 
-        var candidates = employees.FindAll(e => e.id != newEmp.id && e.isFemale != newEmp.isFemale);
+        var candidates = employees.FindAll(e => e.id != newEmp.id && e.isFemale != newEmp.isFemale
+                                                && !IsTargetDispatched(e.id)); // 파견중 직원은 연애 상대 제외
         if (candidates.Count == 0) return;
 
         var partner = candidates[UnityEngine.Random.Range(0, candidates.Count)];
@@ -884,7 +898,7 @@ public class RandomEventManager : MonoBehaviour
         {
             var highSatCandidates = new List<EmployeeData>();
             foreach (var emp in EmployeeManager.Instance.ownedEmployees)
-                if (emp.satisfaction >= 90) highSatCandidates.Add(emp);
+                if (emp.satisfaction >= 90 && !IsTargetDispatched(emp.id)) highSatCandidates.Add(emp);
 
             if (highSatCandidates.Count > 0 && UnityEngine.Random.value < 0.1f)
             {
@@ -897,6 +911,7 @@ public class RandomEventManager : MonoBehaviour
         foreach (var emp in new List<EmployeeData>(EmployeeManager.Instance.ownedEmployees))
         {
             if (emp.satisfaction >= 41) continue;
+            if (IsTargetDispatched(emp.id)) continue; // 파견중 직원은 사직/도주 발동 안 함
 
             float triggerChance = (50 - emp.satisfaction) / 100f;
             // 테크트리 '평생 직장(sat_loyalty)' — 자진 퇴사(사직서/도망) 전체 확률 10%p 하락 (음수는 0%)

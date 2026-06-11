@@ -31,6 +31,7 @@ public class ItemEmployeeSelectUI : MonoBehaviour
 
         foreach (var emp in EmployeeManager.Instance.ownedEmployees)
         {
+            if (DispatchManager.Instance != null && DispatchManager.Instance.IsDispatched(emp.id)) continue; // 파견중 직원은 아이템 대상 제외
             if (_roleFilter.HasValue && emp.role != _roleFilter.Value) continue;
             // 라꾸라꾸: 디버프 걸린 직원만 노출
             if (_currentRow != null && _currentRow.itemId == "relax" && !emp.HasAnyStatDebuff()) continue;

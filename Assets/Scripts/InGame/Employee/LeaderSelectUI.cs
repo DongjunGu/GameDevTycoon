@@ -74,7 +74,8 @@ public class LeaderSelectUI : MonoBehaviour
             Destroy(child.gameObject);
 
         var filtered = EmployeeManager.Instance.ownedEmployees
-            .FindAll(e => e.role == filterRole);
+            .FindAll(e => e.role == filterRole
+                          && (DispatchManager.Instance == null || !DispatchManager.Instance.IsDispatched(e.id))); // 파견중 직원은 팀장 후보 제외
 
         // CEO 는 ownedEmployees 에 없지만 모든 role 의 팀장 후보로 항상 노출
         var ceo = EmployeeManager.Instance.CEO;

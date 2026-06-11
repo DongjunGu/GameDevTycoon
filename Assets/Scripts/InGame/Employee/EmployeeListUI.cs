@@ -1,164 +1,266 @@
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using TMPro;
 
-// 해고 UI — 채용(HiringUI) 흐름을 미러링.
-// 보유 직원을 EmployeeSlotPrefab2(채용과 동일) 슬롯 리스트로 표시 → 선택 → 이력서 캐러셀(좌:이전/중앙:현재/우:다음, 좌우 화살표) →
-// confirmBtn("해고") 클릭 시 ConfirmUI 로 "{이름}을 해고하시겠습니까?" 확인 → 네=해고+목록 복귀 / 아니오=ConfirmUI 만 닫음.
+// 직원 관리 패널 (구 해고-캐러셀 EmployeeListUI 를 새 디자인으로 교체).
+//  - 우(EmployeeListRightScrollView/Content): 보유 직원 슬롯 리스트(EmployeeSlotListUI 프리팹)
+//  - 좌(ListLeftPanel): 슬롯 선택 시 해당 직원 상세 (EmployeeCardUI 와 동일 항목). 선택 전엔 비활성 + EmptyPanel 표시.
+//  - BottomPanel: 강화하기 / 해고하기 / 아이템 사용하기 / 닫기.
+//      · 강화 → TrainingPanelUI.OpenForEmployee (이 패널 닫고 열기 → 닫히면 복귀)
+//      · 해고 → ConfirmUI 확인 후 FireEmployee, 목록 갱신
+//      · 아이템 → ItemPanelUI.OpenForEmployee (닫고 열기 → 복귀)
+//      · 파견중 직원은 강화/아이템/해고 시 AlertUI 로 차단.
 public class EmployeeListUI : MonoBehaviour
 {
     public static EmployeeListUI Instance { get; private set; }
 
-    [Header("Panels")]
-    public GameObject listPanel;
-    public GameObject confirmPanel;          // ConfirmFirePanel
+    [Header("Root (열기/닫기 토글 대상 — 비우면 이 GameObject)")]
+    public GameObject panelRoot;          // EmployeeListPanel
 
-    [Header("List")]
-    public Transform slotParent;
-    public GameObject employeeSlotPrefab;    // EmployeeSlotPrefab2 (채용과 동일)
+    [Header("List (EmployeeListRightScrollView/Content)")]
+    public Transform  slotParent;         // Content
+    public GameObject slotPrefab;         // EmployeeSlotListUI 프리팹
 
-    [Header("Resume Carousel")]
-    public ResumeFlipper resumeFlipper;
-    public EmployeeResumePanel resumeCenterPanel;
-    public EmployeeResumePanel resumeLeftPanel;
-    public EmployeeResumePanel resumeRightPanel;
-    public Button prevButton;
-    public Button nextButton;
+    [Header("Detail toggle")]
+    public GameObject leftPanel;          // ListLeftPanel — 선택 시 활성
+    public GameObject emptyPanel;         // 선택 전 placeholder — leftPanel 과 반대로 토글
 
-    private readonly List<EmployeeData> _list = new();
-    private int _currentIndex = -1;
-    private EmployeeData _selectedEmployee;
+    [Header("Detail (ListLeftPanel) — EmployeeCardUI 와 동일 항목")]
+    public Image portraitImage;
+    public TextMeshProUGUI nameText;
+    public TextMeshProUGUI potentialText;     // "잠재력: {}"
+    public TextMeshProUGUI gradeText;
+    public Image gradePanel;                  // 등급색 배경
+    public Image roleBadge;                   // 역할 아이콘
+    public Sprite[] roleIcons;                // role enum 순서 [Planner, Programmer, Artist]
+    public TextMeshProUGUI traitText;         // 특성명 (클릭 시 설명)
+    public TextMeshProUGUI eventText;         // 전용 이벤트명 (클릭 시 설명)
+    public TextMeshProUGUI enhancementText;   // "Lv.{}"
+    public Slider satisfactionSlider;
+    public TextMeshProUGUI satisfactionText;
+    public GameObject dispatchedBadge;        // 파견중 badge (옵션)
+    public TextMeshProUGUI planningText;
+    public TextMeshProUGUI developText;
+    public TextMeshProUGUI artText;
+    public TextMeshProUGUI creativityText;
+
+    [Header("Buttons (BottomPanel)")]
+    public Button enhanceButton;
+    public Button fireButton;
+    public Button itemButton;
+    public Button closeButton;
+
+    private string _selectedId = "";
+    private Coroutine _gradeCo;
+
+    GameObject Root => panelRoot != null ? panelRoot : gameObject;
 
     void Awake()
     {
-        if (Instance != null) { Destroy(gameObject); return; }
+        if (Instance != null && Instance != this) { Destroy(gameObject); return; }
         Instance = this;
+
+        if (enhanceButton != null) { enhanceButton.onClick.RemoveListener(OnClickEnhance); enhanceButton.onClick.AddListener(OnClickEnhance); }
+        if (fireButton    != null) { fireButton.onClick.RemoveListener(OnClickFire);       fireButton.onClick.AddListener(OnClickFire); }
+        if (itemButton    != null) { itemButton.onClick.RemoveListener(OnClickItem);       itemButton.onClick.AddListener(OnClickItem); }
+        if (closeButton   != null) { closeButton.onClick.RemoveListener(OnClickClose);     closeButton.onClick.AddListener(OnClickClose); }
     }
 
-    void Start()
-    {
-        if (prevButton != null) prevButton.onClick.AddListener(OnClickPrev);
-        if (nextButton != null) nextButton.onClick.AddListener(OnClickNext);
-    }
-
+    // 메뉴 직원관리 버튼 OnClick 에 연결
     public void OpenList()
     {
         GameTimeManager.Instance?.StopTime();
-        gameObject.SetActive(true);
-        if (confirmPanel != null) confirmPanel.SetActive(false);
-        ShowList();
+        Root.SetActive(true);
+        BuildList();
+        HideDetail();
     }
 
-    // 외부(커플 동반퇴사/사직/도주 등)에서 ownedEmployees 변경 시, 리스트가 열려있으면 다시 빌드.
-    public void RefreshIfOpen()
-    {
-        if (listPanel != null && listPanel.activeInHierarchy) ShowList();
-    }
-
-    void ShowList()
-    {
-        if (slotParent != null)
-            foreach (Transform child in slotParent)
-                Destroy(child.gameObject);
-
-        if (confirmPanel != null) confirmPanel.SetActive(false);
-        if (listPanel != null) listPanel.SetActive(true);
-
-        if (slotParent == null || employeeSlotPrefab == null) return;
-        foreach (var employee in EmployeeManager.Instance.ownedEmployees)
-        {
-            var slot = Instantiate(employeeSlotPrefab, slotParent);
-            slot.GetComponent<EmployeeSlotUI>().Setup(employee, OnSelectEmployee);
-        }
-    }
-
-    // 슬롯 선택 → 캐러셀로 진입(선택 직원이 가운데).
-    public void OnSelectEmployee(EmployeeData employee)
-    {
-        _list.Clear();
-        _list.AddRange(EmployeeManager.Instance.ownedEmployees);
-        int idx = _list.IndexOf(employee);
-        _currentIndex = idx >= 0 ? idx : 0;
-
-        // 패널을 먼저 활성화한 뒤 Populate — 비활성 상태에서 등급 셰머 코루틴 StartCoroutine 시 에러 방지.
-        if (listPanel != null) listPanel.SetActive(false);
-        if (confirmPanel != null) confirmPanel.SetActive(true);
-        PopulateResume();
-        UpdateArrowButtons();
-    }
-
-    public void OnClickNext() => FlipTo(+1);
-    public void OnClickPrev() => FlipTo(-1);
-
-    void FlipTo(int dir)
-    {
-        if (_list.Count <= 1) return;
-        if (resumeFlipper != null && resumeFlipper.IsFlipping) return;
-
-        int next = (_currentIndex + dir + _list.Count) % _list.Count;
-        if (resumeFlipper != null)
-            resumeFlipper.Flip(dir, () => { _currentIndex = next; PopulateResume(); });
-        else { _currentIndex = next; PopulateResume(); }
-    }
-
-    // 보유 직원 2명 이상일 때만 화살표 + 좌/우 이력서 노출 (1명 이하면 가운데만).
-    void UpdateArrowButtons()
-    {
-        bool multi = _list.Count > 1;
-        if (prevButton != null) prevButton.gameObject.SetActive(multi);
-        if (nextButton != null) nextButton.gameObject.SetActive(multi);
-        if (resumeLeftPanel  != null) resumeLeftPanel.gameObject.SetActive(multi);
-        if (resumeRightPanel != null) resumeRightPanel.gameObject.SetActive(multi);
-    }
-
-    // 좌:이전 / 가운데:현재 / 우:다음 (양끝 순환)
-    void PopulateResume()
-    {
-        if (_list.Count == 0) return;
-        int n = _list.Count, ci = _currentIndex;
-        var center = _list[ci];
-        _selectedEmployee = center;
-        // 해고는 확정된 실제 수치 + 버프/디버프 색상 표시 (채용처럼 interval 아님).
-        if (resumeCenterPanel != null) resumeCenterPanel.Setup(center, showActualStats: true);
-        if (resumeLeftPanel  != null) resumeLeftPanel.Setup(_list[(ci - 1 + n) % n], showActualStats: true);
-        if (resumeRightPanel != null) resumeRightPanel.Setup(_list[(ci + 1) % n], showActualStats: true);
-    }
-
-    // confirmBtn("해고") — 즉시 해고하지 않고 확인 다이얼로그.
-    public void OnClickFire()
-    {
-        if (_selectedEmployee == null) return;
-        ConfirmUI.Instance.Show(
-            $"{_selectedEmployee.employeeName}을(를) 해고하시겠습니까?",
-            onConfirm: DoFire,
-            onCancel: () => { },     // 아니오 — ConfirmUI 만 닫고 이력서 유지
-            confirmText: "네",
-            cancelText: "아니오"
-        );
-    }
-
-    void DoFire()
-    {
-        if (_selectedEmployee == null) return;
-        EmployeeManager.Instance.FireEmployee(_selectedEmployee);
-        HUDUI.Instance?.RefreshAll();
-        _selectedEmployee = null;
-        if (confirmPanel != null) confirmPanel.SetActive(false);
-        ShowList();   // 해고된 직원 빠진 목록으로 복귀 (계속 해고 가능)
-    }
-
-    // 확인 화면 → 목록으로
-    public void OnClickBack()
-    {
-        if (confirmPanel != null) confirmPanel.SetActive(false);
-        if (listPanel != null) listPanel.SetActive(true);
-    }
-
-    // 닫기
     public void OnClickClose()
     {
         GameTimeManager.Instance?.StartTime();
-        if (confirmPanel != null) confirmPanel.SetActive(false);
-        if (listPanel != null) listPanel.SetActive(false);
+        Root.SetActive(false);
     }
+
+    // 외부(커플 동반퇴사/사직/도주 등)에서 ownedEmployees 변경 시, 열려있으면 다시 빌드.
+    public void RefreshIfOpen()
+    {
+        if (Root.activeInHierarchy) { BuildList(); RefreshSelectedOrHide(); }
+    }
+
+    // ── 목록 ─────────────────────────────────────
+    void BuildList()
+    {
+        if (slotParent == null || slotPrefab == null || EmployeeManager.Instance == null) return;
+        foreach (Transform child in slotParent)
+            Destroy(child.gameObject);
+
+        foreach (var emp in EmployeeManager.Instance.ownedEmployees)
+        {
+            var go = Instantiate(slotPrefab, slotParent);
+            go.SetActive(true); // 프리팹 루트가 비활성으로 저장돼 있어도 강제 활성
+            var slot = go.GetComponent<EmployeeSlotListUI>();
+            if (slot != null) slot.Setup(emp, OnSelectEmployee);
+        }
+    }
+
+    // ── 선택 / 상세 ───────────────────────────────
+    // public: 구 OwnedEmployeeSlotUI(연봉협상 슬롯)가 참조 — 호환 유지.
+    public void OnSelectEmployee(EmployeeData emp)
+    {
+        if (emp == null) return;
+        _selectedId = emp.id;
+        SetDetailActive(true);
+        PopulateDetail(emp);
+    }
+
+    void HideDetail()
+    {
+        _selectedId = "";
+        SetDetailActive(false);
+        RefreshButtons(null);
+    }
+
+    // 파견중 직원은 선택은 되지만 강화/해고/아이템 버튼 비활성(클릭 불가). 선택 없으면 셋 다 비활성.
+    void RefreshButtons(EmployeeData emp)
+    {
+        bool ok = emp != null && !IsDispatched(emp.id);
+        if (enhanceButton != null) enhanceButton.interactable = ok;
+        if (fireButton    != null) fireButton.interactable    = ok;
+        if (itemButton    != null) itemButton.interactable    = ok;
+    }
+
+    // 선택 직원이 아직 보유 중이면 상세 재표시, 아니면(해고 등) EmptyPanel 로.
+    void RefreshSelectedOrHide()
+    {
+        var emp = !string.IsNullOrEmpty(_selectedId) ? EmployeeManager.Instance?.GetEmployee(_selectedId) : null;
+        if (emp != null) { SetDetailActive(true); PopulateDetail(emp); }
+        else HideDetail();
+    }
+
+    void SetDetailActive(bool active)
+    {
+        if (leftPanel  != null) leftPanel.SetActive(active);
+        if (emptyPanel != null) emptyPanel.SetActive(!active);
+    }
+
+    void PopulateDetail(EmployeeData emp)
+    {
+        if (portraitImage != null && !string.IsNullOrEmpty(emp.portraitId))
+        {
+            var sprite = Resources.Load<Sprite>($"Portraits/{emp.portraitId}");
+            if (sprite != null) portraitImage.sprite = sprite;
+        }
+        SetText(nameText,      emp.employeeName);
+        SetText(potentialText, $"잠재력: {emp.PotentialToString()}");
+        SetText(gradeText,     emp.GradeToString());
+        if (roleBadge != null && roleIcons != null
+            && (int)emp.role >= 0 && (int)emp.role < roleIcons.Length
+            && roleIcons[(int)emp.role] != null)
+            roleBadge.sprite = roleIcons[(int)emp.role];
+
+        ApplyGradeColor(emp.grade);
+        CharacterTraitApplier.SetupTraitText(traitText, emp);
+        CharacterUniqueEvents.SetupEventTextDirect(eventText, emp);
+
+        SetText(enhancementText, $"Lv.{emp.enhancementLevel}");
+        if (satisfactionSlider != null)
+        {
+            satisfactionSlider.minValue = 0f;
+            satisfactionSlider.maxValue = 100f;
+            satisfactionSlider.value = emp.satisfaction;
+            EmployeeCardUI.ApplySatisfactionColor(satisfactionSlider, emp.satisfaction);
+        }
+        SetText(satisfactionText, $"{emp.satisfaction}");
+
+        if (dispatchedBadge != null)
+            dispatchedBadge.SetActive(IsDispatched(emp.id));
+
+        // 능력치 = 버프/디버프 적용 실제값 + 색상 (EmployeeCardUI 와 동일)
+        EmployeeCardUI.SetStatColored(planningText,   emp.planningSkill,   emp.EffectivePlanningSkill);
+        EmployeeCardUI.SetStatColored(developText,    emp.developSkill,    emp.EffectiveDevelopSkill);
+        EmployeeCardUI.SetStatColored(artText,        emp.artSkill,        emp.EffectiveArtSkill);
+        EmployeeCardUI.SetStatColored(creativityText, emp.creativitySkill, emp.EffectiveCreativitySkill);
+
+        RefreshButtons(emp); // 파견중이면 강화/해고/아이템 버튼 비활성
+    }
+
+    void ApplyGradeColor(EmployeeGrade grade)
+    {
+        if (gradePanel == null) return;
+        if (_gradeCo != null) { StopCoroutine(_gradeCo); _gradeCo = null; }
+        _gradeCo = EmployeeGradeColor.Apply(this, gradePanel, grade);
+    }
+
+    // ── 버튼 ─────────────────────────────────────
+    EmployeeData Selected()
+        => !string.IsNullOrEmpty(_selectedId) ? EmployeeManager.Instance?.GetEmployee(_selectedId) : null;
+
+    // 강화하기 — 이 패널 닫고 강화 패널 열기 → 닫히면 복귀(선택 직원 재표시)
+    public void OnClickEnhance()
+    {
+        var emp = Selected();
+        if (emp == null || TrainingPanelUI.Instance == null) return;
+        if (IsDispatched(emp.id)) { AlertUI.Instance?.Show("파견중인 직원은 강화할 수 없습니다."); return; }
+
+        string id = emp.id;
+        Root.SetActive(false);
+        TrainingPanelUI.Instance.OpenForEmployee(emp, () => Reopen(id));
+    }
+
+    // 아이템 사용하기 — 이 패널 닫고 아이템 패널을 해당 직원 컨텍스트로 열기 → 닫히면 복귀
+    public void OnClickItem()
+    {
+        var emp = Selected();
+        if (emp == null || ItemPanelUI.Instance == null) return;
+        if (IsDispatched(emp.id)) { AlertUI.Instance?.Show("파견중인 직원에게는 사용할 수 없습니다."); return; }
+
+        string id = emp.id;
+        Root.SetActive(false);
+        ItemPanelUI.Instance.OpenForEmployee(id, () => Reopen(id));
+    }
+
+    // 해고하기 — 확인 다이얼로그 후 해고
+    public void OnClickFire()
+    {
+        var emp = Selected();
+        if (emp == null) return;
+        if (IsDispatched(emp.id)) { AlertUI.Instance?.Show("파견중인 직원은 해고할 수 없습니다."); return; }
+        if (ConfirmUI.Instance == null) { DoFire(emp.id); return; }
+
+        string id = emp.id;
+        ConfirmUI.Instance.Show(
+            $"{emp.employeeName}을(를) 해고하시겠습니까?",
+            onConfirm: () => DoFire(id),
+            onCancel:  () => { },
+            confirmText: "네",
+            cancelText:  "아니오"
+        );
+    }
+
+    void DoFire(string id)
+    {
+        var emp = EmployeeManager.Instance?.GetEmployee(id);
+        if (emp == null) return;
+        EmployeeManager.Instance.FireEmployee(emp);
+        HUDUI.Instance?.RefreshAll();
+        _selectedId = "";
+        BuildList();
+        HideDetail();   // 선택 해제 → EmptyPanel
+    }
+
+    // 강화/아이템 패널에서 복귀 — 시간정지는 이미 걸려 있으므로 추가 안 함. 패널만 다시 표시 + 선택 복원.
+    void Reopen(string reselectId)
+    {
+        Root.SetActive(true);
+        BuildList();
+        var emp = !string.IsNullOrEmpty(reselectId) ? EmployeeManager.Instance?.GetEmployee(reselectId) : null;
+        if (emp != null) OnSelectEmployee(emp);
+        else HideDetail();
+    }
+
+    // ── 헬퍼 ─────────────────────────────────────
+    static bool IsDispatched(string id)
+        => DispatchManager.Instance != null && DispatchManager.Instance.IsDispatched(id);
+
+    static void SetText(TextMeshProUGUI t, string s) { if (t != null) t.text = s; }
 }
