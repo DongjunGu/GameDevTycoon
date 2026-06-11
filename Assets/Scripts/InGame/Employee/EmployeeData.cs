@@ -497,6 +497,9 @@ public class EmployeeData
     // 만족도 변경 (1~100 클램프)
     public void ChangeSatisfaction(int amount)
     {
+        // 파견중(사무실 부재) 직원은 이벤트성 만족도 변화 동결 — 파견 출발 시점 값 유지.
+        // (주기 만족도 하락은 EmployeeManager 가 직접 대입 + 자체 IsDispatched 가드 / 복귀 보상 RecoverSatisfaction 은 직접 대입이라 영향 없음)
+        if (DispatchManager.Instance != null && DispatchManager.Instance.IsDispatched(id)) return;
         satisfaction = Mathf.Clamp(satisfaction + amount, 1, 100);
     }
 }

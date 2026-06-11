@@ -117,7 +117,8 @@ public class SalaryNegotiationManager : MonoBehaviour
         int currentYear = GameTimeManager.Instance.Year;
         var eligible    = EmployeeManager.Instance.ownedEmployees
             .FindAll(e => e.hiredYear > 0 && e.hiredYear < currentYear
-                          && !CharacterTraitApplier.IsGoldspoon(e)); // 금수저는 연봉협상 대상 제외
+                          && !CharacterTraitApplier.IsGoldspoon(e) // 금수저는 연봉협상 대상 제외
+                          && (DispatchManager.Instance == null || !DispatchManager.Instance.IsDispatched(e.id))); // 파견중 제외
 
         if (eligible.Count == 0) return (null, NegotiationCriteria.HighStat);
 

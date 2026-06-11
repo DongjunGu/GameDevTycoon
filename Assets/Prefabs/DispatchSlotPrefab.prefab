@@ -101,6 +101,7 @@ GameObject:
   - component: {fileID: 1627988576840935089}
   - component: {fileID: 817742487171509235}
   - component: {fileID: 689817217593220215}
+  - component: {fileID: 1773855836919626716}
   m_Layer: 5
   m_Name: PortraitPanel
   m_TagString: Untagged
@@ -166,6 +167,26 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+--- !u!114 &1773855836919626716
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1474222536355325850}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 306cc8c2b49d7114eaa3623786fc2126, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.LayoutElement
+  m_IgnoreLayout: 0
+  m_MinWidth: 0
+  m_MinHeight: 0
+  m_PreferredWidth: 0
+  m_PreferredHeight: 0
+  m_FlexibleWidth: 1
+  m_FlexibleHeight: 1
+  m_LayoutPriority: 1
 --- !u!1 &1983924396680351385
 GameObject:
   m_ObjectHideFlags: 0
@@ -199,11 +220,11 @@ RectTransform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 8436396821405731959}
   - {fileID: 1627988576840935089}
   - {fileID: 5693376504042221504}
   - {fileID: 708346801829035555}
   - {fileID: 2513207750784286489}
+  - {fileID: 8436396821405731959}
   - {fileID: 7368129986742250967}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -264,7 +285,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::DispatchSlotUI
   portraitImage: {fileID: 1010103169446989691}
   nameText: {fileID: 5312578376692105808}
-  roleText: {fileID: 0}
+  roleIcon: {fileID: 2640862290002106944}
+  roleIcons:
+  - {fileID: 557219105, guid: b35b93d3d97396945a9a3a8d376c3c92, type: 3}
+  - {fileID: 962383066, guid: b35b93d3d97396945a9a3a8d376c3c92, type: 3}
+  - {fileID: 1888231692, guid: b35b93d3d97396945a9a3a8d376c3c92, type: 3}
+  - {fileID: 283327289, guid: b35b93d3d97396945a9a3a8d376c3c92, type: 3}
   enhancementText: {fileID: 7734006873942644483}
   selectButton: {fileID: 8909723514100389306}
   selectedIndicator: {fileID: 1983924396680351385}
@@ -326,6 +352,7 @@ GameObject:
   - component: {fileID: 5693376504042221504}
   - component: {fileID: 6455989182152059660}
   - component: {fileID: 7734006873942644483}
+  - component: {fileID: 6993118031611100210}
   m_Layer: 5
   m_Name: EnhancementText
   m_TagString: Untagged
@@ -452,6 +479,26 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &6993118031611100210
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3900693692350956990}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 306cc8c2b49d7114eaa3623786fc2126, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.LayoutElement
+  m_IgnoreLayout: 0
+  m_MinWidth: 0
+  m_MinHeight: 0
+  m_PreferredWidth: 0
+  m_PreferredHeight: 0
+  m_FlexibleWidth: 1
+  m_FlexibleHeight: 1
+  m_LayoutPriority: 1
 --- !u!1 &4645648104893683077
 GameObject:
   m_ObjectHideFlags: 0
@@ -602,7 +649,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 0, g: 0, b: 0, a: 0}
+  m_Color: {r: 0, g: 0, b: 0, a: 0.47058824}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -643,7 +690,7 @@ MonoBehaviour:
     m_NormalColor: {r: 1, g: 1, b: 1, a: 1}
     m_HighlightedColor: {r: 0.9607843, g: 0.9607843, b: 0.9607843, a: 1}
     m_PressedColor: {r: 0.78431374, g: 0.78431374, b: 0.78431374, a: 1}
-    m_SelectedColor: {r: 0.9607843, g: 0.9607843, b: 0.9607843, a: 1}
+    m_SelectedColor: {r: 1, g: 1, b: 1, a: 1}
     m_DisabledColor: {r: 0.78431374, g: 0.78431374, b: 0.78431374, a: 0.5019608}
     m_ColorMultiplier: 1
     m_FadeDuration: 0.1
@@ -739,6 +786,7 @@ GameObject:
   - component: {fileID: 708346801829035555}
   - component: {fileID: 6264284704987312411}
   - component: {fileID: 5312578376692105808}
+  - component: {fileID: 1944305990056280423}
   m_Layer: 5
   m_Name: nameText
   m_TagString: Untagged
@@ -865,6 +913,26 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &1944305990056280423
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8407607732694781268}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 306cc8c2b49d7114eaa3623786fc2126, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.LayoutElement
+  m_IgnoreLayout: 0
+  m_MinWidth: 0
+  m_MinHeight: 0
+  m_PreferredWidth: 0
+  m_PreferredHeight: 0
+  m_FlexibleWidth: 1
+  m_FlexibleHeight: 1
+  m_LayoutPriority: 1
 --- !u!1 &8819662880065439922
 GameObject:
   m_ObjectHideFlags: 0

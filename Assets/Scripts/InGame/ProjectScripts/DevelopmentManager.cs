@@ -489,6 +489,8 @@ public class DevelopmentManager : MonoBehaviour
             foreach (var employee in EmployeeManager.Instance.ownedEmployees.ToList())
             {
                 if (!_tickTimesMap.ContainsKey(employee.id)) continue;
+                // 파견중 직원은 사무실 부재 — GetState 가 기본값 Working 을 줘서 틱이 누적되는 것 방지(복귀 시 OnEmployeeHired 가 새 틱 구성).
+                if (DispatchManager.Instance != null && DispatchManager.Instance.IsDispatched(employee.id)) continue;
 
                 CharacterState curState = OfficeManager.Instance.GetState(employee.id);
                 _prevStateMap.TryGetValue(employee.id, out CharacterState prevState);
@@ -567,6 +569,7 @@ public class DevelopmentManager : MonoBehaviour
         foreach (var employee in EmployeeManager.Instance.ownedEmployees.ToList())
         {
             if (!_tickTimesMap.ContainsKey(employee.id)) continue;
+            if (DispatchManager.Instance != null && DispatchManager.Instance.IsDispatched(employee.id)) continue; // 파견중 직원은 잔여 틱도 누적 X
 
             var times  = _tickTimesMap[employee.id];
             int[] order = _tickOrderMap[employee.id];
@@ -671,7 +674,8 @@ public class DevelopmentManager : MonoBehaviour
             if (UnityEngine.Random.value < bugFixChance)
             {
                 var workers = EmployeeManager.Instance.ownedEmployees
-                    .Where(e => OfficeManager.Instance.GetState(e.id) == CharacterState.Working)
+                    .Where(e => OfficeManager.Instance.GetState(e.id) == CharacterState.Working
+                                && !(DispatchManager.Instance != null && DispatchManager.Instance.IsDispatched(e.id))) // 파견중 제외
                     .ToList();
 
                 if (workers.Count == 0)

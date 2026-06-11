@@ -48,10 +48,15 @@ public static class CharacterTraitApplier
         return (emp.masterEmployeeId != null && Directory.TryGetValue(emp.masterEmployeeId, out var v)) ? v.evt : "";
     }
 
+    // 파견중(사무실 부재) 직원인지 — 파견중엔 특성/전용이벤트 모두 비활성. CharacterUniqueEvents 도 공유.
+    public static bool IsOnDispatch(EmployeeData emp)
+        => emp != null && DispatchManager.Instance != null && DispatchManager.Instance.IsDispatched(emp.id);
+
     // grade >= Epic 이고 유효한 특성ID 를 가진 직원의 특성 row 반환. 아니면 null.
     public static CharacterTraitRow GetActiveTrait(EmployeeData emp)
     {
         if (emp == null) return null;
+        if (IsOnDispatch(emp)) return null;                        // 파견중에는 특성 효과/표시 비활성
         if (emp.grade < EmployeeGrade.Epic) return null;          // ⚠️ 게이팅 미해결 (위 주석)
         string traitId = ResolveTraitId(emp);
         if (string.IsNullOrEmpty(traitId)) return null;

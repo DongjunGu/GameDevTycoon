@@ -31,7 +31,7 @@ public class DispatchSlotUI : MonoBehaviour
             roleIcon.sprite = roleIcons[(int)data.role];
             roleIcon.enabled = true;
         }
-        if (enhancementText != null) enhancementText.text = $"+{data.enhancementLevel}";
+        if (enhancementText != null) enhancementText.text = $"Lv {data.enhancementLevel}";
 
         if (portraitImage != null)
         {
@@ -55,7 +55,19 @@ public class DispatchSlotUI : MonoBehaviour
 
     public void SetSelected(bool on)
     {
-        // selectedIndicator 가 슬롯 루트 자신으로 잘못 연결돼 있으면 토글 시 슬롯 전체가 꺼짐 → 방어
+        // selectButton 의 Image 알파만 토글 — 선택 시 120/255, 해제 시 0. RGB(색)는 인스펙터에서 설정한 값 유지.
+        if (selectButton != null)
+        {
+            var img = selectButton.image != null ? selectButton.image : selectButton.GetComponent<Image>();
+            if (img != null)
+            {
+                var c = img.color;
+                c.a = on ? 120f / 255f : 0f;
+                img.color = c;
+            }
+        }
+
+        // selectedIndicator 가 연결돼 있으면 함께 토글 (옵션). 슬롯 루트 자신이면 무시(전체 꺼짐 방어).
         if (selectedIndicator != null && selectedIndicator != gameObject)
             selectedIndicator.SetActive(on);
     }

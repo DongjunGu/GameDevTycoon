@@ -22,6 +22,7 @@ public static class CharacterUniqueEvents
     public static void WeeklyCheck(EmployeeData emp)
     {
         if (emp == null) return;
+        if (CharacterTraitApplier.IsOnDispatch(emp)) return; // 파견중 직원은 전용 이벤트 발동 안 함
         switch (CharacterTraitApplier.ResolveEventType(emp))
         {
             case "KimUnique":       CheckGlassMentalRecovery(emp); break;
@@ -68,7 +69,8 @@ public static class CharacterUniqueEvents
 
         EmployeeData hunsu = null;
         foreach (var emp in em.ownedEmployees)
-            if (emp.grade >= EmployeeGrade.Unique && CharacterTraitApplier.ResolveEventType(emp) == "HunsuUnique")
+            if (emp.grade >= EmployeeGrade.Unique && !CharacterTraitApplier.IsOnDispatch(emp)
+                && CharacterTraitApplier.ResolveEventType(emp) == "HunsuUnique")
             { hunsu = emp; break; }
         if (hunsu == null) return;
 
@@ -179,6 +181,7 @@ public static class CharacterUniqueEvents
     public static void Trigger(EmployeeData emp)
     {
         if (emp == null) return;
+        if (CharacterTraitApplier.IsOnDispatch(emp)) return; // 파견중 직원은 전용 이벤트 발동 안 함 (백스톱)
         string eventType = CharacterTraitApplier.ResolveEventType(emp);
         if (string.IsNullOrEmpty(eventType)) return;
 
@@ -239,6 +242,7 @@ public static class CharacterUniqueEvents
         foreach (var emp in em.ownedEmployees)
         {
             if (emp.grade < EmployeeGrade.Unique) continue;
+            if (CharacterTraitApplier.IsOnDispatch(emp)) continue; // 파견중 오타쿠는 버튜버 데뷔 발동 안 함
             if (CharacterTraitApplier.ResolveEventType(emp) != "OtakuUnique") continue;
             if (!string.IsNullOrEmpty(emp.otakuFixedGenre) && emp.otakuFixedGenre == genreName) { otaku = emp; break; }
         }
@@ -377,7 +381,8 @@ public static class CharacterUniqueEvents
         var em = EmployeeManager.Instance;
         if (em?.ownedEmployees == null) return false;
         foreach (var e in em.ownedEmployees)
-            if (e.grade >= EmployeeGrade.Unique && CharacterTraitApplier.ResolveEventType(e) == "UgiUnique")
+            if (e.grade >= EmployeeGrade.Unique && !CharacterTraitApplier.IsOnDispatch(e)
+                && CharacterTraitApplier.ResolveEventType(e) == "UgiUnique")
                 return true;
         return false;
     }
