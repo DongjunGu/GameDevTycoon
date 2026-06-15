@@ -104,7 +104,7 @@ public class OfficeManager : MonoBehaviour
     {
         if (!_characters.TryGetValue(employeeId, out var oc)) return;
         var statSprite = StatPopupSprites.Instance != null ? StatPopupSprites.Instance.GetStatIcon(statKey) : null;
-        oc.ShowStatTickPopup(statSprite, amount, color, isJackpot);
+        oc.ShowStatTickPopup(statSprite, statKey, amount, color, isJackpot);
     }
 
     // 해고 시 — 데이터 즉시 제거, 캐릭터는 SpawnPoint까지 걸어간 뒤 소멸
@@ -361,6 +361,15 @@ public class OfficeManager : MonoBehaviour
     {
         foreach (var oc in _characters.Values)
             oc.SetDeskWorking();
+    }
+
+    // 개발 시작 시 호출 — 이전 프로젝트에서 남은 개발틱 팝업 큐/카운터 정리.
+    // 잔재 ActiveCount 가 LeaderSelectUI 의 카운트업 대기를 막아 딜레이/hang 을 유발하던 것 방지.
+    public void ClearAllPopups()
+    {
+        foreach (var oc in _characters.Values)
+            oc?.ForceClearPopups();
+        StatTickPopup.ActiveCount = 0;
     }
 
     // 개발 시작 시 호출 — patrol 포인트 갱신

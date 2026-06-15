@@ -89866,7 +89866,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 8195057915177590154, guid: c3bb574c44051b445904e6543db7aeb2, type: 3}
+  m_Sprite: {fileID: 3291002483823293322, guid: 2924f5ba64f2aa64e85dfa8c0055cf9c, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -119515,6 +119515,12 @@ MonoBehaviour:
   developText: {fileID: 317874376}
   artText: {fileID: 394505829}
   creativityText: {fileID: 734953017}
+  planningArrow: {fileID: 0}
+  developArrow: {fileID: 0}
+  artArrow: {fileID: 0}
+  creativityArrow: {fileID: 0}
+  redArrow: {fileID: 0}
+  blueArrow: {fileID: 0}
   satisfactionAnimSpeed: 30
 --- !u!114 &1451220975
 MonoBehaviour:
@@ -120284,7 +120290,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -0.0000071525574, y: -0.000014305115}
+  m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 1400, y: 600}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1462243614
@@ -146693,6 +146699,12 @@ MonoBehaviour:
   developText: {fileID: 1933262528}
   artText: {fileID: 1402735207}
   creativityText: {fileID: 1052089650}
+  planningArrow: {fileID: 1064311246}
+  developArrow: {fileID: 1622693202}
+  artArrow: {fileID: 68392601}
+  creativityArrow: {fileID: 784823010}
+  redArrow: {fileID: 3291002483823293322, guid: 2924f5ba64f2aa64e85dfa8c0055cf9c, type: 3}
+  blueArrow: {fileID: 8195057915177590154, guid: c3bb574c44051b445904e6543db7aeb2, type: 3}
   enhanceButton: {fileID: 1302543082}
   fireButton: {fileID: 1937397502}
   itemButton: {fileID: 1780630530}
@@ -172190,7 +172202,7 @@ RectTransform:
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
   m_AnchoredPosition: {x: 0, y: -50}
-  m_SizeDelta: {x: 0, y: -67}
+  m_SizeDelta: {x: 0, y: -119.79}
   m_Pivot: {x: 0, y: 1}
 --- !u!114 &2040224964
 MonoBehaviour:

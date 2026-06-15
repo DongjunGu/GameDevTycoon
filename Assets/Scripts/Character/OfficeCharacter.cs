@@ -10,6 +10,7 @@ public class OfficeCharacter : MonoBehaviour, IPointerClickHandler
         public bool    isBlock;
         // stat tick
         public Sprite  stat;
+        public string  statKey;   // 흡입 타겟(스탯 텍스트) 결정용
         public int     amount;
         public Color   color;
         public bool    isJackpot;
@@ -279,13 +280,13 @@ public class OfficeCharacter : MonoBehaviour, IPointerClickHandler
     }
 
     // 상시 개발틱 팝업
-    public void ShowStatTickPopup(Sprite statSprite, int amount, Color color, bool isJackpot)
+    public void ShowStatTickPopup(Sprite statSprite, string statKey, int amount, Color color, bool isJackpot)
     {
         if (StatTickPopupPool.Instance == null) return;
         EnqueuePopup(new PopupRequest
         {
             isBlock = false,
-            stat = statSprite, amount = amount, color = color, isJackpot = isJackpot
+            stat = statSprite, statKey = statKey, amount = amount, color = color, isJackpot = isJackpot
         });
     }
 
@@ -320,7 +321,7 @@ public class OfficeCharacter : MonoBehaviour, IPointerClickHandler
                 OnPopupFinished();
                 return;
             }
-            p.Show(req.stat, req.amount, req.color, req.isJackpot, OnPopupFinished);
+            p.Show(req.stat, req.statKey, req.amount, req.color, req.isJackpot, OnPopupFinished);
         }
     }
 
@@ -338,5 +339,13 @@ public class OfficeCharacter : MonoBehaviour, IPointerClickHandler
         int leftover = _popupQueue.Count + (_popupActive ? 1 : 0);
         if (leftover > 0)
             StatTickPopup.ActiveCount = Mathf.Max(0, StatTickPopup.ActiveCount - leftover);
+    }
+
+    // 개발 시작 등에서 호출 — 이 캐릭터의 개발틱 팝업 큐/활성 상태를 정리.
+    // (전역 StatTickPopup.ActiveCount 리셋은 호출측 OfficeManager.ClearAllPopups 가 담당)
+    public void ForceClearPopups()
+    {
+        _popupQueue.Clear();
+        _popupActive = false;
     }
 }

@@ -36,6 +36,11 @@ public class SalesSaveManager : MonoBehaviour
     public bool HasPendingRestore => _hasPendingRestore;
     public bool WasRestored { get; private set; } = false;
 
+    // 로드된 판매가 "이미 완료된 상태"인지. stage=Marketing 잔존(SaveProject 가 판매 중 스킵돼 발생)으로
+    // ProjectSaveManager 가 "판매 시작!" 으로 복원하는 것을 막는 데 사용.
+    private bool _loadedSalesAlreadyComplete;
+    public bool SalesAlreadyComplete => _loadedSalesAlreadyComplete;
+
     void Awake()
     {
         if (Instance != null) { Destroy(gameObject); return; }
@@ -44,13 +49,16 @@ public class SalesSaveManager : MonoBehaviour
     }
 
     // ── 저장 ─────────────────────────────────
+    // isActive: 진행 중=true / 마지막 주차(완료)=false. 완료를 별도 UpdateV2(CompleteSales)로 분리하지 않고
+    // 마지막 저장에 함께 실으면 "마지막에 쓰는 값"이 항상 isActive=false 가 되어 복원 race 가 사라진다.
     public void SaveSales(int completedWeeks, int totalRevenue, int[] revenuePerPeriod,
         float qualityScore, ProjectScale salesScale, string projectName,
         ProjectScale cachedScale, ProjectGenre cachedGenre, ProjectPlatform cachedPlatform,
-        float planning, float develop, float art, float creativity, float bug)
+        float planning, float develop, float art, float creativity, float bug,
+        bool isActive = true)
     {
         var param = new Param();
-        param.Add("isActive", true);
+        param.Add("isActive", isActive);
         param.Add("completedWeeks", completedWeeks);
         param.Add("totalRevenue", totalRevenue);
         // 세션 시작 시 동결된 주차별 매출 배열 — 복원 시 distribution/comebackUnlocked 재계산 안 함
@@ -135,6 +143,8 @@ public class SalesSaveManager : MonoBehaviour
     }
 
     // ── 판매 완료 ─────────────────────────────
+    // 보조 안전망: 마지막 주차 SaveSales 가 이미 isActive=false 를 썼으므로 사실상 중복(둘 다 false → race 무해).
+    // 마지막 SaveSales 가 어떤 이유로 누락돼도 여기서 한 번 더 isActive=false 를 보장한다.
     public void CompleteSales()
     {
         if (string.IsNullOrEmpty(_rowInDate)) return;
@@ -173,6 +183,7 @@ public class SalesSaveManager : MonoBehaviour
     // ── 로드 ─────────────────────────────────
     public void LoadSales(System.Action onComplete = null)
     {
+        _loadedSalesAlreadyComplete = false; // 매 로드마다 재판정 (이전 런/로드 값 stale 방지)
         Backend.GameData.GetMyData("UserSales", new Where(), bro =>
         {
             if (!bro.IsSuccess())
@@ -207,17 +218,25 @@ public class SalesSaveManager : MonoBehaviour
             JsonData row = rows[rows.Count - 1];
             _rowInDate = SafeString(row, "inDate", "");
 
-            _loadedIsActive = SafeBool(row, "isActive", false);
-            if (!_loadedIsActive)
+            _loadedIsActive         = SafeBool(row, "isActive", false);
+            _loadedCompletedWeeks   = SafeInt(row, "completedWeeks", 0);
+            _loadedTotalRevenue     = SafeInt(row, "totalRevenue", 0);
+            _loadedRevenuePerPeriod = ParseRevenuePerPeriod(SafeString(row, "revenuePerPeriod", ""));
+
+            // 완료 판정 — 두 신호(isActive, completedWeeks)를 일관되게 해석.
+            //  · allWeeksDone: 모든 주차가 끝남 (isActive 가 race 로 true 로 남아도 완료로 간주)
+            //  · 비활성(isActive=false)인데 판매 이력(completedWeeks>0)이 있으면 정상 완료
+            // → 완료된 판매는 복원하지 않고, ProjectSaveManager 의 "판매 시작!"(stage=Marketing 잔존) 도 막는다.
+            bool allWeeksDone = _loadedRevenuePerPeriod != null && _loadedCompletedWeeks >= _loadedRevenuePerPeriod.Length;
+            _loadedSalesAlreadyComplete = allWeeksDone || (!_loadedIsActive && _loadedCompletedWeeks > 0);
+
+            if (!_loadedIsActive || allWeeksDone)
             {
-                Debug.Log("진행 중인 판매 없음");
+                Debug.Log($"진행 중인 판매 없음 (isActive={_loadedIsActive}, completedWeeks={_loadedCompletedWeeks}, complete={_loadedSalesAlreadyComplete})");
                 onComplete?.Invoke();
                 return;
             }
 
-            _loadedCompletedWeeks = SafeInt(row, "completedWeeks", 0);
-            _loadedTotalRevenue   = SafeInt(row, "totalRevenue", 0);
-            _loadedRevenuePerPeriod = ParseRevenuePerPeriod(SafeString(row, "revenuePerPeriod", ""));
             _loadedQualityScore   = SafeFloat(row, "qualityScore", 0f);
             _loadedSalesScale     = (ProjectScale)SafeInt(row, "salesScale", 0);
             _loadedProjectName    = SafeString(row, "projectName", "프로젝트명");

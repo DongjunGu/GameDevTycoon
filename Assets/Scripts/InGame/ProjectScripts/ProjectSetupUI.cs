@@ -109,10 +109,11 @@ public class ProjectSetupUI : MonoBehaviour
         }
         GameTimeManager.Instance.StopTime();
 
-        // 새 설정 초기화 — 규모는 기본 소규모(개발금 즉시 표시), 플랫폼·장르는 미선택.
+        // 새 설정 초기화 — 마지막 선택(로컬 저장)이 있으면 규모/플랫폼/장르 복원, 없으면 소규모+미선택.
         _projectData = new ProjectData { scale = ProjectScale.Small };
         _genreChosen = false;
         _platformChosen = false;
+        LoadLastSelection();
 
         UpdateGenreButtonLabels();
         RefreshMain();
@@ -211,6 +212,8 @@ public class ProjectSetupUI : MonoBehaviour
         SelectedGenre = _projectData.genre;
         SelectedPlatform = _projectData.platform;
 
+        SaveLastSelection(); // 다음 프로젝트 설정 시 기본값으로 복원되도록 로컬 저장
+
         if (DevelopmentManager.Instance.CurrentStage == ProjectStage.Sales)
             SalesUI.Instance.NotifyNewProjectStarted();
 
@@ -229,6 +232,52 @@ public class ProjectSetupUI : MonoBehaviour
 
         ShowOnly(null);
         GameTimeManager.Instance.StartTime();
+    }
+
+    // ── 마지막 선택 기억 (한 회차 한정 — PlayerPrefs 로 영속화해 재접속에도 유지, 새 런 시작 시 ResetForNewRun 으로 클리어) ──
+    const string PrefScale    = "ProjectSetup_LastScale";
+    const string PrefGenre    = "ProjectSetup_LastGenre";
+    const string PrefPlatform = "ProjectSetup_LastPlatform";
+
+    void SaveLastSelection()
+    {
+        PlayerPrefs.SetInt(PrefScale,    (int)_projectData.scale);
+        PlayerPrefs.SetInt(PrefGenre,    (int)_projectData.genre);
+        PlayerPrefs.SetInt(PrefPlatform, (int)_projectData.platform);
+        PlayerPrefs.Save();
+    }
+
+    // 이번 회차에 저장된 마지막 선택을 복원. 없으면(첫 프로젝트/새 런) 그대로 둠.
+    void LoadLastSelection()
+    {
+        if (!PlayerPrefs.HasKey(PrefScale)) return;
+
+        _projectData.scale = (ProjectScale)PlayerPrefs.GetInt(PrefScale);
+
+        if (PlayerPrefs.HasKey(PrefPlatform))
+        {
+            _projectData.platform = (ProjectPlatform)PlayerPrefs.GetInt(PrefPlatform);
+            _platformChosen = true;
+        }
+
+        if (PlayerPrefs.HasKey(PrefGenre))
+        {
+            _projectData.genre = (ProjectGenre)PlayerPrefs.GetInt(PrefGenre);
+            _genreChosen = true;
+            SelectedGenrePopularity = GenrePopularityManager.Instance != null
+                ? GenrePopularityManager.Instance.GetPopularity(_projectData.genre) : 1;
+            SelectedGenreFatigue = GenreFatigueManager.Instance != null
+                ? GenreFatigueManager.Instance.GetFatigue(_projectData.genre) : 0;
+        }
+    }
+
+    // 새 런 시작 시 호출 (NewRunInitializer) — 마지막 선택 기억 삭제 → 다음 프로젝트는 "선택하기" 로 시작.
+    public static void ResetForNewRun()
+    {
+        PlayerPrefs.DeleteKey(PrefScale);
+        PlayerPrefs.DeleteKey(PrefGenre);
+        PlayerPrefs.DeleteKey(PrefPlatform);
+        PlayerPrefs.Save();
     }
 
     // ── 패널 전환 ─────────────────────────────

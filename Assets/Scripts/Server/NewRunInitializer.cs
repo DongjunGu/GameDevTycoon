@@ -84,6 +84,7 @@ public static class NewRunInitializer
         TraitEffectApplier.ResetForNewRun();  // _firstSaleConsumed / _brokeRescueFired 등 1회성 플래그 리셋
         MerchantManager.Instance?.ResetForNewRun();
         DispatchManager.Instance?.ResetForNewRun();
+        ProjectSetupUI.ResetForNewRun();  // 마지막 프로젝트 선택(규모/장르/플랫폼) 기억 초기화
     }
 
     static void FinalizeRun(Action onComplete)

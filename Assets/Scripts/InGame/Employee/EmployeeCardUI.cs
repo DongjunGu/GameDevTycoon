@@ -31,6 +31,14 @@ public class EmployeeCardUI : MonoBehaviour
     public TextMeshProUGUI artText;
     public TextMeshProUGUI creativityText;
 
+    [Header("Stat arrows — 능력치 옆 ArrowImage (상승=red / 하락=blue / 무변화=숨김)")]
+    public Image planningArrow;
+    public Image developArrow;
+    public Image artArrow;
+    public Image creativityArrow;
+    public Sprite redArrow;   // 버프(상승, 빨간 수치)
+    public Sprite blueArrow;  // 디버프(하락, 파란 수치)
+
     [Header("Animation")]
     [Tooltip("만족도 슬라이더가 1초당 변하는 단위 수 (값이 클수록 빠름)")]
     public float satisfactionAnimSpeed = 30f;
@@ -113,6 +121,12 @@ public class EmployeeCardUI : MonoBehaviour
         SetStatColored(developText,    emp.developSkill,    emp.EffectiveDevelopSkill);
         SetStatColored(artText,        emp.artSkill,        emp.EffectiveArtSkill);
         SetStatColored(creativityText, emp.creativitySkill, emp.EffectiveCreativitySkill);
+
+        // 수치 옆 화살표 — 수치 색상과 동일 기준 (상승=red / 하락=blue / 무변화=숨김)
+        SetStatArrow(planningArrow,   emp.planningSkill,   emp.EffectivePlanningSkill);
+        SetStatArrow(developArrow,    emp.developSkill,    emp.EffectiveDevelopSkill);
+        SetStatArrow(artArrow,        emp.artSkill,        emp.EffectiveArtSkill);
+        SetStatArrow(creativityArrow, emp.creativitySkill, emp.EffectiveCreativitySkill);
     }
 
     // 능력치 텍스트에 버프/디버프 적용 실제값 + 색상을 한 번에 세팅 (EmployeeResumePanel 해고 모드와 공유).
@@ -121,6 +135,15 @@ public class EmployeeCardUI : MonoBehaviour
         if (label == null) return;
         label.text  = $"{effectiveSkill}";
         label.color = EmployeeData.GetStatColor(baseSkill, effectiveSkill);
+    }
+
+    // 능력치 변화 방향에 따라 화살표 sprite 교체. 변화 없으면 Image 만 끔(layout 슬롯 보존).
+    void SetStatArrow(Image arrow, int baseSkill, int effectiveSkill)
+    {
+        if (arrow == null) return;
+        if (effectiveSkill > baseSkill)      { arrow.sprite = redArrow;  arrow.enabled = true; }
+        else if (effectiveSkill < baseSkill) { arrow.sprite = blueArrow; arrow.enabled = true; }
+        else                                   arrow.enabled = false;
     }
 
     public void Hide()
