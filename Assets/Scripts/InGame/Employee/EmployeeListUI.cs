@@ -44,6 +44,14 @@ public class EmployeeListUI : MonoBehaviour
     public TextMeshProUGUI artText;
     public TextMeshProUGUI creativityText;
 
+    [Header("Stat arrows — 능력치 옆 ArrowImage (상승=red / 하락=blue / 무변화=숨김)")]
+    public Image planningArrow;
+    public Image developArrow;
+    public Image artArrow;
+    public Image creativityArrow;
+    public Sprite redArrow;   // 버프(상승, 빨간 수치)
+    public Sprite blueArrow;  // 디버프(하락, 파란 수치)
+
     [Header("Buttons (BottomPanel)")]
     public Button enhanceButton;
     public Button fireButton;
@@ -181,7 +189,22 @@ public class EmployeeListUI : MonoBehaviour
         EmployeeCardUI.SetStatColored(artText,        emp.artSkill,        emp.EffectiveArtSkill);
         EmployeeCardUI.SetStatColored(creativityText, emp.creativitySkill, emp.EffectiveCreativitySkill);
 
+        // 수치 옆 화살표 — 수치 색상과 동일 기준 (상승=red / 하락=blue / 무변화=숨김)
+        SetStatArrow(planningArrow,   emp.planningSkill,   emp.EffectivePlanningSkill);
+        SetStatArrow(developArrow,    emp.developSkill,    emp.EffectiveDevelopSkill);
+        SetStatArrow(artArrow,        emp.artSkill,        emp.EffectiveArtSkill);
+        SetStatArrow(creativityArrow, emp.creativitySkill, emp.EffectiveCreativitySkill);
+
         RefreshButtons(emp); // 파견중이면 강화/해고/아이템 버튼 비활성
+    }
+
+    // 능력치 변화 방향에 따라 화살표 sprite 교체. 변화 없으면 Image 만 끔(layout 슬롯 보존).
+    void SetStatArrow(Image arrow, int baseSkill, int effectiveSkill)
+    {
+        if (arrow == null) return;
+        if (effectiveSkill > baseSkill)      { arrow.sprite = redArrow;  arrow.enabled = true; }
+        else if (effectiveSkill < baseSkill) { arrow.sprite = blueArrow; arrow.enabled = true; }
+        else                                   arrow.enabled = false;
     }
 
     void ApplyGradeColor(EmployeeGrade grade)

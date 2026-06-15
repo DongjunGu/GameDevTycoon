@@ -159,12 +159,40 @@ public class DevelopmentPanelUI : MonoBehaviour
         creativityText.text = $"창의성: {Mathf.RoundToInt(_creativityDisplay)}";
     }
 
-    // 프로젝트 개발 중이면 defaultText 비활성, 아니면 활성. (상태 바뀔 때만 SetActive)
+    // 실제 개발 단계(Developing/BugFixing)에서만 defaultText 비활성.
+    // 마케팅·판매·완료·대기 단계에서는 표시한다.
+    // defaultText 표시 중에는 스탯/타이머 텍스트를 모두 숨긴다(반대로 동기화).
     void UpdateDefaultText()
     {
         if (defaultText == null) return;
-        bool developing = DevelopmentManager.Instance != null && DevelopmentManager.Instance.IsStarted;
+        var dm = DevelopmentManager.Instance;
+        bool developing = dm != null
+            && (dm.CurrentStage == ProjectStage.Developing || dm.CurrentStage == ProjectStage.BugFixing);
         if (defaultText.activeSelf == developing) defaultText.SetActive(!developing);
+        SetStatTextsVisible(developing); // 매 프레임 동기화 (초기 상태 어긋남 방지, enabled set 은 무비용)
+    }
+
+    // statKey(개발틱 종류) → 해당 스탯 텍스트 RectTransform. StatTickPopup 흡입 타겟용.
+    // blank(꽝) 등 매핑 없는 종류는 null → 흡입 없이 제자리 소멸.
+    public RectTransform GetStatTextRect(string statKey) => statKey switch
+    {
+        "planning"   => planningText   != null ? planningText.rectTransform   : null,
+        "develop"    => developText    != null ? developText.rectTransform    : null,
+        "art"        => artText        != null ? artText.rectTransform        : null,
+        "bug"        => bugText        != null ? bugText.rectTransform         : null,
+        "creativity" => creativityText != null ? creativityText.rectTransform : null,
+        _ => null
+    };
+
+    // 개발 중에만 스탯/타이머 텍스트 표시. enabled 토글로 layout 자리 유지.
+    void SetStatTextsVisible(bool visible)
+    {
+        if (planningText   != null) planningText.enabled   = visible;
+        if (developText    != null) developText.enabled    = visible;
+        if (artText        != null) artText.enabled        = visible;
+        if (creativityText != null) creativityText.enabled = visible;
+        if (bugText        != null) bugText.enabled        = visible;
+        DevelopmentTimerUI.Instance?.SetTextVisible(visible);
     }
 
     public void SetBug(float value)

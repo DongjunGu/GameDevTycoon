@@ -399,8 +399,12 @@ public class ProjectSaveManager : MonoBehaviour
 
             // Marketing 단계에서 껐을 때 (SalesUI 열리기 전) → 직접 복원
             // 단, SalesSaveManager에 이미 활성 세이브가 있으면 그쪽에서 처리
+            // SalesSaveManager 가 판매를 복원 중이거나(HasPendingRestore/WasRestored),
+            // 이미 완료된 판매로 판정했으면(SalesAlreadyComplete) "판매 시작!" 을 띄우지 않는다.
+            // (판매 중 SaveProject 가 스킵돼 stage 가 Marketing 으로 잔존하는 케이스 방어)
             bool salesAlreadyHandled = SalesSaveManager.Instance != null &&
-                (SalesSaveManager.Instance.HasPendingRestore || SalesSaveManager.Instance.WasRestored);
+                (SalesSaveManager.Instance.HasPendingRestore || SalesSaveManager.Instance.WasRestored
+                 || SalesSaveManager.Instance.SalesAlreadyComplete);
             if (_loadedStage == ProjectStage.Marketing && _loadedQualityScore > 0f && !salesAlreadyHandled)
             {
                 AlertUI.Instance.Show("판매 시작!", () =>

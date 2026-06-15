@@ -37,12 +37,25 @@ public class LeaderSelectUI : MonoBehaviour
 
     IEnumerator OpenAfterPopups(LeaderType type, System.Action onComplete)
     {
-        // 호출자가 미리 StopTime 했어도 카운트업 끝까지 시간을 풀어줌 (deadlock 방지)
+        // 호출자가 미리 StopTime 했어도 카운트업 끝까지 시간을 풀어줌 (deadlock 방지).
+        // StartTime 1회로는 중첩 정지(메뉴 진입 + 개발 시작 = stopCount 2)를 못 풀어 카운트업이
+        // 영영 진행 안 됨 → ForceStartTime 으로 확실히 흐르게 한 뒤, 끝나면 StopTime 으로 복원.
         bool wasStopped = GameTimeManager.Instance != null && !GameTimeManager.Instance.IsRunning;
-        if (wasStopped) GameTimeManager.Instance.StartTime();
+        if (wasStopped) GameTimeManager.Instance.ForceStartTime();
 
-        while (StatTickPopup.ActiveCount > 0)
+        // ActiveCount 가 (OnPopupFinish 누락 등으로) stale 이면 시간이 흘러도 안 줄어 무한 대기 →
+        // real-time 3초 안전 타임아웃 후 강제 진행.
+        float waited = 0f;
+        while (StatTickPopup.ActiveCount > 0 && waited < 3f)
+        {
+            waited += Time.unscaledDeltaTime;
             yield return null;
+        }
+        if (StatTickPopup.ActiveCount > 0)
+        {
+            Debug.LogWarning($"[LeaderSelectUI] 개발틱 팝업 대기 타임아웃(ActiveCount={StatTickPopup.ActiveCount}) — 강제 진행");
+            StatTickPopup.ActiveCount = 0;
+        }
 
         if (wasStopped) GameTimeManager.Instance?.StopTime();
         OpenInternal(type, onComplete);

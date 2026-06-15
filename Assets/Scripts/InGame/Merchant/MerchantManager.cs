@@ -260,7 +260,10 @@ public class MerchantManager : MonoBehaviour
             Vector2 b = _resolvedDestination.position;
             float d = Vector2.Distance(a, b);
             if (d < arrivalThreshold) { Debug.Log($"[Merchant] 도착 판정 통과 (dist={d:F2})"); break; }
-            elapsed += Time.unscaledDeltaTime;
+            // timeout 은 "시간이 흐르는 동안"만 누적 — 정지 중엔 상인 patrol 도 멈추므로,
+            // unscaled 로 재면 정지된 동안 timeout 이 소진돼 상인이 이동 중인데 강제 진행되는 버그가 생긴다.
+            if (GameTimeManager.Instance == null || GameTimeManager.Instance.IsRunning)
+                elapsed += Time.deltaTime;
             yield return null;
         }
         if (elapsed >= timeout)

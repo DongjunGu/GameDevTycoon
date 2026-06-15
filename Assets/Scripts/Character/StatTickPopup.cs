@@ -18,14 +18,29 @@ public class StatTickPopup : MonoBehaviour
     public ParticleSystem  jackpotParticle;
 
     [Header("타이밍")]
-    public float totalCountDuration = 2f;
-    public float holdAfter          = 0.3f;
-    public float blankDuration      = 1f;
+    public float totalCountDuration = 2f;   // (구버전 카운트업용 — 현재 미사용)
+    public float holdAfter          = 0.3f; // (구버전)
+    public float blankDuration      = 1f;   // 꽝 제자리 표시 시간
+
+    [Header("흡입 연출")]
+    public float holdBeforeSuck = 1f;    // +N 표시 후 흡입 시작까지 유지 시간
+    public float suckDuration   = 0.4f;  // 타겟으로 빨려드는 시간
+    public float suckEndScale   = 0.3f;  // 흡입 끝 스케일 배율
+    public float suckArcHeight  = 1.5f;  // 포물선 정점 높이(월드 단위, 양수=위로 솟음)
+    public float nudgeDistance  = 0.5f;  // 흡입 직전 우측으로 살짝 빼는 거리(월드 단위)
+    public float nudgeDuration  = 0.15f; // 우측 이동 시간
 
     private System.Action _onFinish;
+    private string _statKey;
+    private Vector3 _baseScale = Vector3.one;
 
-    public void Show(Sprite stat, int target, Color color, bool playParticle, System.Action onFinish)
+    void Awake() => _baseScale = transform.localScale;
+
+    public void Show(Sprite stat, string statKey, int target, Color color, bool playParticle, System.Action onFinish)
     {
+        _statKey = statKey;
+        transform.localScale = _baseScale; // 이전 흡입으로 줄어든 스케일 복원
+
         if (statIcon != null)
         {
             statIcon.sprite  = stat;
@@ -51,24 +66,27 @@ public class StatTickPopup : MonoBehaviour
 
     IEnumerator Animate(int target)
     {
+        // ── 신규 연출: 한 번에 +N 표시 → holdBeforeSuck(1초) 유지 → 타겟 스탯 텍스트로 가속 흡입 → 소멸 ──
         if (target <= 0)
         {
+            // 꽝(blank) — 숫자 없이 제자리 소멸 (빨려들어가지 않음)
             yield return WaitPaused(blankDuration);
             Finish();
             yield break;
         }
 
-        // 처음부터 +1 표시 (아이콘이 떴다는 건 최소 1은 발동됐다는 뜻)
-        if (numberLabel != null) numberLabel.text = "+1";
+        if (numberLabel != null) numberLabel.text = $"+{target}"; // 카운트업 없이 즉시 표시
+        yield return WaitPaused(holdBeforeSuck);                  // 1초 유지
+        yield return NudgeRight();                                // 흡입 직전 살짝 우측으로(준비 동작)
+        yield return SuckIntoTarget();                            // 타겟으로 가속 흡입
+        Finish();
 
-        if (target == 1)
-        {
-            // +1만 들어왔으면 totalCountDuration 동안 그대로 머무르다가 사라짐
-            yield return WaitPaused(totalCountDuration);
-        }
+        /* ── 구버전: 제자리 카운트업 (보존용 주석) ──
+        if (target <= 0) { yield return WaitPaused(blankDuration); Finish(); yield break; }
+        if (numberLabel != null) numberLabel.text = "+1";
+        if (target == 1) { yield return WaitPaused(totalCountDuration); }
         else
         {
-            // +1 → +target 까지 (target-1)번 전환, 총 totalCountDuration
             float interval = totalCountDuration / (target - 1);
             for (int i = 2; i <= target; i++)
             {
@@ -77,8 +95,65 @@ public class StatTickPopup : MonoBehaviour
             }
             yield return WaitPaused(holdAfter);
         }
-
         Finish();
+        */
+    }
+
+    // 흡입 직전 우측으로 살짝 빠지는 준비 동작(anticipation). ease-out 으로 부드럽게 멈춤.
+    IEnumerator NudgeRight()
+    {
+        Vector3 from = transform.position;
+        Vector3 to   = from + Vector3.right * nudgeDistance;
+        float elapsed = 0f;
+        float dur = Mathf.Max(0.01f, nudgeDuration);
+        while (elapsed < dur)
+        {
+            if (GameTimeManager.Instance == null || GameTimeManager.Instance.IsRunning)
+                elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / dur);
+            float ease = 1f - (1f - t) * (1f - t); // ease-out
+            transform.position = Vector3.Lerp(from, to, ease);
+            yield return null;
+        }
+    }
+
+    // 역할 스탯 텍스트(DevelopmentPanelUI) 위치로 가속(ease-in) 이동 + 축소 → 빨려드는 연출.
+    // 타겟을 못 찾으면(블록/창의성 등 매핑 없음) 그냥 종료해 제자리 소멸.
+    IEnumerator SuckIntoTarget()
+    {
+        RectTransform targetRect = DevelopmentPanelUI.Instance != null
+            ? DevelopmentPanelUI.Instance.GetStatTextRect(_statKey) : null;
+        Camera cam = Camera.main;
+        if (targetRect == null || cam == null) yield break;
+
+        Canvas canvas = targetRect.GetComponentInParent<Canvas>();
+        Camera uiCam = (canvas != null && canvas.renderMode != RenderMode.ScreenSpaceOverlay)
+            ? canvas.worldCamera : null;
+
+        Vector3 start = transform.position;
+        float zDist = Mathf.Abs(cam.transform.position.z - start.z);
+
+        float elapsed = 0f;
+        float dur = Mathf.Max(0.01f, suckDuration);
+        while (elapsed < dur)
+        {
+            if (GameTimeManager.Instance == null || GameTimeManager.Instance.IsRunning)
+                elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / dur);
+            float ease = t * t * t; // 가속(3차 ease-in) — 처음 천천히, 끝에서 급격히 빨라짐
+
+            // 타겟 UI 위치를 매 프레임 월드 좌표로 변환 (카메라 줌/팬 추종)
+            Vector2 screen = RectTransformUtility.WorldToScreenPoint(uiCam, targetRect.position);
+            Vector3 worldTarget = cam.ScreenToWorldPoint(new Vector3(screen.x, screen.y, zDist));
+            worldTarget.z = start.z;
+
+            // 가로 진행은 가속(ease), 세로는 대칭 포물선 호(t=0,1 에서 0, 중간에서 최대)
+            Vector3 pos = Vector3.LerpUnclamped(start, worldTarget, ease);
+            pos.y += Mathf.Sin(t * Mathf.PI) * suckArcHeight;
+            transform.position   = pos;
+            transform.localScale = Vector3.Lerp(_baseScale, _baseScale * suckEndScale, t);
+            yield return null;
+        }
     }
 
     void Finish()

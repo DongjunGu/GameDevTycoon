@@ -38,4 +38,11 @@ public class DevelopmentTimerUI : MonoBehaviour
         timerText.text = "";
         progressText.text = "";
     }
+
+    // 개발 단계가 아닐 때(defaultText 표시 중) 타이머/진행률 텍스트 숨김. enabled 토글로 layout 자리 유지.
+    public void SetTextVisible(bool visible)
+    {
+        if (timerText != null)    timerText.enabled = visible;
+        if (progressText != null) progressText.enabled = visible;
+    }
 }

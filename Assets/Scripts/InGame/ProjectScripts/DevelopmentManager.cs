@@ -295,6 +295,9 @@ public class DevelopmentManager : MonoBehaviour
         artistLeader = null;
 
         DevelopmentPanelUI.Instance.ResetValues();
+        // 이전 프로젝트에서 남은 개발틱 팝업 잔재 정리 — LeaderSelectUI 가 stale ActiveCount 를 기다리며
+        // 딜레이/hang 되지 않도록 (개발 시작 직전엔 개발틱 팝업이 없는 게 정상).
+        OfficeManager.Instance?.ClearAllPopups();
         RandomEventManager.Instance.InitEvents();
         RandomEventManager.Instance.ScheduleEvents();
         GameTimeManager.Instance.StopTime();

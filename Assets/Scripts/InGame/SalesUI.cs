@@ -360,10 +360,13 @@ public class SalesUI : MonoBehaviour
             QuestManager.Instance?.UpdateProgress(QuestType.TotalRevenue, weeklyRevenue);
 
             _completedBarIndex = i + 1;
+            // 마지막 주차면 isActive=false 로 저장 → 완료 상태가 "마지막 write" 가 되어 재접속 복원 race 제거.
+            bool isLastWeek = _completedBarIndex >= barCount;
             SalesSaveManager.Instance?.SaveSales(
                 _completedBarIndex, _cachedTotalRevenue, _cachedRevenuePerPeriod, _cachedQualityScore, _cachedScale, _cachedProjectName,
                 _cachedScale, _cachedGenre, _cachedPlatform,
-                _cachedPlanning, _cachedDevelop, _cachedArt, _cachedCreativity, _cachedBug
+                _cachedPlanning, _cachedDevelop, _cachedArt, _cachedCreativity, _cachedBug,
+                isActive: !isLastWeek
             );
             GameTimeManager.Instance?.SaveGameTime();
             ProjectSaveManager.Instance?.SaveProject();
