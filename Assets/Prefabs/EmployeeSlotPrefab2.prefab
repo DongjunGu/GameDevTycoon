@@ -433,6 +433,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::EmployeeSatisfactionSlider
   portraitImage: {fileID: 6283319015138193094}
   slider: {fileID: 0}
+  satisfactionFillSet: {fileID: 11400000, guid: e0d8fc530843ed24da36e6e88e954bb3, type: 2}
   dispatchedBadge: {fileID: 0}
   animSpeed: 10
 --- !u!114 &7703281688435003650

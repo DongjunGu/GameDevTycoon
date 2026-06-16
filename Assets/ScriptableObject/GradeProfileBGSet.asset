@@ -1,0 +1,19 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: af162aa09994f7647af78317b5a04a8c, type: 3}
+  m_Name: GradeProfileBGSet
+  m_EditorClassIdentifier: Assembly-CSharp::GradeSpriteSet
+  normal: {fileID: 21300000, guid: a5b5b63bf8c9d9b468c976de8969c969, type: 3}
+  rare: {fileID: 21300000, guid: 7c80e2650ba3d224198b7e724898aa71, type: 3}
+  epic: {fileID: 21300000, guid: baa7c72703a66de4d8c1ed9b328ef800, type: 3}
+  unique: {fileID: 21300000, guid: 84e6c00a53f31034781cb18a751e053e, type: 3}
+  legendary: {fileID: 21300000, guid: f9e1752efd45e4e47a11904438dd44aa, type: 3}

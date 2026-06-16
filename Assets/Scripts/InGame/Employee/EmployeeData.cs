@@ -486,11 +486,13 @@ public class EmployeeData
         _ => 0
     };
 
-    // 원래 수치 대비 현재 수치로 색상 결정 (높으면 빨강, 낮으면 파랑, 같으면 흰색)
+    // 원래 수치 대비 현재 수치로 색상 결정 (버프=#E63356 / 디버프=#517FFF / 같으면 흰색)
+    static readonly Color StatBuffColor   = new Color(0.902f, 0.200f, 0.337f); // #E63356
+    static readonly Color StatDebuffColor = new Color(0.318f, 0.498f, 1.000f); // #517FFF
     public static Color GetStatColor(int baseSkill, int effectiveSkill)
     {
-        if (effectiveSkill > baseSkill) return Color.red;
-        if (effectiveSkill < baseSkill) return Color.blue;
+        if (effectiveSkill > baseSkill) return StatBuffColor;
+        if (effectiveSkill < baseSkill) return StatDebuffColor;
         return Color.white;
     }
 

@@ -17,7 +17,7 @@ public class EmployeeResumePanel : MonoBehaviour
     public TextMeshProUGUI gradeText;
     public Image gradePanel;                // 등급색 배경 (Unique/Legendary 셰머)
     public Image roleBadge;                 // 역할 아이콘
-    public Sprite[] roleIcons;              // role enum 순서 [Planner, Programmer, Artist]
+    public RoleIconSet roleIconSet;         // 공용 역할 아이콘 세트
 
     [Header("Trait / Event")]
     public TextMeshProUGUI traitText;       // 캐릭터 특성명 (Epic+ 일 때만)
@@ -26,6 +26,7 @@ public class EmployeeResumePanel : MonoBehaviour
     [Header("Enhancement / Satisfaction")]
     public TextMeshProUGUI enhancementText;
     public Slider satisfactionSlider;
+    public SatisfactionFillSet satisfactionFillSet; // 구간별 Fill sprite 묶음 (공용 에셋)
     public TextMeshProUGUI satisfactionText;
 
     [Header("Stats (주스탯=강화반영 범위 / 부스탯·창의성=고정)")]
@@ -51,10 +52,7 @@ public class EmployeeResumePanel : MonoBehaviour
         if (nameText != null)      nameText.text      = emp.employeeName;
         if (potentialText != null) potentialText.text = $"잠재력: {emp.PotentialToString()}";
         if (gradeText != null)     gradeText.text     = emp.GradeToString();
-        if (roleBadge != null && roleIcons != null
-            && (int)emp.role >= 0 && (int)emp.role < roleIcons.Length
-            && roleIcons[(int)emp.role] != null)
-            roleBadge.sprite = roleIcons[(int)emp.role];
+        RoleIconSet.Apply(roleBadge, roleIconSet, emp.role);
 
         ApplyGradeColor(emp.grade);
 
@@ -72,7 +70,7 @@ public class EmployeeResumePanel : MonoBehaviour
             satisfactionSlider.minValue = 0f;
             satisfactionSlider.maxValue = 100f;
             satisfactionSlider.value = emp.satisfaction;
-            EmployeeCardUI.ApplySatisfactionColor(satisfactionSlider, emp.satisfaction);
+            SatisfactionFillSet.Apply(satisfactionSlider, satisfactionFillSet, emp.satisfaction);
         }
         if (satisfactionText != null) satisfactionText.text = $"{emp.satisfaction}";
 

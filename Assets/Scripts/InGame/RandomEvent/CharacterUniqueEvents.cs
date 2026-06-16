@@ -124,6 +124,22 @@ public static class CharacterUniqueEvents
         return row != null ? row.title : "";
     }
 
+    // 등급 게이팅을 무시하고 직원이 (잠재적으로) 가진 전용 이벤트명 반환. CEO/미보유는 "".
+    // 카드 UI 가 "등급 미충족이어도 이름은 표시 + lockedPanel" 하기 위해 사용.
+    public static string GetEventNameAnyGrade(EmployeeData emp)
+    {
+        if (emp == null || emp.isCEO) return "";
+        string eventType = CharacterTraitApplier.ResolveEventType(emp);
+        if (string.IsNullOrEmpty(eventType)) return "";
+        CharacterUniqueEventRow row = null;
+        CharacterUniqueEventChartLoader.Cache?.TryGetValue(eventType, out row);
+        return row != null ? row.title : "";
+    }
+
+    // 전용 이벤트 발동 등급(Unique 이상) 충족 여부. CEO 제외.
+    public static bool IsEventUnlocked(EmployeeData emp)
+        => emp != null && !emp.isCEO && emp.grade >= EmployeeGrade.Unique;
+
     // eventText 클릭 시 — 전용 이벤트명 + 설명을 AlertUI 로 표시.
     public static void ShowEventDescription(EmployeeData emp)
     {
