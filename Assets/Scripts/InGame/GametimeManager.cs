@@ -7,7 +7,9 @@ public class GameTimeManager : MonoBehaviour
 {
     public static GameTimeManager Instance { get; private set; }
 
-    public int Year { get; private set; } = 2000;
+    public const int StartYear = 2000;   // 게임 시작 연도 (연세 등 경과연수 계산 기준)
+
+    public int Year { get; private set; } = StartYear;
     public int Month { get; private set; } = 1;
     public int Week { get; private set; } = 1;
 
@@ -168,6 +170,7 @@ public class GameTimeManager : MonoBehaviour
                 Year++;
                 QuestManager.Instance?.UpdateProgress(QuestType.SurviveYears, 1);
                 SalaryNegotiationManager.Instance?.ResetYearFlag();
+                HUDUI.Instance?.RefreshYearFee();   // 연세는 해마다 증가 (Year 파생)
                 PayAnnualSalary();
             }
         }
@@ -289,7 +292,7 @@ public class GameTimeManager : MonoBehaviour
         }
     }
 
-    public string GetTimeString() => $"{Year}년 {Month}월 {Week}주";
+    public string GetTimeString() => $"{Year}년 {Month}월 {Week}주차";
 
     int SafeInt(JsonData row, string key, int fallback)
     {

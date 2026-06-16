@@ -32,11 +32,12 @@ public class EmployeeListUI : MonoBehaviour
     public TextMeshProUGUI gradeText;
     public Image gradePanel;                  // 등급색 배경
     public Image roleBadge;                   // 역할 아이콘
-    public Sprite[] roleIcons;                // role enum 순서 [Planner, Programmer, Artist]
+    public RoleIconSet roleIconSet;           // 공용 역할 아이콘 세트
     public TextMeshProUGUI traitText;         // 특성명 (클릭 시 설명)
     public TextMeshProUGUI eventText;         // 전용 이벤트명 (클릭 시 설명)
     public TextMeshProUGUI enhancementText;   // "Lv.{}"
     public Slider satisfactionSlider;
+    public SatisfactionFillSet satisfactionFillSet; // 구간별 Fill sprite 묶음 (공용 에셋)
     public TextMeshProUGUI satisfactionText;
     public GameObject dispatchedBadge;        // 파견중 badge (옵션)
     public TextMeshProUGUI planningText;
@@ -44,13 +45,13 @@ public class EmployeeListUI : MonoBehaviour
     public TextMeshProUGUI artText;
     public TextMeshProUGUI creativityText;
 
-    [Header("Stat arrows — 능력치 옆 ArrowImage (상승=red / 하락=blue / 무변화=숨김)")]
+    [Header("Stat arrows — 능력치 옆 ArrowImage (버프=기본 / 디버프=Y축 flip / 무변화=숨김)")]
     public Image planningArrow;
     public Image developArrow;
     public Image artArrow;
     public Image creativityArrow;
-    public Sprite redArrow;   // 버프(상승, 빨간 수치)
-    public Sprite blueArrow;  // 디버프(하락, 파란 수치)
+    [Tooltip("화살표 스프라이트 1개. 버프는 그대로, 디버프는 Y축으로 뒤집어 사용")]
+    public Sprite statArrowSprite;
 
     [Header("Buttons (BottomPanel)")]
     public Button enhanceButton;
@@ -161,10 +162,7 @@ public class EmployeeListUI : MonoBehaviour
         SetText(nameText,      emp.employeeName);
         SetText(potentialText, $"잠재력: {emp.PotentialToString()}");
         SetText(gradeText,     emp.GradeToString());
-        if (roleBadge != null && roleIcons != null
-            && (int)emp.role >= 0 && (int)emp.role < roleIcons.Length
-            && roleIcons[(int)emp.role] != null)
-            roleBadge.sprite = roleIcons[(int)emp.role];
+        RoleIconSet.Apply(roleBadge, roleIconSet, emp.role);
 
         ApplyGradeColor(emp.grade);
         CharacterTraitApplier.SetupTraitText(traitText, emp);
@@ -176,7 +174,7 @@ public class EmployeeListUI : MonoBehaviour
             satisfactionSlider.minValue = 0f;
             satisfactionSlider.maxValue = 100f;
             satisfactionSlider.value = emp.satisfaction;
-            EmployeeCardUI.ApplySatisfactionColor(satisfactionSlider, emp.satisfaction);
+            SatisfactionFillSet.Apply(satisfactionSlider, satisfactionFillSet, emp.satisfaction);
         }
         SetText(satisfactionText, $"{emp.satisfaction}");
 
@@ -198,13 +196,22 @@ public class EmployeeListUI : MonoBehaviour
         RefreshButtons(emp); // 파견중이면 강화/해고/아이템 버튼 비활성
     }
 
-    // 능력치 변화 방향에 따라 화살표 sprite 교체. 변화 없으면 Image 만 끔(layout 슬롯 보존).
+    // 능력치 변화 방향에 따라 화살표 표시. 스프라이트는 1개 — 버프는 그대로, 디버프는 Y축 flip. 무변화면 숨김.
     void SetStatArrow(Image arrow, int baseSkill, int effectiveSkill)
     {
         if (arrow == null) return;
-        if (effectiveSkill > baseSkill)      { arrow.sprite = redArrow;  arrow.enabled = true; }
-        else if (effectiveSkill < baseSkill) { arrow.sprite = blueArrow; arrow.enabled = true; }
-        else                                   arrow.enabled = false;
+        if (effectiveSkill == baseSkill) { arrow.enabled = false; return; }
+
+        bool debuff = effectiveSkill < baseSkill;
+        arrow.sprite  = statArrowSprite;
+        arrow.color   = EmployeeData.GetStatColor(baseSkill, effectiveSkill); // 수치 색상과 동일 (버프 #E63356 / 디버프 #517FFF)
+        arrow.enabled = true;
+
+        // Y축 flip (디버프) / 원복 (버프) — x·z 는 유지
+        var rt = arrow.rectTransform;
+        var s  = rt.localScale;
+        float magY = Mathf.Abs(s.y);
+        rt.localScale = new Vector3(s.x, debuff ? -magY : magY, s.z);
     }
 
     void ApplyGradeColor(EmployeeGrade grade)

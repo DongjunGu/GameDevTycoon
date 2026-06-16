@@ -152,6 +152,21 @@ public static class CharacterTraitApplier
         return row != null ? row.name : "";
     }
 
+    // 등급 게이팅을 무시하고 직원이 (잠재적으로) 가진 특성명 반환. CEO/파견/미보유는 "".
+    // 카드 UI 가 "등급 미충족이어도 이름은 표시 + lockedPanel" 하기 위해 사용.
+    public static string GetTraitNameAnyGrade(EmployeeData emp)
+    {
+        if (emp == null || emp.isCEO || IsOnDispatch(emp)) return "";
+        string traitId = ResolveTraitId(emp);
+        if (string.IsNullOrEmpty(traitId)) return "";
+        var cache = CharacterTraitChartLoader.Cache;
+        return (cache != null && cache.TryGetValue(traitId, out var row)) ? row.name : "";
+    }
+
+    // 특성 발동 등급(Epic 이상) 충족 여부. CEO/파견 제외.
+    public static bool IsTraitUnlocked(EmployeeData emp)
+        => emp != null && !emp.isCEO && !IsOnDispatch(emp) && emp.grade >= EmployeeGrade.Epic;
+
     // 슬롯/카드 공통 — traitText 에 특성명 세팅 + 클릭 시 설명을 띄우는 버튼으로 만든다(런타임 컴포넌트 부착, 에디터 배선 불필요).
     // 특성 없음/CEO 면 빈 문자열 + raycastTarget off → 클릭이 슬롯 버튼으로 통과(가로채지 않음).
     // clickable=false 면 특성명은 표시하되 클릭→AlertUI 설명을 비활성(예: 팀장 선택 슬롯 — 클릭이 슬롯 선택으로 통과해야 함).

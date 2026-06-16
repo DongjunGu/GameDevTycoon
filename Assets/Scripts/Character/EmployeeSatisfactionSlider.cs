@@ -11,6 +11,17 @@ public class EmployeeSatisfactionSlider : MonoBehaviour, IPointerClickHandler
     [Header("References")]
     public Image portraitImage;
     public Slider slider;
+    [Tooltip("만족도 구간별 Fill sprite 묶음 (공용 SatisfactionFillSet 에셋)")]
+    public SatisfactionFillSet satisfactionFillSet;
+
+    [Header("등급 테두리 (공용 GradeSpriteSet 에셋)")]
+    public Image gradeBorder;
+    public GradeSpriteSet gradeBorderSet;
+
+    [Header("역할 아이콘 (공용 RoleIconSet 에셋)")]
+    public Image roleIcon;
+    public RoleIconSet roleIconSet;
+
     [Header("파견중 표시 (옵션)")]
     public GameObject dispatchedBadge;
 
@@ -49,6 +60,16 @@ public class EmployeeSatisfactionSlider : MonoBehaviour, IPointerClickHandler
             slider.maxValue = 100f;
             slider.interactable = false; // 드래그/조작 불가, 시각용
         }
+
+        // 인스펙터 미할당 시 자식 이름으로 자동 탐색 (EmployeeStatusPrefab: "ImagePanel" 프레임 / "roleIcon")
+        if (gradeBorder == null) gradeBorder = FindChildImage("ImagePanel");
+        if (roleIcon    == null) roleIcon    = FindChildImage("roleIcon");
+    }
+
+    Image FindChildImage(string childName)
+    {
+        var t = transform.Find(childName);
+        return t != null ? t.GetComponent<Image>() : null;
     }
 
     public void SetEmployee(string employeeId)
@@ -61,14 +82,18 @@ public class EmployeeSatisfactionSlider : MonoBehaviour, IPointerClickHandler
 
         if (portraitImage != null && !string.IsNullOrEmpty(emp.portraitId))
         {
-            var sprite = Resources.Load<Sprite>($"Portraits/{emp.portraitId}");
+            var sprite = Resources.Load<Sprite>($"Portraits/Mini/{emp.portraitId}");
             if (sprite != null) portraitImage.sprite = sprite;
         }
         if (slider != null)
         {
             slider.value = emp.satisfaction; // 첫 표시 즉시 세팅 (애니메이션 없이)
-            EmployeeCardUI.ApplySatisfactionColor(slider, emp.satisfaction);
+            SatisfactionFillSet.Apply(slider, satisfactionFillSet, emp.satisfaction);
         }
+
+        // 등급 테두리 / 역할 아이콘 (공용 SO)
+        GradeSpriteSet.Apply(gradeBorder, gradeBorderSet, emp.grade);
+        RoleIconSet.Apply(roleIcon,       roleIconSet,    emp.role);
 
         RefreshDispatchVisual();
     }
@@ -102,7 +127,7 @@ public class EmployeeSatisfactionSlider : MonoBehaviour, IPointerClickHandler
             emp.satisfaction,
             animSpeed * Time.deltaTime
         );
-        EmployeeCardUI.ApplySatisfactionColor(slider, Mathf.RoundToInt(slider.value));
+        SatisfactionFillSet.Apply(slider, satisfactionFillSet, Mathf.RoundToInt(slider.value));
     }
 
     public void OnPointerClick(PointerEventData eventData)
@@ -110,4 +135,5 @@ public class EmployeeSatisfactionSlider : MonoBehaviour, IPointerClickHandler
         if (string.IsNullOrEmpty(_employeeId)) return;
         EmployeeCardUI.Instance?.Show(_employeeId);
     }
+
 }

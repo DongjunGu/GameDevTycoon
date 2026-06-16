@@ -56,7 +56,7 @@ public class QuestUI : MonoBehaviour
             var descText = item.transform.Find("DescText").GetComponent<TextMeshProUGUI>();
             var progressValue = item.transform.Find("ProgressRow/ProgressValueText").GetComponent<TextMeshProUGUI>();
 
-            descText.text = quest.isMainQuest ? $"[메인] {quest.description}" : quest.description;
+            descText.text = quest.isMainQuest ? $"{quest.description}" : quest.description;
             progressValue.text = $"{quest.currentValue:N0} / {quest.targetValue:N0}";
 
             // 배경 이미지

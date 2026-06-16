@@ -12,7 +12,8 @@ public class EmployeeSlotListUI : MonoBehaviour
     public Image employeePortraitImage; // 초상화 컨테이너 (자식 bgImage/portraitImage 의 탐색 기준)
     public TextMeshProUGUI nameText;
     public TextMeshProUGUI levelText;          // 강화 레벨 "Lv.{}"
-    public Slider satisfactionSlider;          // 만족도 (0~100, 구간별 색)
+    public Slider satisfactionSlider;          // 만족도 (0~100, 구간별 Fill sprite)
+    public SatisfactionFillSet satisfactionFillSet; // 구간별 Fill sprite 묶음 (공용 에셋)
     public Button selectButton;
     [Header("파견중 표시 (옵션)")]
     public GameObject dispatchedBadge;
@@ -33,7 +34,7 @@ public class EmployeeSlotListUI : MonoBehaviour
             satisfactionSlider.minValue = 0f;
             satisfactionSlider.maxValue = 100f;
             satisfactionSlider.value = data.satisfaction;
-            EmployeeCardUI.ApplySatisfactionColor(satisfactionSlider, data.satisfaction); // 구간별 색
+            SatisfactionFillSet.Apply(satisfactionSlider, satisfactionFillSet, data.satisfaction); // 구간별 Fill sprite
         }
 
         var portrait = ResolvePortrait();

@@ -17,13 +17,30 @@ public class EmployeeCardUI : MonoBehaviour
     public TextMeshProUGUI potentialText;   // "잠재력: {잠재력}"
     public TextMeshProUGUI gradeText;       // 등급 텍스트
     public Image gradePanel;                // 등급색 배경
+
+    [Header("등급별 스프라이트 (공용 GradeSpriteSet 에셋)")]
+    [Tooltip("초상화 패널(portraitImagePanel) 에 적용할 등급 프레임 세트")]
+    public Image portraitImagePanel;
+    public GradeSpriteSet portraitFrameSet;
+    [Tooltip("gradePanel-gradeBG 에 적용할 등급BG 세트")]
+    public Image gradeBG;
+    public GradeSpriteSet gradeBGSet;
+    [Header("역할 아이콘 (공용 RoleIconSet 에셋)")]
     public Image roleBadge;                 // 역할 아이콘
-    public Sprite[] roleIcons;              // role enum 인덱스 순서 [Planner, Programmer, Artist]
-    public TextMeshProUGUI traitText;   // 캐릭터 특성명 (grade >= Epic 일 때만, 아니면 빈 문자열)
-    public TextMeshProUGUI eventText;   // 전용 이벤트명 (grade >= Unique 일 때만, 아니면 빈 문자열)
+    public RoleIconSet roleIconSet;
+    public TextMeshProUGUI traitText;   // 캐릭터 특성명 (등급 무관 항상 표시, 미충족이면 lockedPanel)
+    public TextMeshProUGUI eventText;   // 전용 이벤트명 (등급 무관 항상 표시, 미충족이면 lockedPanel)
+    [Tooltip("특성 등급(Epic) 미충족 시 활성화 — 위에 raycast Image 가 있어 터치 차단")]
+    public GameObject traitLockedPanel;
+    [Tooltip("이벤트 등급(Unique) 미충족 시 활성화 — 위에 raycast Image 가 있어 터치 차단")]
+    public GameObject eventLockedPanel;
     public TextMeshProUGUI enhancementText;
     public Slider satisfactionSlider;
     public TextMeshProUGUI satisfactionText;
+
+    [Header("만족도 Fill 이미지 (구간별 — 색 대신 sprite 교체)")]
+    [Tooltip("구간별 Fill sprite 묶음 (공용 SatisfactionFillSet 에셋)")]
+    public SatisfactionFillSet satisfactionFillSet;
     [Tooltip("파견중일 때 표시할 badge (옵션)")]
     public GameObject dispatchedBadge;
     public TextMeshProUGUI planningText;
@@ -31,13 +48,13 @@ public class EmployeeCardUI : MonoBehaviour
     public TextMeshProUGUI artText;
     public TextMeshProUGUI creativityText;
 
-    [Header("Stat arrows — 능력치 옆 ArrowImage (상승=red / 하락=blue / 무변화=숨김)")]
+    [Header("Stat arrows — 능력치 옆 ArrowImage (버프=기본 / 디버프=Y축 flip / 무변화=숨김)")]
     public Image planningArrow;
     public Image developArrow;
     public Image artArrow;
     public Image creativityArrow;
-    public Sprite redArrow;   // 버프(상승, 빨간 수치)
-    public Sprite blueArrow;  // 디버프(하락, 파란 수치)
+    [Tooltip("화살표 스프라이트 1개. 버프는 그대로, 디버프는 Y축으로 뒤집어 사용")]
+    public Sprite statArrowSprite;
 
     [Header("Animation")]
     [Tooltip("만족도 슬라이더가 1초당 변하는 단위 수 (값이 클수록 빠름)")]
@@ -68,19 +85,16 @@ public class EmployeeCardUI : MonoBehaviour
         // 정적 정보(초상화·이름)는 Show 시점에 한 번만 세팅
         if (portraitImage != null && !string.IsNullOrEmpty(emp.portraitId))
         {
-            var sprite = Resources.Load<Sprite>($"Portraits/{emp.portraitId}");
+            var sprite = Resources.Load<Sprite>($"Portraits/Mini/{emp.portraitId}");
             if (sprite != null) portraitImage.sprite = sprite;
         }
         if (nameText != null) nameText.text = emp.employeeName;
-        if (potentialText != null) potentialText.text = $"잠재력: {emp.PotentialToString()}";
+        if (potentialText != null) potentialText.text = $"{emp.PotentialToString()}";
         if (gradeText != null) gradeText.text = emp.GradeToString();
-        if (roleBadge != null && roleIcons != null
-            && (int)emp.role >= 0 && (int)emp.role < roleIcons.Length
-            && roleIcons[(int)emp.role] != null)
-            roleBadge.sprite = roleIcons[(int)emp.role];
+        RoleIconSet.Apply(roleBadge, roleIconSet, emp.role);
         ApplyGradeColor(emp.grade);
-        CharacterTraitApplier.SetupTraitText(traitText, emp);
-        CharacterUniqueEvents.SetupEventTextDirect(eventText, emp);
+        SetupTraitWithLock(emp);
+        SetupEventWithLock(emp);
         if (satisfactionSlider != null)
         {
             satisfactionSlider.minValue = 0f;
@@ -112,9 +126,9 @@ public class EmployeeCardUI : MonoBehaviour
                 satisfactionAnimSpeed * Time.deltaTime
             );
             displayedSatisfaction = Mathf.RoundToInt(satisfactionSlider.value);
-            ApplySatisfactionColor(satisfactionSlider, displayedSatisfaction);
+            SatisfactionFillSet.Apply(satisfactionSlider, satisfactionFillSet, displayedSatisfaction);
         }
-        if (satisfactionText != null) satisfactionText.text = $"{displayedSatisfaction}";
+        if (satisfactionText != null) satisfactionText.text = $"{displayedSatisfaction}/100";
         if (enhancementText  != null) enhancementText.text  = $"Lv.{emp.enhancementLevel}";
         // 능력치 = 버프/디버프 적용된 실제값 + 색상(버프 빨강 / 디버프 파랑 / 변화 없음 흰색)
         SetStatColored(planningText,   emp.planningSkill,   emp.EffectivePlanningSkill);
@@ -134,22 +148,91 @@ public class EmployeeCardUI : MonoBehaviour
     {
         if (label == null) return;
         label.text  = $"{effectiveSkill}";
-        label.color = EmployeeData.GetStatColor(baseSkill, effectiveSkill);
+        // 면색은 흰색으로 통일, 버프/디버프 구분은 outline 색으로 (버프 #E63356 / 디버프 #517FFF / 무변화 검정)
+        label.color = Color.white;
+        Color outline = effectiveSkill == baseSkill
+            ? Color.black
+            : EmployeeData.GetStatColor(baseSkill, effectiveSkill);
+        label.fontMaterial.SetColor(ShaderUtilities.ID_OutlineColor, outline);
     }
 
-    // 능력치 변화 방향에 따라 화살표 sprite 교체. 변화 없으면 Image 만 끔(layout 슬롯 보존).
+    // 능력치 변화 방향에 따라 화살표 표시. 스프라이트는 1개 — 버프는 그대로, 디버프는 Y축 flip. 무변화면 숨김.
     void SetStatArrow(Image arrow, int baseSkill, int effectiveSkill)
     {
         if (arrow == null) return;
-        if (effectiveSkill > baseSkill)      { arrow.sprite = redArrow;  arrow.enabled = true; }
-        else if (effectiveSkill < baseSkill) { arrow.sprite = blueArrow; arrow.enabled = true; }
-        else                                   arrow.enabled = false;
+        if (effectiveSkill == baseSkill) { arrow.enabled = false; return; }
+
+        bool debuff = effectiveSkill < baseSkill;
+        arrow.sprite  = statArrowSprite;
+        arrow.color   = EmployeeData.GetStatColor(baseSkill, effectiveSkill); // 수치 색상과 동일 (버프 #E63356 / 디버프 #517FFF)
+        arrow.enabled = true;
+
+        // Y축 flip (디버프) / 원복 (버프) — x·z 는 유지
+        var rt = arrow.rectTransform;
+        var s  = rt.localScale;
+        float magY = Mathf.Abs(s.y);
+        rt.localScale = new Vector3(s.x, debuff ? -magY : magY, s.z);
     }
 
     public void Hide()
     {
         _currentEmployeeId = null;
         if (cardPanel != null) cardPanel.SetActive(false);
+    }
+
+    // 특성 — 등급 무관 이름 표시. 등급 충족이면 클릭 시 설명, 미충족이면 lockedPanel 활성화(터치 차단).
+    void SetupTraitWithLock(EmployeeData emp)
+    {
+        string name = CharacterTraitApplier.GetTraitNameAnyGrade(emp);
+        bool unlocked = CharacterTraitApplier.IsTraitUnlocked(emp);
+        bool hasTrait = !string.IsNullOrEmpty(name);
+
+        if (traitText != null)
+        {
+            traitText.text = hasTrait ? $"특성 : {name}" : "";
+            var btn = traitText.GetComponent<TraitDescriptionButton>();
+            if (hasTrait && unlocked)
+            {
+                if (btn == null) btn = traitText.gameObject.AddComponent<TraitDescriptionButton>();
+                btn.Bind(emp);
+                traitText.raycastTarget = true;
+            }
+            else
+            {
+                if (btn != null) btn.Bind(null);
+                traitText.raycastTarget = false; // 미충족/미보유 → 클릭(설명) 비활성
+            }
+        }
+
+        // 특성이 있는데 등급 미충족일 때만 잠금 패널 노출 (미보유는 잠글 게 없음)
+        if (traitLockedPanel != null) traitLockedPanel.SetActive(hasTrait && !unlocked);
+    }
+
+    // 전용 이벤트 — 등급 무관 이름 표시. 등급 충족이면 클릭 시 설명, 미충족이면 lockedPanel 활성화(터치 차단).
+    void SetupEventWithLock(EmployeeData emp)
+    {
+        string name = CharacterUniqueEvents.GetEventNameAnyGrade(emp);
+        bool unlocked = CharacterUniqueEvents.IsEventUnlocked(emp);
+        bool hasEvent = !string.IsNullOrEmpty(name);
+
+        if (eventText != null)
+        {
+            eventText.text = hasEvent ? $"이벤트 : {name}" : "";
+            var btn = eventText.GetComponent<EventDescriptionButton>();
+            if (hasEvent && unlocked)
+            {
+                if (btn == null) btn = eventText.gameObject.AddComponent<EventDescriptionButton>();
+                btn.Bind(emp);
+                eventText.raycastTarget = true;
+            }
+            else
+            {
+                if (btn != null) btn.Bind(null);
+                eventText.raycastTarget = false;
+            }
+        }
+
+        if (eventLockedPanel != null) eventLockedPanel.SetActive(hasEvent && !unlocked);
     }
 
     // ── 등급색 (gradePanel) — 슬롯 UI 와 동일 규칙. Normal/Rare/Epic 단색, Unique/Legendary 셰머 ──
@@ -159,6 +242,10 @@ public class EmployeeCardUI : MonoBehaviour
 
     void ApplyGradeColor(EmployeeGrade grade)
     {
+        // 등급별 스프라이트 적용 (공용 SO) — 초상화 프레임 / gradeBG
+        GradeSpriteSet.Apply(portraitImagePanel, portraitFrameSet, grade);
+        GradeSpriteSet.Apply(gradeBG,            gradeBGSet,       grade);
+
         if (gradePanel == null) return;
         StopAllCoroutines();
 
@@ -172,6 +259,7 @@ public class EmployeeCardUI : MonoBehaviour
             _                  => GradeNormal,
         };
     }
+
 
     System.Collections.IEnumerator UniqueShimmer()
     {
@@ -237,27 +325,6 @@ public class EmployeeCardUI : MonoBehaviour
         if (cardPanel != null) cardPanel.SetActive(false);
 
         TrainingPanelUI.Instance.OpenForEmployee(emp, () => Show(savedEmpId));
-    }
-
-    // 만족도 능력치 보정 구간(EmployeeData.GetSatisfactionMultiplier)에 맞춰 슬라이더 Fill 색상 변경
-    //   81~100  → x1.1  초록 (강화)
-    //   61~80   → x1.0  파랑 (보통)
-    //   41~60   → x0.9  주황 (약 디버프)
-    //   0~40    → x0.8  빨강 (강 디버프)
-    public static void ApplySatisfactionColor(Slider slider, int satisfaction)
-    {
-        if (slider == null || slider.fillRect == null) return;
-        var fill = slider.fillRect.GetComponent<Image>();
-        if (fill == null) return;
-        fill.color = GetSatisfactionColor(satisfaction);
-    }
-
-    public static Color GetSatisfactionColor(int satisfaction)
-    {
-        if (satisfaction >= 81) return new Color(0.32f, 0.83f, 0.52f); // #52d486 초록
-        if (satisfaction >= 61) return new Color(0.36f, 0.62f, 1.00f); // #5b9eff 파랑
-        if (satisfaction >= 41) return new Color(0.94f, 0.69f, 0.25f); // #f0b040 주황
-        return                       new Color(0.91f, 0.35f, 0.35f);   // #e85a5a 빨강
     }
 
     // 카드가 열려있는 동안: ① 매 프레임 데이터 갱신 ② 빈 공간/다른 UI 클릭 시 닫음
