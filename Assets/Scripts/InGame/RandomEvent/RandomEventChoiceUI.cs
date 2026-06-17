@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.EventSystems;
 using TMPro;
 
 public class RandomEventChoiceUI : MonoBehaviour
@@ -12,31 +13,35 @@ public class RandomEventChoiceUI : MonoBehaviour
     public GameObject eventPanel;
 
     [Header("UI")]
-    public TextMeshProUGUI titleText;
-    public TextMeshProUGUI descriptionText;
     public Image portraitImage;
     public Image portraitImage2;
-
-    [Header("Character Names")]
-    public GameObject      leftCharNamePanel;   // portrait1(왼쪽) 캐릭터 이름 패널
-    public TextMeshProUGUI leftCharNameText;
-    public GameObject      rightCharNamePanel;  // portrait2(오른쪽) 캐릭터 이름 패널
-    public TextMeshProUGUI rightCharNameText;
 
     [Header("Buttons")]
     public Transform choiceButtonContainer;
     public GameObject choiceButtonPrefab;
     public Button confirmButton;
+    [Tooltip("선택지 클릭 시 RandomEventChoiceBtn 이미지로 교체할 스프라이트")]
+    public Sprite choiceSelectedSprite;
 
     [Header("타이핑 속도 (초/글자)")]
     [SerializeField] private float _typingSpeed = 0.05f;
 
     [Header("두 명 강조 (말하는 주체)")]
+    [Tooltip("말풍선 박스 — portrait1 이 화자일 때 활성")]
+    public GameObject dialogBoxImage1;
+    [Tooltip("말풍선 박스 — portrait2 가 화자일 때 활성")]
+    public GameObject dialogBoxImage2;
+    [Tooltip("DialogBoxImage1 자식 — portrait1 의 이름/대사")]
+    public TextMeshProUGUI nameText1;
+    public TextMeshProUGUI descriptionText1;
+    [Tooltip("DialogBoxImage2 자식 — portrait2 의 이름/대사")]
+    public TextMeshProUGUI nameText2;
+    public TextMeshProUGUI descriptionText2;
     [Tooltip("말하지 않는 초상화의 scale (화자는 1 고정)")]
-    [SerializeField] private float _nonSpeakerScale = 0.9f;
-    [Tooltip("말하지 않는 초상화의 alpha (0~255). 화자는 255)")]
-    [SerializeField] private float _nonSpeakerAlpha255 = 130f;
-    [Tooltip("화자 전환 시 scale 보간 시간(초)")]
+    [SerializeField] private float _nonSpeakerScale = 0.85f;
+    [Tooltip("말하지 않는 초상화의 색 (RGB+alpha 통합). 화자는 흰색/255")]
+    [SerializeField] private Color _nonSpeakerColor = new Color(111f / 255f, 111f / 255f, 111f / 255f, 225f / 255f); // #6F6F6F, a225
+    [Tooltip("화자 전환 시 보간 시간(초)")]
     [SerializeField] private float _speakerAnimDuration = 0.5f;
 
     private bool _twoPerson;            // 초상화 2개 모두 활성(두 명 이벤트)일 때만 강조 동작
@@ -53,6 +58,7 @@ public class RandomEventChoiceUI : MonoBehaviour
     private bool            _isTypingDone;
     private string          _currentFullText;
     private System.Action   _typingOnComplete;
+    private TextMeshProUGUI _typingTarget;     // 이번 타이핑이 출력될 대상(화자 박스의 descriptionText)
 
     private string                 _chosenSystemMessage;
     private RandomEventChoiceOption _chosenOption;
@@ -80,7 +86,6 @@ public class RandomEventChoiceUI : MonoBehaviour
         _chosenOption        = null;
         _inSecondaryPhase    = false;
 
-        titleText.text = data.title;
         SetPortrait(data.portraitId);
         SetPortrait2(data.portraitId2);
 
@@ -145,9 +150,6 @@ public class RandomEventChoiceUI : MonoBehaviour
                 if (!string.IsNullOrEmpty(_chosenOption.secondaryPortraitId))
                     SetPortrait2(_chosenOption.secondaryPortraitId);
             }
-            if (!string.IsNullOrEmpty(_chosenOption.secondaryTitle))
-                titleText.text = _chosenOption.secondaryTitle;
-
             string secDesc = _chosenOption.secondaryDescriptions[
                 UnityEngine.Random.Range(0, _chosenOption.secondaryDescriptions.Count)];
             StartTyping(secDesc, onComplete: () =>
@@ -189,14 +191,61 @@ public class RandomEventChoiceUI : MonoBehaviour
             var lbl = go.GetComponentInChildren<TextMeshProUGUI>();
             if (lbl != null) lbl.text = choice.buttonLabel;
 
-            var btn      = go.GetComponent<Button>();
-            var captured = choice;
+            var btn        = go.GetComponent<Button>();
+            var captured   = choice;
+            var capturedGo = go;
             btn.interactable = !choice.disabled;
             if (!choice.disabled)
-                btn.onClick.AddListener(() => OnChoiceSelected(captured));
+            {
+                // 누르는 동안 글씨 검정, 떼면 하양 (이미지는 Button SpriteSwap 이 자동 전환)
+                var et   = go.GetComponent<EventTrigger>() ?? go.AddComponent<EventTrigger>();
+                var down = new EventTrigger.Entry { eventID = EventTriggerType.PointerDown };
+                down.callback.AddListener(_ => SetLabelColor(capturedGo, Color.black));
+                et.triggers.Add(down);
+                var up = new EventTrigger.Entry { eventID = EventTriggerType.PointerUp };
+                up.callback.AddListener(_ => SetLabelColor(capturedGo, Color.white));
+                et.triggers.Add(up);
+
+                btn.onClick.AddListener(() => OnChoiceClicked(captured, capturedGo));
+            }
 
             _spawnedButtons.Add(go);
         }
+    }
+
+    // 선택지 클릭 → 글씨 검정으로 바꾸고 0.3초 유지한 뒤 실제 선택 처리.
+    void OnChoiceClicked(RandomEventChoiceOption choice, GameObject go)
+    {
+        // 0.3초 동안 중복 클릭 방지
+        foreach (var b in _spawnedButtons)
+        {
+            var bt = b != null ? b.GetComponent<Button>() : null;
+            if (bt != null) bt.interactable = false;
+        }
+
+        // 선택한 버튼: 글씨 검정 + 이미지를 지정 스프라이트로 고정 (0.3초 동안 같이 유지)
+        if (go != null)
+        {
+            var btn = go.GetComponent<Button>();
+            var img = go.GetComponent<Image>();
+            if (btn != null) btn.enabled = false;   // SpriteSwap transition 정지 → 코드 스프라이트 유지
+            if (img != null && choiceSelectedSprite != null) img.sprite = choiceSelectedSprite;
+            SetLabelColor(go, Color.black);
+        }
+        StartCoroutine(SelectAfterDelay(choice));
+    }
+
+    IEnumerator SelectAfterDelay(RandomEventChoiceOption choice)
+    {
+        yield return new WaitForSecondsRealtime(0.3f);   // 검정 글씨 + pressed 이미지 유지 시간
+        OnChoiceSelected(choice);
+    }
+
+    void SetLabelColor(GameObject go, Color color)
+    {
+        if (go == null) return;
+        var lbl = go.GetComponentInChildren<TextMeshProUGUI>();
+        if (lbl != null) lbl.color = color;
     }
 
     void OnChoiceSelected(RandomEventChoiceOption choice)
@@ -204,7 +253,7 @@ public class RandomEventChoiceUI : MonoBehaviour
         _chosenOption     = choice;
         _inSecondaryPhase = false;
 
-        // 선택지 버튼 숨기기
+        // 선택지 버튼 모두 숨김
         foreach (var go in _spawnedButtons)
             go.SetActive(false);
 
@@ -225,10 +274,6 @@ public class RandomEventChoiceUI : MonoBehaviour
             if (!string.IsNullOrEmpty(choice.resultPortraitId))
                 SetPortrait(choice.resultPortraitId);
         }
-
-        // 제목 교체 (null이면 유지)
-        if (choice.resultTitle != null)
-            titleText.text = choice.resultTitle;
 
         // 효과 즉시 적용
         choice.onChoose?.Invoke();
@@ -264,17 +309,28 @@ public class RandomEventChoiceUI : MonoBehaviour
         if (_typingCoroutine != null) StopCoroutine(_typingCoroutine);
         _currentFullText  = text;
         _typingOnComplete = onComplete;
+        _typingTarget     = ActiveDescription();   // 현재 화자 박스의 descriptionText
         _typingCoroutine  = StartCoroutine(TypeText(text, onComplete));
+    }
+
+    // 현재 말하는 쪽의 대사 출력 대상. 박스 미배선 시 단일 descriptionText 로 폴백.
+    TextMeshProUGUI ActiveDescription()
+    {
+        int s = _twoPerson
+            ? _speakerSide
+            : (portraitImage2 != null && portraitImage2.gameObject.activeSelf ? 2 : 1);
+        return (s == 2) ? descriptionText2 : descriptionText1;
     }
 
     IEnumerator TypeText(string text, System.Action onComplete)
     {
-        _isTypingDone        = false;
-        descriptionText.text = "";
+        _isTypingDone = false;
+        var tgt = _typingTarget;
+        if (tgt != null) tgt.text = "";
 
         foreach (char c in text)
         {
-            descriptionText.text += c;
+            if (tgt != null) tgt.text += c;
             yield return new WaitForSeconds(_typingSpeed);
         }
 
@@ -286,8 +342,8 @@ public class RandomEventChoiceUI : MonoBehaviour
     void SkipTyping()
     {
         if (_typingCoroutine != null) StopCoroutine(_typingCoroutine);
-        descriptionText.text = _currentFullText;
-        _isTypingDone        = true;
+        if (_typingTarget != null) _typingTarget.text = _currentFullText;
+        _isTypingDone = true;
 
         var cb            = _typingOnComplete;
         _typingOnComplete = null;
@@ -304,7 +360,7 @@ public class RandomEventChoiceUI : MonoBehaviour
         portraitImage.sprite = portrait;
         portraitImage.gameObject.SetActive(portrait != null);
         _leftName = ResolveCharName(portrait != null ? portraitId : null);
-        if (leftCharNameText != null) leftCharNameText.text = _leftName;
+        if (nameText1 != null) nameText1.text = _leftName;   // box1 이름
         RefreshNamePanels();
     }
 
@@ -317,7 +373,7 @@ public class RandomEventChoiceUI : MonoBehaviour
         portraitImage2.sprite = portrait;
         portraitImage2.gameObject.SetActive(portrait != null);
         _rightName = ResolveCharName(portrait != null ? portraitId : null);
-        if (rightCharNameText != null) rightCharNameText.text = _rightName;
+        if (nameText2 != null) nameText2.text = _rightName;   // box2 이름
         RefreshNamePanels();
     }
 
@@ -328,10 +384,9 @@ public class RandomEventChoiceUI : MonoBehaviour
             ? _speakerSide
             : (portraitImage2 != null && portraitImage2.gameObject.activeSelf ? 2 : 1);
 
-        if (leftCharNamePanel  != null)
-            leftCharNamePanel.SetActive(speaker == 1 && !string.IsNullOrEmpty(_leftName));
-        if (rightCharNamePanel != null)
-            rightCharNamePanel.SetActive(speaker == 2 && !string.IsNullOrEmpty(_rightName));
+        // 말풍선 박스는 말하는 쪽만 활성 (두 명/한 명 모두 동일 기준)
+        if (dialogBoxImage1 != null) dialogBoxImage1.SetActive(speaker == 1);
+        if (dialogBoxImage2 != null) dialogBoxImage2.SetActive(speaker == 2);
     }
 
     string ResolveCharName(string portraitId)
@@ -381,33 +436,33 @@ public class RandomEventChoiceUI : MonoBehaviour
         }
         else
         {
-            SetPortraitState(spk, 1f, 1f);                                   // 화자
-            SetPortraitState(non, _nonSpeakerScale, _nonSpeakerAlpha255 / 255f); // 비화자
+            SetPortraitState(spk, 1f, Color.white);            // 화자 — 흰색/255/scale1
+            SetPortraitState(non, _nonSpeakerScale, _nonSpeakerColor); // 비화자 — #6F6F6F/a225/scale0.85
         }
     }
 
     IEnumerator AnimateSpeaker(Image spk, Image non)
     {
-        Vector3 spkFrom = spk.transform.localScale, nonFrom = non.transform.localScale;
-        float   spkAFrom = spk.color.a,             nonAFrom = non.color.a;
-        Vector3 spkTo = Vector3.one,                nonTo = Vector3.one * _nonSpeakerScale;
-        float   spkATo = 1f,                        nonATo = _nonSpeakerAlpha255 / 255f;
+        Vector3 spkSFrom = spk.transform.localScale, nonSFrom = non.transform.localScale;
+        Color   spkCFrom = spk.color,                nonCFrom = non.color;
+        Vector3 spkSTo = Vector3.one,                nonSTo = Vector3.one * _nonSpeakerScale;
+        Color   spkCTo = Color.white,                nonCTo = _nonSpeakerColor;
 
         float t = 0f;
         while (t < _speakerAnimDuration)
         {
             t += Time.deltaTime;
             float k = Mathf.Clamp01(t / _speakerAnimDuration);
-            spk.transform.localScale = Vector3.Lerp(spkFrom, spkTo, k);
-            non.transform.localScale = Vector3.Lerp(nonFrom, nonTo, k);
-            SetImageAlpha(spk, Mathf.Lerp(spkAFrom, spkATo, k));
-            SetImageAlpha(non, Mathf.Lerp(nonAFrom, nonATo, k));
+            spk.transform.localScale = Vector3.Lerp(spkSFrom, spkSTo, k);
+            non.transform.localScale = Vector3.Lerp(nonSFrom, nonSTo, k);
+            spk.color = Color.Lerp(spkCFrom, spkCTo, k);
+            non.color = Color.Lerp(nonCFrom, nonCTo, k);
             yield return null;
         }
-        spk.transform.localScale = spkTo;
-        non.transform.localScale = nonTo;
-        SetImageAlpha(spk, spkATo);
-        SetImageAlpha(non, nonATo);
+        spk.transform.localScale = spkSTo;
+        non.transform.localScale = nonSTo;
+        spk.color = spkCTo;
+        non.color = nonCTo;
         _speakerAnimCo = null;
     }
 
@@ -415,19 +470,13 @@ public class RandomEventChoiceUI : MonoBehaviour
     {
         if (img == null) return;
         img.transform.localScale = Vector3.one;
-        SetImageAlpha(img, 1f);
+        img.color = Color.white;
     }
 
-    void SetPortraitState(Image img, float scale, float alpha)
+    void SetPortraitState(Image img, float scale, Color color)
     {
         if (img == null) return;
         img.transform.localScale = Vector3.one * scale;
-        SetImageAlpha(img, alpha);
-    }
-
-    void SetImageAlpha(Image img, float a)
-    {
-        if (img == null) return;
-        var c = img.color; c.a = a; img.color = c;
+        img.color = color;
     }
 }

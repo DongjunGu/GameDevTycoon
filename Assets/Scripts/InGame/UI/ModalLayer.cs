@@ -9,6 +9,10 @@ using UnityEngine.UI;
 [DisallowMultipleComponent]
 public class ModalLayer : MonoBehaviour
 {
+    [Tooltip("켜면 이 모달이 떠 있는 동안 배경 블러를 적용. 끄면 입력 차단(dim)만. 다이얼로그/이벤트만 켠다.")]
+    [SerializeField] bool _useBlur = false;
+    public bool UseBlur => _useBlur;
+
     public int AssignedOrder { get; private set; }
 
     Canvas _canvas;

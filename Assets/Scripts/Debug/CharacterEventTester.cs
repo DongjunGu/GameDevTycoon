@@ -15,16 +15,16 @@ using UnityEngine;
 // ──────────────────────────────────────────────────────────────────────────
 public class CharacterEventTester : MonoBehaviour
 {
-// #if UNITY_EDITOR
-//     [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.AfterSceneLoad)]
-//     static void AutoSpawn()
-//     {
-//         if (FindObjectOfType<CharacterEventTester>() != null) return;
-//         var go = new GameObject("[CharacterEventTester]");
-//         go.AddComponent<CharacterEventTester>();
-//         DontDestroyOnLoad(go);
-//     }
-// #endif
+#if UNITY_EDITOR
+    [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.AfterSceneLoad)]
+    static void AutoSpawn()
+    {
+        if (FindObjectOfType<CharacterEventTester>() != null) return;
+        var go = new GameObject("[CharacterEventTester]");
+        go.AddComponent<CharacterEventTester>();
+        DontDestroyOnLoad(go);
+    }
+#endif
 
     bool _open = false;
     Vector2 _scroll;
