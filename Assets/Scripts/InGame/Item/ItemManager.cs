@@ -97,7 +97,8 @@ public class ItemManager : MonoBehaviour
         _inventory.TryGetValue(itemId, out int cur);
         _inventory[itemId] = cur + count;
         Save();
-        ItemPanelUI.Instance?.Refresh();
+        // Unity 널 검사(!=) — 파괴된 stale Instance 면 ?. 가 통과해 크래시하므로 명시 검사.
+        if (ItemPanelUI.Instance != null) ItemPanelUI.Instance.Refresh();
 
         if (itemId == "coffee")
             RandomEventManager.Instance?.ScheduleCoffeeRequestEvent();
@@ -111,7 +112,7 @@ public class ItemManager : MonoBehaviour
     {
         _inventory.TryGetValue(itemId, out int cur);
         _inventory[itemId] = cur + count;
-        ItemPanelUI.Instance?.Refresh();
+        if (ItemPanelUI.Instance != null) ItemPanelUI.Instance.Refresh();
 
         if (itemId == "coffee")
             RandomEventManager.Instance?.ScheduleCoffeeRequestEvent();

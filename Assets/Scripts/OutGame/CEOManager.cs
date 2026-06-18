@@ -218,7 +218,7 @@ public class CEOManager : MonoBehaviour
         ceo.creativitySkill  = 0;
         ceo.salary           = 0;
         ceo.satisfaction     = 100;
-        ceo.portraitId       = "";
+        ceo.portraitId       = "ceo_001"; // Resources/Portraits/ + Portraits/Mini/ 에 ceo_001 이미지 필요
         ceo.isCEO            = true;
         ceo.isDefault        = false;
         ceo.assignedDeskId   = ceoDeskId;

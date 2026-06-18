@@ -30,9 +30,12 @@ public class GenreFatigueManager : MonoBehaviour
             if (g != genre)
                 _fatigue[g] = Mathf.Max(0, _fatigue[g] - 1);
 
-        // 직전과 같은 장르면 +2
+        // 직전과 같은 장르면 +2 (장착 특성 'c3' fatigueReduce 만큼 상승량 감소, 최소 0)
         if (_lastGenre == genre)
-            _fatigue[genre] = Mathf.Min(3, _fatigue[genre] + 2);
+        {
+            int inc = Mathf.Max(0, 2 - TraitEffectApplier.GetSameGenreFatigueReduce());
+            _fatigue[genre] = Mathf.Min(3, _fatigue[genre] + inc);
+        }
 
         _lastGenre = genre;
     }

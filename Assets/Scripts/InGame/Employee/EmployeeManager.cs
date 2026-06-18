@@ -585,12 +585,14 @@ public class EmployeeManager : MonoBehaviour
 
             // 테크트리 '멘탈 케어 서비스(sat_mental)' — 주기 만족도 하락량 1 감소
             int mentalCare = (TechTreeManager.Instance != null && TechTreeManager.Instance.IsUnlocked("sat_mental")) ? 1 : 0;
+            // 특성 's5'(monthlySatDropReduce) — 주기 만족도 하락량 추가 감소 (sat_mental 과 합산)
+            int traitDropReduce = TraitEffectApplier.GetMonthlySatDropReduce();
 
             foreach (var emp in ownedEmployees)
             {
                 if (DispatchManager.Instance != null && DispatchManager.Instance.IsDispatched(emp.id)) continue; // 파견중 제외
                 int dropAmount = (globalOvertime || emp.isOvertimeWorker) ? 10 : 5;
-                dropAmount = Mathf.Max(0, dropAmount - mentalCare);
+                dropAmount = Mathf.Max(0, dropAmount - mentalCare - traitDropReduce);
                 emp.satisfaction = Mathf.Clamp(emp.satisfaction - dropAmount, 0, 100);
             }
         }

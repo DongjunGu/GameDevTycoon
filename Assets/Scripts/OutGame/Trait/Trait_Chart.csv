@@ -4,7 +4,26 @@ trait_caffeine,카페인 중독,시작 시 커피 1개 보유,C,startItem_coffee
 trait_haggler,중고 거래,아이템 5% 할인가로 구매,C,itemDiscount,5
 trait_beginner_luck,초심자의 행운,첫 게임 매출 +10%,C,firstSaleBonus,10
 trait_poor_rescue,가난한 회사,회사 돈이 처음 0원이 되면 랜덤 직원의 연봉만큼 지급,C,brokeRescue,0
+trait_dev_discount,c1,개발금 10% 할인,C,devCostDiscount,10
+trait_resign_down,c2,퇴사 확률 10% 감소,C,resignChanceReduce,10
+trait_fatigue_down,c3,같은 게임 만들어도 피로도 1 적게 상승,C,fatigueReduce,1
 trait_gold_spoon,금수저,시작 시 6000G 추가 보유,B,startGold,6000
 trait_haggler_plus,중고 거래+,아이템 10% 할인가로 구매,B,itemDiscount,10
+trait_enhance_discount,b1,강화비 5% 감소,B,enhanceCostDiscount,5
+trait_high_sat_stat,b3,만족도 81 이상일 때 스탯 5% 추가 상승,B,highSatStatBonus,5
+trait_start_block,b5,랜덤 블록 아이템 1개 보유한 상태로 시작,B,startItem_blockRandom,1
+trait_small_sale,b6,소규모 게임 발매 시 매출 +5%,B,smallScaleSaleBonus,5
 trait_marketing_god,마케팅의 신,마케팅비 0원으로 최적화 적용,A,marketingFree,0
 trait_recruiter,호객행위,채용 공고 시 지원하는 인원 +1,A,recruitApplicants,1
+trait_enhance_discount_a,a1,강화비 10% 감소,A,enhanceCostDiscount,10
+trait_yearly_recover,a2,1년에 1번 10% 확률로 랜덤 직원 1명 만족도 풀 회복,A,yearlySatRecover,10
+trait_high_sat_stat_a,a4,만족도 81 이상일 때 스탯 10% 추가 상승,A,highSatStatBonus,10
+trait_medium_sale,a5,중형 게임 발매 시 매출 +5%,A,mediumScaleSaleBonus,5
+trait_bug_tolerance,a6,버그 2개까지 있어도 출시 패널티 면제,A,bugTolerance,2
+trait_fire_immune,s1,해고해도 남은 직원 만족도 하락 이벤트 없음,S,fireNoMoraleEvent,0
+trait_enhance_discount_s,s2,강화비용 15% 감소,S,enhanceCostDiscount,15
+trait_high_enhance_success,s3,15성 이상 강화 성공 확률 5% 상승,S,highEnhanceSuccess,5
+trait_yearly_all_recover,s4,1년에 1번 5% 확률로 직원 전원 만족도 95 회복,S,yearlyAllRecover,5
+trait_monthly_sat_reduce,s5,월간 만족도 감소량 1 감소,S,monthlySatDropReduce,1
+trait_large_sale,s7,대작 게임 발매 시 매출 +5%,S,largeScaleSaleBonus,5
+trait_perfect_sale,s8,평론가 점수 100점 달성 시 매출 +5%,S,perfectScoreSaleBonus,5

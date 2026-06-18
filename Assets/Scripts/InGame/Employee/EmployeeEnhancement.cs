@@ -73,17 +73,34 @@ public static class EmployeeEnhancement
     public static bool IsMax(EmployeeData emp) => emp.enhancementLevel >= GetMaxLevel(emp.grade);
 
     // 현재 레벨 → +1 강화 비용. 최대치/범위 초과면 -1.
+    // 장착 특성 'b1'(enhanceCostDiscount) 적용 — 표시·차감 공통 소스라 한 곳만 할인.
     public static int GetCost(EmployeeData emp)
     {
         int lv = emp.enhancementLevel;
         if (IsMax(emp) || lv < 0 || lv >= CostTable.Length) return -1;
-        return CostTable[lv];
+        return TraitEffectApplier.ApplyEnhanceCostDiscount(CostTable[lv]);
     }
 
     public static (int success, int maintain, int downgrade) GetRates(EmployeeData emp)
     {
         int lv = Mathf.Clamp(emp.enhancementLevel, 0, RateTable.Length - 1);
-        return RateTable[lv];
+        var r = RateTable[lv];
+
+        // 특성 's3'(highEnhanceSuccess) — 강화레벨 15 이상에서 성공 확률 +N%p (유지/하락에서 차감).
+        // 표시·실제 롤이 GetRates 단일 소스라 한 곳만 보정.
+        if (emp.enhancementLevel >= 15)
+        {
+            int bonus = TraitEffectApplier.GetHighEnhanceSuccessBonus();
+            if (bonus > 0)
+            {
+                int success  = Mathf.Min(100, r.success + bonus);
+                int absorbed = success - r.success;            // 실제 증가분
+                int downgrade = Mathf.Max(0, r.downgrade - absorbed);
+                int maintain  = Mathf.Max(0, 100 - success - downgrade);
+                return (success, maintain, downgrade);
+            }
+        }
+        return r;
     }
 
     // 성공확률 / 실패확률 2분류 (실패 = 유지 + 하락 = 100 - 성공)

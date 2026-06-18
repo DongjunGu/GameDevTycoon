@@ -271,7 +271,10 @@ public class EmployeeListUI : MonoBehaviour
     {
         var emp = EmployeeManager.Instance?.GetEmployee(id);
         if (emp == null) return;
-        EmployeeManager.Instance.FireEmployee(emp);
+        // 특성 's1'(fireNoMoraleEvent) 장착 시 직접 해고를 퇴사 카운트에서 제외
+        // → YearlyExitCount 미증가 → 불안정 회사/불안감 조성(만족도 하락) 이벤트로 안 이어짐.
+        bool countAsExit = !TraitEffectApplier.HasFireMoraleImmunity();
+        EmployeeManager.Instance.FireEmployee(emp, countAsExit);
         HUDUI.Instance?.RefreshAll();
         _selectedId = "";
         BuildList();

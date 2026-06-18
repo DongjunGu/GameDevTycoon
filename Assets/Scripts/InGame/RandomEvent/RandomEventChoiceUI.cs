@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
+using UnityEngine.InputSystem;
 using TMPro;
 
 public class RandomEventChoiceUI : MonoBehaviour
@@ -64,6 +65,10 @@ public class RandomEventChoiceUI : MonoBehaviour
     private RandomEventChoiceOption _chosenOption;
     private bool                   _inSecondaryPhase;
 
+    // 대사 타이핑이 끝난 뒤 "클릭해야" 선택지가 뜨도록 하는 대기 상태 + 보류된 선택지 목록.
+    private bool _awaitingChoiceReveal;
+    private List<RandomEventChoiceOption> _pendingChoices;
+
     // ── 초기화 ──────────────────────────────────────────────────
     void Awake()
     {
@@ -81,10 +86,12 @@ public class RandomEventChoiceUI : MonoBehaviour
 
     void DisplayInternal(RandomEventChoiceData data)
     {
-        _currentData         = data;
-        _chosenSystemMessage = null;
-        _chosenOption        = null;
-        _inSecondaryPhase    = false;
+        _currentData          = data;
+        _chosenSystemMessage  = null;
+        _chosenOption         = null;
+        _inSecondaryPhase     = false;
+        _awaitingChoiceReveal = false;
+        _pendingChoices       = null;
 
         SetPortrait(data.portraitId);
         SetPortrait2(data.portraitId2);
@@ -99,13 +106,14 @@ public class RandomEventChoiceUI : MonoBehaviour
         eventPanel.SetActive(true);
         ModalGate.I.Register(this);
 
-        // description 타이핑 → 완료 후 선택지 버튼 표시.
+        // description 타이핑 → 완료 후 "클릭해야" 선택지 버튼 표시 (Update 의 reveal 클릭이 SpawnChoiceButtons 호출).
         // 선택지가 없으면(정보성 이벤트 — ChoiceButtonContainer 미사용) 확인 버튼을 바로 노출해 닫을 수 있게 함.
         StartTyping(data.description, onComplete: () =>
         {
             if (data.choices != null && data.choices.Count > 0)
             {
-                SpawnChoiceButtons(data.choices);
+                _pendingChoices       = data.choices;
+                _awaitingChoiceReveal = true; // 클릭 대기 — Update 에서 클릭 시 SpawnChoiceButtons
             }
             else
             {
@@ -115,7 +123,38 @@ public class RandomEventChoiceUI : MonoBehaviour
         });
     }
 
-    // description 영역 탭 → 타이핑 스킵
+    // 타이핑 중 화면 어디를 클릭하든 즉시 완성 (New Input System — Mouse/Touch).
+    // 타이핑 완료 후에는 무동작(선택지/확인 버튼이 진행 담당).
+    void Update()
+    {
+        if (eventPanel == null || !eventPanel.activeSelf) return;
+
+        // 타이핑 중: 클릭하면 즉시 완성 (선택지는 아직 표시 안 함).
+        if (!_isTypingDone)
+        {
+            if (ClickedThisFrame()) SkipTyping();
+            return;
+        }
+
+        // 타이핑 완료 후: 선택지 공개 대기 중이면 클릭해야 선택지 표시.
+        if (_awaitingChoiceReveal && ClickedThisFrame())
+        {
+            _awaitingChoiceReveal = false;
+            SpawnChoiceButtons(_pendingChoices);
+            _pendingChoices = null;
+        }
+    }
+
+    static bool ClickedThisFrame()
+    {
+        var mouse = Mouse.current;
+        if (mouse != null && mouse.leftButton.wasPressedThisFrame) return true;
+        var touch = Touchscreen.current;
+        if (touch != null && touch.primaryTouch.press.wasPressedThisFrame) return true;
+        return false;
+    }
+
+    // description 영역 탭 → 타이핑 스킵 (전체화면 Update 와 별개로 유지 — 무해)
     public void OnClickDescription()
     {
         if (!_isTypingDone) SkipTyping();
@@ -185,50 +224,86 @@ public class RandomEventChoiceUI : MonoBehaviour
     {
         ClearChoiceButtons();
 
+        // 선택지 표시 시: 화자 강조 해제 — 두 초상 모두 원상복구(scale 1 / 흰색) + 두 대사 박스 비활성화.
+        if (_speakerAnimCo != null) { StopCoroutine(_speakerAnimCo); _speakerAnimCo = null; }
+        ResetPortrait(portraitImage);
+        ResetPortrait(portraitImage2);
+        if (dialogBoxImage1 != null) dialogBoxImage1.SetActive(false);
+        if (dialogBoxImage2 != null) dialogBoxImage2.SetActive(false);
+
         foreach (var choice in choices)
         {
             var go  = Instantiate(choiceButtonPrefab, choiceButtonContainer);
             var lbl = go.GetComponentInChildren<TextMeshProUGUI>();
-            if (lbl != null) lbl.text = choice.buttonLabel;
+            if (lbl != null) { lbl.text = choice.buttonLabel; lbl.raycastTarget = false; } // 글자 영역 클릭도 selectBtn 으로 통과
 
-            var btn        = go.GetComponent<Button>();
+            var rootImg    = go.GetComponent<Image>();   // 비주얼(스프라이트 전환) 대상 = 루트 RandomEventChoiceBtn
+            var btn        = GetSelectButton(go);          // 실제 클릭 = 자식 selectBtn 의 Button
             var captured   = choice;
             var capturedGo = go;
-            btn.interactable = !choice.disabled;
-            if (!choice.disabled)
+            if (btn != null)
             {
-                // 누르는 동안 글씨 검정, 떼면 하양 (이미지는 Button SpriteSwap 이 자동 전환)
-                var et   = go.GetComponent<EventTrigger>() ?? go.AddComponent<EventTrigger>();
-                var down = new EventTrigger.Entry { eventID = EventTriggerType.PointerDown };
-                down.callback.AddListener(_ => SetLabelColor(capturedGo, Color.black));
-                et.triggers.Add(down);
-                var up = new EventTrigger.Entry { eventID = EventTriggerType.PointerUp };
-                up.callback.AddListener(_ => SetLabelColor(capturedGo, Color.white));
-                et.triggers.Add(up);
+                // selectBtn 이 버튼(937×104) 전체를 덮도록 stretch-fill → 가장자리까지 클릭됨.
+                var srt = btn.GetComponent<RectTransform>();
+                if (srt != null)
+                {
+                    srt.anchorMin = Vector2.zero; srt.anchorMax = Vector2.one;
+                    srt.offsetMin = Vector2.zero; srt.offsetMax = Vector2.zero;
+                }
+                // selectBtn 자체가 raycast 를 받도록 Image(투명이어도) 보장.
+                var srcImg = btn.GetComponent<Image>();
+                if (srcImg == null) srcImg = btn.gameObject.AddComponent<Image>();
+                srcImg.color = new Color(1f, 1f, 1f, 0f); // 투명 — 비주얼은 루트, 클릭만 받음
+                srcImg.raycastTarget = true;
 
-                btn.onClick.AddListener(() => OnChoiceClicked(captured, capturedGo));
+                // SpriteSwap 전환(눌림/하이라이트/비활성)이 루트 이미지에 적용되도록 targetGraphic 을 루트로.
+                if (rootImg != null) btn.targetGraphic = rootImg;
+                btn.interactable = !choice.disabled;
+                if (!choice.disabled)
+                {
+                    // 누르는 동안 글씨 검정, 떼면 하양 — EventTrigger 는 클릭 대상(selectBtn)에 부착, 글씨는 루트 라벨.
+                    var et   = btn.gameObject.GetComponent<EventTrigger>() ?? btn.gameObject.AddComponent<EventTrigger>();
+                    var down = new EventTrigger.Entry { eventID = EventTriggerType.PointerDown };
+                    down.callback.AddListener(_ => SetLabelColor(capturedGo, Color.black));
+                    et.triggers.Add(down);
+                    var up = new EventTrigger.Entry { eventID = EventTriggerType.PointerUp };
+                    up.callback.AddListener(_ => SetLabelColor(capturedGo, Color.white));
+                    et.triggers.Add(up);
+
+                    btn.onClick.AddListener(() => OnChoiceClicked(captured, capturedGo));
+                }
             }
 
             _spawnedButtons.Add(go);
         }
     }
 
+    // 선택지 클릭 버튼 — 프리팹 자식 "selectBtn" 의 Button (없으면 자식에서 첫 Button 폴백).
+    Button GetSelectButton(GameObject go)
+    {
+        if (go == null) return null;
+        var t = go.transform.Find("selectBtn");
+        if (t != null) { var b = t.GetComponent<Button>(); if (b != null) return b; }
+        return go.GetComponentInChildren<Button>(true);
+    }
+
     // 선택지 클릭 → 글씨 검정으로 바꾸고 0.3초 유지한 뒤 실제 선택 처리.
     void OnChoiceClicked(RandomEventChoiceOption choice, GameObject go)
     {
-        // 0.3초 동안 중복 클릭 방지
+
+        // 0.3초 동안 중복 클릭 방지 — 각 선택지의 selectBtn 비활성화
         foreach (var b in _spawnedButtons)
         {
-            var bt = b != null ? b.GetComponent<Button>() : null;
+            var bt = GetSelectButton(b);
             if (bt != null) bt.interactable = false;
         }
 
-        // 선택한 버튼: 글씨 검정 + 이미지를 지정 스프라이트로 고정 (0.3초 동안 같이 유지)
+        // 선택한 버튼: 글씨 검정 + 루트 RandomEventChoiceBtn 이미지를 지정 스프라이트로 고정 (0.3초 유지)
         if (go != null)
         {
-            var btn = go.GetComponent<Button>();
-            var img = go.GetComponent<Image>();
-            if (btn != null) btn.enabled = false;   // SpriteSwap transition 정지 → 코드 스프라이트 유지
+            var btn = GetSelectButton(go);
+            var img = go.GetComponent<Image>();      // 비주얼 = 루트 이미지
+            if (btn != null) btn.enabled = false;    // SpriteSwap transition 정지 → 코드 스프라이트 유지
             if (img != null && choiceSelectedSprite != null) img.sprite = choiceSelectedSprite;
             SetLabelColor(go, Color.black);
         }

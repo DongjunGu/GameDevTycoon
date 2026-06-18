@@ -11,6 +11,14 @@ public class EmployeeSlotUI : MonoBehaviour
     public Button selectButton;    // 슬롯 선택(채용 후보 클릭)
     public GameObject ownedBadge;  // 보유중 뱃지 이미지
     public GameObject dispatchedBadge; // 파견중 뱃지 (해고 리스트 등 — 후보엔 항상 비활성)
+
+    [Header("등급 테두리 (공용 GradeSpriteSet 에셋)")]
+    public Image gradeBorder;
+    public GradeSpriteSet gradeBorderSet;
+
+    [Header("역할 아이콘 (공용 RoleIconSet 에셋)")]
+    public Image roleIcon;
+    public RoleIconSet roleIconSet;
     private static readonly Color ColorNormal = new Color(0.92f, 0.92f, 0.92f);
     private static readonly Color ColorRare = new Color(0.75f, 0.88f, 0.95f);
     private static readonly Color ColorEpic = new Color(0.55f, 0.30f, 0.85f);
@@ -23,10 +31,15 @@ public class EmployeeSlotUI : MonoBehaviour
         if (nameText != null) nameText.text = data.employeeName;
         if (portraitImage != null && !string.IsNullOrEmpty(data.portraitId))
         {
-            var sprite = Resources.Load<Sprite>($"Portraits/{data.portraitId}");
+            var sprite = Resources.Load<Sprite>($"Portraits/Mini/{data.portraitId}");
             if (sprite != null) portraitImage.sprite = sprite;
         }
         _pendingGrade = data.grade;
+
+        // 등급 테두리 / 역할 아이콘 (공용 SO — EmployeeSatisfactionSlider 와 동일 방식)
+        EnsureVisualRefs();
+        GradeSpriteSet.Apply(gradeBorder, gradeBorderSet, data.grade);
+        RoleIconSet.Apply(roleIcon, roleIconSet, data.role);
 
         // 보유중 뱃지 (masterEmployeeId 공백이면 이름으로 대조)
         bool isOwned = EmployeeManager.Instance.ownedEmployees
@@ -47,6 +60,19 @@ public class EmployeeSlotUI : MonoBehaviour
     void OnEnable()
     {
         ApplyGradeColor(_pendingGrade); // 활성화될 때 실행
+    }
+
+    // 인스펙터 미할당 시 자식 이름으로 자동 탐색 (EmployeeSatisfactionSlider 와 동일: "ImagePanel" 테두리 / "roleIcon").
+    void EnsureVisualRefs()
+    {
+        if (gradeBorder == null) gradeBorder = FindChildImage("ImagePanel");
+        if (roleIcon    == null) roleIcon    = FindChildImage("roleIcon");
+    }
+
+    Image FindChildImage(string childName)
+    {
+        var t = transform.Find(childName);
+        return t != null ? t.GetComponent<Image>() : null;
     }
 
     void ApplyGradeColor(EmployeeGrade grade)

@@ -228,9 +228,20 @@ public class SalesUI : MonoBehaviour
                 float otakuSalesBonus  = CharacterTraitApplier.GetOtakuSalesBonus(_cachedGenre);
                 // 신의 축복(우기 전용 이벤트) 주사위 6: 다음 축복까지 매출 +10%.
                 float godBlessingBonus = CharacterUniqueEvents.GetGodBlessingSalesBonus();
-                // 매출 보너스는 합연산 — 유튜버 +5% + 장인정신 +10% + 만점 +15% + 오타쿠 +20% + 신의축복 +10% (곱셈 아님).
+                // 장착 특성 'b6'(소규모) / 'a5'(중형) / 's7'(대작) — 규모별 매출 보너스.
+                float scaleSaleBonus   = scale switch
+                {
+                    ProjectScale.Small  => TraitEffectApplier.GetSmallScaleSaleBonus(),
+                    ProjectScale.Medium => TraitEffectApplier.GetMediumScaleSaleBonus(),
+                    ProjectScale.Large  => TraitEffectApplier.GetLargeScaleSaleBonus(),
+                    _                   => 0f
+                };
+                // 장착 특성 's8'(perfectScoreSaleBonus) — 평론가 100점 시 매출 보너스 (테크트리 만점신화와 합산).
+                float perfectTraitBonus = (CriticReviewUI.Instance != null && CriticReviewUI.Instance.LastCriticTotal == 100)
+                    ? TraitEffectApplier.GetPerfectScoreSaleBonus() : 0f;
+                // 매출 보너스는 합연산 — 유튜버 +5% + 장인정신 +10% + 만점 +15% + 오타쿠 +20% + 신의축복 +10% + 규모 +5% + 평론가만점 +5% (곱셈 아님).
                 // rand 는 별개의 자연스러운 변동성이라 곱셈 유지.
-                float bonusSum         = (youtuberBonus - 1f) + (craftsmanBonus - 1f) + perfectBonus + otakuSalesBonus + godBlessingBonus;
+                float bonusSum         = (youtuberBonus - 1f) + (craftsmanBonus - 1f) + perfectBonus + otakuSalesBonus + godBlessingBonus + scaleSaleBonus + perfectTraitBonus;
                 float totalMultiplier  = Mathf.Max(0f, 1f + bonusSum);
                 totalRevenue = Mathf.RoundToInt(
                     (5000f + 200f * scaleMultiplier * Mathf.Pow(qualityScore / 100f, 2f)) * rand * totalMultiplier

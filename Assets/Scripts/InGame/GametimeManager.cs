@@ -114,6 +114,12 @@ public class GameTimeManager : MonoBehaviour
                     RandomEventManager.Instance?.LoadEnergyDrinkRequestWeeksLeft(
                         SafeInt(row, "energyDrinkRequestWeeksLeft", -1)
                     );
+                    RandomEventManager.Instance?.LoadYearlyRecoverState(
+                        SafeString(row, "yearlySatRecover", "")
+                    );
+                    RandomEventManager.Instance?.LoadYearlyAllRecoverState(
+                        SafeString(row, "yearlyAllRecover", "")
+                    );
                     MerchantManager.Instance?.LoadSchedule(
                         SafeString(row, "merchantSchedule", ""),
                         SafeString(row, "merchantItems", ""),
@@ -254,6 +260,8 @@ public class GameTimeManager : MonoBehaviour
         param.Add("unstableCompanyWeeksLeft",   RandomEventManager.Instance?.GetUnstableCompanyWeeksLeft()     ?? -1);
         param.Add("coffeeRequestWeeksLeft",       RandomEventManager.Instance?.GetCoffeeRequestWeeksLeft()         ?? -1);
         param.Add("energyDrinkRequestWeeksLeft",  RandomEventManager.Instance?.GetEnergyDrinkRequestWeeksLeft()    ?? -1);
+        param.Add("yearlySatRecover",             RandomEventManager.Instance?.GetYearlyRecoverState()             ?? "-1:-1");
+        param.Add("yearlyAllRecover",             RandomEventManager.Instance?.GetYearlyAllRecoverState()          ?? "-1:-1");
         param.Add("merchantSchedule",             MerchantManager.Instance?.GetScheduleString()                     ?? "");
         param.Add("merchantItems",                MerchantManager.Instance?.GetItemsString()                        ?? "");
         param.Add("merchantVisitedYear",          MerchantManager.Instance?.VisitedYear                             ?? 0);

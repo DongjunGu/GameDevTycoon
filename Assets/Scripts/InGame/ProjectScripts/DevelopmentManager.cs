@@ -749,19 +749,25 @@ public class DevelopmentManager : MonoBehaviour
         }
 
         float remainingBug = DevelopmentPanelUI.Instance.GetBug();
-        float triggerProb = Mathf.Min(1f, remainingBug * 0.02f);
 
         BugPenalty = 0f;
-        if (UnityEngine.Random.value < triggerProb)
+        // 장착 특성 'a6'(bugTolerance) — 버그가 허용치 이하면 패널티 무조건 면제(확률 굴림 스킵).
+        // 미장착(tolerance 0)이면 remainingBug>0 일 때만 굴림 → 기존 동작 그대로.
+        int bugTolerance = TraitEffectApplier.GetBugTolerance();
+        if (remainingBug > bugTolerance)
         {
-            BugPenalty = remainingBug switch
+            float triggerProb = Mathf.Min(1f, remainingBug * 0.02f);
+            if (UnityEngine.Random.value < triggerProb)
             {
-                < 3f  => 0.03f,
-                < 6f  => 0.06f,
-                < 10f => 0.09f,
-                < 20f => 0.12f,
-                _     => 0.15f
-            };
+                BugPenalty = remainingBug switch
+                {
+                    < 3f  => 0.03f,
+                    < 6f  => 0.06f,
+                    < 10f => 0.09f,
+                    < 20f => 0.12f,
+                    _     => 0.15f
+                };
+            }
         }
 
         string msg = BugPenalty > 0f
