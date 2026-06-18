@@ -17,6 +17,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.InputSystem;
 using TMPro;
 
 public class DialogUI : MonoBehaviour
@@ -122,13 +123,23 @@ public class DialogUI : MonoBehaviour
         ClearChoices();
     }
 
-    // ─── 터치 입력 ───────────────────────────────────────────────
-    // private void Update()
-    // {
-    //     if (!_dialogPanel.activeSelf) return;
-    //     if (!Input.GetMouseButtonDown(0)) return;
-    //     OnTap();
-    // }
+    // ─── 터치 입력 (New Input System — Mouse/Touch) ──────────────
+    // 타이핑 중 화면 어디를 클릭하든 즉시 전체 텍스트 표시(완성). 완료 후 클릭은 무동작 —
+    // 다음 노드 진행/선택은 기존 흐름(선택지 버튼·autoAdvance·직원선택 등)이 담당해 흐름 깨짐 방지.
+    private void Update()
+    {
+        if (_dialogPanel == null || !_dialogPanel.activeSelf) return;
+        if (!_isTypingDone && ClickedThisFrame()) SkipTyping();
+    }
+
+    private static bool ClickedThisFrame()
+    {
+        var mouse = Mouse.current;
+        if (mouse != null && mouse.leftButton.wasPressedThisFrame) return true;
+        var touch = Touchscreen.current;
+        if (touch != null && touch.primaryTouch.press.wasPressedThisFrame) return true;
+        return false;
+    }
 
     private void OnTap()
     {

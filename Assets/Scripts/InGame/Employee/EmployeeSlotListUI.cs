@@ -40,7 +40,7 @@ public class EmployeeSlotListUI : MonoBehaviour
         var portrait = ResolvePortrait();
         if (portrait != null && !string.IsNullOrEmpty(data.portraitId))
         {
-            var sprite = Resources.Load<Sprite>($"Portraits/{data.portraitId}");
+            var sprite = Resources.Load<Sprite>($"Portraits/Mini/{data.portraitId}");
             if (sprite != null) portrait.sprite = sprite;
         }
 

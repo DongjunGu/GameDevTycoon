@@ -13,7 +13,8 @@
       "WebFetch(domain:www.youtube.com)",
       "WebFetch(domain:youtubetotranscript.com)",
       "Bash(grep -n \"--- !u!224 &1678375264\" \"C:\\\\Users\\\\PC\\\\Documents\\\\GitHub\\\\GameDevTycoon\\\\GameDevTycoon\\\\Assets\\\\Scenes\\\\GameScene.unity\")",
-      "Bash(grep -n \"--- !u!224 &2001716370\" \"C:\\\\Users\\\\PC\\\\Documents\\\\GitHub\\\\GameDevTycoon\\\\GameDevTycoon\\\\Assets\\\\Scenes\\\\GameScene.unity\")"
+      "Bash(grep -n \"--- !u!224 &2001716370\" \"C:\\\\Users\\\\PC\\\\Documents\\\\GitHub\\\\GameDevTycoon\\\\GameDevTycoon\\\\Assets\\\\Scenes\\\\GameScene.unity\")",
+      "mcp__UnityMCP__manage_scene"
     ]
   }
 }

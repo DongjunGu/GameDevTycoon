@@ -22,6 +22,13 @@ public class ItemPanelUI : MonoBehaviour
         itemListPanel.SetActive(false);
     }
 
+    // 씬 전환으로 파괴될 때 static Instance 에 stale(파괴된) 참조가 남지 않도록 해제.
+    // (남으면 런 시작 등 다른 씬에서 ItemPanelUI.Instance?.Refresh() 가 파괴된 객체를 건드려 MissingReferenceException)
+    void OnDestroy()
+    {
+        if (Instance == this) Instance = null;
+    }
+
     public void Open()
     {
         GameTimeManager.Instance?.StopTime();

@@ -143,9 +143,12 @@ public class ProjectSetupUI : MonoBehaviour
         if (img != null) img.color = selected ? scaleSelectedColor : scaleNormalColor;
     }
 
+    // 장착 특성 'c1'(devCostDiscount) 적용한 실제 개발금 — 표시·차감 공통 소스.
+    int CurrentDevCost => TraitEffectApplier.ApplyDevCostDiscount(_projectData.Cost);
+
     void UpdateDevCost()
     {
-        if (devCostText != null) devCostText.text = $"개발금: {_projectData.Cost:N0}G";
+        if (devCostText != null) devCostText.text = $"개발금: {CurrentDevCost:N0}G";
     }
 
     // ── 규모 선택 (인라인 토글, 패널 전환 없음) ──
@@ -199,7 +202,7 @@ public class ProjectSetupUI : MonoBehaviour
             return;
         }
 
-        int cost = _projectData.Cost;
+        int cost = CurrentDevCost;
         if (!MoneyManager.Instance.CanAfford(cost))
         {
             AlertUI.Instance.Show($"개발금이 부족합니다.\n필요: {cost:N0}G / 보유: {MoneyManager.Instance.Gold:N0}G");

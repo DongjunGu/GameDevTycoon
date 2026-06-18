@@ -256,19 +256,29 @@ public class EmployeeData
     public float GetSatisfactionMultiplier()
     {
         if (isCEO) return 1.0f; // CEO 는 만족도 시스템 적용 안 함
+
+        float mult;
         // 유리멘탈(김아무개) 특성: 만족도 구간 배율이 일반 직원보다 극단적.
         // 91~100 +30% / 81~90 +15% / 61~80 중립 / 60 이하 -20%.
         if (CharacterTraitApplier.IsGlassMental(this))
         {
-            if (satisfaction >= 91) return 1.3f;
-            if (satisfaction >= 81) return 1.15f;
-            if (satisfaction >= 61) return 1.0f;
-            return 0.8f; // 60 이하 (41~60 및 40 이하 모두)
+            if      (satisfaction >= 91) mult = 1.3f;
+            else if (satisfaction >= 81) mult = 1.15f;
+            else if (satisfaction >= 61) mult = 1.0f;
+            else                         mult = 0.8f; // 60 이하 (41~60 및 40 이하 모두)
         }
-        if (satisfaction >= 81) return 1.1f;
-        if (satisfaction >= 61) return 1.0f;
-        if (satisfaction >= 41) return 0.9f;
-        return 0.8f;
+        else
+        {
+            if      (satisfaction >= 81) mult = 1.1f;
+            else if (satisfaction >= 61) mult = 1.0f;
+            else if (satisfaction >= 41) mult = 0.9f;
+            else                         mult = 0.8f;
+        }
+
+        // 장착 특성 'b3'(81+, +5%) / 'a4'(80+, +10%) — 고만족 시 스탯 배율 추가 가산 (임계값별 합산).
+        mult += TraitEffectApplier.GetHighSatStatBonus(satisfaction);
+
+        return mult;
     }
 
     public void ApplyStatDebuff(int weeks)

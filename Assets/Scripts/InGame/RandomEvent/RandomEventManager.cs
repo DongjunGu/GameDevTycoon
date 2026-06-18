@@ -22,6 +22,12 @@ public class RandomEventManager : MonoBehaviour
     private int _coffeeRequestWeeksLeft      = -1; // -1이면 예약 없음
     private int _energyDrinkRequestWeeksLeft = -1; // -1이면 예약 없음
 
+    // 연중 1회 발동 특성 스케줄 — 새 연도마다 확률을 굴려 성공 시 연중 랜덤 주차에 예약.
+    // decidedYear 를 함께 저장(영속)해 재접속 시 같은 해 재굴림(중복 발동) 방지.
+    private class YearlySchedule { public int decidedYear = -1; public int weeksLeft = -1; }
+    private readonly YearlySchedule _yearlyRecover    = new(); // a2: 랜덤 1명 → 100
+    private readonly YearlySchedule _yearlyAllRecover = new(); // s4: 전원 → 95
+
     private struct PendingRomancePayload
     {
         public string newEmpId;
@@ -72,6 +78,16 @@ public class RandomEventManager : MonoBehaviour
 
     // _pendingEvent 이동 중 OR 도착 후 UI가 닫힐 때까지 true
     public bool HasPendingEvent => _pendingEvent != null || _pendingChoiceEvent != null || _eventInProgress;
+
+    // 다른 이벤트가 진행 중인지(대기 이벤트 + 화면에 떠 있는 모달 + 사직 큐) 통합 판정.
+    // 한 주(週) 틱에 여러 소스(OnWeekChanged 의 야매코드/불안정/커피/에너지, CheckConditionEvents 의
+    // 사직/도주/야근 등)가 동시에 StopTime 을 쌓으면, 첫 모달이 ResumeFromEvent→ForceStartTime 으로
+    // 카운트를 통째로 0 으로 밀어 큐에 남은 모달이 떠 있는데도 시간이 재개되는 버그가 발생한다.
+    // → 새 이벤트 발동 전 이 가드로 "한 번에 한 체인만" 시작하도록 막는다.
+    public bool IsEventBusy =>
+        HasPendingEvent ||
+        _resignationModalActive ||
+        (ModalGate.Instance != null && ModalGate.Instance.IsBlocked);
 
     // 파견중(사무실 부재) 직원 ID 인지 — patrol 이벤트 타깃이면 강제이동이 불가하므로 스킵 판단에 사용.
     static bool IsTargetDispatched(string empId)
@@ -145,6 +161,10 @@ public class RandomEventManager : MonoBehaviour
         _unstableCompanyWeeksLeft     = -1;
         _coffeeRequestWeeksLeft       = -1;
         _energyDrinkRequestWeeksLeft  = -1;
+        _yearlyRecover.decidedYear    = -1;
+        _yearlyRecover.weeksLeft      = -1;
+        _yearlyAllRecover.decidedYear = -1;
+        _yearlyAllRecover.weeksLeft   = -1;
         _pendingRomanceEvents.Clear();
         _pendingRomanceEvent = null;
         _activeCouple = null;
@@ -182,12 +202,67 @@ public class RandomEventManager : MonoBehaviour
             GameTimeManager.Instance.OnTimeChanged -= OnWeekChanged;
     }
 
+    // 연중 1회 발동 특성(a2/s4) 처리 — 새 연도마다 확률을 1회 굴려, 성공 시 연중 남은 주차 중
+    // 랜덤한 주에 발동한다. a2/s4 는 서로 독립 스케줄. (비모달 stat popup — 시간/모달 흐름 영향 없음)
+    void HandleYearlyRecovers()
+    {
+        if (TickYearlySchedule(_yearlyRecover, TraitEffectApplier.GetYearlySatRecoverChancePct()))
+        {
+            // a2 — 랜덤 직원 1명 만족도 풀 회복
+            if (TraitEffectApplier.DoYearlySatRecover(out var emp) && emp != null)
+            {
+                OfficeManager.Instance?.ShowStatPopup(emp.id, "만족도 회복!", new Color(1f, 0.5f, 0.5f));
+                GameTimeManager.Instance?.SaveGameTime(); // 컬럼(weeksLeft=-1) 저장 + 만족도 fan-out
+            }
+        }
+
+        if (TickYearlySchedule(_yearlyAllRecover, TraitEffectApplier.GetYearlyAllRecoverChancePct()))
+        {
+            // s4 — 직원 전원 만족도 95 회복
+            if (TraitEffectApplier.DoYearlyAllRecover())
+            {
+                if (EmployeeManager.Instance?.ownedEmployees != null)
+                    foreach (var emp in EmployeeManager.Instance.ownedEmployees)
+                        OfficeManager.Instance?.ShowStatPopup(emp.id, "만족도 회복!", new Color(1f, 0.5f, 0.5f));
+                GameTimeManager.Instance?.SaveGameTime();
+            }
+        }
+    }
+
+    // 새 연도면 1회 확률 굴림(성공 시 연중 남은 주차 랜덤 예약), 매주 카운트다운.
+    // 예약 주차 도달 시 true 반환(이번 주 발동). 그 외 false.
+    bool TickYearlySchedule(YearlySchedule s, int chancePct)
+    {
+        var gt = GameTimeManager.Instance;
+        if (gt == null) return false;
+
+        if (s.decidedYear != gt.Year)
+        {
+            s.decidedYear = gt.Year;
+            s.weeksLeft   = -1;
+            if (chancePct > 0 && UnityEngine.Random.Range(0, 100) < chancePct)
+            {
+                int weeksLeftInYear = Mathf.Max(1, 48 - ((gt.Month - 1) * 4 + (gt.Week - 1)));
+                s.weeksLeft = UnityEngine.Random.Range(1, weeksLeftInYear + 1);
+            }
+        }
+
+        if (s.weeksLeft > 0)
+        {
+            s.weeksLeft--;
+            if (s.weeksLeft == 0) { s.weeksLeft = -1; return true; }
+        }
+        return false;
+    }
+
     void OnWeekChanged()
     {
         while (_nextWeekPopups.Count > 0)
             AlertUI.Instance.Show(_nextWeekPopups.Dequeue());
 
-        if (PendingHackyCodePenalty > 0f)
+        HandleYearlyRecovers();
+
+        if (PendingHackyCodePenalty > 0f && !IsEventBusy)
         {
             PendingHackyCodeWeeksLeft--;
             if (PendingHackyCodeWeeksLeft <= 0)
@@ -206,7 +281,7 @@ public class RandomEventManager : MonoBehaviour
             }
         }
 
-        if (_unstableCompanyWeeksLeft > 0)
+        if (_unstableCompanyWeeksLeft > 0 && !IsEventBusy)
         {
             _unstableCompanyWeeksLeft--;
             if (_unstableCompanyWeeksLeft == 0)
@@ -216,7 +291,7 @@ public class RandomEventManager : MonoBehaviour
             }
         }
 
-        if (_coffeeRequestWeeksLeft > 0)
+        if (_coffeeRequestWeeksLeft > 0 && !IsEventBusy)
         {
             _coffeeRequestWeeksLeft--;
             if (_coffeeRequestWeeksLeft == 0)
@@ -226,7 +301,7 @@ public class RandomEventManager : MonoBehaviour
             }
         }
 
-        if (_energyDrinkRequestWeeksLeft > 0)
+        if (_energyDrinkRequestWeeksLeft > 0 && !IsEventBusy)
         {
             _energyDrinkRequestWeeksLeft--;
             if (_energyDrinkRequestWeeksLeft == 0)
@@ -682,6 +757,22 @@ public class RandomEventManager : MonoBehaviour
     public int  GetEnergyDrinkRequestWeeksLeft()      => _energyDrinkRequestWeeksLeft;
     public void LoadEnergyDrinkRequestWeeksLeft(int w)=> _energyDrinkRequestWeeksLeft = w;
 
+    // 연중 1회 발동 스케줄 — "decidedYear:weeksLeft" 한 컬럼 직렬화 (UserGameTime). a2/s4 각각 별도 컬럼.
+    // decidedYear 를 함께 저장해 재접속 시 같은 해 재굴림(중복 발동) 방지 + weeksLeft 카운트다운 이어감.
+    public string GetYearlyRecoverState()    => $"{_yearlyRecover.decidedYear}:{_yearlyRecover.weeksLeft}";
+    public string GetYearlyAllRecoverState() => $"{_yearlyAllRecover.decidedYear}:{_yearlyAllRecover.weeksLeft}";
+    public void LoadYearlyRecoverState(string s)    => ParseYearlySchedule(s, _yearlyRecover);
+    public void LoadYearlyAllRecoverState(string s) => ParseYearlySchedule(s, _yearlyAllRecover);
+
+    static void ParseYearlySchedule(string s, YearlySchedule sched)
+    {
+        if (string.IsNullOrEmpty(s)) return;
+        var parts = s.Split(':');
+        if (parts.Length != 2) return;
+        if (int.TryParse(parts[0], out int year))  sched.decidedYear = year;
+        if (int.TryParse(parts[1], out int weeks)) sched.weeksLeft   = weeks;
+    }
+
     public void ScheduleEnergyDrinkRequestEvent()
     {
         if (_energyDrinkRequestWeeksLeft > 0) return;
@@ -892,6 +983,10 @@ public class RandomEventManager : MonoBehaviour
     // ── 조건 이벤트 ───────────────────────────────────────────
     public void CheckConditionEvents()
     {
+        // 다른 이벤트(모달/대기/사직 큐)가 진행 중이면 이번 주 조건 이벤트는 스킵 — 다음 주 재시도.
+        // 한 주 틱에 OnWeekChanged 이벤트 + 조건 이벤트가 겹쳐 StopTime 이 쌓이는 것을 차단.
+        if (IsEventBusy) return;
+
         // 만족도 90이상: 10% 확률로 자발적 야근 (개발 중에만)
         if (DevelopmentManager.Instance?.CurrentStage == ProjectStage.Developing &&
             !DevelopmentManager.Instance.IsVoluntaryOvertimeActive)
@@ -917,6 +1012,8 @@ public class RandomEventManager : MonoBehaviour
             // 테크트리 '평생 직장(sat_loyalty)' — 자진 퇴사(사직서/도망) 전체 확률 10%p 하락 (음수는 0%)
             if (TechTreeManager.Instance != null && TechTreeManager.Instance.IsUnlocked("sat_loyalty"))
                 triggerChance -= 0.10f;
+            // 장착 특성 'c2'(resignChanceReduce) — 사직/도주 트리거 확률 추가 차감
+            triggerChance -= TraitEffectApplier.GetResignChanceReduce();
             if (triggerChance <= 0f || UnityEngine.Random.value >= triggerChance) continue;
 
             var captured = emp;
@@ -924,6 +1021,11 @@ public class RandomEventManager : MonoBehaviour
                 TriggerEmployeeResignationEvent(captured);
             else
                 TriggerEmployeeRunEvent(captured);
+
+            // 한 주에 한 체인만 발동 — 나머지 저만족 직원은 다음 주 재시도 (만족도<41 유지 시).
+            // 사직(큐)·도주 모달이 다른 OnWeekChanged/유니크 이벤트와 동시에 떠 시간정지 카운트가
+            // 꼬이는 것을 방지.
+            return;
         }
 
         CheckCharacterUniqueEvents();
@@ -936,6 +1038,7 @@ public class RandomEventManager : MonoBehaviour
         if (EmployeeManager.Instance == null) return;
         foreach (var emp in new List<EmployeeData>(EmployeeManager.Instance.ownedEmployees))
         {
+            if (IsEventBusy) return; // 이미 이벤트 발동됨 — 나머지 유니크 체크는 다음 주
             if (emp.grade < EmployeeGrade.Unique) continue;
             if (string.IsNullOrEmpty(CharacterTraitApplier.ResolveEventType(emp))) continue;
             CharacterUniqueEvents.WeeklyCheck(emp);
@@ -1167,11 +1270,18 @@ public class RandomEventManager : MonoBehaviour
 
             if (choiceData.requiresPatrol)
             {
+                // 파견중 직원이 타깃이면 강제이동이 no-op(_characters 부재) → 영영 안 뜸. 스킵하고 알림.
+                if (IsTargetDispatched(choiceData.targetEmployeeId))
+                {
+                    Debug.LogWarning($"[EventTest] {type} — 타깃 {choiceData.targetEmployeeId} 파견중이라 발동 불가");
+                    return;
+                }
                 _pendingEvent       = null;
                 _pendingChoiceEvent = choiceData;
                 if (!string.IsNullOrEmpty(choiceData.targetEmployeeId) &&
                     !string.IsNullOrEmpty(choiceData.requiredPatrolPointId))
                 {
+                    Debug.Log($"[EventTest] {type} — {choiceData.targetEmployeeId} 를 {choiceData.requiredPatrolPointId} 로 이동 후 도착 시 표시");
                     OfficeManager.Instance?.ForceCharacterToPatrolPoint(
                         choiceData.targetEmployeeId, choiceData.requiredPatrolPointId, stayDuration: 1f);
                 }

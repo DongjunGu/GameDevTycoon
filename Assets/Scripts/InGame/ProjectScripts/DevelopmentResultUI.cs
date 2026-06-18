@@ -191,7 +191,7 @@ public class DevelopmentResultUI : MonoBehaviour
         {
             if (contributorPortrait != null && !string.IsNullOrEmpty(top.portraitId))
             {
-                var sprite = Resources.Load<Sprite>($"Portraits/{top.portraitId}");
+                var sprite = Resources.Load<Sprite>($"Portraits/Mini/{top.portraitId}");
                 if (sprite != null) contributorPortrait.sprite = sprite;
             }
             if (contributorNameText != null) contributorNameText.text = top.name;

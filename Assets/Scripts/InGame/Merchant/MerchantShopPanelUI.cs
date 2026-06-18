@@ -10,7 +10,7 @@ using UnityEngine.UI;
 // 하단 끝: 구입 버튼
 // 닫기 X (선택)
 //
-// 가격은 일단 0G 고정 (ItemChartRow 에 price 컬럼 없음). 추후 price 컬럼 추가 시 row.price 로 교체.
+// 가격은 ItemChartRow.price 사용 (GetPrice). 장착 특성 '중고 거래/중고 거래+' 가 있으면 할인가 적용.
 public class MerchantShopPanelUI : MonoBehaviour
 {
     [Header("Header")]
@@ -160,5 +160,10 @@ public class MerchantShopPanelUI : MonoBehaviour
     }
 
     // 가격은 ItemChartRow.price 사용. 차트에 없으면 1G 폴백.
-    static int GetPrice(ItemChartRow row) => row != null && row.price > 0 ? row.price : 1;
+    // 장착 특성 '중고 거래/중고 거래+' (itemDiscount) 가 있으면 할인가 반환 (표시·차감 동일 소스).
+    static int GetPrice(ItemChartRow row)
+    {
+        int basePrice = row != null && row.price > 0 ? row.price : 1;
+        return TraitEffectApplier.ApplyItemDiscount(basePrice);
+    }
 }
