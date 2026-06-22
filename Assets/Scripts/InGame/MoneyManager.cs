@@ -79,6 +79,8 @@ public class MoneyManager : MonoBehaviour
                     () =>
                     {
                         AddGold(rescueSalary);
+                        // [대출 시스템 비활성화] 구제 후에도 부족하면 그대로 둔다(대출 prompt 제거).
+                        /*
                         if (_gold < amount &&
                             LoanManager.Instance != null && LoanManager.Instance.activeLoans.Count == 0)
                         {
@@ -87,11 +89,14 @@ public class MoneyManager : MonoBehaviour
                                 onConfirm: () => LoanUI.Instance?.Open()
                             );
                         }
+                        */
                     }
                 );
                 return false;
             }
 
+            // [대출 시스템 비활성화] 잔액 부족 시 대출 prompt 없이 실패 반환.
+            /*
             if (LoanManager.Instance != null && LoanManager.Instance.activeLoans.Count == 0)
             {
                 ConfirmUI.Instance?.Show(
@@ -99,6 +104,7 @@ public class MoneyManager : MonoBehaviour
                     onConfirm: () => LoanUI.Instance?.Open()
                 );
             }
+            */
             return false;
         }
         _gold -= amount;

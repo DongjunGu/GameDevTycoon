@@ -32,6 +32,7 @@ public class StatTickPopup : MonoBehaviour
 
     private System.Action _onFinish;
     private string _statKey;
+    private float _revealAmount;   // 흡입 완료 시 패널에 공개할 개발값 (>0이면 Finish/OnDisable에서 1회 공개)
     private Vector3 _baseScale = Vector3.one;
 
     void Awake() => _baseScale = transform.localScale;
@@ -39,6 +40,7 @@ public class StatTickPopup : MonoBehaviour
     public void Show(Sprite stat, string statKey, int target, Color color, bool playParticle, System.Action onFinish)
     {
         _statKey = statKey;
+        _revealAmount = Mathf.Max(0, target); // 흡입 끝나야 패널 표시값 공개 (즉시 X)
         transform.localScale = _baseScale; // 이전 흡입으로 줄어든 스케일 복원
 
         if (statIcon != null)
@@ -161,14 +163,29 @@ public class StatTickPopup : MonoBehaviour
         if (jackpotParticle != null)
             jackpotParticle.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
 
+        RevealToPanel();   // 흡입 완료 — 이제 패널 표시값이 올라간다
+
         var cb = _onFinish;
         _onFinish = null;
         StatTickPopupPool.Instance?.Return(this);
         cb?.Invoke();
     }
 
+    // 패널 표시값 공개 — 1회만(중복 방지로 _revealAmount 소진).
+    void RevealToPanel()
+    {
+        if (_revealAmount > 0f)
+        {
+            DevelopmentPanelUI.Instance?.RevealValues(_statKey, _revealAmount);
+            _revealAmount = 0f;
+        }
+    }
+
     void OnDisable()
     {
+        // 강제 비활성화(개발 시작 시 ClearAllPopups 등) 시에도 패널값 공개 누락 방지
+        RevealToPanel();
+
         // 강제 비활성화 시 콜백 누락 방지
         if (_onFinish != null)
         {

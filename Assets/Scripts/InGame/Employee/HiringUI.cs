@@ -23,6 +23,10 @@ public class HiringUI : MonoBehaviour
     public Button refreshButton;
     [Tooltip("ConfirmHirePanel 새로고침 버튼. refreshButton 과 같은 1회 가드를 공유. 누르면 이력서 셔플 후 후보 재추첨(확정 화면 유지).")]
     public Button confirmRefreshButton;
+    [Tooltip("'hire_refresh' 미해금 시 활성화되는 잠금 덮개 (refreshButton 용). 해금되면 자동 비활성.")]
+    public GameObject refreshLockedPanel;
+    [Tooltip("'hire_refresh' 미해금 시 활성화되는 잠금 덮개 (confirmRefreshButton 용). 해금되면 자동 비활성.")]
+    public GameObject confirmRefreshLockedPanel;
 
     [Header("Slots")]
     public Transform slotParent;
@@ -386,6 +390,9 @@ public class HiringUI : MonoBehaviour
         bool usable = unlocked && !_refreshUsed;
         if (refreshButton != null)        refreshButton.interactable        = usable;
         if (confirmRefreshButton != null) confirmRefreshButton.interactable = usable;
+        // 미해금 시 잠금 덮개 활성화, 해금되면 비활성화
+        if (refreshLockedPanel != null)        refreshLockedPanel.SetActive(!unlocked);
+        if (confirmRefreshLockedPanel != null) confirmRefreshLockedPanel.SetActive(!unlocked);
     }
 
     // 가중치 랜덤 롤
