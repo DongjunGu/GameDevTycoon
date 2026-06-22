@@ -59,9 +59,11 @@ public class LoanUI : MonoBehaviour
             $"{amount:N0}G 대출\n이자율: {rate:F0}% → 상환금액: {repayAmount:N0}G\n만기: {dueYear}년 {GameTimeManager.Instance.Month}월 {GameTimeManager.Instance.Week}주",
             onConfirm: () =>
             {
-                LoanManager.Instance.TakeLoan(tierIndex);
+                // 대출금 입금(AddGold)은 SaveLoan 서버 콜백 이후라 비동기 — 입금 완료 후에야
+                // 패널 닫기 + onClose(true) 를 발사해야 호출자(임금 재지급)가 늘어난 잔액을 본다.
+                // (입금 전에 onClose 를 쏘면 잔액 부족으로 오판해 파산 처리되는 race 발생)
                 _didTakeLoan = true;
-                OnClickClose(); // 대출 성사 시 패널 자동 닫기 + 시간 재개 + onClose(true)
+                LoanManager.Instance.TakeLoan(tierIndex, OnClickClose);
             },
             onCancel: () => { },
             confirmText: "대출하기",

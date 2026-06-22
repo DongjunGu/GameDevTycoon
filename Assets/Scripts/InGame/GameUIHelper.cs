@@ -12,6 +12,12 @@ public static class GameUIHelper
     //   - 임금 지급 같이 "대출 받으면 차감 재시도, 안 받고 닫으면 파산" 호출자가 흐름 분기 콜백 전달
     public static void ShowLoanPrompt(System.Action onDecline = null, System.Action<bool> onClose = null)
     {
+        // [대출 시스템 비활성화] 대출 prompt 없이 "재화 부족" 안내 + onDecline 폴백만.
+        // 대출 복구 시 아래 블록 주석 해제하고 이 두 줄 제거.
+        if (onDecline != null) onDecline.Invoke();
+        else                   AlertUI.Instance?.Show("재화가 부족합니다.");
+        return;
+        /*
         // 이미 활성 대출이 있으면 추가 대출 불가
         if (LoanManager.Instance != null && LoanManager.Instance.activeLoans.Count > 0)
         {
@@ -27,5 +33,6 @@ public static class GameUIHelper
             confirmText: "대출하기",
             cancelText:  "아니요"
         );
+        */
     }
 }

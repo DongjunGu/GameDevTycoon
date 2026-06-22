@@ -32,12 +32,20 @@ public class DevelopmentPanelUI : MonoBehaviour
     private float _bug;
     private float _creativity;
 
-    // 화면 표시용 (실제값을 향해 1씩 따라잡음)
+    // 화면 표시용 (공개값을 향해 1씩 따라잡음)
     private float _planningDisplay;
     private float _developDisplay;
     private float _artDisplay;
     private float _bugDisplay;
     private float _creativityDisplay;
+
+    // 공개값 — 표시값(Display)이 따라잡는 목표. 실제값과 분리해 개발틱 팝업이 패널로 빨려든 뒤
+    // RevealValues 로만 공개된다(흡입 후 카운트업 연출). 그 외 경로(로드/즉시가산/배수)는 실제값과 동시에 공개.
+    private float _planningReveal;
+    private float _developReveal;
+    private float _artReveal;
+    private float _bugReveal;
+    private float _creativityReveal;
 
     private float _tickAccumulator;
 
@@ -66,11 +74,11 @@ public class DevelopmentPanelUI : MonoBehaviour
         _tickAccumulator -= steps * tickInterval;
 
         bool changed = false;
-        changed |= MoveDisplay(ref _planningDisplay,   _planning,   steps);
-        changed |= MoveDisplay(ref _developDisplay,    _develop,    steps);
-        changed |= MoveDisplay(ref _artDisplay,        _art,        steps);
-        changed |= MoveDisplay(ref _bugDisplay,        _bug,        steps);
-        changed |= MoveDisplay(ref _creativityDisplay, _creativity, steps);
+        changed |= MoveDisplay(ref _planningDisplay,   _planningReveal,   steps);
+        changed |= MoveDisplay(ref _developDisplay,    _developReveal,    steps);
+        changed |= MoveDisplay(ref _artDisplay,        _artReveal,        steps);
+        changed |= MoveDisplay(ref _bugDisplay,        _bugReveal,        steps);
+        changed |= MoveDisplay(ref _creativityDisplay, _creativityReveal, steps);
 
         if (changed) UpdateUI();
     }
@@ -88,11 +96,11 @@ public class DevelopmentPanelUI : MonoBehaviour
 
     private void SyncDisplayInstantly()
     {
-        _planningDisplay   = _planning;
-        _developDisplay    = _develop;
-        _artDisplay        = _art;
-        _bugDisplay        = _bug;
-        _creativityDisplay = _creativity;
+        _planningDisplay   = _planningReveal;
+        _developDisplay    = _developReveal;
+        _artDisplay        = _artReveal;
+        _bugDisplay        = _bugReveal;
+        _creativityDisplay = _creativityReveal;
         UpdateUI();
     }
 
@@ -103,7 +111,12 @@ public class DevelopmentPanelUI : MonoBehaviour
         _art        = art;
         _bug        = bug;
         _creativity = creativity;
-        // 저장 로드 등 — 애니메이션 없이 즉시 일치
+        // 저장 로드 등 — 흡입 연출 없이 실제값을 즉시 공개 + 표시
+        _planningReveal   = planning;
+        _developReveal    = develop;
+        _artReveal        = art;
+        _bugReveal        = bug;
+        _creativityReveal = creativity;
         SyncDisplayInstantly();
     }
 
@@ -120,6 +133,12 @@ public class DevelopmentPanelUI : MonoBehaviour
         _artDisplay = 0f;
         _bugDisplay = 0f;
         _creativityDisplay = 0f;
+
+        _planningReveal = 0f;
+        _developReveal = 0f;
+        _artReveal = 0f;
+        _bugReveal = 0f;
+        _creativityReveal = 0f;
         _tickAccumulator = 0f;
 
         planningText.text = "";
@@ -129,6 +148,8 @@ public class DevelopmentPanelUI : MonoBehaviour
         creativityText.text = "";
     }
 
+    // 개발틱 산출 — 실제값(저장/로직)만 즉시 증가. 화면 표시값은 개발틱 팝업이 패널로 빨려든 뒤
+    // RevealValues 로 공개될 때까지 오르지 않는다(흡입 후 카운트업 연출).
     public void AddValues(float planning, float develop, float art, float bug, float creativity = 0f)
     {
         _planning   += planning;
@@ -136,10 +157,24 @@ public class DevelopmentPanelUI : MonoBehaviour
         _art        += art;
         _bug        += bug;
         _creativity += creativity;
-        // Update()가 표시값을 1씩 따라잡음
     }
 
-    // 호출자가 직접 1씩 틱하는 경우(LeaderScoreUI 등) — 표시값도 즉시 동기화
+    // 개발틱 팝업이 패널로 빨려든 뒤(StatTickPopup.Finish) 호출 — 해당 스탯 표시값을 amount 만큼 공개.
+    // Update()가 표시값을 공개값까지 1씩 따라잡으며 카운트업.
+    public void RevealValues(string statKey, float amount)
+    {
+        if (amount == 0f) return;
+        switch (statKey)
+        {
+            case "planning":   _planningReveal   += amount; break;
+            case "develop":    _developReveal    += amount; break;
+            case "art":        _artReveal        += amount; break;
+            case "bug":        _bugReveal        += amount; break;
+            case "creativity": _creativityReveal += amount; break;
+        }
+    }
+
+    // 호출자가 직접 1씩 틱하는 경우(LeaderScoreUI 등) — 실제값/공개값/표시값 즉시 동기화
     public void AddValuesInstant(float planning, float develop, float art, float bug, float creativity = 0f)
     {
         _planning   += planning;
@@ -147,6 +182,11 @@ public class DevelopmentPanelUI : MonoBehaviour
         _art        += art;
         _bug        += bug;
         _creativity += creativity;
+        _planningReveal   += planning;
+        _developReveal    += develop;
+        _artReveal        += art;
+        _bugReveal        += bug;
+        _creativityReveal += creativity;
         SyncDisplayInstantly();
     }
 
@@ -198,6 +238,7 @@ public class DevelopmentPanelUI : MonoBehaviour
     public void SetBug(float value)
     {
         _bug = value;
+        _bugReveal = value;   // 버그 작업은 흡입 연출 없이 즉시 반영
         // Update()가 _bugDisplay를 따라잡음
     }
 
@@ -206,6 +247,9 @@ public class DevelopmentPanelUI : MonoBehaviour
         _planning *= multiplier;
         _develop  *= multiplier;
         _art      *= multiplier;
+        _planningReveal *= multiplier;
+        _developReveal  *= multiplier;
+        _artReveal      *= multiplier;
         // Update()가 따라잡음
     }
 }

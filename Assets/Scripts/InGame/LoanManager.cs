@@ -38,7 +38,10 @@ public class LoanManager : MonoBehaviour
     }
 
     // ── 대출 실행 ─────────────────────────────
-    public void TakeLoan(int tierIndex)
+    // onComplete: 대출금이 실제로 입금(AddGold)된 후 호출. 임금 재지급 등 "대출 후 차감 재시도"
+    //             호출자는 이 콜백에서 재시도해야 함 — SaveLoan(서버 Insert)이 비동기라
+    //             TakeLoan 반환 직후에는 아직 잔액이 늘지 않았기 때문(파산 오판 race 방지).
+    public void TakeLoan(int tierIndex, System.Action onComplete = null)
     {
         int amount = LoanAmounts[tierIndex];
 
@@ -64,6 +67,7 @@ public class LoanManager : MonoBehaviour
             ProjectSaveManager.Instance?.SaveProject();
             LoanUI.Instance.RefreshUI();
             Debug.Log($"대출 실행: {amount:N0}G / 만기: {dueYear}년 {dueMonth}월 {dueWeek}주");
+            onComplete?.Invoke();
         });
     }
 

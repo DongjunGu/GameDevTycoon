@@ -13,15 +13,20 @@ public class EmployeeResumePanel : MonoBehaviour
     [Header("Identity")]
     public Image portraitImage;
     public TextMeshProUGUI nameText;
-    public TextMeshProUGUI potentialText;   // "잠재력: {}"
+    public TextMeshProUGUI potentialText;   // "{잠재력}"
     public TextMeshProUGUI gradeText;
-    public Image gradePanel;                // 등급색 배경 (Unique/Legendary 셰머)
+    public Image gradePanel;                // 등급별 이미지 (색 대신 sprite 교체)
+    public GradeSpriteSet gradeSpriteSet;   // 공용 등급 스프라이트 세트 (gradePanel 에 적용)
     public Image roleBadge;                 // 역할 아이콘
     public RoleIconSet roleIconSet;         // 공용 역할 아이콘 세트
 
     [Header("Trait / Event")]
-    public TextMeshProUGUI traitText;       // 캐릭터 특성명 (Epic+ 일 때만)
-    public TextMeshProUGUI eventText;       // 전용 이벤트명 (Unique+ 일 때만)
+    public TextMeshProUGUI traitText;       // 캐릭터 특성명 (등급 무관 항상 표시)
+    public TextMeshProUGUI eventText;       // 전용 이벤트명 (등급 무관 항상 표시)
+    [Tooltip("특성 등급(Epic) 미충족 시 활성화되는 덮개 — 위에 raycast Image 가 있어 클릭 차단")]
+    public GameObject traitLockedPanel;
+    [Tooltip("이벤트 등급(Unique) 미충족 시 활성화되는 덮개 — 위에 raycast Image 가 있어 클릭 차단")]
+    public GameObject eventLockedPanel;
 
     [Header("Enhancement / Satisfaction")]
     public TextMeshProUGUI enhancementText;
@@ -46,24 +51,31 @@ public class EmployeeResumePanel : MonoBehaviour
 
         if (portraitImage != null && !string.IsNullOrEmpty(emp.portraitId))
         {
-            var sprite = Resources.Load<Sprite>($"Portraits/{emp.portraitId}");
+            var sprite = Resources.Load<Sprite>($"Portraits/Mini/{emp.portraitId}");
             if (sprite != null) portraitImage.sprite = sprite;
         }
         if (nameText != null)      nameText.text      = emp.employeeName;
-        if (potentialText != null) potentialText.text = $"잠재력: {emp.PotentialToString()}";
+        if (potentialText != null) potentialText.text = emp.PotentialToString();
         if (gradeText != null)     gradeText.text     = emp.GradeToString();
         RoleIconSet.Apply(roleBadge, roleIconSet, emp.role);
 
-        ApplyGradeColor(emp.grade);
+        // 등급별 이미지 교체 (색 변경 대신 sprite 세트)
+        GradeSpriteSet.Apply(gradePanel, gradeSpriteSet, emp.grade);
 
-        // 특성/이벤트 — 라벨엔 이름(없으면 "없음"), 클릭하면 설명 패널(traitDescriptionPanel/eventDescriptionPanel)을 토글해 설명 표시.
-        // AlertUI 대신 자체 패널 사용(ModalGate 차단 영향 없음). 설명만 표시(이름은 라벨에만).
+        // 특성/이벤트 — 등급 무관 이름을 항상 표시(다 출력). 등급 충족이면 클릭 시 설명 패널 토글,
+        // 미충족이면 덮개(lockedPanel) 활성화로 클릭 차단. (EmployeeCardUI 와 동일 규칙)
         ResolveDescRefs();
-        string traitName = (!emp.isCEO) ? CharacterTraitApplier.GetTraitName(emp) : "";
-        WireDesc(traitText, _traitDescImg, _traitDescText, traitName, CharacterTraitApplier.GetTraitDescription(emp), "특성");
-        WireDesc(eventText, _eventDescImg, _eventDescText, CharacterUniqueEvents.GetEventName(emp), CharacterUniqueEvents.GetEventDescription(emp), "이벤트");
+        string traitName = (!emp.isCEO) ? CharacterTraitApplier.GetTraitNameAnyGrade(emp) : "";
+        bool traitUnlocked = (!emp.isCEO) && CharacterTraitApplier.IsTraitUnlocked(emp);
+        WireDesc(traitText, _traitDescImg, _traitDescText, traitName,
+                 CharacterTraitApplier.GetTraitDescription(emp), "특성", traitUnlocked, traitLockedPanel);
 
-        if (enhancementText != null) enhancementText.text = $"{emp.enhancementLevel}Lv / {emp.MaxEnhancementLevel}Lv";
+        string eventName = CharacterUniqueEvents.GetEventNameAnyGrade(emp);
+        bool eventUnlocked = CharacterUniqueEvents.IsEventUnlocked(emp);
+        WireDesc(eventText, _eventDescImg, _eventDescText, eventName,
+                 CharacterUniqueEvents.GetEventDescription(emp), "이벤트", eventUnlocked, eventLockedPanel);
+
+        if (enhancementText != null) enhancementText.text = $"+{emp.enhancementLevel}";
 
         if (satisfactionSlider != null)
         {
@@ -125,16 +137,23 @@ public class EmployeeResumePanel : MonoBehaviour
     }
 
     // 라벨에 "{kind} : {이름}"(없으면 "{kind} : 없음") 표시 + 설명 있으면 클릭 토글 부착. 설명 패널은 기본 숨김.
-    void WireDesc(TMP_Text label, Image descImg, TMP_Text descText, string name, string desc, string kind)
+    // unlocked=false(등급 미충족)면 lockedPanel 덮개 활성화 + 클릭(설명) 비활성.
+    void WireDesc(TMP_Text label, Image descImg, TMP_Text descText, string name, string desc, string kind,
+                  bool unlocked, GameObject lockedPanel)
     {
         if (descImg  != null) descImg.enabled = false;
         if (descText != null) descText.gameObject.SetActive(false);
-        if (label == null) return;
 
         bool has = !string.IsNullOrEmpty(name);
+
+        // 특성/이벤트가 있는데 등급 미충족일 때만 덮개 노출 (미보유는 덮을 게 없음)
+        if (lockedPanel != null) lockedPanel.SetActive(has && !unlocked);
+
+        if (label == null) return;
         label.text = has ? $"{kind} : {name}" : $"{kind} : 없음";
 
-        bool clickable = has && !string.IsNullOrEmpty(desc) && (descImg != null || descText != null);
+        // 등급 충족(unlocked) + 설명 존재일 때만 클릭으로 설명 토글. 미충족이면 덮개가 클릭 차단.
+        bool clickable = has && unlocked && !string.IsNullOrEmpty(desc) && (descImg != null || descText != null);
         label.raycastTarget = clickable;
 
         var toggle = label.GetComponent<ResumeDescriptionToggle>();
@@ -146,52 +165,4 @@ public class EmployeeResumePanel : MonoBehaviour
         else if (toggle != null) toggle.Setup(null, null, null);
     }
 
-    // ── 등급색 (gradePanel) — EmployeeCardUI 와 동일 규칙 ──
-    private static readonly Color GradeNormal = new Color(0.92f, 0.92f, 0.92f);
-    private static readonly Color GradeRare   = new Color(0.75f, 0.88f, 0.95f);
-    private static readonly Color GradeEpic   = new Color(0.55f, 0.30f, 0.85f);
-
-    void ApplyGradeColor(EmployeeGrade grade)
-    {
-        if (gradePanel == null) return;
-        StopAllCoroutines();
-
-        // 코루틴(셰머)은 활성 상태에서만 — 비활성 GameObject 에서 StartCoroutine 시 에러 방지.
-        if (isActiveAndEnabled)
-        {
-            if (grade == EmployeeGrade.Legendary) { StartCoroutine(LegendaryShimmer()); return; }
-            if (grade == EmployeeGrade.Unique)    { StartCoroutine(UniqueShimmer());    return; }
-        }
-
-        gradePanel.color = grade switch
-        {
-            EmployeeGrade.Rare      => GradeRare,
-            EmployeeGrade.Epic      => GradeEpic,
-            EmployeeGrade.Unique    => new Color(1.0f, 0.85f, 0.30f), // 비활성 시 셰머 대신 단색 골드
-            EmployeeGrade.Legendary => new Color(1.0f, 0.85f, 0.30f),
-            _                       => GradeNormal,
-        };
-    }
-
-    System.Collections.IEnumerator UniqueShimmer()
-    {
-        Color goldA = new Color(1.0f, 0.85f, 0.30f);
-        Color goldB = new Color(0.85f, 0.65f, 0.10f);
-        while (true)
-        {
-            float t = (Mathf.Sin(Time.unscaledTime * 2.0f) + 1f) / 2f;
-            gradePanel.color = Color.Lerp(goldB, goldA, t);
-            yield return null;
-        }
-    }
-
-    System.Collections.IEnumerator LegendaryShimmer()
-    {
-        while (true)
-        {
-            float h = Mathf.Repeat(Time.unscaledTime * 0.25f, 1f);
-            gradePanel.color = Color.HSVToRGB(h, 0.55f, 1f);
-            yield return null;
-        }
-    }
 }

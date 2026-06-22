@@ -352,6 +352,10 @@ public class GameTimeManager : MonoBehaviour
             return;
         }
 
+        // [대출 시스템 비활성화] 잔액 부족 → 바로 파산.
+        // 대출 복구 시 아래 블록 주석 해제.
+        TriggerBankruptcy();
+        /*
         // 대출 활성으로 prompt 불가 / 사용자 prompt 거절 → 임금 못 받음 → 파산
         // 대출 받고 닫으면 → 다시 임금 차감 시도. 대출 안 받고 그냥 닫으면 → 파산.
         GameUIHelper.ShowLoanPrompt(
@@ -362,6 +366,7 @@ public class GameTimeManager : MonoBehaviour
                 else             TriggerBankruptcy();
             }
         );
+        */
     }
 
     void TriggerBankruptcy()
