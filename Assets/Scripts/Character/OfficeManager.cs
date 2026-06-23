@@ -257,7 +257,14 @@ public class OfficeManager : MonoBehaviour
             if (desk != null &&
                 ((!string.IsNullOrEmpty(ceoDeskId)       && desk.deskId == ceoDeskId) ||
                  (!string.IsNullOrEmpty(secretaryDeskId) && desk.deskId == secretaryDeskId)))
-                desk = DeskManager.Instance.GetEmptyDesk();
+            {
+                // [테스트] desk_03 겹침 허용 모드면 비서석에 저장된 직원을 그대로 복원(재할당 안 함)
+                bool overflowKeep = DeskManager.Instance.overflowToDesk03
+                                    && !string.IsNullOrEmpty(secretaryDeskId)
+                                    && desk.deskId == secretaryDeskId;
+                if (!overflowKeep)
+                    desk = DeskManager.Instance.GetEmptyDesk();
+            }
 
             if (desk == null) continue;
 

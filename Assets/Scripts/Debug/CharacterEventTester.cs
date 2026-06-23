@@ -29,6 +29,7 @@ public class CharacterEventTester : MonoBehaviour
     bool _open = false;
     Vector2 _scroll;
     string _status = "";
+    int _targetEnhanceLevel = 25; // 강화 목표 레벨(등급별 최대치로 clamp)
 
     // 마스터 ID → 표시명 (CharacterTraitApplier.Directory 와 동일 매핑)
     static readonly (string masterId, string label)[] Chars =
@@ -100,6 +101,16 @@ public class CharacterEventTester : MonoBehaviour
         if (GUILayout.Button("약점 극복 (훈수, 개발중 필요)")) { CharacterUniqueEvents.CheckWeaknessOvercome(); Set("약점극복 호출 (개발중·훈수 보유 시 발동)"); }
         if (GUILayout.Button("버튜버 데뷔 (오타쿠, 개발중 필요)")) { CharacterUniqueEvents.CheckVtuberDebut(null); Set("버튜버 호출 (장르=오타쿠고정장르 일치 시 발동)"); }
         if (GUILayout.Button("잠 깨우기 (천재, 개발중 필요)")) ForceEvent("GeniusUnique");
+
+        GUILayout.Space(8);
+        GUILayout.Label("<b>━━ 채용 / 강화 테스트 ━━</b>", Rich());
+        HiringUI.InstantInterview = GUILayout.Toggle(HiringUI.InstantInterview, " 채용 즉시 공개 (3주 대기 생략 → 바로 후보 리스트)");
+        GUILayout.BeginHorizontal();
+        GUILayout.Label($"목표 강화 레벨: {_targetEnhanceLevel}", GUILayout.Width(150));
+        if (GUILayout.Button("-", GUILayout.Width(36))) _targetEnhanceLevel = Mathf.Max(0, _targetEnhanceLevel - 1);
+        if (GUILayout.Button("+", GUILayout.Width(36))) _targetEnhanceLevel = Mathf.Min(25, _targetEnhanceLevel + 1);
+        GUILayout.EndHorizontal();
+        if (GUILayout.Button($"채용된 전 직원 +{_targetEnhanceLevel}강까지 강화 (등급 최대치 제한)")) EnhanceAll(_targetEnhanceLevel);
 
         GUILayout.Space(8);
         GUILayout.Label("<b>━━ 유틸 ━━</b>", Rich());
@@ -204,5 +215,27 @@ public class CharacterEventTester : MonoBehaviour
         if (emp == null) { Set("우기 없음"); return; }
         EmployeeManager.Instance.FireEmployee(emp, countAsExit: false);
         Set($"우기 해고: {emp.employeeName} → 신의축복 지속효과 정리됨 (HasUniqueUgi={CharacterUniqueEvents.HasUniqueUgi()})");
+    }
+
+    // ── 강화 (테스트: 확률 무시하고 강제 성공으로 목표 레벨까지) ──
+    void EnhanceAll(int target)
+    {
+        var em = EmployeeManager.Instance;
+        int count = 0;
+        foreach (var e in em.ownedEmployees)
+        {
+            if (e.isCEO) continue;
+            int goal = Mathf.Min(target, EmployeeEnhancement.GetMaxLevel(e.grade));
+            while (e.enhancementLevel < goal)
+            {
+                e.enhancementLevel++;
+                em.ApplyEnhancement(e); // EnhanceOnce 성공 경로와 동일 — 주스탯/부스탯/연봉 반영
+            }
+            em.UpdateEmployee(e);
+            count++;
+        }
+        em.SaveAllEmployees();
+        HUDUI.Instance?.RefreshAll();
+        Set($"{count}명 강화 완료 (목표 +{target}강, 등급별 최대치 제한 적용)");
     }
 }
