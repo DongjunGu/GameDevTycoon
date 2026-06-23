@@ -79,6 +79,7 @@ public class HiringUI : MonoBehaviour
     [Header("Settings")]
     public int candidateCount = 4;
     const int INTERVIEW_WEEKS = 3; // 채용 클릭 → 후보 리스트 공개까지 대기 주차
+    public static bool InstantInterview = false; // [테스트] 켜면 대기 없이 즉시 후보 리스트 공개 (CharacterEventTester 토글)
 
     private EmployeeData _selectedEmployee;
     private EmployeeData _conflictingOwned;     // 동일 masterEmployeeId 보유 직원
@@ -223,12 +224,26 @@ public class HiringUI : MonoBehaviour
             interviewWeeks = 1;
             OnboardingState.MarkFirstHireDone();
         }
+        // [테스트] 즉시 공개 모드 — weeks=0 으로 두면 OnWeekPassed(>0 조건)가 자동 reveal 하지 않음 → 중복 방지
+        if (InstantInterview) interviewWeeks = 0;
         EmployeeManager.Instance.SetHiringPending(tierIndex, interviewWeeks);
         GameTimeManager.Instance?.SaveGameTime();
 
         // 채용 UI 닫고 "면접 확정" 비서 안내 → 확인 시 시간 재개(OpenHiring 의 StopTime 해소). 이후 게임 진행하며 INTERVIEW_WEEKS 주 경과.
         tierPanel.SetActive(false);
         gameObject.SetActive(false);
+
+        // [테스트] 즉시 공개 모드면 대기 없이 바로 후보 리스트.
+        // OpenHiring 에서 건 StopTime 을 먼저 해소(원래 ShowSecretaryEvent 콜백이 하던 일) 후 RevealHiring 호출.
+        // RevealHiring 의 BeginCandidateFlow 가 자체 StopTime 을 다시 관리한다.
+        // (이 StartTime 을 빼면 OpenHiring 의 StopTime 이 안 풀려 채용 후 시간이 영영 멈춤)
+        if (InstantInterview)
+        {
+            GameTimeManager.Instance?.StartTime();
+            RevealHiring(tierIndex);
+            return;
+        }
+
         ShowSecretaryEvent("면접 확정 후 알려드리겠습니다.", () => GameTimeManager.Instance?.StartTime());
     }
 

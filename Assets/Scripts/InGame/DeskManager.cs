@@ -8,6 +8,10 @@ public class DeskManager : MonoBehaviour
     [Header("Desks")]
     public List<WorkStation> allDesks;
 
+    [Header("테스트")]
+    [Tooltip("빈 데스크가 없을 때 desk_03 에 겹쳐 배정(테스트용). 끄면 원래대로 빈자리 없으면 스폰 안 됨.")]
+    public bool overflowToDesk03 = true;
+
     // deskId → 사용 중인 employeeId
     private Dictionary<string, string> _deskAssignments = new();
 
@@ -24,6 +28,17 @@ public class DeskManager : MonoBehaviour
         {
             if (!_deskAssignments.ContainsKey(desk.deskId))
                 return desk;
+        }
+        // [테스트용] 빈 데스크가 없으면 desk_03 에 겹쳐 배정 → 데스크 수보다 많은 직원도 스폰돼
+        // 랜덤이벤트/개발틱 등에 일반 직원처럼 가용됨. (시각적으로는 desk_03 에 겹쳐 앉음)
+        if (overflowToDesk03)
+        {
+            var overflow = GetDeskById("desk_03");
+            if (overflow != null)
+            {
+                Debug.LogWarning("빈 Desk 없음 → desk_03 에 겹쳐 배정(테스트용)");
+                return overflow;
+            }
         }
         Debug.LogWarning("빈 Desk 없음");
         return null;

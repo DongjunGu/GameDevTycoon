@@ -4014,8 +4014,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d8ff09acb4c98a8409041fef47b5ece3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::StageManager
-  currentStage: 1
-  maxEmployeePerStage: 02000000
+  currentStage: 2
+  maxEmployeePerStage: 02000000040000000600000007000000
 --- !u!114 &2062941536
 MonoBehaviour:
   m_ObjectHideFlags: 0
