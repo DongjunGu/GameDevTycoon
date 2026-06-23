@@ -404,10 +404,40 @@ public class GameTimeManager : MonoBehaviour
         }
         else
         {
-            bool rumorTriggered = RandomEventManager.Instance?.CheckUnstableCompanyOnNewYear(Year) ?? false;
-            EmployeeManager.Instance?.ResetYearlyExitCount();
-            if (!rumorTriggered)
-                ForceStartTime();
+            // 임금 지급 완료 → 연세(회사 운영비) 차감
+            ProcessYearFeeDeduction();
         }
+    }
+
+    // 임금 차감 후 연세(운영비) 차감 — AlertUI 확인 시 차감 + 4-set 저장. 부족하면 파산.
+    void ProcessYearFeeDeduction()
+    {
+        int yearFee = HUDUI.Instance != null ? HUDUI.Instance.CurrentYearFee : 0;
+
+        AlertUI.Instance.Show(
+            $"연세 {yearFee:N0}G가 차감됩니다.",
+            () =>
+            {
+                int goldAfter = MoneyManager.Instance.Gold - yearFee;
+                MoneyManager.Instance.ForceSpendGold(yearFee, saveImmediately: false);
+
+                // 4-set 저장 (SaveGameTime 이 SaveAllEmployees 자동 fan-out)
+                SaveGameTime();
+                MoneyManager.Instance?.SaveMoney();
+                ProjectSaveManager.Instance?.SaveProject();
+
+                if (goldAfter < 0)
+                {
+                    TriggerBankruptcy();
+                    return;
+                }
+
+                // 새해 후속 처리 (기존 임금 성공 분기에서 이동)
+                bool rumorTriggered = RandomEventManager.Instance?.CheckUnstableCompanyOnNewYear(Year) ?? false;
+                EmployeeManager.Instance?.ResetYearlyExitCount();
+                if (!rumorTriggered)
+                    ForceStartTime();
+            }
+        );
     }
 }
