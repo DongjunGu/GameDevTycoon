@@ -67,6 +67,8 @@ public class HiringUI : MonoBehaviour
     public ResumeFlipper resumeFlipper;
     public Button prevCandidateButton;          // 왼쪽 화살표 (이전 후보)
     public Button nextCandidateButton;          // 오른쪽 화살표 (다음 후보)
+    [Tooltip("CountPanel 의 countText — '현재 후보 순서/전체 후보 수' (예: 1/4) 표시. 넘길 때마다 갱신.")]
+    public TextMeshProUGUI countText;
 
     [Header("Resume Panels (EmployeeResumePanel x3 — 캐러셀 슬롯)")]
     [Tooltip("가운데(현재 후보) 패널 — ResumeFlipper 가 붙은 그 패널")]
@@ -296,7 +298,7 @@ public class HiringUI : MonoBehaviour
 
     void OpenCandidateList(int tierIndex)
     {
-        ModalGate.I.Register(this); // 후보 리스트 표시 동안 다른 모달(퇴사 등) 차단·큐잉 (닫힐 때 EndCandidateFlow 에서 해제)
+        ModalGate.I.Register(this); // 후보 표시 동안 다른 모달(퇴사 등) 차단·큐잉 (닫힐 때 EndCandidateFlow 에서 해제)
         gameObject.SetActive(true);
         tierPanel.SetActive(false);
         hiringPanel.SetActive(false);
@@ -305,7 +307,21 @@ public class HiringUI : MonoBehaviour
 
         _currentTierIndex = tierIndex;
         _refreshUsed = false; // 새 진입(재접속 복원 포함) 시 새로고침 권리 부여 — 리롤은 무를 수 있음
-        ShowCandidates(EmployeeManager.Instance.GetHiringListA()); // 저장된 초기 리스트
+        // 후보 리스트(HiringPanel) 단계 폐지 — 바로 확정 화면(ConfirmHirePanel) 캐러셀로 진입.
+        ShowConfirmDirect(EmployeeManager.Instance.GetHiringListA()); // 저장된 초기 리스트
+    }
+
+    // 슬롯 리스트(HiringPanel) 없이 확정 화면(ConfirmHirePanel)으로 바로 진입 — 첫 후보를 가운데에 띄우고 캐러셀 구성.
+    void ShowConfirmDirect(List<EmployeeData> candidates)
+    {
+        SetCandidates(candidates);
+        if (loadingPanel != null) loadingPanel.SetActive(false);
+        hiringPanel.SetActive(false);
+        confirmPanel.SetActive(true);
+        _currentIndex = (candidates != null && candidates.Count > 0) ? 0 : -1;
+        PopulateConfirm();
+        UpdateArrowButtons();
+        UpdateRefreshButton();
     }
 
     // 비서 초상화 RandomEventUI 안내(EventPanel). 확인 시 onConfirm. type=Recruit 라 시간 강제재개(ResumeFromEvent) 안 함.
@@ -350,16 +366,8 @@ public class HiringUI : MonoBehaviour
     }
 
     // 테크트리 '한 번 더!(hire_refresh)' — 같은 세션 1회 한정 후보 전체 재추첨. 확인창 없이 즉시 실행.
-    public void OnClickRefresh()
-    {
-        if (_refreshUsed) return;
-        if (TechTreeManager.Instance == null || !TechTreeManager.Instance.IsUnlocked("hire_refresh")) return;
-        if (_currentTierIndex < 0) return;
-
-        _refreshUsed = true;
-        if (loadingPanel != null) loadingPanel.SetActive(true);
-        ShowCandidates(EmployeeManager.Instance.GetHiringListB()); // 미리 확정된 리롤 리스트
-    }
+    // HiringPanel 폐지로 확정 화면 셔플(OnClickRefreshFromConfirm)과 동일하게 동작.
+    public void OnClickRefresh() => OnClickRefreshFromConfirm();
 
     // ConfirmHirePanel 의 새로고침 버튼 — refreshButton 과 같은 1회 가드(_refreshUsed)·해금(hire_refresh)을 공유.
     // HiringPanel 새로고침과 달리 슬롯 리스트로 돌아가지 않고 확정 화면을 유지하며 이력서 셔플 연출을 보여준다. 확인창 없이 즉시 실행.
@@ -441,39 +449,7 @@ public class HiringUI : MonoBehaviour
             _hireCosts.Add(e.hireCost); // 공개 시 확정된 비용 사용 (재접속에도 고정)
     }
 
-    void ShowCandidates(List<EmployeeData> candidates)
-    {
-        SetCandidates(candidates);
-
-        if (loadingPanel != null) loadingPanel.SetActive(false);
-
-        confirmPanel.SetActive(false);
-
-        foreach (Transform child in slotParent)
-            Destroy(child.gameObject);
-
-        foreach (var employee in candidates)
-        {
-            var slot = Instantiate(employeeSlotPrefab, slotParent);
-            slot.GetComponent<EmployeeSlotUI>().Setup(employee, OnSelectEmployee);
-        }
-
-        hiringPanel.SetActive(true);
-        UpdateRefreshButton();
-    }
-
-    public void OnSelectEmployee(EmployeeData employee)
-    {
-        int idx = _currentCandidates.IndexOf(employee);
-        _currentIndex = idx >= 0 ? idx : 0;
-
-        // 패널을 먼저 활성화한 뒤 Populate — 비활성 상태에서 등급 셰머 코루틴 StartCoroutine 시 에러 방지.
-        hiringPanel.SetActive(false);
-        confirmPanel.SetActive(true);
-        PopulateConfirm();
-        UpdateArrowButtons();
-        UpdateRefreshButton();   // ConfirmHirePanel 새로고침 버튼 상태 반영
-    }
+    // (구) 슬롯 리스트 표시(ShowCandidates)·슬롯 선택(OnSelectEmployee) 제거 — HiringPanel 단계 폐지로 ShowConfirmDirect 가 대체.
 
     // 오른쪽 화살표 — 다음 후보 이력서로 넘김
     public void OnClickNextCandidate() => FlipTo(+1);
@@ -530,13 +506,23 @@ public class HiringUI : MonoBehaviour
             ? _hireCosts[ci]
             : Mathf.RoundToInt(EmployeeManager.GetExpectedEnhanceCost(center.enhancementLevel) * UnityEngine.Random.Range(0.8f, 1.2f));
 
-        // 좌:이전 / 중앙:현재 / 우:다음 후보 미리 표시
+        // 좌·우 패널을 Setup "전에" 먼저 활성화 — 비활성 상태에서 Setup 하면 TMP 텍스트(수치)는
+        // 메시 재생성이 누락돼 늦게 반영되는 반면 Image(초상)는 활성화 후 정상 표시되는 이슈 방지.
+        // (이미지는 미리 반영되는데 수치만 늦게 바뀌던 현상 교정 — 활성/비활성은 UpdateArrowButtons 와 동일 규칙: 후보 2명 이상)
+        bool multi = n > 1;
+        if (resumeLeftPanel  != null && resumeLeftPanel.gameObject.activeSelf  != multi) resumeLeftPanel.gameObject.SetActive(multi);
+        if (resumeRightPanel != null && resumeRightPanel.gameObject.activeSelf != multi) resumeRightPanel.gameObject.SetActive(multi);
+
+        // 좌:이전 / 중앙:현재 / 우:다음 후보 미리 표시 (이미지·수치 동시 세팅)
         if (resumeCenterPanel != null) resumeCenterPanel.Setup(center);
         if (resumeLeftPanel  != null) resumeLeftPanel.Setup(_currentCandidates[(ci - 1 + n) % n]);
         if (resumeRightPanel != null) resumeRightPanel.Setup(_currentCandidates[(ci + 1) % n]);
 
         if (confirmHireCostText != null)
             confirmHireCostText.text = _hireCost <= 0 ? "무료" : $"{_hireCost:N0}G";
+
+        // CountPanel — 현재 후보 순서/전체 후보 수 (예: 1/4). 화살표로 넘기면 PopulateConfirm 재호출로 자동 갱신.
+        if (countText != null) countText.text = $"{ci + 1}/{n}";
 
         // 동일 직원 보유 여부 확인 (중앙 후보 기준, masterEmployeeId 공백이면 이름으로 대조)
         _conflictingOwned = EmployeeManager.Instance.ownedEmployees
@@ -644,13 +630,12 @@ public class HiringUI : MonoBehaviour
         DialogManager.Instance.Resume();
     }
 
-    public void OnClickBack()
-    {
-        ShowCandidates(_currentCandidates);
-    }
+    // "리스트가기" 제거 — 후보 리스트(HiringPanel) 단계를 폐지해 돌아갈 리스트가 없다. (버튼은 씬에서 제거)
+    public void OnClickBack() { }
 
     public void OnClickClose()
     {
+        
         // 취소 확정 시에만 흐름 종료(시간 재개). "채용진행" 선택 시엔 리스트 유지 + 시간 정지 유지.
         ConfirmUI.Instance.Show(
             "채용을 취소하시겠습니까?",

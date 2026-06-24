@@ -90,8 +90,10 @@ public class DispatchManager : MonoBehaviour
         int oldLevel = emp.enhancementLevel;
         int add      = RollEnhanceAmount(oldLevel);
         int newLevel = oldLevel + add;
-        // 0~10 구간만 결과 11 클램프 (11성 초과 불가). 그 외 구간은 상한 없음.
+        // 0~10 구간만 결과 11 클램프 (11성 초과 불가).
         if (oldLevel <= 10 && newLevel > 11) newLevel = 11;
+        // 최대 강화(전 등급 25) 초과 방지 — 테이블 상한이자 강화 상한.
+        newLevel = Mathf.Min(newLevel, EmployeeData.MaxEnhancementForGrade(emp.grade));
 
         float ran        = Random.Range(0.6f, 1.5f);
         int   mainStat   = GetMainStat(emp);

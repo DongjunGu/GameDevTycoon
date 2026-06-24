@@ -67,7 +67,7 @@ public class EmployeeData
     public int creativityMin, creativityMax;
     public int salaryMin, salaryMax;
 
-    // 강화로 인한 주스탯/부스탯 증가 (표시용). 부스탯 0.4 고정이라 min==max.
+    // 강화로 인한 주스탯/부스탯 증가 (표시용). 부스탯 0.5 고정이라 min==max.
     public int mainStatEnhanceGain;
     public int subStatEnhanceMin;
     public int subStatEnhanceMax;
@@ -339,16 +339,8 @@ public class EmployeeData
         : ArtText();
     public string SatisfactionText() => $"만족도: {satisfaction}";
 
-    // 등급별 최대 강화 레벨 — EmployeeEnhancement.GetMaxLevel 와 단일 소스 공유.
-    public static int MaxEnhancementForGrade(EmployeeGrade g) => g switch
-    {
-        EmployeeGrade.Normal    => 15,
-        EmployeeGrade.Rare      => 15,
-        EmployeeGrade.Epic      => 20,
-        EmployeeGrade.Unique    => 25,
-        EmployeeGrade.Legendary => 30,
-        _                       => 15
-    };
+    // 최대 강화 레벨 — 등급 무관 전 등급 25강 공통. EmployeeEnhancement.GetMaxLevel 와 단일 소스 공유.
+    public static int MaxEnhancementForGrade(EmployeeGrade g) => 25;
     public int MaxEnhancementLevel => MaxEnhancementForGrade(grade);
 
     public string RoleToString()

@@ -189,8 +189,10 @@ public class ModalBlocker : MonoBehaviour
         foreach (var layer in _stack)
         {
             if (layer == null) continue;
-            var c = layer.GetComponent<Canvas>();
-            if (c != null && c.enabled) { c.enabled = false; hidden.Add(c); }
+            // 모달 자신 + 하위의 모든 Canvas(중첩 overrideSorting 캔버스 포함)를 캡처에서 제외.
+            // 캐러셀 종이처럼 자체 Canvas 를 가진 자식이 블러 배경에 섞여 들어가는 것을 방지.
+            foreach (var c in layer.GetComponentsInChildren<Canvas>(false))
+                if (c != null && c.enabled) { c.enabled = false; hidden.Add(c); }
         }
 
         // 2) 메인 카메라를 RT 로 1회 렌더 (게임 + ScreenSpaceCamera UI 포함). 카메라 팬/줌도 반영됨.

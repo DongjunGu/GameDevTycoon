@@ -809,56 +809,56 @@ public class EmployeeManager : MonoBehaviour
               0,  // 7→8
               0,  // 8→9
               0,  // 9→10
-              0,  // 10→11
-          5_000,  // 11→12
-          8_000,  // 12→13
-         11_000,  // 13→14
-         14_000,  // 14→15
+          1_500,  // 10→11
+          3_000,  // 11→12
+          4_500,  // 12→13
+          6_000,  // 13→14
+         15_000,  // 14→15
          20_000,  // 15→16
          25_000,  // 16→17
          30_000,  // 17→18
          35_000,  // 18→19
-         50_000,  // 19→20
-         60_000,  // 20→21
-         70_000,  // 21→22
-         80_000,  // 22→23
-         90_000,  // 23→24
-        100_000,  // 24→25
+        100_000,  // 19→20
+        130_000,  // 20→21
+        160_000,  // 21→22
+        200_000,  // 22→23
+        250_000,  // 23→24
+        300_000,  // 24→25
     };
 
     // 주스탯 증가량 테이블 [강화 단계(0→1 ~ 24→25)] = (min, max)
     private static readonly (int min, int max)[] MainStatGainTable =
     {
-        ( 5,  5),  // 0→1
-        (10, 10),  // 1→2
-        (10, 10),  // 2→3
-        (10, 10),  // 3→4
-        (15, 15),  // 4→5
-        (15, 15),  // 5→6
-        (15, 15),  // 6→7
-        (20, 20),  // 7→8
-        (20, 20),  // 8→9
-        (20, 20),  // 9→10
-        (25, 25),  // 10→11
-        (25, 35),  // 11→12
-        (25, 35),  // 12→13
-        (25, 35),  // 13→14
-        (25, 35),  // 14→15
-        (35, 45),  // 15→16
-        (35, 45),  // 16→17
-        (35, 45),  // 17→18
-        (35, 45),  // 18→19
-        (35, 45),  // 19→20
-        (40, 60),  // 20→21
-        (40, 60),  // 21→22
-        (40, 60),  // 22→23
-        (40, 80),  // 23→24
-        (50,100),  // 24→25
+        ( 20,  20),  // 0→1
+        ( 20,  20),  // 1→2
+        ( 25,  25),  // 2→3
+        ( 25,  25),  // 3→4
+        ( 30,  30),  // 4→5
+        ( 30,  30),  // 5→6
+        ( 35,  35),  // 6→7
+        ( 35,  35),  // 7→8
+        ( 40,  40),  // 8→9
+        ( 40,  40),  // 9→10
+        ( 40,  40),  // 10→11
+        ( 50,  50),  // 11→12
+        ( 50,  50),  // 12→13
+        ( 50,  50),  // 13→14
+        ( 50,  50),  // 14→15
+        ( 65,  65),  // 15→16
+        ( 65,  65),  // 16→17
+        ( 65,  65),  // 17→18
+        ( 65,  65),  // 18→19
+        ( 65,  65),  // 19→20
+        ( 90,  90),  // 20→21
+        ( 90,  90),  // 21→22
+        ( 90,  90),  // 22→23
+        (120, 120),  // 23→24
+        (160, 160),  // 24→25
     };
 
-    // 부스탯 증가 배율 — 주스탯 증가량(잠재력 보너스 포함) 대비. 0.4 고정(이전 0.3~0.5 랜덤).
+    // 부스탯/창의성 증가 배율 — 주스탯 증가량(잠재력 보너스 포함) 대비. 0.5 고정.
     // 고정값이라 하락 시 테이블+잠재력으로 재계산 가능 → 강화 기록(enhancementRecordsJson) 저장 불필요.
-    const float SubStatRatio = 0.4f;
+    const float SubStatRatio = 0.5f;
 
     public void ApplyEnhancement(EmployeeData employee)
     {
@@ -874,12 +874,12 @@ public class EmployeeManager : MonoBehaviour
             EmployeePotential.C => 0,
             EmployeePotential.B => 1,
             EmployeePotential.A => 3,
-            EmployeePotential.S => 5,
+            EmployeePotential.S => 8,
             _ => 0
         };
         int totalMainGain = mainGain + potentialBonus;
 
-        // 부스탯: 주스탯 증가량의 0.4 고정 — 3개(비주스탯 2 + 창의성) 동일 적용
+        // 부스탯: 주스탯 증가량의 0.5 고정 — 3개(비주스탯 2 + 창의성) 동일 적용
         int subGain = Mathf.RoundToInt(totalMainGain * SubStatRatio);
 
         ApplyStat(employee, GetMainStatKey(employee.role), totalMainGain);
@@ -891,7 +891,7 @@ public class EmployeeManager : MonoBehaviour
     }
 
     // 강화 하락 시 해당 레벨의 스탯/연봉을 되돌림.
-    // 부스탯 0.4 고정이라 기록 없이 테이블+잠재력으로 재계산 — 주스탯/부스탯/연봉 모두 동일 기준으로 롤백.
+    // 부스탯 0.5 고정이라 기록 없이 테이블+잠재력으로 재계산 — 주스탯/부스탯/연봉 모두 동일 기준으로 롤백.
     public void ReverseEnhancement(EmployeeData employee, int levelToReverse)
     {
         int tableIndex = Mathf.Clamp(levelToReverse - 1, 0, MainStatGainTable.Length - 1);
@@ -902,7 +902,7 @@ public class EmployeeManager : MonoBehaviour
             EmployeePotential.C => 0,
             EmployeePotential.B => 1,
             EmployeePotential.A => 3,
-            EmployeePotential.S => 5,
+            EmployeePotential.S => 8,
             _ => 0
         };
         int totalMainGain = (mainMin + mainMax) / 2 + potentialBonus; // 0~10강은 min==max
@@ -916,25 +916,36 @@ public class EmployeeManager : MonoBehaviour
         employee.salary = Mathf.Max(0, employee.salary - CharacterTraitApplier.ApplyGoldspoonSalary(employee, EnhanceSalaryTable[tableIndex]));
     }
 
-    // 강화 레벨별 누적 기댓값 비용 (0강=0원, 11강=4696원, ...)
-    // EnhanceCostTable + EnhanceTable 확률로 계산한 값
+    // 강화된 직원 채용 비용 = 연봉 누적 증가량 (EnhanceSalaryTable 의 레벨별 누적합).
+    // 강화 레벨 N 후보를 뽑을 때 이 값(±20%)을 비용으로 차감. (11강부터 비용 발생)
     private static readonly int[] CumulativeExpectedEnhanceCost =
     {
-            0,  // 0강
-           51,  // 1강
-          158,  // 2강
-          282,  // 3강
-          421,  // 4강
-          643,  // 5강
-          917,  // 6강
-         1249,  // 7강
-         1735,  // 8강
-         2393,  // 9강
-         3295,  // 10강
-         4696,  // 11강
-        11363,  // 12강
-        24696,  // 13강
-        44696,  // 14강
+                0,  // 0강
+                0,  // 1강
+                0,  // 2강
+                0,  // 3강
+                0,  // 4강
+                0,  // 5강
+                0,  // 6강
+                0,  // 7강
+                0,  // 8강
+                0,  // 9강
+                0,  // 10강
+            1_500,  // 11강
+            4_500,  // 12강
+            9_000,  // 13강
+           15_000,  // 14강
+           30_000,  // 15강
+           50_000,  // 16강
+           75_000,  // 17강
+          105_000,  // 18강
+          140_000,  // 19강
+          240_000,  // 20강
+          370_000,  // 21강
+          530_000,  // 22강
+          730_000,  // 23강
+          980_000,  // 24강
+        1_280_000,  // 25강
     };
 
     public static int GetExpectedEnhanceCost(int enhancementLevel)
@@ -955,7 +966,7 @@ public class EmployeeManager : MonoBehaviour
             EmployeePotential.C => 0,
             EmployeePotential.B => 1,
             EmployeePotential.A => 3,
-            EmployeePotential.S => 5,
+            EmployeePotential.S => 8,
             _ => 0
         };
 
@@ -976,7 +987,7 @@ public class EmployeeManager : MonoBehaviour
         }
 
         employee.mainStatEnhanceGain = mainGainTotal;
-        employee.subStatEnhanceMin = subGainTotal; // 0.4 고정이라 min==max
+        employee.subStatEnhanceMin = subGainTotal; // 0.5 고정이라 min==max
         employee.subStatEnhanceMax = subGainTotal;
 
         string mainStat  = GetMainStatKey(employee.role);
@@ -997,7 +1008,7 @@ public class EmployeeManager : MonoBehaviour
         EmployeePotential.C => 0,
         EmployeePotential.B => 1,
         EmployeePotential.A => 3,
-        EmployeePotential.S => 5,
+        EmployeePotential.S => 8,
         _ => 0
     };
 
@@ -1010,14 +1021,14 @@ public class EmployeeManager : MonoBehaviour
         return (mn + pot, mx + pot);
     }
 
-    // 다음 강화 부스탯 증가 범위 (주스탯 증가량 × 0.4). 예상수치 미리보기용.
+    // 다음 강화 부스탯 증가 범위 (주스탯 증가량 × 0.5). 예상수치 미리보기용.
     public (int min, int max) GetNextSubStatGain(EmployeeData emp)
     {
         var (mn, mx) = GetNextMainStatGain(emp);
         return (Mathf.RoundToInt(mn * SubStatRatio), Mathf.RoundToInt(mx * SubStatRatio));
     }
 
-    // 다음 강화 부스탯 평균(단일) 증가량 — 주스탯 범위 중앙값 × 0.4. 부스탯 단일 표시용.
+    // 다음 강화 부스탯 평균(단일) 증가량 — 주스탯 범위 중앙값 × 0.5. 부스탯 단일 표시용.
     public int GetNextSubStatGainAvg(EmployeeData emp)
     {
         var (mn, mx) = GetNextMainStatGain(emp);
