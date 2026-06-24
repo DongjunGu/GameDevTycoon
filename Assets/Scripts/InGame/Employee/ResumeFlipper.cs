@@ -23,6 +23,12 @@ public class ResumeFlipper : MonoBehaviour
     [Tooltip("오른쪽 슬롯 종이 (PaperBehindRight)")]
     [SerializeField] RectTransform rightPaper;
 
+    [Header("Count Panel (카드에 고정 — 넘김 영향 X)")]
+    [Tooltip("CountPanel(1/4 표시). 가운데 카드의 '자식이 아닌' 형제로 두고 할당. 카드 홈(쉬는 상태) 좌측상단 기준으로 매 프레임 고정 위치된다.")]
+    [SerializeField] RectTransform countPanel;
+    [Tooltip("카드 좌측상단 코너 기준 오프셋(캔버스 px). 예: (-110, 0)")]
+    [SerializeField] Vector2 countOffsetFromTopLeft = new Vector2(-110f, 0f);
+
     [Header("Slot layout (가운데 기준 좌/우 종이 배치 — 인스펙터 조절)")]
     [Tooltip("가운데에서 좌·우 종이까지의 가로 거리. 클수록 좌우로 더 벌어진다.")]
     [SerializeField] float sideOffsetX = 140f;
@@ -52,7 +58,7 @@ public class ResumeFlipper : MonoBehaviour
     Vector2 _centerHome;          // 슬라이드 시작 시점(쉬는 상태)의 가운데 위치
     Vector3 _centerScale = Vector3.one, _centerRot = Vector3.zero;
     Canvas _centerCanvas, _leftCanvas, _rightCanvas;
-    int _centerSort = 1, _leftSort, _rightSort;
+    int _centerSort = 1; // 모달 밖 폴백용 기준 order (ModalBaseOrder 에서 사용)
     bool _init;
     Tween _tween;
 
@@ -76,8 +82,8 @@ public class ResumeFlipper : MonoBehaviour
         _centerRot   = _center.localEulerAngles;
         _centerCanvas = GetComponent<Canvas>();
         _centerSort = _centerCanvas != null ? _centerCanvas.sortingOrder : 1;
-        if (leftPaper  != null) { _leftCanvas  = leftPaper.GetComponent<Canvas>();  _leftSort  = _leftCanvas  != null ? _leftCanvas.sortingOrder  : 0; }
-        if (rightPaper != null) { _rightCanvas = rightPaper.GetComponent<Canvas>(); _rightSort = _rightCanvas != null ? _rightCanvas.sortingOrder : 0; }
+        if (leftPaper  != null) _leftCanvas  = leftPaper.GetComponent<Canvas>();
+        if (rightPaper != null) _rightCanvas = rightPaper.GetComponent<Canvas>();
         _init = true;
     }
 
@@ -92,11 +98,45 @@ public class ResumeFlipper : MonoBehaviour
         if (rightPaper != null) { var p = RightSlot(_centerHome); rightPaper.anchoredPosition3D = new Vector3(p.x, p.y, 0f); rightPaper.localScale = SideScaleV; rightPaper.localEulerAngles = RightRot; }
     }
 
+    // 쉬는 상태: 세 종이를 "모달 기준 order"(같은 값)로 맞춘다.
+    // - 모달 블로커보다 1 높은 모달 order 를 상속받는 값이라 셋 다 블로커 위 → 좌/우 종이도 클릭 OK.
+    // - 쉬는 상태에선 좌/우가 가운데와 겹치지 않아(좌우 오프셋) 깊이 차가 시각적으로 무의미.
     void RestoreSorting()
     {
-        if (_centerCanvas != null) _centerCanvas.sortingOrder = _centerSort;
-        if (_leftCanvas  != null) _leftCanvas.sortingOrder  = _leftSort;
-        if (_rightCanvas != null) _rightCanvas.sortingOrder = _rightSort;
+        int b = ModalBaseOrder();
+        if (_centerCanvas != null) { _centerCanvas.overrideSorting = true; _centerCanvas.sortingOrder = b; }
+        if (_leftCanvas  != null) { _leftCanvas.overrideSorting  = true; _leftCanvas.sortingOrder  = b; }
+        if (_rightCanvas != null) { _rightCanvas.overrideSorting = true; _rightCanvas.sortingOrder = b; }
+    }
+
+    // 종이 Canvas 가 따라갈 기준 정렬값 = 위쪽(모달) Canvas 의 sortingOrder.
+    // 종이 자신의 Canvas 는 건너뛰려 transform.parent 부터 위로 탐색. 모달이면 블로커보다 1 높은 값(예: 52).
+    // 이 값을 기준으로 쉴 땐 셋 다 b, 넘기는 중 들어오는 종이만 b+1 로 올려 "앞으로" 나오게 한다.
+    // (브라우징 중엔 ConfirmHirePanel 만 모달이라 b+1 이 위 모달과 충돌하지 않음. 모달 밖이면 부모 캔버스 order 그대로.)
+    int ModalBaseOrder()
+    {
+        var p = transform.parent;
+        var c = (p != null) ? p.GetComponentInParent<Canvas>() : null;
+        return (c != null) ? c.sortingOrder : _centerSort;
+    }
+
+    readonly Vector3[] _cornerBuf = new Vector3[4];
+
+    // CountPanel 을 가운데 카드의 "좌측상단 코너 + 오프셋"에 고정.
+    // 카드의 실제 월드 코너에서 계산하므로 해상도/캔버스 스케일에 독립적이고,
+    // 넘기는 중(IsFlipping)에는 호출하지 않아 카드가 움직여도 CountPanel 은 제자리에 머문다.
+    // ※ CountPanel 은 카드의 '자식이 아닌' 형제여야 함(자식이면 카드 트랜스폼을 따라가 움직임).
+    void PinCountPanel()
+    {
+        if (countPanel == null || _center == null) return;
+        _center.GetWorldCorners(_cornerBuf);          // 0:BL 1:TL 2:TR 3:BR
+        Vector3 worldTopLeft = _cornerBuf[1];
+        // 오프셋은 캔버스(부모) px 기준 → 월드로 변환해 해상도/스케일 반영.
+        var parent = _center.parent as RectTransform;
+        Vector3 worldOffset = (parent != null)
+            ? parent.TransformVector(countOffsetFromTopLeft.x, countOffsetFromTopLeft.y, 0f)
+            : (Vector3)countOffsetFromTopLeft;
+        countPanel.position = worldTopLeft + worldOffset;
     }
 
     /// <summary>
@@ -119,7 +159,8 @@ public class ResumeFlipper : MonoBehaviour
         Canvas incomingCanvas = next ? _rightCanvas : _leftCanvas;
 
         // 넘기는 즉시 들어오는 패널을 가운데보다 앞으로 → 누르자마자 기존 가운데가 가려지고 들어오는 게 앞으로 온다.
-        if (incomingCanvas != null) incomingCanvas.sortingOrder = _centerSort + 1;
+        // 모달 기준 order(b) 위로 +1 만 올림 — 셋 다 블로커 위라 클릭 유지하면서 들어오는 종이만 앞.
+        if (incomingCanvas != null) { incomingCanvas.overrideSorting = true; incomingCanvas.sortingOrder = ModalBaseOrder() + 1; }
 
         Vector2 leftSlot  = LeftSlot(_centerHome);
         Vector2 rightSlot = RightSlot(_centerHome);
@@ -245,7 +286,8 @@ public class ResumeFlipper : MonoBehaviour
         _centerScale = _center.localScale;
         _centerRot   = _center.localEulerAngles;
         ApplyHome();
-        RestoreSorting();
+        RestoreSorting(); // 모달 기준 order 로 세 종이 정렬 (블로커 위 → 클릭 OK)
+        PinCountPanel();  // CountPanel 첫 위치 고정
     }
 
     void OnDisable()
@@ -257,19 +299,30 @@ public class ResumeFlipper : MonoBehaviour
         RestoreSorting();
     }
 
+    // 쉬는 동안 매 프레임 모달 기준 order 재적용 — OnEnable 시점에 모달(ModalLayer)이 아직 order 를
+    // 할당하기 전이라 종이가 블로커 아래로 깔려 "처음에 안 보이는" 문제를 자동 보정.
+    // (채용 화면은 시간정지라 비용 무의미. 넘기는 중엔 들어오는 종이 +1 유지를 위해 건드리지 않음.)
+    void LateUpdate()
+    {
+        if (!Application.isPlaying || IsFlipping) return;
+        RestoreSorting();
+        PinCountPanel(); // 쉬는 동안 카드 우측상단에 고정 (해상도 변화도 자동 추종)
+    }
+
     // ── 에디터 프리뷰: 인스펙터 값/가운데 위치 변화 시 종이를 슬롯으로 즉시 배치 (변화 있을 때만 적용) ──
 #if UNITY_EDITOR
-    Vector2 _lastCenter; float _lastOX, _lastOY, _lastS, _lastT; bool _previewValid;
+    Vector2 _lastCenter; float _lastOX, _lastOY, _lastS, _lastT; Vector2 _lastCountOff; bool _previewValid;
     void Update()
     {
         if (Application.isPlaying) return;
         if (_center == null) _center = (RectTransform)transform;
         Vector2 c = _center.anchoredPosition;
-        if (_previewValid && c == _lastCenter && _lastOX == sideOffsetX && _lastOY == sideOffsetY && _lastS == sideScale && _lastT == sideTiltZ)
+        if (_previewValid && c == _lastCenter && _lastOX == sideOffsetX && _lastOY == sideOffsetY && _lastS == sideScale && _lastT == sideTiltZ && _lastCountOff == countOffsetFromTopLeft)
             return;
         if (leftPaper  != null) { var pl = LeftSlot(c);  leftPaper.anchoredPosition3D  = new Vector3(pl.x, pl.y, 0f); leftPaper.localScale  = SideScaleV; leftPaper.localEulerAngles  = LeftRot; }
         if (rightPaper != null) { var pr = RightSlot(c); rightPaper.anchoredPosition3D = new Vector3(pr.x, pr.y, 0f); rightPaper.localScale = SideScaleV; rightPaper.localEulerAngles = RightRot; }
-        _lastCenter = c; _lastOX = sideOffsetX; _lastOY = sideOffsetY; _lastS = sideScale; _lastT = sideTiltZ; _previewValid = true;
+        PinCountPanel(); // 에디터에서도 카드 우측상단 고정 위치 미리보기 (-110x 조절 시 즉시 반영)
+        _lastCenter = c; _lastOX = sideOffsetX; _lastOY = sideOffsetY; _lastS = sideScale; _lastT = sideTiltZ; _lastCountOff = countOffsetFromTopLeft; _previewValid = true;
     }
 #endif
 }

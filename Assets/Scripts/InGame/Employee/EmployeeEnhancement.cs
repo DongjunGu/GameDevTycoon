@@ -10,62 +10,62 @@ public static class EmployeeEnhancement
     // 강화 비용 테이블 [현재 레벨] = (현재 레벨 → +1 비용)
     public static readonly int[] CostTable =
     {
-            50,  // 0→1
+           100,  // 0→1
            100,  // 1→2
-           100,  // 2→3
-           100,  // 3→4
-           150,  // 4→5
-           150,  // 5→6
-           150,  // 6→7
-           200,  // 7→8
-           200,  // 8→9
-           200,  // 9→10
-           250,  // 10→11
+           200,  // 2→3
+           200,  // 3→4
+           300,  // 4→5
+           300,  // 5→6
+           500,  // 6→7
+           500,  // 7→8
+           800,  // 8→9
+           800,  // 9→10
+           800,  // 10→11
          2_000,  // 11→12
-         4_000,  // 12→13
-         6_000,  // 13→14
-         8_000,  // 14→15
-        10_000,  // 15→16
-        20_000,  // 16→17
-        30_000,  // 17→18
-        40_000,  // 18→19
-        50_000,  // 19→20
-        70_000,  // 20→21
-        90_000,  // 21→22
-       110_000,  // 22→23
-       150_000,  // 23→24
-       200_000,  // 24→25
+         3_000,  // 12→13
+         4_000,  // 13→14
+         5_000,  // 14→15
+        12_000,  // 15→16
+        14_000,  // 16→17
+        16_000,  // 17→18
+        18_000,  // 18→19
+        18_000,  // 19→20
+        40_000,  // 20→21
+        45_000,  // 21→22
+        50_000,  // 22→23
+       100_000,  // 23→24
+       150_000,  // 24→25
     };
 
     // 강화 확률 테이블 [현재 레벨] = (성공%, 유지%, 하락%)
-    // 0~10: 실패 시 하락 가능, 11~24: 하락 없음(유지)
-    public static readonly (int success, int maintain, int downgrade)[] RateTable =
+    // 0~10: 하락 없음(유지), 11~24: 소폭 하락 발생. 유지/하락은 소수점 포함.
+    public static readonly (float success, float maintain, float downgrade)[] RateTable =
     {
-        (99,  0,  0),  // 0
-        (95,  0,  5),  // 1
-        (90,  0, 10),  // 2
-        (85,  0, 15),  // 3
-        (80,  0, 20),  // 4
-        (75,  0, 25),  // 5
-        (70,  0, 30),  // 6
-        (65,  0, 35),  // 7
-        (60,  0, 40),  // 8
-        (55,  0, 45),  // 9
-        (50,  0, 50),  // 10
-        (30, 70,  0),  // 11
-        (30, 70,  0),  // 12
-        (30, 70,  0),  // 13
-        (30, 70,  0),  // 14
-        (20, 80,  0),  // 15
-        (20, 80,  0),  // 16
-        (20, 80,  0),  // 17
-        (20, 80,  0),  // 18
-        (15, 85,  0),  // 19
-        (15, 85,  0),  // 20
-        (15, 85,  0),  // 21
-        (15, 85,  0),  // 22
-        (10, 90,  0),  // 23
-        ( 5, 95,  0),  // 24
+        (80, 20,     0),     // 0
+        (75, 25,     0),     // 1
+        (70, 30,     0),     // 2
+        (65, 35,     0),     // 3
+        (60, 40,     0),     // 4
+        (60, 40,     0),     // 5
+        (55, 45,     0),     // 6
+        (55, 45,     0),     // 7
+        (50, 50,     0),     // 8
+        (50, 50,     0),     // 9
+        (50, 50,     0),     // 10
+        (45, 54f,    1f),    // 11
+        (45, 53.7f,  1.3f),  // 12
+        (40, 58.4f,  1.6f),  // 13
+        (40, 58.1f,  1.9f),  // 14
+        (35, 62.8f,  2.2f),  // 15
+        (35, 62.5f,  2.5f),  // 16
+        (30, 67.2f,  2.8f),  // 17
+        (30, 66.8f,  3.2f),  // 18
+        (30, 66.5f,  3.5f),  // 19
+        (20, 76.2f,  3.8f),  // 20
+        (20, 75.9f,  4.1f),  // 21
+        (20, 75.6f,  4.4f),  // 22
+        (10, 85.3f,  4.7f),  // 23
+        ( 5, 90f,    5f),    // 24
     };
 
     public static int GetMaxLevel(EmployeeGrade grade) => EmployeeData.MaxEnhancementForGrade(grade);
@@ -81,7 +81,7 @@ public static class EmployeeEnhancement
         return TraitEffectApplier.ApplyEnhanceCostDiscount(CostTable[lv]);
     }
 
-    public static (int success, int maintain, int downgrade) GetRates(EmployeeData emp)
+    public static (float success, float maintain, float downgrade) GetRates(EmployeeData emp)
     {
         int lv = Mathf.Clamp(emp.enhancementLevel, 0, RateTable.Length - 1);
         var r = RateTable[lv];
@@ -93,19 +93,19 @@ public static class EmployeeEnhancement
             int bonus = TraitEffectApplier.GetHighEnhanceSuccessBonus();
             if (bonus > 0)
             {
-                int success  = Mathf.Min(100, r.success + bonus);
-                int absorbed = success - r.success;            // 실제 증가분
-                int downgrade = Mathf.Max(0, r.downgrade - absorbed);
-                int maintain  = Mathf.Max(0, 100 - success - downgrade);
+                float success  = Mathf.Min(100f, r.success + bonus);
+                float absorbed = success - r.success;            // 실제 증가분
+                float downgrade = Mathf.Max(0f, r.downgrade - absorbed);
+                float maintain  = Mathf.Max(0f, 100f - success - downgrade);
                 return (success, maintain, downgrade);
             }
         }
         return r;
     }
 
-    // 성공확률 / 실패확률 2분류 (실패 = 유지 + 하락 = 100 - 성공)
-    public static int SuccessRate(EmployeeData emp) => GetRates(emp).success;
-    public static int FailRate(EmployeeData emp)    => 100 - GetRates(emp).success;
+    // 성공확률 / 실패확률 2분류 (실패 = 유지 + 하락 = 100 - 성공). 성공%는 항상 정수.
+    public static int SuccessRate(EmployeeData emp) => Mathf.RoundToInt(GetRates(emp).success);
+    public static int FailRate(EmployeeData emp)    => 100 - SuccessRate(emp);
 
     // 강화 1회 실행 — 비용 차감/저장은 호출자 책임.
     // 레벨/주스탯/부스탯/연봉/만족도를 변경한 뒤 결과(성공/유지/하락)를 반환한다.
@@ -113,7 +113,7 @@ public static class EmployeeEnhancement
     {
         int level = emp.enhancementLevel;
         var (success, maintain, downgrade) = GetRates(emp);
-        int roll = Random.Range(0, 100);
+        float roll = Random.Range(0f, 100f);
 
         if (roll < success)
         {
