@@ -30,11 +30,17 @@ public class EmployeeListUI : MonoBehaviour
     public TextMeshProUGUI nameText;
     public TextMeshProUGUI potentialText;     // "잠재력: {}"
     public TextMeshProUGUI gradeText;
-    public Image gradePanel;                  // 등급색 배경
+    [Tooltip("등급별 BG 스프라이트 (EmployeeCardUI 와 동일 — 공용 GradeSpriteSet). 색 변경은 사용 안 함, 스프라이트 교체만.")]
+    public Image gradeBG;
+    public GradeSpriteSet gradeBGSet;
     public Image roleBadge;                   // 역할 아이콘
     public RoleIconSet roleIconSet;           // 공용 역할 아이콘 세트
-    public TextMeshProUGUI traitText;         // 특성명 (클릭 시 설명)
-    public TextMeshProUGUI eventText;         // 전용 이벤트명 (클릭 시 설명)
+    public TextMeshProUGUI traitText;         // 특성명 (등급 무관 항상 출력, 클릭 시 설명)
+    public TextMeshProUGUI eventText;         // 전용 이벤트명 (등급 무관 항상 출력, 클릭 시 설명)
+    [Tooltip("특성 등급(Epic) 미충족 시 활성화되는 잠금 덮개")]
+    public GameObject traitLockedPanel;
+    [Tooltip("이벤트 등급(Unique) 미충족 시 활성화되는 잠금 덮개")]
+    public GameObject eventLockedPanel;
     public TextMeshProUGUI enhancementText;   // "Lv.{}"
     public Slider satisfactionSlider;
     public SatisfactionFillSet satisfactionFillSet; // 구간별 Fill sprite 묶음 (공용 에셋)
@@ -60,7 +66,6 @@ public class EmployeeListUI : MonoBehaviour
     public Button closeButton;
 
     private string _selectedId = "";
-    private Coroutine _gradeCo;
 
     GameObject Root => panelRoot != null ? panelRoot : gameObject;
 
@@ -160,15 +165,15 @@ public class EmployeeListUI : MonoBehaviour
             if (sprite != null) portraitImage.sprite = sprite;
         }
         SetText(nameText,      emp.employeeName);
-        SetText(potentialText, $"잠재력: {emp.PotentialToString()}");
-        SetText(gradeText,     emp.GradeToString());
+        SetText(potentialText, emp.PotentialToString());           // "A" 단독 (라벨 없음)
+        SetText(gradeText,     emp.GradeToString().ToUpper());     // 등급 대문자
         RoleIconSet.Apply(roleBadge, roleIconSet, emp.role);
 
-        ApplyGradeColor(emp.grade);
-        CharacterTraitApplier.SetupTraitText(traitText, emp);
-        CharacterUniqueEvents.SetupEventTextDirect(eventText, emp);
+        ApplyGradeBG(emp.grade);
+        SetupTraitWithLock(emp);  // 등급 무관 이름 출력 + 미충족 시 lockedPanel 활성
+        SetupEventWithLock(emp);
 
-        SetText(enhancementText, $"Lv.{emp.enhancementLevel}");
+        SetText(enhancementText, $"+{emp.enhancementLevel}");      // "+N"
         if (satisfactionSlider != null)
         {
             satisfactionSlider.minValue = 0f;
@@ -214,11 +219,63 @@ public class EmployeeListUI : MonoBehaviour
         rt.localScale = new Vector3(s.x, debuff ? -magY : magY, s.z);
     }
 
-    void ApplyGradeColor(EmployeeGrade grade)
+    // 등급 BG = 스프라이트(공용 SO)만 교체. 색 변경(gradePanel 코루틴)은 제거.
+    void ApplyGradeBG(EmployeeGrade grade)
     {
-        if (gradePanel == null) return;
-        if (_gradeCo != null) { StopCoroutine(_gradeCo); _gradeCo = null; }
-        _gradeCo = EmployeeGradeColor.Apply(this, gradePanel, grade);
+        GradeSpriteSet.Apply(gradeBG, gradeBGSet, grade);
+    }
+
+    // 특성 — 등급 무관 이름 표시(해당 등급 아니어도 출력). 충족이면 클릭 시 설명, 미충족이면 lockedPanel 활성(터치 차단).
+    void SetupTraitWithLock(EmployeeData emp)
+    {
+        string name = CharacterTraitApplier.GetTraitNameAnyGrade(emp);
+        bool unlocked = CharacterTraitApplier.IsTraitUnlocked(emp);
+        bool hasTrait = !string.IsNullOrEmpty(name);
+
+        if (traitText != null)
+        {
+            traitText.text = hasTrait ? $"특성 : {name}" : "";
+            var btn = traitText.GetComponent<TraitDescriptionButton>();
+            if (hasTrait && unlocked)
+            {
+                if (btn == null) btn = traitText.gameObject.AddComponent<TraitDescriptionButton>();
+                btn.Bind(emp);
+                traitText.raycastTarget = true;
+            }
+            else
+            {
+                if (btn != null) btn.Bind(null);
+                traitText.raycastTarget = false; // 미충족/미보유 → 설명 클릭 비활성
+            }
+        }
+        // 특성이 있는데 등급 미충족일 때만 잠금 패널 노출 (미보유는 잠글 게 없음)
+        if (traitLockedPanel != null) traitLockedPanel.SetActive(hasTrait && !unlocked);
+    }
+
+    // 전용 이벤트 — 등급 무관 이름 표시. 충족이면 클릭 시 설명, 미충족이면 lockedPanel 활성.
+    void SetupEventWithLock(EmployeeData emp)
+    {
+        string name = CharacterUniqueEvents.GetEventNameAnyGrade(emp);
+        bool unlocked = CharacterUniqueEvents.IsEventUnlocked(emp);
+        bool hasEvent = !string.IsNullOrEmpty(name);
+
+        if (eventText != null)
+        {
+            eventText.text = hasEvent ? $"이벤트 : {name}" : "";
+            var btn = eventText.GetComponent<EventDescriptionButton>();
+            if (hasEvent && unlocked)
+            {
+                if (btn == null) btn = eventText.gameObject.AddComponent<EventDescriptionButton>();
+                btn.Bind(emp);
+                eventText.raycastTarget = true;
+            }
+            else
+            {
+                if (btn != null) btn.Bind(null);
+                eventText.raycastTarget = false;
+            }
+        }
+        if (eventLockedPanel != null) eventLockedPanel.SetActive(hasEvent && !unlocked);
     }
 
     // ── 버튼 ─────────────────────────────────────

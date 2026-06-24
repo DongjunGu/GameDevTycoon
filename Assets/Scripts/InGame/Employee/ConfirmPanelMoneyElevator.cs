@@ -2,15 +2,17 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
-// ConfirmHirePanel 에 부착한다. 이 패널이 떠 있는 동안 확정화면의 정렬(레이어) 스택을 관리한다.
+// 패널(ConfirmHirePanel / EmployeePanel 등)에 부착해, 그 패널이 떠 있는 동안
+// (1) MoneyPanel·다이얼로그를 그 패널 위로 끌어올리고 (2) HUD/지정 오브젝트를 숨겼다 닫히면 복구한다.
+// SetActive 토글되는 패널이면 어디든 재사용 가능 (OnEnable/OnDisable 로 동작).
 //
-// 모달(ModalLayer/ModalBlocker)이 ConfirmHirePanel 을 order b(예: 52, 블로커는 b-1=51)로 올린다.
-// ResumeFlipper 가 이력서 카드(종이)를 b(쉴 때)/b+1(넘기는 중)로 둔다.
-// → 그 위에 와야 하는 것들을 b 기준으로 더 높은 order 로 끌어올린다:
-//     카드 = b ~ b+1  /  MoneyPanel = b+MONEY  /  topObjects(ConfirmUI/AlertUI) = b+TOP (최상단)
+// 기준 order b = referenceCanvas.sortingOrder (없으면 이 오브젝트의 Canvas.sortingOrder).
+//   · ConfirmHirePanel: referenceCanvas = 가운데 이력서 카드(ResumeFlipper 가 b/b+1 로 둠) → 그 위로 올림.
+//   · EmployeePanel 등 카드 없는 패널: referenceCanvas = 그 패널의 Canvas(또는 비우면 자기 Canvas).
+// → MoneyPanel = b+MONEY, topObjects(ConfirmUI/AlertUI) = b+TOP(최상단). 같은 sortingLayer 복사.
 // b 는 매 프레임 다시 읽어(LateUpdate) 모달 등록 타이밍/스택 변화에도 맞춘다.
 //
-// 추가로, 이 패널이 떠 있는 동안 HUDCanvas 자식들을 MoneyPanel 만 남기고 숨겼다가 닫히면 복구한다.
+// HUD 숨김: hudCanvas 자식들을 MoneyPanel/topObjects(및 컨테이너) 제외하고 비활성 + alsoHide(HUD 밖) → 닫히면 복구.
 [DisallowMultipleComponent]
 public class ConfirmPanelMoneyElevator : MonoBehaviour
 {
@@ -23,6 +25,8 @@ public class ConfirmPanelMoneyElevator : MonoBehaviour
     [SerializeField] GameObject[] topObjects;
     [Tooltip("이 패널이 떠 있는 동안 자식들을 숨길 HUDCanvas. MoneyPanel/topObjects(및 그 컨테이너)은 제외하고 모두 비활성, 닫히면 복구.")]
     [SerializeField] Transform hudCanvas;
+    [Tooltip("HUDCanvas 밖이지만 같이 숨길 것들 — EmployeeStatusPanel 등. 패널 열릴 때 비활성, 닫히면 복구.")]
+    [SerializeField] GameObject[] alsoHide;
     [Tooltip("정렬 기준 — 가운데 이력서 카드(EmployeeResumePanel)의 Canvas. 이 카드의 layer/order 를 기준으로 그 위로 올린다.")]
     [SerializeField] Canvas referenceCanvas;
 
@@ -62,11 +66,26 @@ public class ConfirmPanelMoneyElevator : MonoBehaviour
     }
 
     // ── 정렬 스택 ─────────────────────────────────────────
-    // 기준 = 가운데 카드(referenceCanvas)의 현재 order/layer. ResumeFlipper 가 매 프레임 갱신하는 값이라
-    // 버튼·MoneyPanel 을 "카드와 같은 layer 에서 카드보다 높은 order" 로 올리면 항상 카드 위에 온다.
-    int BaseOrder() => referenceCanvas != null ? referenceCanvas.sortingOrder
-                     : (GetComponent<Canvas>() != null ? GetComponent<Canvas>().sortingOrder : 1);
-    int BaseLayerId() => referenceCanvas != null ? referenceCanvas.sortingLayerID : 0;
+    // 기준 = referenceCanvas(있으면) 의 order/layer, 없으면 이 패널을 실제로 지배하는 캔버스.
+    //   · ConfirmHirePanel: referenceCanvas=가운데 카드 → 그 위로.
+    //   · EmployeePanel 등: referenceCanvas 비우면 패널이 속한 실제 렌더 캔버스(예: MenuCanvas order 12) 를 찾아 그 위로.
+    // ⚠️ 단순 GetComponent<Canvas>().sortingOrder 는 overrideSorting=false 면 0(필드값)이라 실제 order 가 아님 →
+    //    overrideSorting=true 이거나 루트인 "지배 캔버스" 까지 위로 올라가 그 order/layer 를 쓴다.
+    Canvas EffectiveCanvas()
+    {
+        if (referenceCanvas != null) return referenceCanvas;
+        var c = GetComponentInParent<Canvas>();
+        while (c != null && !c.overrideSorting)
+        {
+            var parent = c.transform.parent;
+            var up = parent != null ? parent.GetComponentInParent<Canvas>() : null;
+            if (up == null || up == c) break;   // 루트 도달
+            c = up;
+        }
+        return c;
+    }
+    int BaseOrder()   { var c = EffectiveCanvas(); return c != null ? c.sortingOrder   : 1; }
+    int BaseLayerId() { var c = EffectiveCanvas(); return c != null ? c.sortingLayerID : 0; }
 
     void BuildRaised()
     {
@@ -126,19 +145,30 @@ public class ConfirmPanelMoneyElevator : MonoBehaviour
         _raised.Clear();
     }
 
-    // ── HUDCanvas 자식 숨김 (MoneyPanel + topObjects 제외) ──
+    // ── HUDCanvas 자식 숨김 (MoneyPanel + topObjects 제외) + alsoHide ──
     void HideHudExceptMoney()
     {
         _hiddenHudChildren.Clear();
-        if (hudCanvas == null) return;
 
-        // 유지(숨기지 않을) 대상: MoneyPanel + topObjects(ConfirmUI/AlertUI)
-        _keepTargets.Clear();
-        if (moneyPanel != null) _keepTargets.Add(moneyPanel.transform);
-        if (topObjects != null)
-            foreach (var go in topObjects) if (go != null) _keepTargets.Add(go.transform);
+        if (hudCanvas != null)
+        {
+            // 유지(숨기지 않을) 대상: MoneyPanel + topObjects(ConfirmUI/AlertUI)
+            _keepTargets.Clear();
+            if (moneyPanel != null) _keepTargets.Add(moneyPanel.transform);
+            if (topObjects != null)
+                foreach (var go in topObjects) if (go != null) _keepTargets.Add(go.transform);
 
-        HideSiblingsAlongPath(hudCanvas);
+            HideSiblingsAlongPath(hudCanvas);
+        }
+
+        // HUDCanvas 밖이지만 같이 숨길 것들 (EmployeeStatusPanel 등)
+        if (alsoHide != null)
+            foreach (var go in alsoHide)
+            {
+                if (go == null || !go.activeSelf) continue; // 이미 꺼진 건 패스(복구 대상 아님)
+                go.SetActive(false);
+                _hiddenHudChildren.Add(go);
+            }
     }
 
     // node 의 자식들 중 "유지 대상" 경로가 아닌 것만 비활성화.
