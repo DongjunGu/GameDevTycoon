@@ -306,11 +306,11 @@ public class EmployeeCardUI : MonoBehaviour
     }
 
     // 카드의 "강화하기" 버튼 OnClick에 연결
-    // → 단일 화면 강화 패널(TrainingPanelUI)을 열고 현재 직원을 바로 선택
+    // → 직원관리 패널(EmployeeListUI)을 열고 현재 직원을 선택 + TrainingPanel 표시
     public void OnClickEnhanceButton()
     {
         if (string.IsNullOrEmpty(_currentEmployeeId)) return;
-        if (TrainingPanelUI.Instance == null) return;
+        if (EmployeeListUI.Instance == null) return;
         if (DispatchManager.Instance != null && DispatchManager.Instance.IsDispatched(_currentEmployeeId))
         {
             AlertUI.Instance?.Show("파견중인 직원은 강화할 수 없습니다.");
@@ -320,11 +320,9 @@ public class EmployeeCardUI : MonoBehaviour
         var emp = EmployeeManager.Instance?.GetEmployee(_currentEmployeeId);
         if (emp == null) return;
 
-        string savedEmpId = _currentEmployeeId;
-
         if (cardPanel != null) cardPanel.SetActive(false);
 
-        TrainingPanelUI.Instance.OpenForEmployee(emp, () => Show(savedEmpId));
+        EmployeeListUI.Instance.OpenForEnhance(emp);
     }
 
     // 카드가 열려있는 동안: ① 매 프레임 데이터 갱신 ② 빈 공간/다른 UI 클릭 시 닫음

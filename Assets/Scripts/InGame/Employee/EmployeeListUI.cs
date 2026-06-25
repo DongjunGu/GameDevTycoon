@@ -1,3 +1,5 @@
+using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
@@ -20,6 +22,9 @@ public class EmployeeListUI : MonoBehaviour
     [Header("List (EmployeeListRightScrollView/Content)")]
     public Transform  slotParent;         // Content
     public GameObject slotPrefab;         // EmployeeSlotListUI 프리팹
+
+    [Header("Snap Scroll (세로 캐러셀 — 비우면 slotParent 부모에서 자동 탐색)")]
+    public VerticalSnapList snapList;
 
     [Header("Detail toggle")]
     public GameObject leftPanel;          // ListLeftPanel — 선택 시 활성
@@ -65,7 +70,25 @@ public class EmployeeListUI : MonoBehaviour
     public Button itemButton;
     public Button closeButton;
 
+    [Header("Detail Slide (InfoPanel ↔ TrainingPanel)")]
+    [Tooltip("DetailPanel 안의 InfoPanel (강화 시 오른쪽으로 슬라이드 퇴장)")]
+    public RectTransform infoSlidePanel;
+    [Tooltip("DetailPanel 안의 TrainingPanel (강화 시 오른쪽에서 왼쪽으로 슬라이드 진입)")]
+    public RectTransform trainingSlidePanel;
+    [Tooltip("TrainingPanel 안의 backBtn — 누르면 역순 슬라이드")]
+    public Button backButton;
+    [Tooltip("슬라이드 거리(px). 0이면 DetailPanel(또는 TrainingPanel) 너비 자동 사용")]
+    public float slideWidth = 0f;
+    public float slideDuration = 0.3f;
+
+    [Header("Menu")]
+    [Tooltip("메뉴 '강화하기' 버튼 — 누르면 패널 열고 바로 TrainingPanel 표시")]
+    public Button trainingMenuButton;
+
     private string _selectedId = "";
+    private readonly List<EmployeeSlotListUI> _slots = new();
+    private readonly List<EmployeeData> _emps = new();
+    private bool _snapHooked;
 
     GameObject Root => panelRoot != null ? panelRoot : gameObject;
 
@@ -78,15 +101,18 @@ public class EmployeeListUI : MonoBehaviour
         if (fireButton    != null) { fireButton.onClick.RemoveListener(OnClickFire);       fireButton.onClick.AddListener(OnClickFire); }
         if (itemButton    != null) { itemButton.onClick.RemoveListener(OnClickItem);       itemButton.onClick.AddListener(OnClickItem); }
         if (closeButton   != null) { closeButton.onClick.RemoveListener(OnClickClose);     closeButton.onClick.AddListener(OnClickClose); }
+        if (backButton    != null) { backButton.onClick.RemoveListener(OnClickBack);       backButton.onClick.AddListener(OnClickBack); }
+        if (trainingMenuButton != null) { trainingMenuButton.onClick.RemoveListener(OpenListForEnhance); trainingMenuButton.onClick.AddListener(OpenListForEnhance); }
     }
 
     // 메뉴 직원관리 버튼 OnClick 에 연결
     public void OpenList()
     {
         GameTimeManager.Instance?.StopTime();
+        _selectedId = ""; // 진입 시 맨 위(첫) 직원 자동 선택
         Root.SetActive(true);
-        BuildList();
-        HideDetail();
+        ResetSlide();      // 항상 InfoPanel 부터 시작
+        BuildList();       // 스냅 리스트가 맨 위 슬롯 자동 선택 → 상세 표시
     }
 
     public void OnClickClose()
@@ -98,7 +124,7 @@ public class EmployeeListUI : MonoBehaviour
     // 외부(커플 동반퇴사/사직/도주 등)에서 ownedEmployees 변경 시, 열려있으면 다시 빌드.
     public void RefreshIfOpen()
     {
-        if (Root.activeInHierarchy) { BuildList(); RefreshSelectedOrHide(); }
+        if (Root.activeInHierarchy) BuildList(); // _selectedId 유지 → 스냅이 같은 직원 재선택
     }
 
     // ── 목록 ─────────────────────────────────────
@@ -107,14 +133,85 @@ public class EmployeeListUI : MonoBehaviour
         if (slotParent == null || slotPrefab == null || EmployeeManager.Instance == null) return;
         foreach (Transform child in slotParent)
             Destroy(child.gameObject);
+        _slots.Clear();
+        _emps.Clear();
 
         foreach (var emp in EmployeeManager.Instance.ownedEmployees)
         {
             var go = Instantiate(slotPrefab, slotParent);
             go.SetActive(true); // 프리팹 루트가 비활성으로 저장돼 있어도 강제 활성
             var slot = go.GetComponent<EmployeeSlotListUI>();
-            if (slot != null) slot.Setup(emp, OnSelectEmployee);
+            if (slot != null)
+            {
+                slot.Setup(emp, OnSlotClicked); // 클릭 → 해당 슬롯으로 스냅
+                _slots.Add(slot);
+                _emps.Add(emp);
+            }
         }
+        SetupSnap();
+    }
+
+    // 스냅 리스트 구성 + 맨 위(또는 기존 선택) 자동 선택
+    void SetupSnap()
+    {
+        var snap = ResolveSnap();
+        if (snap == null)
+        {
+            // 폴백: 스냅 리스트 없음 → 첫(또는 기존 선택) 직원 즉시 선택
+            if (_slots.Count == 0) { HideDetail(); return; }
+            int idx0 = IndexOfSelected();
+            _slots[idx0].SetSelected(true);
+            OnSelectEmployee(_emps[idx0]);
+            return;
+        }
+
+        if (!_snapHooked) { snap.OnSelectedChanged += OnSnapSelected; _snapHooked = true; }
+
+        if (_slots.Count == 0) { HideDetail(); return; }
+        int initial = IndexOfSelected();
+        var rects = new List<RectTransform>(_slots.Count);
+        foreach (var s in _slots) rects.Add((RectTransform)s.transform);
+
+        snap.Setup((RectTransform)slotParent, rects, initial); // 동기 즉시 배치 → 뜨는 즉시 타겟 직원에 위치
+    }
+
+    VerticalSnapList ResolveSnap()
+    {
+        if (snapList != null) return snapList;
+        // slotParent(Content) → Viewport → ScrollView(VerticalSnapList)
+        if (slotParent != null && slotParent.parent != null && slotParent.parent.parent != null)
+            snapList = slotParent.parent.parent.GetComponent<VerticalSnapList>();
+        return snapList;
+    }
+
+    int IndexOfSelected()
+    {
+        if (!string.IsNullOrEmpty(_selectedId))
+        {
+            int f = _emps.FindIndex(e => e != null && e.id == _selectedId);
+            if (f >= 0) return f;
+        }
+        return 0;
+    }
+
+    // 슬롯 클릭 → 해당 슬롯으로 스르륵 스냅 (스냅 완료/시작 시 OnSnapSelected 로 상세 갱신)
+    void OnSlotClicked(EmployeeData emp)
+    {
+        if (emp == null) return;
+        var snap = ResolveSnap();
+        if (snap != null)
+        {
+            int idx = _emps.FindIndex(e => e != null && e.id == emp.id);
+            if (idx >= 0) { snap.SnapToIndex(idx); return; }
+        }
+        OnSelectEmployee(emp); // 폴백
+    }
+
+    // 스냅 리스트가 선택 슬롯을 알려줄 때 → 상세 표시
+    void OnSnapSelected(int index)
+    {
+        if (index < 0 || index >= _emps.Count) return;
+        OnSelectEmployee(_emps[index]);
     }
 
     // ── 선택 / 상세 ───────────────────────────────
@@ -125,6 +222,7 @@ public class EmployeeListUI : MonoBehaviour
         _selectedId = emp.id;
         SetDetailActive(true);
         PopulateDetail(emp);
+        if (_onTraining) TrainingPanelUI.Instance?.OnSelectEmployee(emp); // 트레이닝 뷰 중이면 강화 패널도 갱신
     }
 
     void HideDetail()
@@ -181,7 +279,7 @@ public class EmployeeListUI : MonoBehaviour
             satisfactionSlider.value = emp.satisfaction;
             SatisfactionFillSet.Apply(satisfactionSlider, satisfactionFillSet, emp.satisfaction);
         }
-        SetText(satisfactionText, $"{emp.satisfaction}");
+        SetText(satisfactionText, $"{emp.satisfaction}/100");
 
         if (dispatchedBadge != null)
             dispatchedBadge.SetActive(IsDispatched(emp.id));
@@ -282,16 +380,103 @@ public class EmployeeListUI : MonoBehaviour
     EmployeeData Selected()
         => !string.IsNullOrEmpty(_selectedId) ? EmployeeManager.Instance?.GetEmployee(_selectedId) : null;
 
-    // 강화하기 — 이 패널 닫고 강화 패널 열기 → 닫히면 복귀(선택 직원 재표시)
+    // 강화하기 — InfoPanel 오른쪽 퇴장 + TrainingPanel 왼쪽 진입 (슬라이드). 패널은 닫지 않음.
     public void OnClickEnhance()
     {
         var emp = Selected();
-        if (emp == null || TrainingPanelUI.Instance == null) return;
+        if (emp == null) return;
         if (IsDispatched(emp.id)) { AlertUI.Instance?.Show("파견중인 직원은 강화할 수 없습니다."); return; }
 
-        string id = emp.id;
-        Root.SetActive(false);
-        TrainingPanelUI.Instance.OpenForEmployee(emp, () => Reopen(id));
+        TrainingPanelUI.Instance?.OnSelectEmployee(emp); // 트레이닝 패널에 선택 직원 표시
+        SlideToTraining();
+    }
+
+    // 강화 패널 backBtn — 역순 슬라이드 (TrainingPanel 퇴장 + InfoPanel 복귀) + 상세 갱신(강화로 변한 수치 반영)
+    public void OnClickBack()
+    {
+        SlideToInfo();
+        var emp = Selected();
+        if (emp != null) PopulateDetail(emp);
+    }
+
+    // 메뉴 '강화하기' 버튼 — 패널 열고 바로 TrainingPanel 표시 (선택 직원 = 맨 위 자동선택)
+    public void OpenListForEnhance()
+    {
+        OpenList();             // 패널 열기 + 맨 위 직원 자동선택
+        SetSlideInstant(true);  // InfoPanel 대신 TrainingPanel 부터 (애니 없이) — 선택 확정 시 내용 채워짐
+    }
+
+    // 외부(EmployeeCardUI 등)에서 특정 직원 강화 — 패널 열고 그 직원 선택 + TrainingPanel 표시
+    public void OpenForEnhance(EmployeeData emp)
+    {
+        if (emp == null) return;
+        GameTimeManager.Instance?.StopTime();
+        _selectedId = emp.id;     // 이 직원 선택 (BuildList→snap 이 IndexOfSelected 로 선택)
+        Root.SetActive(true);
+        SetSlideInstant(true);    // InfoPanel 대신 TrainingPanel 부터
+        BuildList();              // 동기 setup → 뜨는 즉시 emp 슬롯에 배치 + TrainingPanel 갱신
+    }
+
+    // ── 슬라이드 ─────────────────────────────────
+    private Coroutine _slideCo;
+    private bool _onTraining; // 현재 TrainingPanel 노출 중인지
+
+    float SlideDist()
+    {
+        if (slideWidth > 0f) return slideWidth;
+        if (trainingSlidePanel != null && trainingSlidePanel.rect.width > 0f) return trainingSlidePanel.rect.width;
+        if (infoSlidePanel != null && infoSlidePanel.rect.width > 0f) return infoSlidePanel.rect.width;
+        return 693f;
+    }
+
+    // 애니 없이 즉시 배치. training=false → InfoPanel(x=0)/TrainingPanel(+W), true → 반대
+    void SetSlideInstant(bool training)
+    {
+        if (_slideCo != null) { StopCoroutine(_slideCo); _slideCo = null; }
+        float w = SlideDist();
+        SetSlideX(infoSlidePanel,     training ? w  : 0f);
+        SetSlideX(trainingSlidePanel, training ? 0f : w);
+        _onTraining = training;
+    }
+
+    // 진입 시 초기 상태: InfoPanel 부터
+    void ResetSlide() => SetSlideInstant(false);
+
+    void SlideToTraining() { StartSlide(SlideDist(), 0f); _onTraining = true; }  // info → +W, training → 0
+    void SlideToInfo()     { StartSlide(0f, SlideDist()); _onTraining = false; } // info → 0, training → +W
+
+    void StartSlide(float infoTo, float trainTo)
+    {
+        if (infoSlidePanel == null || trainingSlidePanel == null) return;
+        if (_slideCo != null) StopCoroutine(_slideCo);
+        _slideCo = StartCoroutine(SlideRoutine(infoTo, trainTo));
+    }
+
+    IEnumerator SlideRoutine(float infoTo, float trainTo)
+    {
+        float infoFrom  = infoSlidePanel.anchoredPosition.x;
+        float trainFrom = trainingSlidePanel.anchoredPosition.x;
+        float dur = Mathf.Max(0.01f, slideDuration);
+        float t = 0f;
+        while (t < dur)
+        {
+            t += Time.unscaledDeltaTime;
+            float k = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(t / dur));
+            SetSlideX(infoSlidePanel,  Mathf.Lerp(infoFrom,  infoTo,  k));
+            SetSlideX(trainingSlidePanel, Mathf.Lerp(trainFrom, trainTo, k));
+            yield return null;
+        }
+        SetSlideX(infoSlidePanel, infoTo);
+        SetSlideX(trainingSlidePanel, trainTo);
+        _slideCo = null;
+    }
+
+    static void SetSlideX(RectTransform rt, float x)
+    {
+        if (rt == null) return;
+        var p = rt.anchoredPosition;
+        p.x = x;
+        rt.anchoredPosition = p;
     }
 
     // 아이템 사용하기 — 이 패널 닫고 아이템 패널을 해당 직원 컨텍스트로 열기 → 닫히면 복귀
@@ -334,18 +519,15 @@ public class EmployeeListUI : MonoBehaviour
         EmployeeManager.Instance.FireEmployee(emp, countAsExit);
         HUDUI.Instance?.RefreshAll();
         _selectedId = "";
-        BuildList();
-        HideDetail();   // 선택 해제 → EmptyPanel
+        BuildList();    // 남은 직원 중 맨 위 자동 선택 (없으면 EmptyPanel)
     }
 
     // 강화/아이템 패널에서 복귀 — 시간정지는 이미 걸려 있으므로 추가 안 함. 패널만 다시 표시 + 선택 복원.
     void Reopen(string reselectId)
     {
+        _selectedId = reselectId ?? "";
         Root.SetActive(true);
-        BuildList();
-        var emp = !string.IsNullOrEmpty(reselectId) ? EmployeeManager.Instance?.GetEmployee(reselectId) : null;
-        if (emp != null) OnSelectEmployee(emp);
-        else HideDetail();
+        BuildList(); // 복귀 직원 재선택 (스냅이 해당 슬롯으로)
     }
 
     // ── 헬퍼 ─────────────────────────────────────

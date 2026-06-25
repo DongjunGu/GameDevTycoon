@@ -10,7 +10,8 @@
       "PowerShell",
       "Skill",
       "WebFetch(domain:github.com)",
-      "mcp__UnityMCP"
+      "mcp__UnityMCP",
+      "Bash(git checkout *)"
     ],
     "ask": [
       "Bash(rm:*)",

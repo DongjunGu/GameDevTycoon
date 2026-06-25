@@ -1,50 +1,29 @@
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 
-// 단일 화면 직원 강화 패널.
-//  - TrainingRightScrollView(listContent): 직원 목록(슬롯 프리팹은 인스펙터 할당, TrainingSlotUI 재사용)
-//  - TrainingLeftPanel: TopPanel / SecondPanel(SPLeft·SPRight) / ThirdPanel(Success·Fail) / BottomPanel
-//    → 직원 미선택 시 4개 패널 비활성, 슬롯 클릭 시 활성 + 상세 표시.
+// 직원 강화 패널 (선택된 직원의 현재/예상 수치·확률·비용 표시 + 강화 실행).
+// 목록/상단정보/초상화/패널 토글 등 구(舊) 단일화면 구조는 제거됨 — 선택은 외부(EmployeeListUI 등)에서 OpenForEmployee 로 주입.
 // 강화 비용/확률/롤은 EmployeeEnhancement(공유), 예상 증가량은 EmployeeManager.GetNext*StatGain 사용.
 public class TrainingPanelUI : MonoBehaviour
 {
     public static TrainingPanelUI Instance { get; private set; }
 
-    [Header("Panel Root (열기/닫기 토글 대상)")]
-    public GameObject panelRoot;            // TrainingPanel. 비우면 이 컴포넌트의 GameObject 사용.
-
-    [Header("List (TrainingRightScrollView)")]
-    public Transform listContent;          // 슬롯이 생성될 부모 (ScrollView Content)
-    public GameObject employeeSlotPrefab;   // TrainingSlotUI 가 붙은 슬롯 프리팹
-
-    [Header("Left Panels (선택 전 비활성)")]
-    public GameObject topPanel;
-    public GameObject secondPanel;
-    public GameObject thirdPanel;
-    public GameObject bottomPanel;
-
-    [Header("TopPanel (선택)")]
-    public TextMeshProUGUI topNameText;
-    public TextMeshProUGUI topRoleText;
-    public TextMeshProUGUI topPotentialText;  // 잠재력 표시 (등급은 portraitBGImage 색으로 표시)
-    public Image portraitBGImage;             // 등급 색 배경
-
-    [Header("SPLeftPanel (현재)")]
-    public Image portraitImage;
+    [Header("CurrentStatusPanel (현재)")]
     public TextMeshProUGUI curEnhanceText;
     public TextMeshProUGUI curDevelopText;
     public TextMeshProUGUI curPlanningText;
     public TextMeshProUGUI curArtText;
     public TextMeshProUGUI curCreativityText;
+    public TextMeshProUGUI curSalaryText;   // 현재 연봉
 
-    [Header("SPRightPanel (강화 후 예상)")]
+    [Header("AfterStatusPanel (강화 후 예상)")]
     public TextMeshProUGUI expEnhanceText;
     public TextMeshProUGUI expDevelopText;
     public TextMeshProUGUI expPlanningText;
     public TextMeshProUGUI expArtText;
     public TextMeshProUGUI expCreativityText;
+    public TextMeshProUGUI expSalaryText;   // 강화 후 연봉
 
     [Header("ThirdPanel")]
     public TextMeshProUGUI successRateText; // SuccessPanel 자식
@@ -53,15 +32,22 @@ public class TrainingPanelUI : MonoBehaviour
     [Header("BottomPanel")]
     public TextMeshProUGUI costText;
     public Button enhanceButton;
-    public TextMeshProUGUI enhanceButtonText; // 선택
-    public Button closeButton;                // 선택 (OnClickClose 자동 연결)
+
+    [Header("BadgePanel (역할/강화/잠재력/등급 — 선택 직원 동기화. EmployeeListUI 와 동일)")]
+    [Tooltip("TrainingPanel 의 BadgePanel (내부 roleIcon/enhancementText/potentialText/gradeText/gradeBG 자동 탐색)")]
+    public Transform badgePanel;
+    public RoleIconSet roleIconSet;    // 역할 아이콘 세트 (공용)
+    public GradeSpriteSet gradeBGSet;  // 등급 BG 세트 (GradeProfileBGSet)
 
     private EmployeeData _selected;
     private System.Action _onClosed; // 카드 컨텍스트 등에서 닫힐 때 1회 호출
-    private Coroutine _gradeCo;
-    private readonly Dictionary<EmployeeData, TrainingEmployeeSlotUI> _slotMap = new();
 
-    GameObject Root => panelRoot != null ? panelRoot : gameObject;
+    // BadgePanel 내부 요소 (이름으로 1회 탐색 캐시)
+    private bool _badgeResolved;
+    private Image _badgeRoleIcon, _badgeGradeBG;
+    private TextMeshProUGUI _badgeEnhanceText, _badgePotentialText, _badgeGradeText;
+
+    GameObject Root => gameObject;
 
     void Awake()
     {
@@ -73,11 +59,6 @@ public class TrainingPanelUI : MonoBehaviour
             enhanceButton.onClick.RemoveListener(OnClickEnhance);
             enhanceButton.onClick.AddListener(OnClickEnhance);
         }
-        if (closeButton != null)
-        {
-            closeButton.onClick.RemoveListener(OnClickClose);
-            closeButton.onClick.AddListener(OnClickClose);
-        }
     }
 
     // ── 열기/닫기 ─────────────────────────────
@@ -87,17 +68,15 @@ public class TrainingPanelUI : MonoBehaviour
         GameTimeManager.Instance?.StopTime();
         Root.SetActive(true);
         HideDetail();
-        PopulateList();
     }
 
-    // 특정 직원 강화 패널을 바로 표시 (EmployeeCardUI '강화하기' 등). onClosed 는 닫힐 때 1회 호출.
+    // 특정 직원 강화 패널을 바로 표시 (EmployeeCardUI/EmployeeListUI '강화하기'). onClosed 는 닫힐 때 1회 호출.
     public void OpenForEmployee(EmployeeData emp, System.Action onClosed = null)
     {
         if (emp == null) return;
         _onClosed = onClosed;
         GameTimeManager.Instance?.StopTime();
         Root.SetActive(true);
-        PopulateList();
         OnSelectEmployee(emp);
     }
 
@@ -111,45 +90,16 @@ public class TrainingPanelUI : MonoBehaviour
         cb?.Invoke();
     }
 
-    // ── 목록 ─────────────────────────────────
-    void PopulateList()
-    {
-        foreach (Transform child in listContent)
-            Destroy(child.gameObject);
-        _slotMap.Clear();
-
-        if (EmployeeManager.Instance == null || employeeSlotPrefab == null) return;
-
-        foreach (var emp in EmployeeManager.Instance.ownedEmployees)
-        {
-            var go = Instantiate(employeeSlotPrefab, listContent);
-            var slot = go.GetComponent<TrainingEmployeeSlotUI>();
-            if (slot == null) continue;
-            slot.Setup(emp, OnSelectEmployee);
-            _slotMap[emp] = slot;
-        }
-    }
-
     // ── 선택 ─────────────────────────────────
-    void OnSelectEmployee(EmployeeData emp)
+    public void OnSelectEmployee(EmployeeData emp)
     {
         _selected = emp;
-        SetDetailPanelsActive(true);
         RefreshDetail();
     }
 
     void HideDetail()
     {
         _selected = null;
-        SetDetailPanelsActive(false);
-    }
-
-    void SetDetailPanelsActive(bool active)
-    {
-        if (topPanel != null)    topPanel.SetActive(active);
-        if (secondPanel != null) secondPanel.SetActive(active);
-        if (thirdPanel != null)  thirdPanel.SetActive(active);
-        if (bottomPanel != null) bottomPanel.SetActive(active);
     }
 
     // ── 상세 갱신 ─────────────────────────────
@@ -158,18 +108,7 @@ public class TrainingPanelUI : MonoBehaviour
         var emp = _selected;
         if (emp == null) return;
 
-        // 초상화
-        if (portraitImage != null && !string.IsNullOrEmpty(emp.portraitId))
-        {
-            var sprite = Resources.Load<Sprite>($"Portraits/{emp.portraitId}");
-            if (sprite != null) portraitImage.sprite = sprite;
-        }
-
-        // TopPanel — 등급은 색(portraitBGImage), 텍스트는 잠재력
-        SetText(topNameText,      emp.employeeName);
-        SetText(topRoleText,      emp.RoleToString());
-        SetText(topPotentialText, emp.PotentialToString());
-        ApplyGradeColor(emp.grade);
+        UpdateBadge(emp);     // 역할/강화/잠재력/등급 (선택 직원 동기화)
         ColorStatPanels(emp); // 주스탯 패널만 강조색, 나머지 흰색
 
         // SPLeftPanel — 현재 수치 (raw 스킬 기준)
@@ -178,6 +117,7 @@ public class TrainingPanelUI : MonoBehaviour
         SetText(curPlanningText,   $"기획: {emp.planningSkill}");
         SetText(curArtText,        $"아트: {emp.artSkill}");
         SetText(curCreativityText, $"창의성: {emp.creativitySkill}");
+        SetText(curSalaryText,     $"연봉: {emp.salary:N0} G");
 
         if (EmployeeEnhancement.IsMax(emp))
         {
@@ -187,13 +127,13 @@ public class TrainingPanelUI : MonoBehaviour
             SetText(expPlanningText,   $"기획: {emp.planningSkill}");
             SetText(expArtText,        $"아트: {emp.artSkill}");
             SetText(expCreativityText, $"창의성: {emp.creativitySkill}");
+            SetText(expSalaryText,     $"연봉: {emp.salary:N0} G"); // MAX — 연봉 변화 없음
 
             SetText(successRateText, "성공확률 : -");
-            SetText(failRateText,    "실패 확률: -");
-            SetText(costText,        "필요한 재화 : -");
+            SetText(failRateText,    "실패확률: -");
+            SetText(costText,        "-");
 
             if (enhanceButton != null) enhanceButton.interactable = false;
-            SetText(enhanceButtonText, "최대치입니다");
             return;
         }
 
@@ -203,23 +143,25 @@ public class TrainingPanelUI : MonoBehaviour
         (int min, int max) subGain = (subAvg, subAvg);
 
         // SPRightPanel — 강화 후 예상 (현재 + 증가 범위)
-        SetText(expEnhanceText,    $"다음 : Lv{emp.enhancementLevel + 1}");
+        SetText(expEnhanceText,    $"강화 후 : Lv{emp.enhancementLevel + 1}");
         SetText(expDevelopText,    ExpStat("개발",   emp.developSkill,    StatIsMain(emp, "develop")  ? mainGain : subGain));
         SetText(expPlanningText,   ExpStat("기획",   emp.planningSkill,   StatIsMain(emp, "planning") ? mainGain : subGain));
         SetText(expArtText,        ExpStat("아트",   emp.artSkill,        StatIsMain(emp, "art")      ? mainGain : subGain));
         SetText(expCreativityText, ExpStat("창의성", emp.creativitySkill, subGain)); // 창의성은 항상 부스탯
 
+        // 강화 후 연봉 = 현재 + 다음 강화 연봉 상승량(금수저 반영)
+        SetText(expSalaryText, $"연봉: {emp.salary + EmployeeManager.Instance.GetNextSalaryGain(emp):N0} G");
+
         // ThirdPanel — 성공/실패 확률 (실패 = 100 - 성공)
         int success = EmployeeEnhancement.SuccessRate(emp);
         SetText(successRateText, $"성공확률 : {success}%");
-        SetText(failRateText,    $"실패 확률: {100 - success}%");
+        SetText(failRateText,    $"실패확률: {100 - success}%");
 
         // BottomPanel — 필요한 재화
         int cost = EmployeeEnhancement.GetCost(emp);
-        SetText(costText, $"필요한 재화 : {cost:N0}G");
+        SetText(costText, $"{cost:N0} G");
 
         if (enhanceButton != null) enhanceButton.interactable = true;
-        SetText(enhanceButtonText, "강화하기");
     }
 
     // ── 강화 실행 ─────────────────────────────
@@ -236,15 +178,7 @@ public class TrainingPanelUI : MonoBehaviour
         GameTimeManager.Instance?.SaveGameTime();
         ProjectSaveManager.Instance?.SaveProject();
 
-        // 패널 + 해당 슬롯 갱신
         RefreshDetail();
-        RefreshSelectedSlot();
-    }
-
-    void RefreshSelectedSlot()
-    {
-        if (_selected != null && _slotMap.TryGetValue(_selected, out var slot) && slot != null)
-            slot.Setup(_selected, OnSelectEmployee);
     }
 
     // ── 헬퍼 ─────────────────────────────────
@@ -272,12 +206,41 @@ public class TrainingPanelUI : MonoBehaviour
         if (img != null) img.color = isMain ? MainStatPanelColor : Color.white;
     }
 
-    void ApplyGradeColor(EmployeeGrade grade)
+    // ── BadgePanel (EmployeeListUI 와 동일하게 선택 직원 동기화: 역할/강화/잠재력/등급) ──
+    void UpdateBadge(EmployeeData emp)
     {
-        if (portraitBGImage == null) return;
-        if (_gradeCo != null) { StopCoroutine(_gradeCo); _gradeCo = null; }
-        _gradeCo = EmployeeGradeColor.Apply(this, portraitBGImage, grade);
+        ResolveBadge();
+        RoleIconSet.Apply(_badgeRoleIcon, roleIconSet, emp.role);
+        SetText(_badgeEnhanceText,   $"+{emp.enhancementLevel}");
+        SetText(_badgePotentialText, emp.PotentialToString());
+        SetText(_badgeGradeText,     emp.GradeToString().ToUpper());
+        GradeSpriteSet.Apply(_badgeGradeBG, gradeBGSet, emp.grade);
     }
+
+    void ResolveBadge()
+    {
+        if (_badgeResolved || badgePanel == null) return;
+        _badgeResolved = true;
+        _badgeRoleIcon      = FindImage(badgePanel, "roleIcon");
+        _badgeEnhanceText   = FindText(badgePanel, "enhancementText");
+        _badgePotentialText = FindText(badgePanel, "potentialText");
+        _badgeGradeText     = FindText(badgePanel, "gradeText");
+        _badgeGradeBG       = FindImage(badgePanel, "gradeBG");
+    }
+
+    static Transform FindDeep(Transform root, string name)
+    {
+        if (root == null) return null;
+        if (root.name == name) return root;
+        for (int i = 0; i < root.childCount; i++)
+        {
+            var r = FindDeep(root.GetChild(i), name);
+            if (r != null) return r;
+        }
+        return null;
+    }
+    static Image FindImage(Transform root, string name) { var t = FindDeep(root, name); return t != null ? t.GetComponent<Image>() : null; }
+    static TextMeshProUGUI FindText(Transform root, string name) { var t = FindDeep(root, name); return t != null ? t.GetComponent<TextMeshProUGUI>() : null; }
 
     static string MainStatKey(EmployeeRole role) => role switch
     {
