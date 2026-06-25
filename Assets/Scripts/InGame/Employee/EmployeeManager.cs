@@ -1035,6 +1035,14 @@ public class EmployeeManager : MonoBehaviour
         return Mathf.RoundToInt((mn + mx) / 2f * SubStatRatio);
     }
 
+    // 다음 강화 1회의 연봉 상승량 (금수저 반영). 예상 연봉 미리보기용. (ApplyEnhancement 과 동일 인덱스 규칙)
+    public int GetNextSalaryGain(EmployeeData emp)
+    {
+        if (emp == null) return 0;
+        int ti = Mathf.Clamp(emp.enhancementLevel, 0, EnhanceSalaryTable.Length - 1);
+        return CharacterTraitApplier.ApplyGoldspoonSalary(emp, EnhanceSalaryTable[ti]);
+    }
+
     private string GetMainStatKey(EmployeeRole role) => role switch
     {
         EmployeeRole.Planner => "planning",
