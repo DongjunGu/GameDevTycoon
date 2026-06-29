@@ -331,13 +331,7 @@ public class SalesUI : MonoBehaviour
 
             int startRevenue = cumulativeRevenue;
 
-            float weekDuration = _cachedScale switch
-            {
-                ProjectScale.Small  => 5f,
-                ProjectScale.Medium => 4.2f,
-                ProjectScale.Large  => 3.9f,
-                _ => 5f
-            };
+            float weekDuration = 4f; // 규모 무관 4초/주 통일
             float barAnimDuration = weekDuration * 0.7f;
             float elapsed = 0f;
             while (elapsed < barAnimDuration)

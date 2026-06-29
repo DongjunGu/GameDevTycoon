@@ -23,16 +23,24 @@ public class GameTimeManager : MonoBehaviour
 
     public float secondsPerWeek = 6f;
 
+    // 개발(Developing) 시계 속도: 전 규모 총 80초로 통일하되 주수(16/24/32)는 유지 → 80/주수
     public void SetProjectSpeed(ProjectScale scale)
     {
         secondsPerWeek = scale switch
         {
-            ProjectScale.Small  => 5f,
-            ProjectScale.Medium => 4.2f,
-            ProjectScale.Large  => 3.9f,
-            _ => 6f
+            ProjectScale.Small  => 80f / 16f, // 5.0초/주
+            ProjectScale.Medium => 80f / 24f, // 3.33초/주
+            ProjectScale.Large  => 80f / 32f, // 2.5초/주
+            _ => 80f / 16f
         };
         Debug.Log($"[GameTimeManager] SetProjectSpeed: {scale} → {secondsPerWeek}초/주");
+    }
+
+    // 디버깅(BugFixing) 시계 속도: 규모 무관 4초/주 고정
+    public void SetDebuggingSpeed()
+    {
+        secondsPerWeek = 4f;
+        Debug.Log($"[GameTimeManager] SetDebuggingSpeed → 4초/주");
     }
 
     public void ResetSpeed()

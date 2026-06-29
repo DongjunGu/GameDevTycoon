@@ -100,8 +100,7 @@ public class EmployeePanelItemUI : MonoBehaviour
 
         if (grade == EmployeeGrade.Unique)
         {
-            if (isActiveAndEnabled) _shimmerCo = StartCoroutine(UniqueShimmer());
-            else gradeBackground.color = new Color(1.0f, 0.85f, 0.30f);
+            gradeBackground.color = new Color(1.0f, 0.85f, 0.30f); // 금색 단색 (반짝임 제거)
             return;
         }
 
@@ -112,19 +111,6 @@ public class EmployeePanelItemUI : MonoBehaviour
             EmployeeGrade.Epic   => ColorEpic,
             _                    => ColorNormal
         };
-    }
-
-    IEnumerator UniqueShimmer()
-    {
-        Color goldA = new Color(1.0f, 0.85f, 0.30f);
-        Color goldB = new Color(0.85f, 0.65f, 0.10f);
-        float speed = 2.0f;
-        while (true)
-        {
-            float t = (Mathf.Sin(Time.time * speed) + 1f) / 2f;
-            gradeBackground.color = Color.Lerp(goldB, goldA, t);
-            yield return null;
-        }
     }
 
     IEnumerator LegendaryShimmer()

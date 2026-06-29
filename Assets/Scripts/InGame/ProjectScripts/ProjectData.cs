@@ -11,9 +11,9 @@ public class ProjectData
 
     public static int GetCost(ProjectScale scale) => scale switch
     {
-        ProjectScale.Small  => 3000,
-        ProjectScale.Medium => 15000,
-        ProjectScale.Large  => 100000,
+        ProjectScale.Small  => 1000,
+        ProjectScale.Medium => 1000,
+        ProjectScale.Large  => 1000,
         _ => 0
     };
 
@@ -37,9 +37,9 @@ public class ProjectData
 
     public string ScaleInfoString() => scale switch
     {
-        ProjectScale.Small  => "소규모(4개월)\n추천 인원: 2명  /  개발금: 3,000G",
-        ProjectScale.Medium => "중형(6개월)\n추천 인원: 4명  /  개발금: 15,000G",
-        ProjectScale.Large  => "대규모(8개월)\n추천 인원: 5명  /  개발금: 100,000G",
+        ProjectScale.Small  => "소규모(4개월)\n추천 인원: 2명  /  개발금: 1,000G",
+        ProjectScale.Medium => "중형(6개월)\n추천 인원: 4명  /  개발금: 1,000G",
+        ProjectScale.Large  => "대규모(8개월)\n추천 인원: 5명  /  개발금: 1,000G",
         _ => ""
     };
 
