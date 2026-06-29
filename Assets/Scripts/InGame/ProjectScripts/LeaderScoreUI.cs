@@ -28,6 +28,9 @@ public class LeaderScoreUI : MonoBehaviour
 
     private System.Action _onComplete;
 
+    // confirm 시 DevelopmentPanelUI 에 한 번에 적용할 팀장점수 (애니 종료 시 산출)
+    private float _applyPlanning, _applyDevelop, _applyArt;
+
     void Awake()
     {
         if (Instance != null) { Destroy(gameObject); return; }
@@ -136,7 +139,10 @@ public class LeaderScoreUI : MonoBehaviour
             if (hunsuBonusTarget == LeaderType.Planner) pl += hunsuBonus;
             else                                        ar += hunsuBonus;
         }
-        DevelopmentPanelUI.Instance.AddValues(pl, dv, ar, 0f, 0f);
+        // 패널 반영은 confirm 시점에 한 번에 (OnClickConfirm 에서 AddValuesInstant)
+        _applyPlanning = pl;
+        _applyDevelop  = dv;
+        _applyArt      = ar;
 
         yield return new WaitForSeconds(0.5f);
         if (confirmButton) confirmButton.interactable = true;
@@ -176,7 +182,13 @@ public class LeaderScoreUI : MonoBehaviour
 
     public void OnClickConfirm()
     {
+        // 팀장점수를 DevelopmentPanelUI 에 한 번에 반영 (실제값+표시값 즉시 동기화 → 점프 업).
+        // _onComplete(→StartDeveloping) 의 SaveProject 전에 적용돼야 accum 에 저장됨.
+        DevelopmentPanelUI.Instance.AddValuesInstant(_applyPlanning, _applyDevelop, _applyArt, 0f, 0f);
+        _applyPlanning = _applyDevelop = _applyArt = 0f;
+
         leaderscorePanel.SetActive(false);
+        LeaderSelectUI.Instance.entireLeaderPanel.gameObject.SetActive(false);
         ModalGate.I.Unregister(this);
         _onComplete?.Invoke();
     }

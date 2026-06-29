@@ -379,6 +379,14 @@ public class ProjectSaveManager : MonoBehaviour
             );
         }
 
+        // 팀장점수 진행 중 종료였으면 점수 재개 (RandomEvent 스케줄/펜딩 복원이 끝난 지금 실행해야
+        // 재추첨 시 내부 SaveProject 가 빈 스케줄로 덮어쓰지 않음)
+        if (DevelopmentManager.Instance.PendingLeaderScoreResumeRestore)
+        {
+            DevelopmentManager.Instance.ResumeLeaderScore();
+            return;
+        }
+
         // 투자 이벤트 UI 표시 중에 종료됐으면 UI 복원 (stat/threshold/reward 복원 후 처리)
         if (DevelopmentManager.Instance.PendingInvestmentUIRestore)
         {

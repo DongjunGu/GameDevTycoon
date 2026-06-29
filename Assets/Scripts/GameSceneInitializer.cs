@@ -48,6 +48,10 @@ public class GameSceneInitializer : MonoBehaviour
         // 재접속 복원 — 파견 5주가 끝난(주차 0) 채로 종료했던 직원은 복귀 보고 재개
         DispatchManager.Instance?.CheckReturnOnReconnect();
 
+        // 재접속 복원 — 새해 임금/연세 차감 알림 도중 종료했으면 단계에 맞춰 재발동
+        if (GameTimeManager.Instance != null && GameTimeManager.Instance.PendingNewYearStage > 0)
+            ModalGate.I.WhenFree(() => GameTimeManager.Instance.ResumeNewYearPaymentOnReconnect());
+
         //         // 게임 시작 다이얼로그 (첫 시작 시)
         // if (DialogManager.Instance.HasGroup("event_game_start"))
         //     EventDialogTable.PlayManual("event_game_start");

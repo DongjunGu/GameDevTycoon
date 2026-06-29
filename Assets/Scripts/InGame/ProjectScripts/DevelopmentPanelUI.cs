@@ -16,8 +16,8 @@ public class DevelopmentPanelUI : MonoBehaviour
     public GameObject defaultText;
 
     [Header("애니메이션")]
-    [Tooltip("표시값이 1 변할 때마다 걸리는 시간 (초). 0 이하면 즉시 반영")]
-    public float tickInterval = 0.15f;
+    [Tooltip("값이 목표까지 차오르는 데 걸리는 시간 (초). 델타 크기와 무관하게 항상 이 시간에 완료. 0 이하면 즉시 반영")]
+    public float fillDuration = 1f;
 
     public float GetPlanning() => _planning;
     public float GetDevelop() => _develop;
@@ -39,6 +39,13 @@ public class DevelopmentPanelUI : MonoBehaviour
     private float _bugDisplay;
     private float _creativityDisplay;
 
+    // 표시값이 목표까지 차오르는 속도(units/sec) — 목표 변경 시 (남은거리/fillDuration)로 재설정되어 항상 1회분이 fillDuration 안에 완료.
+    private float _planningSpeed;
+    private float _developSpeed;
+    private float _artSpeed;
+    private float _bugSpeed;
+    private float _creativitySpeed;
+
     // 공개값 — 표시값(Display)이 따라잡는 목표. 실제값과 분리해 개발틱 팝업이 패널로 빨려든 뒤
     // RevealValues 로만 공개된다(흡입 후 카운트업 연출). 그 외 경로(로드/즉시가산/배수)는 실제값과 동시에 공개.
     private float _planningReveal;
@@ -46,8 +53,6 @@ public class DevelopmentPanelUI : MonoBehaviour
     private float _artReveal;
     private float _bugReveal;
     private float _creativityReveal;
-
-    private float _tickAccumulator;
 
     void Awake()
     {
@@ -61,36 +66,30 @@ public class DevelopmentPanelUI : MonoBehaviour
     {
         UpdateDefaultText(); // 시간 정지 중에도 갱신해야 하므로 IsRunning 게이트보다 위
         if (GameTimeManager.Instance != null && !GameTimeManager.Instance.IsRunning) return;
-        if (tickInterval <= 0f)
+        if (fillDuration <= 0f)
         {
             SyncDisplayInstantly();
             return;
         }
 
-        _tickAccumulator += Time.deltaTime;
-        if (_tickAccumulator < tickInterval) return;
-
-        int steps = Mathf.FloorToInt(_tickAccumulator / tickInterval);
-        _tickAccumulator -= steps * tickInterval;
-
+        float dt = Time.deltaTime;
         bool changed = false;
-        changed |= MoveDisplay(ref _planningDisplay,   _planningReveal,   steps);
-        changed |= MoveDisplay(ref _developDisplay,    _developReveal,    steps);
-        changed |= MoveDisplay(ref _artDisplay,        _artReveal,        steps);
-        changed |= MoveDisplay(ref _bugDisplay,        _bugReveal,        steps);
-        changed |= MoveDisplay(ref _creativityDisplay, _creativityReveal, steps);
+        changed |= MoveDisplay(ref _planningDisplay,   _planningReveal,   ref _planningSpeed,   dt);
+        changed |= MoveDisplay(ref _developDisplay,    _developReveal,    ref _developSpeed,    dt);
+        changed |= MoveDisplay(ref _artDisplay,        _artReveal,        ref _artSpeed,        dt);
+        changed |= MoveDisplay(ref _bugDisplay,        _bugReveal,        ref _bugSpeed,        dt);
+        changed |= MoveDisplay(ref _creativityDisplay, _creativityReveal, ref _creativitySpeed, dt);
 
         if (changed) UpdateUI();
     }
 
-    private static bool MoveDisplay(ref float display, float target, int steps)
+    // 남은 거리와 무관하게 fillDuration 안에 목표 도달 (등속). 목표 변경 시 RevealValues 가 speed 를 재설정.
+    private bool MoveDisplay(ref float display, float target, ref float speed, float dt)
     {
-        if (Mathf.Approximately(display, target)) return false;
+        if (Mathf.Approximately(display, target)) { speed = 0f; return false; }
+        if (speed <= 0f) speed = Mathf.Abs(target - display) / Mathf.Max(0.0001f, fillDuration); // 안전망(복원 등 speed 미설정 경로)
         float prev = display;
-        if (display < target)
-            display = Mathf.Min(target, display + steps);
-        else
-            display = Mathf.Max(target, display - steps);
+        display = Mathf.MoveTowards(display, target, speed * dt);
         return !Mathf.Approximately(prev, display);
     }
 
@@ -139,7 +138,8 @@ public class DevelopmentPanelUI : MonoBehaviour
         _artReveal = 0f;
         _bugReveal = 0f;
         _creativityReveal = 0f;
-        _tickAccumulator = 0f;
+
+        _planningSpeed = _developSpeed = _artSpeed = _bugSpeed = _creativitySpeed = 0f;
 
         UpdateUI(); // "기획: 0" 등 0으로 즉시 표시 (빈 문자열 대신)
     }
@@ -156,17 +156,19 @@ public class DevelopmentPanelUI : MonoBehaviour
     }
 
     // 개발틱 팝업이 패널로 빨려든 뒤(StatTickPopup.Finish) 호출 — 해당 스탯 표시값을 amount 만큼 공개.
-    // Update()가 표시값을 공개값까지 1씩 따라잡으며 카운트업.
+    // Update()가 표시값을 공개값까지 카운트업. 공개 시점에 speed 를 (남은거리/fillDuration)로 재설정해
+    // 델타 크기와 무관하게 fillDuration(1초) 안에 목표 도달.
     public void RevealValues(string statKey, float amount)
     {
         if (amount == 0f) return;
+        float ft = Mathf.Max(0.0001f, fillDuration);
         switch (statKey)
         {
-            case "planning":   _planningReveal   += amount; break;
-            case "develop":    _developReveal    += amount; break;
-            case "art":        _artReveal        += amount; break;
-            case "bug":        _bugReveal        += amount; break;
-            case "creativity": _creativityReveal += amount; break;
+            case "planning":   _planningReveal   += amount; _planningSpeed   = Mathf.Abs(_planningReveal   - _planningDisplay)   / ft; break;
+            case "develop":    _developReveal    += amount; _developSpeed    = Mathf.Abs(_developReveal    - _developDisplay)    / ft; break;
+            case "art":        _artReveal        += amount; _artSpeed        = Mathf.Abs(_artReveal        - _artDisplay)        / ft; break;
+            case "bug":        _bugReveal        += amount; _bugSpeed        = Mathf.Abs(_bugReveal        - _bugDisplay)        / ft; break;
+            case "creativity": _creativityReveal += amount; _creativitySpeed = Mathf.Abs(_creativityReveal - _creativityDisplay) / ft; break;
         }
     }
 
