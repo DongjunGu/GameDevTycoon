@@ -174,6 +174,7 @@ public class DevelopmentManager : MonoBehaviour
     public bool IsPendingLeaderScore75    => _pendingLeaderScore75;
     public bool IsPendingLeaderSelect      { get; set; }
     public bool PendingInvestmentUIRestore { get; private set; }
+    public bool PendingLeaderScoreResumeRestore { get; private set; }
     public float LeaderDevelopBonusTotal  => _leaderDevelopBonusTotal;
     public float LeaderPlanningBonusTotal => _leaderPlanningBonusTotal;
     public float LeaderArtBonusTotal      => _leaderArtBonusTotal;
@@ -1038,12 +1039,71 @@ public class DevelopmentManager : MonoBehaviour
     private LeaderScoreResume _leaderScoreResume = new LeaderScoreResume();
 
     public bool IsLeaderScoreResumeActive => _leaderScoreResume != null && _leaderScoreResume.active;
+
+    // 뒤끝 저장은 원시 JSON 문자열을 안전히 못 다루므로(다른 복합 저장도 전부 구분자 방식),
+    // '|' 필드 / ',' 배열 구분자 문자열로 직렬화. 부동소수는 InvariantCulture.
     public string GetLeaderScoreResumeJson()
-        => (_leaderScoreResume != null && _leaderScoreResume.active) ? JsonUtility.ToJson(_leaderScoreResume) : "";
-    public void RestoreLeaderScoreResumeJson(string json)
     {
-        if (string.IsNullOrEmpty(json)) { _leaderScoreResume = new LeaderScoreResume(); return; }
-        try { _leaderScoreResume = JsonUtility.FromJson<LeaderScoreResume>(json) ?? new LeaderScoreResume(); }
+        var d = _leaderScoreResume;
+        if (d == null || !d.active) return "";
+        var ci = System.Globalization.CultureInfo.InvariantCulture;
+        string Arr(float[] a)
+        {
+            var sb = new System.Text.StringBuilder();
+            for (int i = 0; i < 4; i++) { if (i > 0) sb.Append(','); sb.Append((i < a.Length ? a[i] : 0f).ToString("R", ci)); }
+            return sb.ToString();
+        }
+        return string.Join("|", new string[]
+        {
+            d.active ? "1" : "0",
+            d.hasValues ? "1" : "0",
+            d.leaderType.ToString(ci),
+            d.employeeId ?? "",
+            Arr(d.fullRoundScores), Arr(d.roundScores), Arr(d.cumDsAfter),
+            d.total.ToString("R", ci),
+            d.overflowRound.ToString(ci),
+            d.cutFactor.ToString("R", ci),
+            d.hunsuBonus.ToString(ci),
+            d.hunsuBonusTarget.ToString(ci),
+            d.jealousyTargetId ?? "",
+            d.leaderCount.ToString(ci)
+        });
+    }
+    public void RestoreLeaderScoreResumeJson(string data)
+    {
+        _leaderScoreResume = new LeaderScoreResume();
+        if (string.IsNullOrEmpty(data)) return;
+        var ci = System.Globalization.CultureInfo.InvariantCulture;
+        try
+        {
+            var f = data.Split('|');
+            if (f.Length < 14) return;
+            float[] Arr(string s)
+            {
+                var p = s.Split(',');
+                var a = new float[4];
+                for (int i = 0; i < 4 && i < p.Length; i++) float.TryParse(p[i], System.Globalization.NumberStyles.Float, ci, out a[i]);
+                return a;
+            }
+            var d = new LeaderScoreResume
+            {
+                active           = f[0] == "1",
+                hasValues        = f[1] == "1",
+                leaderType       = int.Parse(f[2], ci),
+                employeeId       = f[3],
+                fullRoundScores  = Arr(f[4]),
+                roundScores      = Arr(f[5]),
+                cumDsAfter       = Arr(f[6]),
+                total            = float.Parse(f[7], System.Globalization.NumberStyles.Float, ci),
+                overflowRound    = int.Parse(f[8], ci),
+                cutFactor        = float.Parse(f[9], System.Globalization.NumberStyles.Float, ci),
+                hunsuBonus       = int.Parse(f[10], ci),
+                hunsuBonusTarget = int.Parse(f[11], ci),
+                jealousyTargetId = f[12],
+                leaderCount      = int.Parse(f[13], ci)
+            };
+            _leaderScoreResume = d;
+        }
         catch { _leaderScoreResume = new LeaderScoreResume(); }
     }
     public void ClearLeaderScoreResume() { _leaderScoreResume = new LeaderScoreResume(); }
@@ -1051,13 +1111,18 @@ public class DevelopmentManager : MonoBehaviour
     // 재접속 복원 — 같은 직원으로 1회차부터 재생. overflow 확정본이면 저장값 그대로(잠금), 아니면 재추첨.
     public void ResumeLeaderScore()
     {
-        LeaderSelectUI.Instance.entireLeaderPanel.gameObject.SetActive(true);
+        PendingLeaderScoreResumeRestore = false;
         var d = _leaderScoreResume;
         if (d == null || !d.active) return;
 
         LeaderType type = (LeaderType)d.leaderType;
         EmployeeData emp = FindEmployeeById(d.employeeId);
         if (emp == null) { ClearLeaderScoreResume(); return; }
+
+        // 점수창 컨테이너만 켜고 팀장 선택 슬롯 리스트는 숨김 (정상 흐름의 OnSelectLeader 대체)
+        LeaderSelectUI.Instance.entireLeaderPanel.gameObject.SetActive(true);
+        if (LeaderSelectUI.Instance.leaderPanel != null)
+            LeaderSelectUI.Instance.leaderPanel.gameObject.SetActive(false);
 
         // 리더 필드 복원 (확정 전 종료라 CEO 등은 RestoreState 의 leaderId 조회로 비어있을 수 있음)
         switch (type)
@@ -1074,7 +1139,9 @@ public class DevelopmentManager : MonoBehaviour
         }
         else
         {
-            BuildAndShowLeaderScore(type, emp, null, d.leaderCount, null, false); // 재추첨
+            // 재추첨 — doSave=true 로 결과를 다시 저장. 재추첨에서 overflow 나면 hasValues=1 로 잠겨
+            // 다음 재접속부터는 그 값으로 고정(설계: overflow 확정 시 저장). non-overflow 면 계속 재추첨 가능.
+            BuildAndShowLeaderScore(type, emp, null, d.leaderCount, null, true);
         }
     }
 
@@ -1169,10 +1236,13 @@ public class DevelopmentManager : MonoBehaviour
 
                 RestoreTickIndices(tickIndices);
 
-                // 팀장점수 진행 중 종료였으면 → 팀장 선택 재오픈 대신 점수 재개 (최우선, 내부 BuildAndShow 가 StopTime)
+                // 팀장점수 진행 중 종료였으면 → 팀장 선택 재오픈 대신 점수 재개 (최우선).
+                // 재추첨 시 SaveProject 가 발생하므로 RandomEvent 스케줄/펜딩 복원이 끝난 뒤(RestoreIfNeeded)
+                // 실행해야 빈 스케줄로 덮어쓰지 않음 → 여기선 플래그만 세우고 지연 (PendingInvestmentUIRestore 와 동일 패턴)
                 if (IsLeaderScoreResumeActive)
                 {
-                    ResumeLeaderScore();
+                    PendingLeaderScoreResumeRestore = true;
+                    GameTimeManager.Instance.StopTime(); // GameSceneInitializer.StartTime() 상쇄
                 }
                 // 저장 시점에 투자 이벤트 UI가 표시 중이었으면 복원은 RestoreIfNeeded에서 처리
                 else if (pendingInvestmentUI)
@@ -1547,6 +1617,7 @@ public class DevelopmentManager : MonoBehaviour
         IsPendingLeaderSelect      = false;
         ClearLeaderScoreResume();
         PendingInvestmentUIRestore = false;
+        PendingLeaderScoreResumeRestore = false;
         _pendingDevelopmentComplete = false;
         _pendingCreativityGame = false;
         _pendingDebuggingAlert = false;

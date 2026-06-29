@@ -19,6 +19,11 @@ public class GameTimeManager : MonoBehaviour
     private bool _isRunning = false;
     private bool _isLoaded = false;
 
+    // 새해 결제 진행 단계 (영속): 0=없음 / 1=임금 알림 대기 / 2=연세 알림 대기.
+    // 알림 도중 종료해도 재접속 시 이어서 처리하기 위해 저장한다.
+    private int _pendingNewYearStage = 0;
+    public int PendingNewYearStage => _pendingNewYearStage;
+
     public bool IsRunning => _isRunning;
 
     public float secondsPerWeek = 6f;
@@ -93,6 +98,7 @@ public class GameTimeManager : MonoBehaviour
                     Year = SafeInt(row, "year", 2000);
                     Month = SafeInt(row, "month", 1);
                     Week = SafeInt(row, "week", 1);
+                    _pendingNewYearStage = SafeInt(row, "pendingNewYearStage", 0);
                     _rowInDate = SafeString(row, "inDate", "");
                     _isLoaded = true;
 
@@ -237,6 +243,7 @@ public class GameTimeManager : MonoBehaviour
         _elapsed = 0f;
         _stopCount = 0;
         _isRunning = false;
+        _pendingNewYearStage = 0;
         _isLoaded = true; // SaveGameTime 가드 통과를 위해 set
         SaveGameTime(onComplete);
     }
@@ -252,6 +259,7 @@ public class GameTimeManager : MonoBehaviour
         param.Add("year", Year);
         param.Add("month", Month);
         param.Add("week", Week);
+        param.Add("pendingNewYearStage", _pendingNewYearStage);
         param.Add("negotiationMonth",    SalaryNegotiationManager.Instance?.ScheduledMonth ?? 0);
         param.Add("negotiationWeek",     SalaryNegotiationManager.Instance?.ScheduledWeek  ?? 0);
         param.Add("negotiatedThisYear",  SalaryNegotiationManager.Instance?.NegotiatedThisYear ?? false);
@@ -331,12 +339,23 @@ public class GameTimeManager : MonoBehaviour
     }
     void PayAnnualSalary()
     {
+        // 미결제 단계 = 임금. 알림 도중 종료해도 재접속 시 재발동되도록 진행 연도와 함께 영속화.
+        _pendingNewYearStage = 1;
+        SaveGameTime();
+
         int totalSalary = EmployeeManager.Instance.GetTotalSalary();
         // 잔액 충분 여부 무관하게 새해 알림(지불하기) 먼저. 확인 후 자금 부족 분기.
         AlertUI.Instance.Show(
             $"새해가 밝았습니다!\n직원들에게 임금을 지급합니다.\n지급액: {totalSalary:N0}G",
             () => TryPaySalary(totalSalary)
         );
+    }
+
+    // 재접속 복원 — 새해 결제 알림 도중 종료했던 경우 단계에 맞춰 재발동.
+    public void ResumeNewYearPaymentOnReconnect()
+    {
+        if (_pendingNewYearStage == 1)      PayAnnualSalary();
+        else if (_pendingNewYearStage == 2) ProcessYearFeeDeduction();
     }
 
     // 잔액 충분 → 차감, 부족 → brokeRescue 시도 → 그래도 부족 → 대출 prompt
@@ -397,6 +416,7 @@ public class GameTimeManager : MonoBehaviour
         int goldAfter = MoneyManager.Instance.Gold - totalSalary;
 
         MoneyManager.Instance.ForceSpendGold(totalSalary);
+        _pendingNewYearStage = 2; // 임금 완료 → 연세 단계 (이중 차감 방지 위해 저장 전에 전환)
         SaveGameTime();
         ProjectSaveManager.Instance?.SaveProject();
 
@@ -428,6 +448,8 @@ public class GameTimeManager : MonoBehaviour
             {
                 int goldAfter = MoneyManager.Instance.Gold - yearFee;
                 MoneyManager.Instance.ForceSpendGold(yearFee, saveImmediately: false);
+
+                _pendingNewYearStage = 0; // 연세까지 완료 → 새해 결제 종료 (저장 전에 클리어)
 
                 // 4-set 저장 (SaveGameTime 이 SaveAllEmployees 자동 fan-out)
                 SaveGameTime();
