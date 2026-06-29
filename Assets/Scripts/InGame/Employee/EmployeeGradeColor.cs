@@ -12,7 +12,6 @@ public static class EmployeeGradeColor
     public static readonly Color Epic   = new Color(0.55f, 0.30f, 0.85f);
 
     static readonly Color GoldA = new Color(1.00f, 0.85f, 0.30f);
-    static readonly Color GoldB = new Color(0.85f, 0.65f, 0.10f);
 
     // grade 색을 img 에 적용. Unique/Legendary 는 host 에서 코루틴을 시작하고 핸들 반환(단색은 null).
     // 재적용 시 호출자가 이전 핸들을 StopCoroutine 으로 정지해야 함.
@@ -28,23 +27,11 @@ public static class EmployeeGradeColor
                 img.color = Color.HSVToRGB(0f, 0.55f, 1f);
                 return null;
             case EmployeeGrade.Unique:
-                if (canRun) return host.StartCoroutine(UniqueShimmer(img));
-                img.color = GoldA;
+                img.color = GoldA; // 금색 단색 (반짝임 제거)
                 return null;
             case EmployeeGrade.Rare: img.color = Rare; return null;
             case EmployeeGrade.Epic: img.color = Epic; return null;
             default:                 img.color = Normal; return null;
-        }
-    }
-
-    public static IEnumerator UniqueShimmer(Image img)
-    {
-        const float speed = 2.0f;
-        while (true)
-        {
-            float t = (Mathf.Sin(Time.unscaledTime * speed) + 1f) / 2f;
-            img.color = Color.Lerp(GoldB, GoldA, t);
-            yield return null;
         }
     }
 

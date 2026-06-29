@@ -259,13 +259,7 @@ public class DevelopmentManager : MonoBehaviour
     public void StartDevelopment()
     {
         GameTimeManager.Instance.SetProjectSpeed(ProjectSetupUI.SelectedScale);
-        float baseDuration = ProjectSetupUI.SelectedScale switch
-        {
-            ProjectScale.Small  => 80f,
-            ProjectScale.Medium => 100.8f,
-            ProjectScale.Large  => 124.8f,
-            _ => 80f
-        };
+        float baseDuration = 80f; // 전 규모 총 80초로 통일 (주수 16/24/32 차등은 secondsPerWeek가 담당)
 
         // 인원 수에 따른 개발 기간 조정 (추천 인원 대비 1명 차이 = 1주 증감)
         int recommended = ProjectData.GetRecommendedStaff(ProjectSetupUI.SelectedScale);
@@ -273,10 +267,10 @@ public class DevelopmentManager : MonoBehaviour
         int diff = actual - recommended; // 양수: 초과(기간 감소), 음수: 부족(기간 증가)
         float secondsPerWeek = ProjectSetupUI.SelectedScale switch
         {
-            ProjectScale.Small  => 5f,
-            ProjectScale.Medium => 4.2f,
-            ProjectScale.Large  => 3.9f,
-            _ => 5f
+            ProjectScale.Small  => 80f / 16f, // 5.0초/주
+            ProjectScale.Medium => 80f / 24f, // 3.33초/주
+            ProjectScale.Large  => 80f / 32f, // 2.5초/주
+            _ => 80f / 16f
         };
         developmentDuration = baseDuration - diff * secondsPerWeek;
         // 게으른 천재 +2주는 여기서 더하지 않고, 개발 시작(팀장 선택 직후)에 ExtendDevelopmentDuration 으로 적용
@@ -638,6 +632,7 @@ public class DevelopmentManager : MonoBehaviour
         CurrentStage = ProjectStage.BugFixing;
         OfficeManager.Instance?.SetAllWorking();
         OfficeManager.Instance?.StopDevelopmentPatrol();
+        GameTimeManager.Instance.SetDebuggingSpeed(); // 디버깅 구간 4초/주 고정
         GameTimeManager.Instance.StartTime();
 
         float initialBug = DevelopmentPanelUI.Instance.GetBug();
@@ -821,104 +816,266 @@ public class DevelopmentManager : MonoBehaviour
         EmployeeData jealousyTarget = jealousyCandidates.Count > 0
             ? jealousyCandidates[UnityEngine.Random.Range(0, jealousyCandidates.Count)] : null;
 
-        // 팀장 점수 = Effective 주스탯(만족도 배율 + 버프/디버프 스택 + 사내연애 포함) × 오타쿠 배율
-        int skill = type switch
+        int leaderCount = employee.consecutiveLeaderCount;
+        BuildAndShowLeaderScore(type, employee, jealousyTarget, leaderCount, null, true);
+    }
+
+    // 팀장 점수 산출(신규 추첨) 또는 저장값 재생 → LeaderScoreUI 표시.
+    // doSave=true 면 선택 시점 저장(돈/직원 항상, overflow 면 값까지 잠금). 복원 재생/재추첨은 doSave=false.
+    void BuildAndShowLeaderScore(LeaderType type, EmployeeData employee,
+                                 EmployeeData jealousyTarget, int leaderCount, LeaderScoreResume saved, bool doSave)
+    {
+        float[] fullRoundScores;
+        float[] roundScores;
+        float[] cumDsAfter;
+        float total;
+        int overflowRound;
+        float cutFactor;
+        int hunsuBonus;
+        LeaderType hunsuBonusTarget;
+
+        if (saved != null && saved.hasValues)
         {
-            LeaderType.Planner    => employee.EffectivePlanningSkill,
-            LeaderType.Programmer => employee.EffectiveDevelopSkill,
-            LeaderType.Artist     => employee.EffectiveArtSkill,
-            _ => 0
-        };
-        // 오타쿠 특성: 고정 장르 프로젝트의 팀장일 때 능력치 ×1.2 (팀장 점수에 반영)
-        skill = Mathf.RoundToInt(skill * CharacterTraitApplier.GetOtakuStatMultiplier(employee, ProjectSetupUI.SelectedGenre));
-
-        int n = CalcLeaderTickCount(skill);
-
-        float total = CalcLeaderScore(skill, n);
-
-        // 훈수쟁이: 개발 점수의 10% 를 기획/아트 중 랜덤 1곳에 추가.
-        // 게으른 천재 ×1.3 "이전" 의 base 개발 점수 기준 (훈수쟁이 먼저 → 게으른 천재 나중).
-        // 예: base 100 → 훈수 10(다른 파트) → 게으른 천재로 개발만 130.
-        int hunsuBonus = 0;
-        LeaderType hunsuBonusTarget = LeaderType.Planner;
-        if (type == LeaderType.Programmer && CharacterTraitApplier.IsHunsu(employee))
+            // overflow 확정본 — 저장된 값 그대로 재생 (재추첨 없음)
+            fullRoundScores  = (float[])saved.fullRoundScores.Clone();
+            roundScores      = (float[])saved.roundScores.Clone();
+            cumDsAfter       = (float[])saved.cumDsAfter.Clone();
+            total            = saved.total;
+            overflowRound    = saved.overflowRound;
+            cutFactor        = saved.cutFactor;
+            hunsuBonus       = saved.hunsuBonus;
+            hunsuBonusTarget = (LeaderType)saved.hunsuBonusTarget;
+        }
+        else
         {
-            hunsuBonus = Mathf.RoundToInt(total * CharacterTraitApplier.HUNSU_BONUS_RATIO);
-            hunsuBonusTarget = UnityEngine.Random.value < 0.5f ? LeaderType.Planner : LeaderType.Artist;
+            // 신규 추첨 (또는 non-overflow 재접속 재추첨)
+            // 팀장 점수 = Effective 주스탯(만족도·버프/디버프·사내연애 포함) × 오타쿠 배율
+            int skill = type switch
+            {
+                LeaderType.Planner    => employee.EffectivePlanningSkill,
+                LeaderType.Programmer => employee.EffectiveDevelopSkill,
+                LeaderType.Artist     => employee.EffectiveArtSkill,
+                _ => 0
+            };
+            skill = Mathf.RoundToInt(skill * CharacterTraitApplier.GetOtakuStatMultiplier(employee, ProjectSetupUI.SelectedGenre));
+
+            // 강화도(성수) 기반 단계 추첨 → 추천가중치 M
+            int stage = RollLeaderStage(employee.enhancementLevel);
+            float M = stage switch
+            {
+                1 => 1.35f,
+                2 => 1.53f,
+                3 => 1.6f,
+                4 => 1.73f,
+                _ => 1.35f
+            };
+
+            // K(능력치) = 0.8738 + 0.026409 × 주스탯^0.9081
+            float K = 0.8738f + 0.026409f * Mathf.Pow(skill, 0.9081f);
+            bool lazyGenius = type == LeaderType.Programmer && CharacterTraitApplier.HasLazyGeniusOwned();
+            if (lazyGenius)
+                K *= CharacterTraitApplier.LAZY_GENIUS_LEADER_BONUS;
+
+            // 4회차 ds / 회차 점수 시뮬레이션 (누적 ds 100 초과 시 0점 + 전 회차 차감 후 종료)
+            int[] dsMaxRoll = { 12, 14, 16, 14 };
+            fullRoundScores = new float[4];
+            roundScores     = new float[4];
+            cumDsAfter      = new float[4];
+            float cumDs = 0f;
+            overflowRound = -1;
+            cutFactor = 0f;
+            for (int r = 0; r < 4; r++)
+            {
+                int roll = UnityEngine.Random.Range(1, dsMaxRoll[r] + 1); // 1~상한 정수
+                float ds = 11f + roll * M;
+                cumDs += ds;
+                cumDsAfter[r] = cumDs;
+
+                if (cumDs > 100f)
+                {
+                    overflowRound = r;
+                    cutFactor = UnityEngine.Random.Range(0.10f, 0.20f);
+                    fullRoundScores[r] = 0f;
+                    roundScores[r] = 0f;
+                    for (int k = 0; k < r; k++)
+                        roundScores[k] = Mathf.Round(fullRoundScores[k] * (1f - cutFactor));
+                    break;
+                }
+
+                float score = Mathf.Round(K * Mathf.Pow(ds, 0.4f) * UnityEngine.Random.Range(0.97f, 1.03f));
+                fullRoundScores[r] = score;
+                roundScores[r] = score;
+            }
+
+            total = 0f;
+            for (int r = 0; r < 4; r++) total += roundScores[r];
+
+            // 훈수쟁이(개발팀장): 개발 점수의 10% 를 기획/아트 중 랜덤 1곳에 추가 (게으른 천재 ×1.3 이전 base 기준)
+            hunsuBonus = 0;
+            hunsuBonusTarget = LeaderType.Planner;
+            if (type == LeaderType.Programmer && CharacterTraitApplier.IsHunsu(employee))
+            {
+                float baseTotal = lazyGenius ? total / CharacterTraitApplier.LAZY_GENIUS_LEADER_BONUS : total;
+                hunsuBonus = Mathf.RoundToInt(baseTotal * CharacterTraitApplier.HUNSU_BONUS_RATIO);
+                hunsuBonusTarget = UnityEngine.Random.value < 0.5f ? LeaderType.Planner : LeaderType.Artist;
+            }
         }
 
-        // 게으른 천재 보유 시: 개발(프로그래머) 팀장 최종 점수 ×1.3 (훈수쟁이 보너스 계산 후, develop 에만)
-        if (type == LeaderType.Programmer && CharacterTraitApplier.HasLazyGeniusOwned())
-            total *= CharacterTraitApplier.LAZY_GENIUS_LEADER_BONUS;
         if (type == LeaderType.Programmer) _leaderDevelopBonusTotal  = total;
         if (type == LeaderType.Planner)    _leaderPlanningBonusTotal = total;
         if (type == LeaderType.Artist)     _leaderArtBonusTotal      = total;
-        int weightSum = n * (n + 1) / 2;
 
-        int[] weights = new int[n];
-        for (int i = 0; i < n; i++) weights[i] = i + 1;
-        for (int i = n - 1; i > 0; i--)
+        bool hasValues = overflowRound != -1; // overflow 면 값 잠금 저장, 아니면 직원만 저장(재추첨 허용)
+
+        // 선택 시점 진행 컨텍스트 — 직원/역할 항상, overflow 면 값까지
+        _leaderScoreResume = new LeaderScoreResume
         {
-            int j = UnityEngine.Random.Range(0, i + 1);
-            int tmp = weights[i]; weights[i] = weights[j]; weights[j] = tmp;
+            active           = true,
+            hasValues        = hasValues,
+            leaderType       = (int)type,
+            employeeId       = employee.id,
+            fullRoundScores  = hasValues ? (float[])fullRoundScores.Clone() : new float[4],
+            roundScores      = hasValues ? (float[])roundScores.Clone()     : new float[4],
+            cumDsAfter       = hasValues ? (float[])cumDsAfter.Clone()       : new float[4],
+            total            = hasValues ? total : 0f,
+            overflowRound    = hasValues ? overflowRound : -1,
+            cutFactor        = hasValues ? cutFactor : 0f,
+            hunsuBonus       = hasValues ? hunsuBonus : 0,
+            hunsuBonusTarget = (int)hunsuBonusTarget,
+            jealousyTargetId = jealousyTarget != null ? jealousyTarget.id : "",
+            leaderCount      = leaderCount
+        };
+
+        GameTimeManager.Instance.StopTime();
+
+        if (doSave)
+        {
+            // 기획 팀장은 이 시점 CurrentStage 가 None → SaveProject 스킵/isInProgress=false 가 되어 복원 불가. Developing 승격.
+            if (CurrentStage == ProjectStage.None) CurrentStage = ProjectStage.Developing;
+            MoneyManager.Instance.SaveMoney();
+            ProjectSaveManager.Instance.SaveProject();
+            GameTimeManager.Instance.SaveGameTime();
+            EmployeeManager.Instance.SaveAllEmployees();
         }
 
-        float[] scores = new float[n];
-        for (int i = 0; i < n; i++)
-            scores[i] = total * weights[i] / weightSum;
+        LeaderScoreUI.Instance.Show(employee, type, fullRoundScores, roundScores, cumDsAfter,
+                                    total, overflowRound, cutFactor, hunsuBonus, hunsuBonusTarget,
+                                    () => ContinueAfterLeaderScore(type, employee, jealousyTarget, leaderCount, total));
+    }
 
-        int leaderCount = employee.consecutiveLeaderCount;
-        // 기여도: 팀장점수(total)를 팀장 직원에게 누적
+    // 팀장점수 확정(또는 재접속 재개 후 확정) → 개발 진행으로 이어가는 공통 로직.
+    void ContinueAfterLeaderScore(LeaderType type, EmployeeData employee, EmployeeData jealousyTarget, int leaderCount, float total)
+    {
+        ClearLeaderScoreResume();
+        // 기여도 가산은 확정 시점 1회만 (재추첨/재접속 시 이중 가산 방지)
         AddEmployeeContribution(employee.id, total);
-        GameTimeManager.Instance.StopTime();
-        LeaderScoreUI.Instance.Show(employee, type, scores, leaderTickDelay, hunsuBonus, hunsuBonusTarget, () =>
+
+        void StartDeveloping()
         {
-            void StartDeveloping()
-            {
-                IsPendingLeaderSelect = false; // 저장 직전에 펜딩 해제 (재시작 시 재선택 방지)
-                _isRunning = true;
-                CurrentStage = ProjectStage.Developing;
-                GameTimeManager.Instance.ForceStartTime();
-                Debug.Log("팀장점수완료 저장");
+            IsPendingLeaderSelect = false; // 저장 직전에 펜딩 해제 (재시작 시 재선택 방지)
+            _isRunning = true;
+            CurrentStage = ProjectStage.Developing;
+            GameTimeManager.Instance.ForceStartTime();
+            Debug.Log("팀장점수완료 저장");
 
-                // 게으른 천재: 첫 팀장(기획) 선정 직후 1회 — 기간 +2주 / 캐릭터 감속 4주(연장의 2배)
-                // (기획 Open 콜백은 OnSelectLeader 가 _onComplete 를 호출 안 해 dead → 실제 개발 시작 경로인 여기로 이동)
-                if (type == LeaderType.Planner && CharacterTraitApplier.HasLazyGeniusOwned())
+            // 게으른 천재: 첫 팀장(기획) 선정 직후 1회 — 기간 +2주 / 캐릭터 감속 4주(연장의 2배)
+            if (type == LeaderType.Planner && CharacterTraitApplier.HasLazyGeniusOwned())
+            {
+                float spw = ProjectSetupUI.SelectedScale switch
                 {
-                    float spw = ProjectSetupUI.SelectedScale switch
-                    {
-                        ProjectScale.Small  => 5f,
-                        ProjectScale.Medium => 4.2f,
-                        ProjectScale.Large  => 3.9f,
-                        _ => 5f
-                    };
-                    float ext = CharacterTraitApplier.LAZY_GENIUS_EXTRA_WEEKS * spw;
-                    ExtendDevelopmentDuration(ext, ext * 2f);
-                    InfoUI.Instance?.Show("게으른 천재 특성 발동!");
-                }
-
-                MoneyManager.Instance.SaveMoney();
-                ProjectSaveManager.Instance.SaveProject();
-                GameTimeManager.Instance.SaveGameTime();
-                EmployeeManager.Instance.SaveAllEmployees();
-                GameTimeManager.Instance.ForceStartTime();
-                StartCoroutine(DevelopmentCoroutine());
+                    ProjectScale.Small  => 80f / 16f,
+                    ProjectScale.Medium => 80f / 24f,
+                    ProjectScale.Large  => 80f / 32f,
+                    _ => 80f / 16f
+                };
+                float ext = CharacterTraitApplier.LAZY_GENIUS_EXTRA_WEEKS * spw;
+                ExtendDevelopmentDuration(ext, ext * 2f);
+                InfoUI.Instance?.Show("게으른 천재 특성 발동!");
             }
 
-            void AfterBurnout()
-            {
-                if (jealousyTarget != null && UnityEngine.Random.value < 0.7f)
-                    RandomEvents_Condition.TriggerLeaderJealousyEvent(jealousyTarget, StartDeveloping);
-                else
-                    StartDeveloping();
-            }
+            MoneyManager.Instance.SaveMoney();
+            ProjectSaveManager.Instance.SaveProject();
+            GameTimeManager.Instance.SaveGameTime();
+            EmployeeManager.Instance.SaveAllEmployees();
+            GameTimeManager.Instance.ForceStartTime();
+            StartCoroutine(DevelopmentCoroutine());
+        }
 
-            // CEO 는 랜덤이벤트 자체 제외 — burnout 트리거 명시적 가드 (카운터가 안 늘어나 자연스럽게도 막히지만 안전망)
-            if (!employee.isCEO && leaderCount >= 3 && UnityEngine.Random.value < 0.5f)
-                RandomEvents_Condition.TriggerLeaderBurnoutEvent(employee, leaderCount, AfterBurnout);
+        void AfterBurnout()
+        {
+            if (jealousyTarget != null && UnityEngine.Random.value < 0.7f)
+                RandomEvents_Condition.TriggerLeaderJealousyEvent(jealousyTarget, StartDeveloping);
             else
-                AfterBurnout();
-        });
+                StartDeveloping();
+        }
+
+        // CEO 는 랜덤이벤트 자체 제외 — burnout 트리거 명시적 가드
+        if (!employee.isCEO && leaderCount >= 3 && UnityEngine.Random.value < 0.5f)
+            RandomEvents_Condition.TriggerLeaderBurnoutEvent(employee, leaderCount, AfterBurnout);
+        else
+            AfterBurnout();
+    }
+
+    // ── 팀장점수 진행 저장/복원 ─────────────────
+    [System.Serializable]
+    private class LeaderScoreResume
+    {
+        public bool active;
+        public bool hasValues;          // true=overflow 확정본(값 잠금) / false=직원만(재접속 시 재추첨)
+        public int leaderType;
+        public string employeeId = "";
+        public float[] fullRoundScores = new float[4];
+        public float[] roundScores = new float[4];
+        public float[] cumDsAfter = new float[4];
+        public float total;
+        public int overflowRound = -1;
+        public float cutFactor;
+        public int hunsuBonus;
+        public int hunsuBonusTarget;
+        public string jealousyTargetId = "";
+        public int leaderCount;
+    }
+    private LeaderScoreResume _leaderScoreResume = new LeaderScoreResume();
+
+    public bool IsLeaderScoreResumeActive => _leaderScoreResume != null && _leaderScoreResume.active;
+    public string GetLeaderScoreResumeJson()
+        => (_leaderScoreResume != null && _leaderScoreResume.active) ? JsonUtility.ToJson(_leaderScoreResume) : "";
+    public void RestoreLeaderScoreResumeJson(string json)
+    {
+        if (string.IsNullOrEmpty(json)) { _leaderScoreResume = new LeaderScoreResume(); return; }
+        try { _leaderScoreResume = JsonUtility.FromJson<LeaderScoreResume>(json) ?? new LeaderScoreResume(); }
+        catch { _leaderScoreResume = new LeaderScoreResume(); }
+    }
+    public void ClearLeaderScoreResume() { _leaderScoreResume = new LeaderScoreResume(); }
+
+    // 재접속 복원 — 같은 직원으로 1회차부터 재생. overflow 확정본이면 저장값 그대로(잠금), 아니면 재추첨.
+    public void ResumeLeaderScore()
+    {
+        LeaderSelectUI.Instance.entireLeaderPanel.gameObject.SetActive(true);
+        var d = _leaderScoreResume;
+        if (d == null || !d.active) return;
+
+        LeaderType type = (LeaderType)d.leaderType;
+        EmployeeData emp = FindEmployeeById(d.employeeId);
+        if (emp == null) { ClearLeaderScoreResume(); return; }
+
+        // 리더 필드 복원 (확정 전 종료라 CEO 등은 RestoreState 의 leaderId 조회로 비어있을 수 있음)
+        switch (type)
+        {
+            case LeaderType.Planner:    plannerLeader = emp;    break;
+            case LeaderType.Programmer: programmerLeader = emp; break;
+            case LeaderType.Artist:     artistLeader = emp;     break;
+        }
+
+        if (d.hasValues)
+        {
+            EmployeeData jt = FindEmployeeById(d.jealousyTargetId);
+            BuildAndShowLeaderScore(type, emp, jt, d.leaderCount, d, false);    // 저장값 재생(잠금)
+        }
+        else
+        {
+            BuildAndShowLeaderScore(type, emp, null, d.leaderCount, null, false); // 재추첨
+        }
     }
 
     public void RestoreState(
@@ -934,22 +1091,16 @@ public class DevelopmentManager : MonoBehaviour
         bool pendingLeaderSelect = false, bool pendingInvestmentUI = false,
         bool pendingCreativityGame = false, bool pendingDebuggingAlert = false)
     {
-        float baseDuration = ProjectSetupUI.SelectedScale switch
-        {
-            ProjectScale.Small  => 80f,
-            ProjectScale.Medium => 100.8f,
-            ProjectScale.Large  => 124.8f,
-            _ => 80f
-        };
+        float baseDuration = 80f; // 전 규모 총 80초로 통일 (주수 16/24/32 차등은 secondsPerWeek가 담당)
         int recommended = ProjectData.GetRecommendedStaff(ProjectSetupUI.SelectedScale);
         int actual = EmployeeManager.Instance.ownedEmployees.Count;
         int diff = actual - recommended;
         float secondsPerWeek = ProjectSetupUI.SelectedScale switch
         {
-            ProjectScale.Small  => 5f,
-            ProjectScale.Medium => 4.2f,
-            ProjectScale.Large  => 3.9f,
-            _ => 5f
+            ProjectScale.Small  => 80f / 16f, // 5.0초/주
+            ProjectScale.Medium => 80f / 24f, // 3.33초/주
+            ProjectScale.Large  => 80f / 32f, // 2.5초/주
+            _ => 80f / 16f
         };
         // 게으른 천재 +2주는 savedDuration 에 이미 반영돼 복원됨(ExtendDevelopmentDuration 시점에 baked). 캐릭터 속도 감소도 networkSlowEndElapsed 로 복원.
         developmentDuration = savedDuration > 0f ? savedDuration : baseDuration - diff * secondsPerWeek;
@@ -1018,8 +1169,13 @@ public class DevelopmentManager : MonoBehaviour
 
                 RestoreTickIndices(tickIndices);
 
+                // 팀장점수 진행 중 종료였으면 → 팀장 선택 재오픈 대신 점수 재개 (최우선, 내부 BuildAndShow 가 StopTime)
+                if (IsLeaderScoreResumeActive)
+                {
+                    ResumeLeaderScore();
+                }
                 // 저장 시점에 투자 이벤트 UI가 표시 중이었으면 복원은 RestoreIfNeeded에서 처리
-                if (pendingInvestmentUI)
+                else if (pendingInvestmentUI)
                 {
                     PendingInvestmentUIRestore = true;
                     GameTimeManager.Instance.StopTime(); // GameSceneInitializer.StartTime() 상쇄
@@ -1100,6 +1256,31 @@ public class DevelopmentManager : MonoBehaviour
         float t = Mathf.Clamp01((_elapsed - _progressOffsetElapsedAtEvent) / _progressOffsetExtension);
         float offset = _progressVisualOffset * (1f - t);
         return actual + offset;
+    }
+
+    // 강화도(성수, 0~25) → 팀장 단계(1~4) 확률 추첨. 인접 두 단계 사이에서만 분포.
+    int RollLeaderStage(int enhanceLevel)
+    {
+        int lv = Mathf.Clamp(enhanceLevel, 0, 25);
+        float r = UnityEngine.Random.value * 100f;
+        switch (lv)
+        {
+            case 9:  return r < 90f ? 1 : 2;
+            case 10: return r < 80f ? 1 : 2;
+            case 11: return r < 20f ? 1 : 2;
+            case 12: return r < 10f ? 1 : 2;
+            case 13: return r < 90f ? 2 : 3;
+            case 14: return r < 80f ? 2 : 3;
+            case 15: return r < 20f ? 2 : 3;
+            case 16: return r < 10f ? 2 : 3;
+            case 18: return r < 90f ? 3 : 4;
+            case 19: return r < 80f ? 3 : 4;
+            case 20: return r < 20f ? 3 : 4;
+            case 21: return r < 10f ? 3 : 4;
+        }
+        if (lv <= 8)  return 1;
+        if (lv == 17) return 3;
+        return 4; // 22~25
     }
 
     int CalcLeaderTickCount(int skill)
@@ -1364,6 +1545,7 @@ public class DevelopmentManager : MonoBehaviour
         _pendingLeaderScore25      = false;
         _pendingLeaderScore75      = false;
         IsPendingLeaderSelect      = false;
+        ClearLeaderScoreResume();
         PendingInvestmentUIRestore = false;
         _pendingDevelopmentComplete = false;
         _pendingCreativityGame = false;

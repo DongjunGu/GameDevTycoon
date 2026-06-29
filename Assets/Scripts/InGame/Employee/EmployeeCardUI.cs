@@ -250,7 +250,7 @@ public class EmployeeCardUI : MonoBehaviour
         StopAllCoroutines();
 
         if (grade == EmployeeGrade.Legendary) { StartCoroutine(LegendaryShimmer()); return; }
-        if (grade == EmployeeGrade.Unique)    { StartCoroutine(UniqueShimmer());    return; }
+        if (grade == EmployeeGrade.Unique)    { gradePanel.color = new Color(1f, 0.85f, 0.30f); return; }
 
         gradePanel.color = grade switch
         {
@@ -260,18 +260,6 @@ public class EmployeeCardUI : MonoBehaviour
         };
     }
 
-
-    System.Collections.IEnumerator UniqueShimmer()
-    {
-        Color goldA = new Color(1.0f, 0.85f, 0.30f);
-        Color goldB = new Color(0.85f, 0.65f, 0.10f);
-        while (true)
-        {
-            float t = (Mathf.Sin(Time.time * 2.0f) + 1f) / 2f;
-            gradePanel.color = Color.Lerp(goldB, goldA, t);
-            yield return null;
-        }
-    }
 
     System.Collections.IEnumerator LegendaryShimmer()
     {

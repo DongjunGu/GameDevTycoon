@@ -78,6 +78,7 @@ public class ProjectSaveManager : MonoBehaviour
     private bool   _loadedPendingDebuggingAlert;
     private string _loadedUsedGameUpgrades = "";
     private string _loadedContributionJson = "";
+    private string _loadedLeaderScoreResumeJson = "";
 
     private string _loadedProjectName = "프로젝트명";
     public string GetLoadedProjectName() => _loadedProjectName;
@@ -163,6 +164,7 @@ public class ProjectSaveManager : MonoBehaviour
         param.Add("pendingDebuggingAlert", dm.IsPendingDebuggingAlert);
         param.Add("usedGameUpgrades", dm.GetUsedGameUpgradesString());
         param.Add("contributionJson", dm.GetContributionJson());
+        param.Add("leaderScoreResumeJson", dm.GetLeaderScoreResumeJson());
 
         if (!string.IsNullOrEmpty(_rowInDate))
         {
@@ -301,6 +303,7 @@ public class ProjectSaveManager : MonoBehaviour
             _loadedPendingDebuggingAlert         = SafeBool(row, "pendingDebuggingAlert", false);
             _loadedUsedGameUpgrades              = SafeString(row, "usedGameUpgrades", "");
             _loadedContributionJson             = SafeString(row, "contributionJson", "");
+            _loadedLeaderScoreResumeJson        = SafeString(row, "leaderScoreResumeJson", "");
 
             Debug.Log($"프로젝트 로드 완료: stage={_loadedStage} elapsed={_loadedElapsed:F1}");
             onComplete?.Invoke();
@@ -318,6 +321,9 @@ public class ProjectSaveManager : MonoBehaviour
         ProjectSetupUI.SelectedPlatform = _loadedPlatform;
         ProjectSetupUI.SelectedGenrePopularity = _loadedGenrePopularity;
         ProjectSetupUI.SelectedGenreFatigue = _loadedGenreFatigue;
+
+        // 팀장점수 진행 재개 데이터 — RestoreState 가 leaderScoreResume 분기를 판단할 수 있게 먼저 주입
+        DevelopmentManager.Instance.RestoreLeaderScoreResumeJson(_loadedLeaderScoreResumeJson);
 
         // ── RestoreState 먼저 (SetValues 호출됨) ──
         DevelopmentManager.Instance.RestoreState(

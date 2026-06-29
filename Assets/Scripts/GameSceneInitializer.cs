@@ -28,8 +28,10 @@ public class GameSceneInitializer : MonoBehaviour
         OfficeManager.Instance?.RestoreEmployees();
 
         var stage = DevelopmentManager.Instance.CurrentStage;
-        if (stage == ProjectStage.Developing || stage == ProjectStage.BugFixing)
+        if (stage == ProjectStage.Developing)
             GameTimeManager.Instance.SetProjectSpeed(ProjectSetupUI.SelectedScale);
+        else if (stage == ProjectStage.BugFixing)
+            GameTimeManager.Instance.SetDebuggingSpeed(); // 디버깅 복원 시 4초/주
 
         // 재접속 복원 — 면접 완료(주차 0)된 채로 종료했던 채용은 후보 리스트를 다시 공개.
         // (데이터 로드는 LoadingScene 에서 끝나고, HiringUI 는 GameScene 에 있으므로 여기서 트리거)

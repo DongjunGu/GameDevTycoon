@@ -384,8 +384,8 @@ public static class RandomEvents_Condition_Choice
     static float GetSecondsPerWeek() =>
         ProjectSetupUI.SelectedScale switch
         {
-            ProjectScale.Small  => 5f,
-            ProjectScale.Medium => 4.2f,
-            _                   => 3.9f
+            ProjectScale.Small  => 80f / 16f, // 5.0초/주
+            ProjectScale.Medium => 80f / 24f, // 3.33초/주
+            _                   => 80f / 32f  // 2.5초/주 (Large)
         };
 }

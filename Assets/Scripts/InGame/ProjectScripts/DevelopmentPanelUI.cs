@@ -141,11 +141,7 @@ public class DevelopmentPanelUI : MonoBehaviour
         _creativityReveal = 0f;
         _tickAccumulator = 0f;
 
-        planningText.text = "";
-        developText.text = "";
-        artText.text = "";
-        bugText.text = "";
-        creativityText.text = "";
+        UpdateUI(); // "기획: 0" 등 0으로 즉시 표시 (빈 문자열 대신)
     }
 
     // 개발틱 산출 — 실제값(저장/로직)만 즉시 증가. 화면 표시값은 개발틱 팝업이 패널로 빨려든 뒤
@@ -207,7 +203,9 @@ public class DevelopmentPanelUI : MonoBehaviour
         if (defaultText == null) return;
         var dm = DevelopmentManager.Instance;
         bool developing = dm != null
-            && (dm.CurrentStage == ProjectStage.Developing || dm.CurrentStage == ProjectStage.BugFixing);
+            && (dm.CurrentStage == ProjectStage.Developing
+                || dm.CurrentStage == ProjectStage.BugFixing
+                || dm.IsPendingLeaderSelect); // 팀장 선택~점수 표시 구간에도 스탯(0부터) 노출
         if (defaultText.activeSelf == developing) defaultText.SetActive(!developing);
         SetStatTextsVisible(developing); // 매 프레임 동기화 (초기 상태 어긋남 방지, enabled set 은 무비용)
     }

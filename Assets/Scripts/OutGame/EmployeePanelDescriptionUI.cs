@@ -139,8 +139,7 @@ public class EmployeePanelDescriptionUI : MonoBehaviour
         }
         if (grade == EmployeeGrade.Unique)
         {
-            if (isActiveAndEnabled) _bgShimmerCo = StartCoroutine(BgUniqueShimmer());
-            else containerBG.color = BgUnique;
+            containerBG.color = BgUnique; // 금색 단색 (반짝임 제거)
             return;
         }
 
@@ -151,19 +150,6 @@ public class EmployeePanelDescriptionUI : MonoBehaviour
             EmployeeGrade.Epic   => BgEpic,
             _                    => BgNormal
         };
-    }
-
-    IEnumerator BgUniqueShimmer()
-    {
-        Color goldA = new Color(1.0f, 0.85f, 0.30f);
-        Color goldB = new Color(0.85f, 0.65f, 0.10f);
-        float speed = 2.0f;
-        while (true)
-        {
-            float t = (Mathf.Sin(Time.time * speed) + 1f) / 2f;
-            containerBG.color = Color.Lerp(goldB, goldA, t);
-            yield return null;
-        }
     }
 
     IEnumerator BgLegendaryShimmer()

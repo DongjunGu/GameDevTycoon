@@ -8,8 +8,8 @@ public class LeaderSelectUI : MonoBehaviour
     public static LeaderSelectUI Instance { get; private set; }
 
     [Header("UI")]
+    public Transform entireLeaderPanel;
     public Transform leaderPanel;
-    public GameObject leaderscorePanel;
     public TextMeshProUGUI titleText;
     public Transform slotParent;
 
@@ -100,15 +100,16 @@ public class LeaderSelectUI : MonoBehaviour
             slot.GetComponent<LeaderSlotUI>().Setup(employee, this);
         }
 
+        entireLeaderPanel.gameObject.SetActive(true);
         leaderPanel.gameObject.SetActive(true);
         ModalGate.I.Register(this);
     }
 
     public void OnSelectLeader(EmployeeData employee)
     {
-        DevelopmentManager.Instance.SetLeader(_currentType, employee);
         leaderPanel.gameObject.SetActive(false);
         ModalGate.I.Unregister(this);
-        leaderscorePanel.SetActive(true);
+        // 팀장점수 패널 활성화/표시는 SetLeader 내부의 LeaderScoreUI.Show 가 단독 담당
+        DevelopmentManager.Instance.SetLeader(_currentType, employee);
     }
 }

@@ -77,7 +77,7 @@ public class TrainingSlotUI : MonoBehaviour
 
         if (grade == EmployeeGrade.Unique)
         {
-            StartCoroutine(UniqueShimmer());
+            bgImage.color = new Color(1f, 0.85f, 0.30f);
             return;
         }
 
@@ -88,21 +88,6 @@ public class TrainingSlotUI : MonoBehaviour
             EmployeeGrade.Epic => ColorEpic,
             _ => ColorNormal
         };
-    }
-
-    System.Collections.IEnumerator UniqueShimmer()
-    {
-        // 황금색 두 가지를 오가며 반짝임
-        Color goldA = new Color(1.0f, 0.85f, 0.30f); // 밝은 황금
-        Color goldB = new Color(0.85f, 0.65f, 0.10f); // 어두운 황금
-        float speed = 2.0f;
-
-        while (true)
-        {
-            float t = (Mathf.Sin(Time.time * speed) + 1f) / 2f;
-            bgImage.color = Color.Lerp(goldB, goldA, t);
-            yield return null;
-        }
     }
 
     System.Collections.IEnumerator LegendaryShimmer()

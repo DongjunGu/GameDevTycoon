@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: e72f2bf3b74860d4b883223ca53e7357
+guid: 0050bd6f4d619324ca4a9f3d3435fad4
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: -2798781703850369718
-    second: testsprite_0
+      213: 2200151772226462163
+    second: Job_Art_white 1_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -46,7 +46,7 @@ TextureImporter:
   nPOTScale: 0
   lightmap: 0
   compressionQuality: 50
-  spriteMode: 2
+  spriteMode: 1
   spriteExtrude: 1
   spriteMeshType: 1
   alignment: 0
@@ -122,17 +122,30 @@ TextureImporter:
     ignorePlatformSupport: 0
     androidETC2FallbackOverride: 0
     forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: iOS
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
   spriteSheet:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: testsprite_0
+      name: Job_Art_white 1_0
       rect:
         serializedVersion: 2
-        x: 138
-        y: 26
-        width: 317
-        height: 368
+        x: 0
+        y: 0
+        width: 30
+        height: 30
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -141,8 +154,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: a4dd2227edab829d0800000000000000
-      internalID: -2798781703850369718
+      spriteID: 3d121834162888e10800000000000000
+      internalID: 2200151772226462163
       vertices: []
       indices: 
       edges: []
@@ -151,7 +164,7 @@ TextureImporter:
     customData: 
     physicsShape: []
     bones: []
-    spriteID: 
+    spriteID: 5e97eb03825dee720800000000000000
     internalID: 0
     vertices: []
     indices: 
@@ -161,7 +174,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      testsprite_0: -2798781703850369718
+      Job_Art_white 1_0: 2200151772226462163
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 
