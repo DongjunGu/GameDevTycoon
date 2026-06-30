@@ -370,6 +370,7 @@ public class ItemManager : MonoBehaviour
     {
         foreach (var kv in ItemChartLoader.Cache)
         {
+            if (kv.Value.grade == 1) continue;
             _inventory.TryGetValue(kv.Key, out int cur);
             _inventory[kv.Key] = cur + countEach;
         }

@@ -71,6 +71,8 @@ public class EmployeeListUI : MonoBehaviour
     public Button fireButton;
     public Button itemButton;
     public Button closeButton;
+    [Tooltip("아이템 사용 모드 전용 버튼 — 평소 비활성, OpenForUseItem 시에만 표시")]
+    public Button useItemButton;
 
     [Header("Detail Slide (InfoPanel ↔ TrainingPanel)")]
     [Tooltip("DetailPanel 안의 InfoPanel (강화 시 오른쪽으로 슬라이드 퇴장)")]
@@ -92,6 +94,11 @@ public class EmployeeListUI : MonoBehaviour
     private readonly List<EmployeeData> _emps = new();
     private bool _snapHooked;
 
+    // 아이템 사용 모드
+    private bool         _useItemMode;
+    private ItemChartRow _useItemRow;
+    private EmployeeRole? _useItemRoleFilter;
+
     GameObject Root => panelRoot != null ? panelRoot : gameObject;
 
     void Awake()
@@ -99,12 +106,15 @@ public class EmployeeListUI : MonoBehaviour
         if (Instance != null && Instance != this) { Destroy(gameObject); return; }
         Instance = this;
 
-        if (enhanceButton != null) { enhanceButton.onClick.RemoveListener(OnClickEnhance); enhanceButton.onClick.AddListener(OnClickEnhance); }
-        if (fireButton    != null) { fireButton.onClick.RemoveListener(OnClickFire);       fireButton.onClick.AddListener(OnClickFire); }
-        if (itemButton    != null) { itemButton.onClick.RemoveListener(OnClickItem);       itemButton.onClick.AddListener(OnClickItem); }
-        if (closeButton   != null) { closeButton.onClick.RemoveListener(OnClickClose);     closeButton.onClick.AddListener(OnClickClose); }
-        if (backButton    != null) { backButton.onClick.RemoveListener(OnClickBack);       backButton.onClick.AddListener(OnClickBack); }
+        if (enhanceButton  != null) { enhanceButton.onClick.RemoveListener(OnClickEnhance);    enhanceButton.onClick.AddListener(OnClickEnhance); }
+        if (fireButton     != null) { fireButton.onClick.RemoveListener(OnClickFire);           fireButton.onClick.AddListener(OnClickFire); }
+        if (itemButton     != null) { itemButton.onClick.RemoveListener(OnClickItem);           itemButton.onClick.AddListener(OnClickItem); }
+        if (closeButton    != null) { closeButton.onClick.RemoveListener(OnClickClose);         closeButton.onClick.AddListener(OnClickClose); }
+        if (backButton     != null) { backButton.onClick.RemoveListener(OnClickBack);           backButton.onClick.AddListener(OnClickBack); }
+        if (useItemButton  != null) { useItemButton.onClick.RemoveListener(OnClickUseItem);     useItemButton.onClick.AddListener(OnClickUseItem); }
         if (trainingMenuButton != null) { trainingMenuButton.onClick.RemoveListener(OpenListForEnhance); trainingMenuButton.onClick.AddListener(OpenListForEnhance); }
+
+        if (useItemButton != null) useItemButton.gameObject.SetActive(false);
     }
 
     // 메뉴 직원관리 버튼 OnClick 에 연결
@@ -119,6 +129,7 @@ public class EmployeeListUI : MonoBehaviour
 
     public void OnClickClose()
     {
+        if (_useItemMode) { ExitUseItemMode(); return; }
         GameTimeManager.Instance?.StartTime();
         Root.SetActive(false);
     }
@@ -255,10 +266,66 @@ public class EmployeeListUI : MonoBehaviour
     // 파견중 직원은 선택은 되지만 강화/해고/아이템 버튼 비활성(클릭 불가). 선택 없으면 셋 다 비활성.
     void RefreshButtons(EmployeeData emp)
     {
+        if (_useItemMode)
+        {
+            if (useItemButton != null)
+                useItemButton.interactable = emp != null && !IsDispatched(emp.id) && IsRoleMatchForItem(emp);
+            return;
+        }
         bool ok = emp != null && !IsDispatched(emp.id);
         if (enhanceButton != null) enhanceButton.interactable = ok;
         if (fireButton    != null) fireButton.interactable    = ok;
         if (itemButton    != null) itemButton.interactable    = ok;
+    }
+
+    bool IsRoleMatchForItem(EmployeeData emp)
+    {
+        if (_useItemRoleFilter == null) return true;
+        return emp != null && emp.role == _useItemRoleFilter.Value;
+    }
+
+    // 아이템 사용 모드 진입 — ItemDetailUI 에서 사용하기 클릭 시 호출
+    public void OpenForUseItem(ItemChartRow row, EmployeeRole? roleFilter)
+    {
+        _useItemRow        = row;
+        _useItemRoleFilter = roleFilter;
+        _useItemMode       = true;
+        ApplyUseItemModeVisual(true);
+        _selectedId = "";
+        Root.SetActive(true);
+        ResetSlide();
+        BuildList();
+    }
+
+    void ApplyUseItemModeVisual(bool on)
+    {
+        if (enhanceButton != null) enhanceButton.gameObject.SetActive(!on);
+        if (fireButton    != null) fireButton.gameObject.SetActive(!on);
+        if (itemButton    != null) itemButton.gameObject.SetActive(!on);
+        if (useItemButton != null) useItemButton.gameObject.SetActive(on);
+    }
+
+    public void OnClickUseItem()
+    {
+        var emp = Selected();
+        if (emp == null || _useItemRow == null) return;
+
+        if (ItemManager.Instance.UseItem(_useItemRow.itemId, emp))
+        {
+            ItemDetailUI.Instance?.HideDetail();
+            ItemPanelUI.Instance?.Refresh();
+        }
+
+        ExitUseItemMode();
+    }
+
+    void ExitUseItemMode()
+    {
+        _useItemMode       = false;
+        _useItemRow        = null;
+        _useItemRoleFilter = null;
+        ApplyUseItemModeVisual(false);
+        Root.SetActive(false); // StartTime 없이 닫기 (ItemPanel 이 뒤에서 시간정지 유지)
     }
 
     // 선택 직원이 아직 보유 중이면 상세 재표시, 아니면(해고 등) EmptyPanel 로.

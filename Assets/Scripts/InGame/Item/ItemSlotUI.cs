@@ -5,6 +5,8 @@ using TMPro;
 public class ItemSlotUI : MonoBehaviour
 {
     public Image itemImage;
+    public Image frameImage;
+    public ItemGradeSet gradeSet;
     public TextMeshProUGUI nameText;
     public TextMeshProUGUI countText;
     public Button slotButton;
@@ -20,6 +22,8 @@ public class ItemSlotUI : MonoBehaviour
         var sprite = Resources.Load<Sprite>($"Items/{row.imageId}");
         if (sprite != null && itemImage != null)
             itemImage.sprite = sprite;
+
+        ItemGradeSet.Apply(frameImage, gradeSet, row.grade);
 
         slotButton.onClick.RemoveAllListeners();
         slotButton.onClick.AddListener(() => ItemDetailUI.Instance.Show(_row));

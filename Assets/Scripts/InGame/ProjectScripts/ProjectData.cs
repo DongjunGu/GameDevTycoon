@@ -29,17 +29,17 @@ public class ProjectData
 
     public string ScaleToString() => scale switch
     {
-        ProjectScale.Small  => "소규모(4개월)",
-        ProjectScale.Medium => "중형(6개월)",
-        ProjectScale.Large  => "대규모(8개월)",
+        ProjectScale.Small  => "소규모",
+        ProjectScale.Medium => "중형",
+        ProjectScale.Large  => "대형",
         _ => ""
     };
 
     public string ScaleInfoString() => scale switch
     {
-        ProjectScale.Small  => $"소규모(4개월)\n추천 인원: {GetRecommendedStaff(ProjectScale.Small)}명  /  개발금: {GetCost(ProjectScale.Small):N0}G",
-        ProjectScale.Medium => $"중형(6개월)\n추천 인원: {GetRecommendedStaff(ProjectScale.Medium)}명  /  개발금: {GetCost(ProjectScale.Medium):N0}G",
-        ProjectScale.Large  => $"대규모(8개월)\n추천 인원: {GetRecommendedStaff(ProjectScale.Large)}명  /  개발금: {GetCost(ProjectScale.Large):N0}G",
+        ProjectScale.Small  => $"소규모\n추천 인원: {GetRecommendedStaff(ProjectScale.Small)}명  /  개발금: {GetCost(ProjectScale.Small):N0}G",
+        ProjectScale.Medium => $"중형\n추천 인원: {GetRecommendedStaff(ProjectScale.Medium)}명  /  개발금: {GetCost(ProjectScale.Medium):N0}G",
+        ProjectScale.Large  => $"대형\n추천 인원: {GetRecommendedStaff(ProjectScale.Large)}명  /  개발금: {GetCost(ProjectScale.Large):N0}G",
         _ => ""
     };
 
@@ -63,7 +63,7 @@ public class ProjectData
         ProjectPlatform.Mobile   => "모바일",
         ProjectPlatform.PC       => "PC",
         ProjectPlatform.Nintendo => "닌텐도",
-        ProjectPlatform.Console  => "콘솔",
+        ProjectPlatform.Console  => "플레이스테이션",
         _ => ""
     };
 }

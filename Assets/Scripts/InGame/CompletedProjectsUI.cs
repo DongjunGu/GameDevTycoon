@@ -109,9 +109,9 @@ public class CompletedProjectsUI : MonoBehaviour
 
     string ScaleToString(ProjectScale scale) => scale switch
     {
-        ProjectScale.Small => "소규모(1인개발)",
-        ProjectScale.Medium => "중형(팀)",
-        ProjectScale.Large => "대규모(AAA)",
+        ProjectScale.Small => "소규모",
+        ProjectScale.Medium => "중형",
+        ProjectScale.Large => "대형",
         _ => ""
     };
 
@@ -134,7 +134,7 @@ public class CompletedProjectsUI : MonoBehaviour
         ProjectPlatform.Mobile => "모바일",
         ProjectPlatform.PC => "PC",
         ProjectPlatform.Nintendo => "닌텐도",
-        ProjectPlatform.Console => "콘솔",
+        ProjectPlatform.Console => "플레이스테이션",
         _ => ""
     };
 }
