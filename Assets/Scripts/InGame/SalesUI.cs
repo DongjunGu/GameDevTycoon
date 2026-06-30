@@ -108,7 +108,13 @@ public class SalesUI : MonoBehaviour
         _cachedArt = art;
         _cachedCreativity = creativity;
         _cachedBug = bug;
-        GameTimeManager.Instance.ForceStartTime();
+        // 복원 시점에 시간을 멈춘 차단 모달(AlertUI·새해 결제·랜덤이벤트 등 — 모두 ModalGate 에 Register)이
+        // 떠 있으면 시간을 강제로 켜지 않는다. ForceStartTime 은 stopCount=0 으로 모든 정지를 무력화하므로
+        // "알림 떠있는데 판매 그래프가 진행되는" 버그가 생긴다. (SalesUI 복원은 RestoreNextFrame 으로 1프레임 지연 →
+        // 그 시점 ModalGate/시간정지 상태가 활성 모달을 정확히 반영). 모달이 닫혀 시간이 재개되면 판매도 이어서 진행.
+        // 막는 모달이 없을 때만(잔여 복원 정지 해소 목적) 강제 재개.
+        if (GameTimeManager.Instance != null && !ModalGate.I.IsBlocked)
+            GameTimeManager.Instance.ForceStartTime();
         ShowInternal(qualityScore, scale, completedWeeks, savedTotalRevenue, savedRevenuePerPeriod, applyCompletion);
     }
     void ShowInternal(float qualityScore, ProjectScale scale, int completedWeeks = 0, int savedTotalRevenue = 0, int[] savedRevenuePerPeriod = null, bool applyCompletion = true)
@@ -169,11 +175,12 @@ public class SalesUI : MonoBehaviour
         foreach (Transform child in chartArea)
             Destroy(child.gameObject);
 
+        // 규모배율 1/2/4/8 — 대작은 직원 7명 이상이면 8, 그 외(6명 등)는 4
         int scaleMultiplier = scale switch
         {
             ProjectScale.Small  => 1,
-            ProjectScale.Medium => 3,
-            ProjectScale.Large  => 5,
+            ProjectScale.Medium => 2,
+            ProjectScale.Large  => (EmployeeManager.Instance != null && EmployeeManager.Instance.ownedEmployees.Count >= 7) ? 8 : 4,
             _ => 1
         };
         float[] distribution = CalcDistribution(scale);
@@ -243,16 +250,27 @@ public class SalesUI : MonoBehaviour
                 // rand 는 별개의 자연스러운 변동성이라 곱셈 유지.
                 float bonusSum         = (youtuberBonus - 1f) + (craftsmanBonus - 1f) + perfectBonus + otakuSalesBonus + godBlessingBonus + scaleSaleBonus + perfectTraitBonus;
                 float totalMultiplier  = Mathf.Max(0f, 1f + bonusSum);
+                // 매출 = 규모배율 × 332.3 × (원천/100)^2.177 × Random(0.9~1.1)  (원천 = 최종 변환 점수 qualityScore)
                 totalRevenue = Mathf.RoundToInt(
-                    (5000f + 200f * scaleMultiplier * Mathf.Pow(qualityScore / 100f, 2f)) * rand * totalMultiplier
+                    scaleMultiplier * 332.3f * Mathf.Pow(Mathf.Max(0f, qualityScore) / 100f, 2.177f) * rand * totalMultiplier
                 );
                 if (RandomEventManager.Instance != null)
                     RandomEventManager.Instance.YoutuberSalesBonus = 1.0f; // 적용 후 초기화
             }
 
+            // 각 주차 분배에 ±5% 변동을 주되 합이 100% 되도록 재정규화 (총 매출은 유지)
+            float[] jittered = new float[barCount];
+            float jitterSum = 0f;
+            for (int i = 0; i < barCount; i++)
+            {
+                jittered[i] = distribution[i] * UnityEngine.Random.Range(0.95f, 1.05f);
+                jitterSum += jittered[i];
+            }
+            if (jitterSum <= 0f) jitterSum = 1f;
+
             revenuePerPeriod = new int[barCount];
             for (int i = 0; i < barCount; i++)
-                revenuePerPeriod[i] = Mathf.RoundToInt(totalRevenue * distribution[i]);
+                revenuePerPeriod[i] = Mathf.RoundToInt(totalRevenue * (jittered[i] / jitterSum));
 
             // 테크트리 '역주행(money_comeback)' — 첫 호출 시점의 해금 상태로 한 번 결정. 배열에 박혀 저장됨.
             bool comebackUnlocked = TechTreeManager.Instance != null && TechTreeManager.Instance.IsUnlocked("money_comeback");
@@ -443,23 +461,26 @@ public class SalesUI : MonoBehaviour
 
     int CalcRank(int weeklyRevenue)
     {
-        if (weeklyRevenue >= 120000) return 1;
-        if (weeklyRevenue >= 85000)  return 2;
-        if (weeklyRevenue >= 70000)  return 3;
-        if (weeklyRevenue >= 55000)  return 4;
-        if (weeklyRevenue >= 45000)  return 5;
-        if (weeklyRevenue >= 35000)  return 6;
-        if (weeklyRevenue >= 28000)  return 7;
-        if (weeklyRevenue >= 20000)  return 8;
-        if (weeklyRevenue >= 15000)  return 9;
-        if (weeklyRevenue >= 10000)  return 10;
+        if (weeklyRevenue >= 430000) return 1;
+        if (weeklyRevenue >= 380000) return 2;
+        if (weeklyRevenue >= 320000) return 3;
+        if (weeklyRevenue >= 270000) return 4;
+        if (weeklyRevenue >= 225000) return 5;
+        if (weeklyRevenue >= 175000) return 6;
+        if (weeklyRevenue >= 130000) return 7;
+        if (weeklyRevenue >= 95000)  return 8;
+        if (weeklyRevenue >= 70000)  return 9;
+        if (weeklyRevenue >= 53000)  return 10;
+        // 11~30위: 53,000(11위) ~ 27,000(30위)
+        if (weeklyRevenue >= 27000)
+            return Mathf.Clamp(Mathf.RoundToInt(30f - ((weeklyRevenue - 27000f) / 26000f * 19f)), 11, 30);
+        // 31~60위: 27,000(31위) ~ 12,000(60위)
+        if (weeklyRevenue >= 12000)
+            return Mathf.Clamp(Mathf.RoundToInt(60f - ((weeklyRevenue - 12000f) / 15000f * 29f)), 31, 60);
+        // 61~100위: 12,000(61위) ~ 5,000(100위)
         if (weeklyRevenue >= 5000)
-            return Mathf.Clamp(Mathf.RoundToInt(30f - ((weeklyRevenue - 5000f) / 5000f * 19f)), 11, 30);
-        if (weeklyRevenue >= 2500)
-            return Mathf.Clamp(Mathf.RoundToInt(60f - ((weeklyRevenue - 2500f) / 2500f * 29f)), 31, 60);
-        if (weeklyRevenue >= 1500)
-            return Mathf.Clamp(Mathf.RoundToInt(100f - ((weeklyRevenue - 1500f) / 1000f * 39f)), 61, 100);
-        return 0; // 순위권 밖
+            return Mathf.Clamp(Mathf.RoundToInt(100f - ((weeklyRevenue - 5000f) / 7000f * 39f)), 61, 100);
+        return 0; // 순위권 밖 (5,000 미만)
     }
 
     // 규모별 주차 분배

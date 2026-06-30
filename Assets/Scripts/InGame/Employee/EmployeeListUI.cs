@@ -32,6 +32,8 @@ public class EmployeeListUI : MonoBehaviour
 
     [Header("Detail (ListLeftPanel) — EmployeeCardUI 와 동일 항목")]
     public Image portraitImage;
+    [Tooltip("PortraitPanel 자식 NameFrame — 직원 0명 시 비활성")]
+    public GameObject nameFrame;
     public TextMeshProUGUI nameText;
     public TextMeshProUGUI potentialText;     // "잠재력: {}"
     public TextMeshProUGUI gradeText;
@@ -136,7 +138,19 @@ public class EmployeeListUI : MonoBehaviour
         _slots.Clear();
         _emps.Clear();
 
-        foreach (var emp in EmployeeManager.Instance.ownedEmployees)
+        var sorted = new List<EmployeeData>(EmployeeManager.Instance.ownedEmployees);
+        sorted.Sort((a, b) =>
+        {
+            int c = b.grade.CompareTo(a.grade);                  // 등급 내림차순
+            if (c != 0) return c;
+            c = b.enhancementLevel.CompareTo(a.enhancementLevel); // 레벨 내림차순
+            if (c != 0) return c;
+            c = b.potential.CompareTo(a.potential);               // 잠재력 내림차순
+            if (c != 0) return c;
+            return RoleOrder(a.role).CompareTo(RoleOrder(b.role)); // 직군 기획>개발>아트
+        });
+
+        foreach (var emp in sorted)
         {
             var go = Instantiate(slotPrefab, slotParent);
             go.SetActive(true); // 프리팹 루트가 비활성으로 저장돼 있어도 강제 활성
@@ -167,7 +181,12 @@ public class EmployeeListUI : MonoBehaviour
 
         if (!_snapHooked) { snap.OnSelectedChanged += OnSnapSelected; _snapHooked = true; }
 
-        if (_slots.Count == 0) { HideDetail(); return; }
+        if (_slots.Count == 0)
+        {
+            snap.Setup((RectTransform)slotParent, new List<RectTransform>(), 0); // snap 내부 상태 리셋
+            HideDetail();
+            return;
+        }
         int initial = IndexOfSelected();
         var rects = new List<RectTransform>(_slots.Count);
         foreach (var s in _slots) rects.Add((RectTransform)s.transform);
@@ -210,6 +229,7 @@ public class EmployeeListUI : MonoBehaviour
     // 스냅 리스트가 선택 슬롯을 알려줄 때 → 상세 표시
     void OnSnapSelected(int index)
     {
+        if (_emps.Count == 0) { HideDetail(); return; }
         if (index < 0 || index >= _emps.Count) return;
         OnSelectEmployee(_emps[index]);
     }
@@ -253,6 +273,11 @@ public class EmployeeListUI : MonoBehaviour
     {
         if (leftPanel  != null) leftPanel.SetActive(active);
         if (emptyPanel != null) emptyPanel.SetActive(!active);
+        // 직원 0명 시 PortraitPanel 하위 + DetailPanel 하위 숨김
+        if (portraitImage      != null) portraitImage.gameObject.SetActive(active);
+        if (nameFrame          != null) nameFrame.SetActive(active);
+        if (infoSlidePanel     != null) infoSlidePanel.gameObject.SetActive(active);
+        if (trainingSlidePanel != null) trainingSlidePanel.gameObject.SetActive(active);
     }
 
     void PopulateDetail(EmployeeData emp)
@@ -403,7 +428,11 @@ public class EmployeeListUI : MonoBehaviour
     public void OpenListForEnhance()
     {
         OpenList();             // 패널 열기 + 맨 위 직원 자동선택
-        SetSlideInstant(true);  // InfoPanel 대신 TrainingPanel 부터 (애니 없이) — 선택 확정 시 내용 채워짐
+        SetSlideInstant(true);  // InfoPanel 대신 TrainingPanel 부터 (애니 없이)
+        // snap 선택 콜백은 비동기라, 그 전까지 TrainingPanel 에 디자인타임 더미 텍스트(예: 창의성 7000)가 노출된다.
+        // 맨 위(자동선택될) 직원으로 동기 채워 더미가 보이지 않게 한다. 이후 snap 정착 시 동일 값으로 재갱신.
+        var emp = _emps.Count > 0 ? _emps[IndexOfSelected()] : null;
+        if (emp != null) TrainingPanelUI.Instance?.OnSelectEmployee(emp);
     }
 
     // 외부(EmployeeCardUI 등)에서 특정 직원 강화 — 패널 열고 그 직원 선택 + TrainingPanel 표시
@@ -414,7 +443,8 @@ public class EmployeeListUI : MonoBehaviour
         _selectedId = emp.id;     // 이 직원 선택 (BuildList→snap 이 IndexOfSelected 로 선택)
         Root.SetActive(true);
         SetSlideInstant(true);    // InfoPanel 대신 TrainingPanel 부터
-        BuildList();              // 동기 setup → 뜨는 즉시 emp 슬롯에 배치 + TrainingPanel 갱신
+        BuildList();              // 동기 setup → 뜨는 즉시 emp 슬롯에 배치
+        TrainingPanelUI.Instance?.OnSelectEmployee(emp); // 동기 채움 → snap 비동기 선택 전 더미 텍스트 노출 방지
     }
 
     // ── 슬라이드 ─────────────────────────────────
@@ -535,4 +565,12 @@ public class EmployeeListUI : MonoBehaviour
         => DispatchManager.Instance != null && DispatchManager.Instance.IsDispatched(id);
 
     static void SetText(TextMeshProUGUI t, string s) { if (t != null) t.text = s; }
+
+    static int RoleOrder(EmployeeRole role) => role switch
+    {
+        EmployeeRole.Planner    => 0,
+        EmployeeRole.Programmer => 1,
+        EmployeeRole.Artist     => 2,
+        _ => 3
+    };
 }

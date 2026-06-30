@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>GameDevTycoon 밸런싱 시뮬레이터</title>
+<style>
+  :root { --bg:#15171c; --panel:#1e2128; --panel2:#262a33; --line:#333a45; --txt:#e6e8ec; --sub:#9aa3af; --acc:#7c9cff; --good:#5fd17a; --warn:#ffcf66; --bad:#ff6b6b; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--txt); font-family:'Segoe UI',system-ui,'Malgun Gothic',sans-serif; font-size:17px; }
+  h1 { font-size:28px; margin:0 0 6px; }
+  h2 { font-size:21px; margin:0 0 12px; color:var(--acc); border-bottom:1px solid var(--line); padding-bottom:9px; }
+  .wrap { display:grid; grid-template-columns:500px minmax(0,1fr); gap:16px; max-width:1120px; margin:0 auto; padding:18px; align-items:start; }
+  .inputs, .results { display:flex; flex-direction:column; }
+  .full { } /* 좌/우 단일 컬럼 스택이라 무시됨 */
+  .reshead { font-size:24px; color:var(--acc); margin:0 0 12px; border-bottom:2px solid var(--line); padding-bottom:9px; }
+  .panel { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:18px; margin-bottom:16px; }
+  label { display:block; font-size:15px; color:var(--sub); margin-bottom:5px; }
+  select, input[type=number], input[type=text] { width:100%; background:var(--panel2); color:var(--txt); border:1px solid var(--line); border-radius:6px; padding:9px 11px; font-size:16px; }
+  .row { display:grid; gap:11px; margin-bottom:13px; }
+  .row.c2 { grid-template-columns:1fr 1fr; }
+  .row.c3 { grid-template-columns:1fr 1fr 1fr; }
+  .row.c4 { grid-template-columns:1fr 1fr 1fr 1fr; }
+  button { background:var(--acc); color:#0c0f16; border:0; border-radius:7px; padding:12px 18px; font-weight:700; cursor:pointer; font-size:17px; }
+  button.sec { background:var(--panel2); color:var(--txt); border:1px solid var(--line); font-weight:600; }
+  button:hover { filter:brightness(1.08); }
+  table { width:100%; border-collapse:collapse; font-size:16px; }
+  th,td { padding:8px 9px; border-bottom:1px solid var(--line); text-align:right; }
+  th:first-child, td:first-child { text-align:left; }
+  th { color:var(--sub); font-weight:600; }
+  .emp-row td { padding:5px; }
+  .emp-row input, .emp-row select { padding:7px 7px; font-size:15px; }
+  .kv { display:flex; justify-content:space-between; padding:7px 0; border-bottom:1px dotted var(--line); font-size:17px; }
+  .kv .k { color:var(--sub); }
+  .kv .v { font-weight:700; font-variant-numeric:tabular-nums; }
+  .big { font-size:38px; font-weight:800; color:var(--good); }
+  .muted { color:var(--sub); font-size:14px; }
+  .pill { display:inline-block; padding:2px 9px; border-radius:10px; font-size:14px; font-weight:700; }
+  .tag { font-size:14px; color:var(--sub); }
+  .flex { display:flex; gap:8px; align-items:center; }
+  .chk { display:flex; align-items:center; gap:8px; font-size:16px; color:var(--txt); }
+  .chk input { width:auto; transform:scale(1.3); }
+  details summary { cursor:pointer; color:var(--acc); font-size:16px; margin-top:8px; }
+  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  .note { font-size:14px; color:var(--sub); line-height:1.55; }
+  .sec-mini { background:var(--panel2); border-radius:8px; padding:12px; margin-bottom:12px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <!-- ───────── 좌측: 밸런싱 입력 ───────── -->
+  <div class="inputs">
+    <div class="panel">
+      <h1>🎮 밸런싱 시뮬레이터</h1>
+      <div class="muted">현재 코드의 개발틱·팀장점수·감점·마케팅·매출 공식을 그대로 이식. 여러 번 반복한 평균으로 표시.</div>
+    </div>
+
+    <div class="panel full">
+      <h2>프로젝트</h2>
+      <div class="row c2">
+        <div><label>규모</label>
+          <select id="scale"><option value="Small">소규모(3주)</option><option value="Medium" selected>중형(6주)</option><option value="Large">대작(9주)</option></select>
+        </div>
+        <div><label>플랫폼</label>
+          <select id="platform"><option value="Mobile">모바일(기획×1.5)</option><option value="PC" selected>PC(개발×1.5)</option><option value="Nintendo">닌텐도(아트×1.5)</option><option value="Console">콘솔(min×5)</option></select>
+        </div>
+      </div>
+      <div class="row c2">
+        <div><label>장르 인기도</label>
+          <select id="pop"><option value="1">1단계 (×0.97)</option><option value="2" selected>2단계 (×1.0)</option><option value="3">3단계 (×1.03)</option></select>
+        </div>
+        <div><label>장르 피로도</label>
+          <select id="fat"><option value="0" selected>0단계 (×1.0)</option><option value="1">1단계 (×0.98)</option><option value="2">2단계 (×0.96)</option><option value="3">3단계 (×0.93)</option></select>
+        </div>
+      </div>
+      <div class="row c2">
+        <div class="chk"><input type="checkbox" id="overtime" /><label style="margin:0">야근 모드(전원)</label></div>
+        <div class="chk"><input type="checkbox" id="awaken" checked /><label style="margin:0">각성 해금(잭팟 발동)</label></div>
+      </div>
+    </div>
+
+    <div class="panel full">
+      <h2>직원 <button class="sec" style="float:right;padding:3px 9px" onclick="addEmp()">+ 추가</button></h2>
+      <div class="note" style="margin-bottom:8px">주스탯/창의성 = <b>기본값</b>(강화·만족도 적용 전). 강화·잠재력·만족도는 <b>→적용</b> 열에 자동 반영. 팀장은 아래 <b>팀장 선택</b>에서 지정(기본 자동).</div>
+      <table>
+        <thead><tr><th>역할</th><th>기본주스탯</th><th>기본창의</th><th>강화Lv</th><th>잠재</th><th>만족</th><th>→적용(주/창)</th><th></th></tr></thead>
+        <tbody id="empBody"></tbody>
+      </table>
+      <div class="muted" id="empSummary" style="margin-top:8px"></div>
+    </div>
+
+    <div class="panel full">
+      <h2>팀장 선택</h2>
+      <div class="note" style="margin-bottom:8px">역할별로 팀장 직원을 직접 지정. <b>자동</b>이면 해당 역할 중 적용 주스탯이 가장 높은 직원이 팀장이 됩니다.</div>
+      <div class="row c3">
+        <div><label>기획 팀장</label><select id="leaderPlanner" onchange="leaderSel.Planner=this.value"></select></div>
+        <div><label>개발 팀장</label><select id="leaderProgrammer" onchange="leaderSel.Programmer=this.value"></select></div>
+        <div><label>아트 팀장</label><select id="leaderArtist" onchange="leaderSel.Artist=this.value"></select></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>창의성 · 버그</h2>
+      <div class="row c2">
+        <div><label>창의성 점수 c (미니게임, rawScore 가산)</label><input type="number" id="creativityScore" value="200" /></div>
+        <div><label>출시 시 잔여 버그 (감점 계산)</label><input type="number" id="remainBug" value="0" /></div>
+      </div>
+      <div class="note">개발틱에서 생성되는 버그는 결과에 표시됩니다. 디버깅 후 남는 양을 위에 입력하면 버그감점에 반영됩니다.</div>
+    </div>
+
+    <div class="panel">
+      <h2>마케팅</h2>
+      <div class="row c2">
+        <div><label>마케팅 총비용 (G)</label><input type="number" id="mktCost" value="200000" /></div>
+        <div><label>전체 직원 연봉 합 (G)</label><input type="number" id="totalSalary" value="1000000" /></div>
+      </div>
+      <div class="note">P = 마케팅비/전체연봉×100. 수단: 전단지500·PC방1k·카페4k·체험판12k·지하철60k·게임쇼120k·스트리머300k·영끌400k·야구600k</div>
+      <div><label style="margin-top:8px">추가 매출 보너스 합 (%) — 유튜버·장인정신·오타쿠 등</label><input type="number" id="bonusPct" value="0" /></div>
+    </div>
+
+    <div class="panel full">
+      <div class="chk" style="margin-bottom:10px"><input type="checkbox" id="override" /><label style="margin:0;font-weight:700;color:var(--txt)">직접 입력 모드 (직원 산출 무시, P/D/A/C 직접)</label></div>
+      <div id="overrideBox" style="display:none">
+        <div class="row c4">
+          <div><label>기획 P</label><input type="number" id="ovP" value="800"/></div>
+          <div><label>개발 D</label><input type="number" id="ovD" value="800"/></div>
+          <div><label>아트 A</label><input type="number" id="ovA" value="800"/></div>
+          <div><label>창의 C</label><input type="number" id="ovC" value="200"/></div>
+        </div>
+      </div>
+      <div class="row c2">
+        <div><label>반복 횟수</label><input type="number" id="iters" value="3000" /></div>
+        <div style="display:flex;align-items:end"><button style="width:100%" onclick="run()">▶ 시뮬레이션 실행</button></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ───────── 우측: 결과 ───────── -->
+  <div class="results">
+    <div class="reshead">📊 결과</div>
+    <div class="panel full">
+      <h2>결과 (평균)</h2>
+      <div class="grid2">
+        <div>
+          <div class="kv"><span class="k">기획 P</span><span class="v" id="rP">-</span></div>
+          <div class="kv"><span class="k">개발 D</span><span class="v" id="rD">-</span></div>
+          <div class="kv"><span class="k">아트 A</span><span class="v" id="rA">-</span></div>
+          <div class="kv"><span class="k">창의 C</span><span class="v" id="rC">-</span></div>
+          <div class="kv"><span class="k">창의성 블록 획득</span><span class="v" id="rBlocks">-</span></div>
+          <div class="kv"><span class="k">생성 버그(개발틱)</span><span class="v" id="rBugGen">-</span></div>
+          <div class="kv"><span class="k">원천 rawScore</span><span class="v" id="rRaw">-</span></div>
+        </div>
+        <div>
+          <div class="kv"><span class="k">버그 감점</span><span class="v" id="rBugPen">-</span></div>
+          <div class="kv"><span class="k">케이스(쏠림) 감점</span><span class="v" id="rCasePen">-</span></div>
+          <div class="kv"><span class="k">인기×피로 배율</span><span class="v" id="rPopFat">-</span></div>
+          <div class="kv"><span class="k">마케팅 배율 M</span><span class="v" id="rMkt">-</span></div>
+          <div class="kv"><span class="k">평론가 점수</span><span class="v" id="rCritic">-</span></div>
+          <div class="kv"><span class="k">평론가 P(마케팅)</span><span class="v" id="rMktP">-</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel full">
+      <h2>최종 변환 점수 & 매출</h2>
+      <div class="grid2">
+        <div>
+          <div class="muted">최종 변환 점수 (원천)</div>
+          <div class="big" id="rQuality">-</div>
+        </div>
+        <div>
+          <div class="muted">총 매출 (규모배율 <span id="rScaleMul">-</span>)</div>
+          <div class="big" id="rRevenue" style="color:var(--warn)">-</div>
+        </div>
+      </div>
+      <div class="muted" id="rRevRange" style="margin-top:6px"></div>
+    </div>
+
+    <div class="panel">
+      <h2>주차별 매출 & 순위 (평균)</h2>
+      <table>
+        <thead><tr><th>주차</th><th>분배%</th><th>주간 매출</th><th>순위</th></tr></thead>
+        <tbody id="weekBody"></tbody>
+      </table>
+      <div class="muted" id="bestRank" style="margin-top:8px"></div>
+    </div>
+
+    <div class="panel">
+      <h2>팀장 점수 (평균)</h2>
+      <table>
+        <thead><tr><th>역할</th><th>팀장 주스탯</th><th>강화Lv</th><th>팀장 점수</th></tr></thead>
+        <tbody id="leaderBody"></tbody>
+      </table>
+    </div>
+
+    <details class="panel full"><summary>공식 메모 (코드 기준)</summary>
+      <div class="note" style="margin-top:8px">
+        • 개발틱 12개/직원. S=1.2982+0.04068×주스탯^0.9076. 잭팟=3·S·U(0.5,1.5), 성공=S·U(0.8,1.2).<br>
+        • 틱확률 일반 잭10/성28.5/버25/창의(0.15+0.05C)/꽝, 야근 잭15/성35. C=clamp01((창의−17.5)/707.5).<br>
+        • 버그틱: 소 1~4 / 중 2~6 / 대 4~8. 각성 미해금 시 잭팟→성공 흡수.<br>
+        • 팀장점수: M(강화단계 추첨 1.35~1.73), K=0.8738+0.026409·주스탯^0.9081, 4회차 ds=11+roll·M, 누적>100 overflow.<br>
+        • rawScore: Mobile 1.5P / PC 1.5D / Nintendo 1.5A / Console 5·min(P,D,A), 모두 +C.<br>
+        • 버그감점: 발동확률 min(1,버그×0.02), 당첨 시 3/6/9/12/15%. 케이스감점(중·대): min(30%,30%·max(0,불균형−0.3)/0.5), 불균형=(max−avg)/avg.<br>
+        • 평론가 Y=53.46·ln(criticScore+248)−302.9+U(−5,5). 인기 0.97/1/1.03, 피로 1/0.98/0.96/0.93.<br>
+        • 마케팅 M: P=마케팅비/연봉, 매출변화 P&lt;10:−15 / 10~15 / 15~20 / 20~25 / ≥25:+15 → M=1+변화/100.<br>
+        • 최종변환점수 = criticScore×인기×피로×M. 매출 = 규모(1/2/4/8)·332.3·(점수/100)^2.177·U(0.9,1.1)·(1+보너스).
+      </div>
+    </details>
+  </div>
+</div>
+
+<script>
+// ─────────────────────── 유틸 ───────────────────────
+const rand = (a,b)=> a + Math.random()*(b-a);
+const randint = (a,b)=> Math.floor(a + Math.random()*(b-a+1)); // [a,b] 정수
+const round = (x)=> Math.round(x);
+const clamp01 = (x)=> Math.max(0, Math.min(1, x));
+const clamp = (x,a,b)=> Math.max(a, Math.min(b, x));
+const intCast = (x)=> Math.trunc(x);
+
+// ─────────────────────── 직원 ───────────────────────
+const MAIN_STAT_GAIN = [20,20,25,25,30,30,35,35,40,40,40,50,50,50,50,65,65,65,65,65,90,90,90,120,160]; // 0→1 .. 24→25
+const POT_BONUS = { C:0, B:1, A:3, S:8 };
+
+// 강화 레벨 L 까지 누적 주스탯/창의(부스탯) 증가량 (각 레벨마다 잠재보너스 가산, 부스탯=round(총가산×0.5))
+function enhGain(level, pot){
+  const pb = POT_BONUS[pot] ?? 0;
+  let main=0, sub=0;
+  for(let i=0;i<level && i<MAIN_STAT_GAIN.length;i++){
+    const total = MAIN_STAT_GAIN[i] + pb;
+    main += total;
+    sub  += round(total*0.5);
+  }
+  return {main, sub};
+}
+// 만족도 배율 (일반 직원)
+function satMult(sat){
+  if(sat>=81) return 1.1;
+  if(sat>=61) return 1.0;
+  if(sat>=41) return 0.9;
+  return 0.8;
+}
+// 직원의 effective 주스탯/창의 (강화+만족도)
+function effStats(emp){
+  const g = enhGain(emp.level, emp.pot);
+  const m = satMult(emp.sat);
+  const main = intCast((emp.baseMain + g.main) * m);
+  const crea = intCast((emp.baseCrea + g.sub) * m);
+  return { main, crea };
+}
+
+let employees = [];
+function addEmp(role='Programmer', baseMain=120, baseCrea=60, level=0, pot='C', sat=80){
+  employees.push({role, baseMain, baseCrea, level, pot, sat});
+  renderEmps();
+}
+function delEmp(i){ employees.splice(i,1); renderEmps(); }
+function renderEmps(){
+  const body=document.getElementById('empBody');
+  body.innerHTML='';
+  employees.forEach((e,i)=>{
+    const tr=document.createElement('tr'); tr.className='emp-row';
+    const eff=effStats(e);
+    tr.innerHTML=`
+      <td><select onchange="employees[${i}].role=this.value;renderEmps()">
+        <option value="Planner"${e.role==='Planner'?' selected':''}>기획</option>
+        <option value="Programmer"${e.role==='Programmer'?' selected':''}>개발</option>
+        <option value="Artist"${e.role==='Artist'?' selected':''}>아트</option></select></td>
+      <td><input type="number" value="${e.baseMain}" oninput="employees[${i}].baseMain=+this.value;updateEffCells()"></td>
+      <td><input type="number" value="${e.baseCrea}" oninput="employees[${i}].baseCrea=+this.value;updateEffCells()"></td>
+      <td><input type="number" value="${e.level}" min="0" max="25" oninput="employees[${i}].level=+this.value;updateEffCells()"></td>
+      <td><select onchange="employees[${i}].pot=this.value;updateEffCells()">
+        ${['C','B','A','S'].map(p=>`<option value="${p}"${e.pot===p?' selected':''}>${p}</option>`).join('')}</select></td>
+      <td><input type="number" value="${e.sat}" min="1" max="100" oninput="employees[${i}].sat=+this.value;updateEffCells()"></td>
+      <td id="eff${i}" style="color:var(--acc);font-weight:700">${eff.main} / ${eff.crea}</td>
+      <td><button class="sec" style="padding:2px 7px" onclick="delEmp(${i})">×</button></td>`;
+    body.appendChild(tr);
+  });
+  updateEmpSummary();
+  renderLeaderSelect();
+}
+// 입력값 변경 시 적용 스탯 셀만 실시간 갱신 (포커스 유지 위해 전체 렌더 안 함)
+function updateEffCells(){
+  employees.forEach((e,i)=>{
+    const el=document.getElementById('eff'+i);
+    if(el){ const s=effStats(e); el.textContent = s.main+' / '+s.crea; }
+  });
+  updateEmpSummary();
+  renderLeaderSelect(); // 적용주스탯 변화 시 드롭다운 라벨도 갱신
+}
+function updateEmpSummary(){
+  const byRole={Planner:[],Programmer:[],Artist:[]};
+  employees.forEach(e=> byRole[e.role].push(effStats(e).main));
+  const lbl={Planner:'기획',Programmer:'개발',Artist:'아트'};
+  document.getElementById('empSummary').innerHTML =
+    `총 ${employees.length}명 · ` + Object.keys(byRole).map(r=>
+      `${lbl[r]} ${byRole[r].length}명(적용주스탯 ${byRole[r].map(x=>x).join('/')||'-'})`).join(' · ');
+}
+
+// ─────────────────────── 개발틱 ───────────────────────
+function tickCounts(overtime, creativityStat, awaken){
+  let jackpotP = overtime?0.15:0.10;
+  let successP = overtime?0.35:0.285;
+  const bugP   = 0.25;
+  const C = clamp01((creativityStat-17.5)/707.5);
+  const creativityP = 0.15 + 0.05*C;
+  if(!awaken){ successP += jackpotP; jackpotP = 0; }
+  const total=12;
+  let jackpot = jackpotP>0 ? Math.max(1, round(total*jackpotP)) : 0;
+  let success = round(total*successP);
+  let creativity = round(total*creativityP);
+  let bug = Math.max(1, round(total*bugP));
+  let blank = total - jackpot - success - creativity - bug;
+  if(blank<0){ creativity = Math.max(0, creativity+blank); blank=0; }
+  return {jackpot, success, creativity, bug, blank};
+}
+// 직원 1명의 개발틱 → {stat:역할기여, bug:생성버그}
+function simEmployeeTicks(emp, scale, overtime, awaken){
+  const {main, crea} = effStats(emp);
+  const S = 1.2982 + 0.040680*Math.pow(Math.max(0,main),0.9076);
+  const c = tickCounts(overtime, crea, awaken);
+  let stat=0, bug=0;
+  for(let i=0;i<c.jackpot;i++) stat += Math.max(1, round(3*S*rand(0.5,1.5)));
+  for(let i=0;i<c.success;i++) stat += Math.max(0, round(S*rand(0.8,1.2)));
+  for(let i=0;i<c.bug;i++){
+    let r;
+    if(scale==='Small') r=randint(1,4);
+    else if(scale==='Medium') r=randint(2,6);
+    else r=randint(4,8);
+    bug += Math.max(1,r);
+  }
+  // 창의성 틱 1개 = 블록 1개 획득 (게임 내 CreativityGameData.DrawRandomBlock)
+  return {stat, bug, blocks: c.creativity};
+}
+
+// ─────────────────────── 팀장점수 ───────────────────────
+function rollLeaderStage(lv){
+  lv = clamp(lv,0,25);
+  const r = Math.random()*100;
+  switch(lv){
+    case 9:  return r<90?1:2;  case 10: return r<80?1:2;
+    case 11: return r<20?1:2;  case 12: return r<10?1:2;
+    case 13: return r<90?2:3;  case 14: return r<80?2:3;
+    case 15: return r<20?2:3;  case 16: return r<10?2:3;
+    case 18: return r<90?3:4;  case 19: return r<80?3:4;
+    case 20: return r<20?3:4;  case 21: return r<10?3:4;
+  }
+  if(lv<=8) return 1;
+  if(lv===17) return 3;
+  return 4;
+}
+const M_MAP={1:1.35,2:1.53,3:1.6,4:1.73};
+function leaderScore(skill, lv){
+  const M = M_MAP[rollLeaderStage(lv)];
+  const K = 0.8738 + 0.026409*Math.pow(skill,0.9081);
+  const dsMax=[12,14,16,14];
+  const full=[0,0,0,0], rnd=[0,0,0,0];
+  let cumDs=0;
+  for(let r=0;r<4;r++){
+    const roll=randint(1,dsMax[r]);
+    const ds=11+roll*M; cumDs+=ds;
+    if(cumDs>100){
+      const cut=rand(0.10,0.20);
+      full[r]=0; rnd[r]=0;
+      for(let k=0;k<r;k++) rnd[k]=round(full[k]*(1-cut));
+      break;
+    }
+    const sc=round(K*Math.pow(ds,0.4)*rand(0.97,1.03));
+    full[r]=sc; rnd[r]=sc;
+  }
+  return rnd.reduce((a,b)=>a+b,0);
+}
+// 역할별 팀장 선택 상태 ('auto' = 최고 주스탯 자동, 그 외 = 직원 인덱스)
+let leaderSel={Planner:'auto', Programmer:'auto', Artist:'auto'};
+const _roleLbl={Planner:'기획',Programmer:'개발',Artist:'아트'};
+
+// 직원 변경 시 팀장 선택 드롭다운 재구성 (역할별 해당 직원만 노출, 잘못된 선택은 auto 로 복귀)
+function renderLeaderSelect(){
+  ['Planner','Programmer','Artist'].forEach(role=>{
+    const sel=document.getElementById('leader'+role);
+    if(!sel) return;
+    // 현재 선택이 더 이상 유효하지 않으면 auto
+    if(leaderSel[role]!=='auto'){
+      const e=employees[+leaderSel[role]];
+      if(!e || e.role!==role) leaderSel[role]='auto';
+    }
+    let html=`<option value="auto"${leaderSel[role]==='auto'?' selected':''}>자동(최고 주스탯)</option>`;
+    employees.forEach((e,i)=>{
+      if(e.role!==role) return;
+      const s=effStats(e);
+      html+=`<option value="${i}"${leaderSel[role]==String(i)?' selected':''}>#${i+1} 적용주스탯 ${s.main} (Lv${e.level})</option>`;
+    });
+    sel.innerHTML=html;
+  });
+}
+
+// 역할별 팀장 결정 — 선택값 우선, 없으면 최고 effective 주스탯 직원
+function pickLeaders(){
+  const res={Planner:null,Programmer:null,Artist:null};
+  ['Planner','Programmer','Artist'].forEach(role=>{
+    if(leaderSel[role]!=='auto'){
+      const e=employees[+leaderSel[role]];
+      if(e && e.role===role){ const s=effStats(e); res[role]={main:s.main, level:e.level}; return; }
+    }
+    let b=null;
+    employees.forEach(e=>{
+      if(e.role!==role) return;
+      const m=effStats(e).main;
+      if(!b || m>b.main) b={main:m, level:e.level};
+    });
+    res[role]=b;
+  });
+  return res;
+}
+
+// ─────────────────────── 파이프라인 ───────────────────────
+function rawScore(p,d,a,c,platform){
+  switch(platform){
+    case 'Mobile':   return 1.5*p + d + a + c;
+    case 'PC':       return p + 1.5*d + a + c;
+    case 'Nintendo': return p + d + 1.5*a + c;
+    case 'Console':  return 5*Math.min(p,Math.min(d,a)) + c;
+  }
+  return p+d+a+c;
+}
+function bugPenalty(remainBug){ // 발동확률 반영한 기대 감점
+  const prob = Math.min(1, remainBug*0.02);
+  let tier=0;
+  if(remainBug>0){
+    if(remainBug<3) tier=0.03; else if(remainBug<6) tier=0.06;
+    else if(remainBug<10) tier=0.09; else if(remainBug<20) tier=0.12; else tier=0.15;
+  }
+  return Math.random()<prob ? tier : 0;
+}
+function casePenalty(p,d,a,scale){
+  if(scale!=='Medium' && scale!=='Large') return 0;
+  const avg=(p+d+a)/3;
+  if(avg<=0) return 0;
+  const mx=Math.max(p,Math.max(d,a));
+  const imb=(mx-avg)/avg;
+  return Math.min(0.30, 0.30*Math.max(0,imb-0.30)/0.50);
+}
+function popMul(v){ return v===1?0.97 : v===3?1.03 : 1.0; }
+function fatMul(v){ return v===1?0.98 : v===2?0.96 : v===3?0.93 : 1.0; }
+function marketingMul(cost, salary){
+  if(salary<=0) return {M:1.0, P:0};
+  const P = cost/salary*100;
+  let ch;
+  if(P<10) ch=-15;
+  else if(P<15) ch=-15+(P-10)*2;
+  else if(P<20) ch=-5+(P-15)*2;
+  else if(P<25) ch=5+(P-20)*2;
+  else ch=15;
+  return {M:1+ch/100, P};
+}
+function criticDisplay(criticScore){
+  const base = round(53.46*Math.log(criticScore+248) - 302.9);
+  return clamp(base + randint(-5,5), 0, 100);
+}
+function distribution(scale){
+  if(scale==='Small') return [0.50,0.30,0.20];
+  if(scale==='Medium') return [0.35,0.25,0.15,0.12,0.08,0.05];
+  return [0.24,0.18,0.15,0.12,0.10,0.08,0.06,0.04,0.03];
+}
+function scaleMultiplier(scale, empCount){
+  if(scale==='Small') return 1;
+  if(scale==='Medium') return 2;
+  return empCount>=7 ? 8 : 4;
+}
+function calcRank(w){
+  if(w>=430000)return 1; if(w>=380000)return 2; if(w>=320000)return 3; if(w>=270000)return 4;
+  if(w>=225000)return 5; if(w>=175000)return 6; if(w>=130000)return 7; if(w>=95000)return 8;
+  if(w>=70000)return 9; if(w>=53000)return 10;
+  if(w>=27000) return clamp(round(30-((w-27000)/26000*19)),11,30);
+  if(w>=12000) return clamp(round(60-((w-12000)/15000*29)),31,60);
+  if(w>=5000)  return clamp(round(100-((w-5000)/7000*39)),61,100);
+  return 0;
+}
+
+// ─────────────────────── 실행 (반복 시뮬레이션) ───────────────────────
+function run(){
+  const scale=document.getElementById('scale').value;
+  const platform=document.getElementById('platform').value;
+  const pop=+document.getElementById('pop').value;
+  const fat=+document.getElementById('fat').value;
+  const overtime=document.getElementById('overtime').checked;
+  const awaken=document.getElementById('awaken').checked;
+  const creativityScore=+document.getElementById('creativityScore').value;
+  const remainBug=+document.getElementById('remainBug').value;
+  const mktCost=+document.getElementById('mktCost').value;
+  const totalSalary=+document.getElementById('totalSalary').value;
+  const bonusPct=+document.getElementById('bonusPct').value;
+  const override=document.getElementById('override').checked;
+  const N=Math.max(1, +document.getElementById('iters').value);
+
+  const dist=distribution(scale);
+  const weeks=dist.length;
+  const empCount=employees.length;
+  const sMul=scaleMultiplier(scale, empCount);
+  const totalMul=Math.max(0, 1+bonusPct/100);
+  const leaders=pickLeaders();
+  const lblRole={Planner:'기획',Programmer:'개발',Artist:'아트'};
+
+  // 누적 합
+  let acc={P:0,D:0,A:0,C:0,bugGen:0,blocks:0,raw:0,bugPen:0,casePen:0,popfat:0,M:0,Pmkt:0,critic:0,quality:0,revenue:0};
+  let leaderAcc={Planner:0,Programmer:0,Artist:0};
+  let weekAcc=new Array(weeks).fill(0);
+  let revMin=Infinity, revMax=-Infinity;
+
+  for(let it=0; it<N; it++){
+    let P,D,A,C, bugGen=0, blocks=0;
+    let lp={Planner:0,Programmer:0,Artist:0};
+    if(override){
+      P=+document.getElementById('ovP').value; D=+document.getElementById('ovD').value;
+      A=+document.getElementById('ovA').value; C=+document.getElementById('ovC').value;
+    } else {
+      P=D=A=0; C=creativityScore;
+      // 개발틱
+      employees.forEach(e=>{
+        const r=simEmployeeTicks(e, scale, overtime, awaken);
+        bugGen += r.bug; blocks += r.blocks;
+        if(e.role==='Planner') P+=r.stat;
+        else if(e.role==='Programmer') D+=r.stat;
+        else A+=r.stat;
+      });
+      // 팀장점수
+      ['Planner','Programmer','Artist'].forEach(role=>{
+        const L=leaders[role];
+        if(L){ const s=leaderScore(L.main, L.level); lp[role]=s;
+          if(role==='Planner')P+=s; else if(role==='Programmer')D+=s; else A+=s; }
+      });
+    }
+    leaderAcc.Planner+=lp.Planner; leaderAcc.Programmer+=lp.Programmer; leaderAcc.Artist+=lp.Artist;
+
+    const raw=rawScore(P,D,A,C,platform);
+    const bp=bugPenalty(remainBug);
+    const cp=casePenalty(P,D,A,scale);
+    const criticScore=raw*(1-bp)*(1-cp);          // sAdj 동일
+    const critic=criticDisplay(criticScore);
+    const pf=popMul(pop)*fatMul(fat);
+    const finalScore=criticScore*pf;
+    const mk=marketingMul(mktCost, totalSalary);
+    const quality=finalScore*mk.M;                 // 최종 변환 점수 (원천)
+    const revenue=round(sMul*332.3*Math.pow(Math.max(0,quality)/100,2.177)*rand(0.9,1.1)*totalMul);
+
+    // 주차 분배 (±5% 변동 후 재정규화)
+    const jit=dist.map(x=>x*rand(0.95,1.05));
+    const jsum=jit.reduce((a,b)=>a+b,0)||1;
+    for(let w=0;w<weeks;w++){
+      weekAcc[w]+=round(revenue*(jit[w]/jsum));
+    }
+
+    acc.P+=P; acc.D+=D; acc.A+=A; acc.C+=C; acc.bugGen+=bugGen; acc.blocks+=blocks; acc.raw+=raw;
+    acc.bugPen+=bp; acc.casePen+=cp; acc.popfat+=pf; acc.M+=mk.M; acc.Pmkt+=mk.P;
+    acc.critic+=critic; acc.quality+=quality; acc.revenue+=revenue;
+    revMin=Math.min(revMin,revenue); revMax=Math.max(revMax,revenue);
+  }
+  const A_=(x)=> x/N;
+  const fmt=(x)=> Math.round(x).toLocaleString();
+  const pct=(x)=> (x*100).toFixed(1)+'%';
+
+  document.getElementById('rP').textContent=fmt(A_(acc.P));
+  document.getElementById('rD').textContent=fmt(A_(acc.D));
+  document.getElementById('rA').textContent=fmt(A_(acc.A));
+  document.getElementById('rC').textContent=fmt(A_(acc.C));
+  document.getElementById('rBlocks').textContent=A_(acc.blocks).toFixed(1)+'개';
+  document.getElementById('rBugGen').textContent=fmt(A_(acc.bugGen));
+  document.getElementById('rRaw').textContent=fmt(A_(acc.raw));
+  document.getElementById('rBugPen').textContent=pct(A_(acc.bugPen));
+  document.getElementById('rCasePen').textContent=pct(A_(acc.casePen));
+  document.getElementById('rPopFat').textContent='×'+A_(acc.popfat).toFixed(3);
+  document.getElementById('rMkt').textContent='×'+A_(acc.M).toFixed(3);
+  document.getElementById('rMktP').textContent=A_(acc.Pmkt).toFixed(1)+'%';
+  document.getElementById('rCritic').textContent=A_(acc.critic).toFixed(1)+'점';
+  document.getElementById('rQuality').textContent=fmt(A_(acc.quality));
+  document.getElementById('rRevenue').textContent=fmt(A_(acc.revenue))+'G';
+  document.getElementById('rScaleMul').textContent='×'+sMul;
+  document.getElementById('rRevRange').textContent=`범위: ${fmt(revMin)} ~ ${fmt(revMax)} G (반복 ${N}회)`;
+
+  // 주차 테이블
+  const wb=document.getElementById('weekBody'); wb.innerHTML='';
+  let bestRank=999;
+  for(let w=0;w<weeks;w++){
+    const wr=A_(weekAcc[w]);
+    const rk=calcRank(Math.round(wr)); // 주차별 평균 매출에서 순위 산출 (게임 CalcRank 와 동일)
+    if(rk>0) bestRank=Math.min(bestRank,rk);
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td>${w+1}주</td><td>${(dist[w]*100).toFixed(0)}%</td><td>${fmt(wr)}G</td><td>${rk>0?rk+'위':'권외'}</td>`;
+    wb.appendChild(tr);
+  }
+  document.getElementById('bestRank').textContent = bestRank<999 ? `최고 순위: ${bestRank}위` : '순위권 밖';
+
+  // 팀장 테이블
+  const lb=document.getElementById('leaderBody'); lb.innerHTML='';
+  ['Planner','Programmer','Artist'].forEach(role=>{
+    const L=leaders[role];
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td>${lblRole[role]}</td><td>${L?L.main:'-'}</td><td>${L?L.level:'-'}</td><td>${override?'-':Math.round(A_(leaderAcc[role]))}</td>`;
+    lb.appendChild(tr);
+  });
+}
+
+document.getElementById('override').addEventListener('change', e=>{
+  document.getElementById('overrideBox').style.display = e.target.checked?'block':'none';
+});
+
+// 기본 직원 셋업 (중형 추천 4명 예시)
+addEmp('Planner',120,60,0,'C',80);
+addEmp('Programmer',120,60,0,'C',80);
+addEmp('Artist',120,60,0,'C',80);
+addEmp('Programmer',100,50,0,'C',80);
+run();
+</script>
+</body>
+</html>

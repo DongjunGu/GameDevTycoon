@@ -355,9 +355,14 @@ public class MerchantManager : MonoBehaviour
         float elapsed = 0f;
         while (mc != null && elapsed < timeout)
         {
-            float d = Vector3.Distance(mc.transform.position, spawnPoint.position);
-            if (d < 0.2f) break;
-            elapsed += Time.unscaledDeltaTime;
+            // XY 거리만 사용 — 도착 코루틴과 동일(캐릭터 z 는 sorting 용으로 달라 Vector3 면 임계 못 맞춤).
+            Vector2 a = mc.transform.position;
+            Vector2 b = spawnPoint.position;
+            if (Vector2.Distance(a, b) < 0.6f) break;
+            // timeout 은 "시간이 흐르는 동안"만 누적 — 정지 중엔 상인 patrol 도 멈추므로,
+            // unscaled 로 재면 정지된 동안 timeout 이 소진돼 상인이 이동 중인데 도중에 파괴되는 버그가 생긴다.
+            if (GameTimeManager.Instance == null || GameTimeManager.Instance.IsRunning)
+                elapsed += Time.deltaTime;
             yield return null;
         }
         if (mc != null) Destroy(mc.gameObject);
