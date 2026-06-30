@@ -8,22 +8,38 @@ public class ItemDetailUI : MonoBehaviour
 
     [Header("Panels")]
     public GameObject detailPanel;
+    [Tooltip("디테일 열릴 때 터치 차단할 리스트 패널 (ItemPanel)")]
+    public GameObject listBlockTarget;
 
     [Header("UI")]
     public Image              itemImage;
+    public Image              frameImage;
+    public ItemGradeSet       gradeSet;
     public TextMeshProUGUI    nameText;
     public TextMeshProUGUI    descriptionText;
-    public TextMeshProUGUI    effectText;
-    public TextMeshProUGUI    countText;
     public Button             useButton;
 
     private ItemChartRow _currentRow;
+    private CanvasGroup  _listCG;
 
     void Awake()
     {
         if (Instance != null) { Destroy(gameObject); return; }
         Instance = this;
         detailPanel.SetActive(false);
+
+        if (listBlockTarget != null)
+        {
+            _listCG = listBlockTarget.GetComponent<CanvasGroup>();
+            if (_listCG == null) _listCG = listBlockTarget.AddComponent<CanvasGroup>();
+        }
+    }
+
+    void SetListInteractable(bool v)
+    {
+        if (_listCG == null) return;
+        _listCG.interactable   = v;
+        _listCG.blocksRaycasts = v;
     }
 
     public void Show(ItemChartRow row)
@@ -32,21 +48,17 @@ public class ItemDetailUI : MonoBehaviour
 
         nameText.text        = row.name;
         descriptionText.text = row.description;
-        effectText.text      = row.effectType switch
-        {
-            "satisfaction" => $"만족도 +{row.effectValue}",
-            _ => ""
-        };
 
         int count = ItemManager.Instance.GetCount(row.itemId);
-        countText.text         = $"보유: {count}개";
         useButton.interactable = count > 0 && ItemManager.IsUsableNow(row) && !IsGameUpgradeAlreadyUsed(row) && !IsRelaxButNoDebuffedEmployee(row) && !IsEventReadyCategory(row);
 
         var sprite = Resources.Load<Sprite>($"Items/{row.imageId}");
         if (sprite != null && itemImage != null)
             itemImage.sprite = sprite;
 
-        ItemPanelUI.Instance.itemListPanel.SetActive(false);
+        ItemGradeSet.Apply(frameImage, gradeSet, row.grade);
+
+        SetListInteractable(false);
         detailPanel.SetActive(true);
     }
 
@@ -54,7 +66,6 @@ public class ItemDetailUI : MonoBehaviour
     {
         if (_currentRow == null) return;
         int count = ItemManager.Instance.GetCount(_currentRow.itemId);
-        countText.text         = $"보유: {count}개";
         useButton.interactable = count > 0 && ItemManager.IsUsableNow(_currentRow) && !IsGameUpgradeAlreadyUsed(_currentRow) && !IsRelaxButNoDebuffedEmployee(_currentRow);
     }
 
@@ -67,7 +78,7 @@ public class ItemDetailUI : MonoBehaviour
         {
             if (ItemManager.Instance.UseItemNoTarget(_currentRow.itemId))
             {
-                RefreshCount();
+                HideDetail();
                 ItemPanelUI.Instance?.Refresh();
             }
             return;
@@ -80,13 +91,13 @@ public class ItemDetailUI : MonoBehaviour
             var emp = EmployeeManager.Instance?.GetEmployee(targetId);
             if (emp != null && ItemManager.Instance.UseItem(_currentRow.itemId, emp))
             {
-                detailPanel.SetActive(false);
+                HideDetail();
                 ItemPanelUI.Instance.OnClickClose(); // 패널 닫기 + StartTime + 카드 콜백 호출
             }
             return;
         }
 
-        // 일반 플로우: 직원 선택 패널로 이동 — 게임 카테고리 직군 아이템은 role 필터링
+        // 일반 플로우: 직원 리스트를 UseItem 모드로 열기 — 게임 카테고리 직군 아이템은 role 필터링
         EmployeeRole? roleFilter = _currentRow.itemId switch
         {
             "upgradeDevelop" => EmployeeRole.Programmer,
@@ -94,7 +105,7 @@ public class ItemDetailUI : MonoBehaviour
             "upgradePlan"    => EmployeeRole.Planner,
             _ => (EmployeeRole?)null
         };
-        ItemEmployeeSelectUI.Instance.Open(_currentRow, roleFilter);
+        EmployeeListUI.Instance?.OpenForUseItem(_currentRow, roleFilter);
     }
 
     static bool NeedsEmployeeTarget(ItemChartRow row)
@@ -127,10 +138,11 @@ public class ItemDetailUI : MonoBehaviour
         return true;
     }
 
-    public void OnClickBack()
+    public void HideDetail()
     {
         detailPanel.SetActive(false);
-        ItemPanelUI.Instance.itemListPanel.SetActive(true);
-        ItemPanelUI.Instance.Refresh();
+        SetListInteractable(true);
     }
+
+    public void OnClickBack() => HideDetail();
 }

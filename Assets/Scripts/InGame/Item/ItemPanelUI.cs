@@ -8,8 +8,14 @@ public class ItemPanelUI : MonoBehaviour
     public GameObject itemListPanel;
 
     [Header("List")]
-    public Transform  slotParent;
+    public Transform  slotParent;           // 아이템 슬롯 부모 (GridLayoutGroup)
     public GameObject itemSlotPrefab;
+    [Tooltip("배경 전용 부모 — slotParent 뒤에 동일 크기·GridLayoutGroup으로 겹쳐 배치. 비우면 slotParent 에 함께 생성")]
+    public Transform  slotBackgroundParent;
+    [Tooltip("아이템 슬롯 아래 깔아둘 배경 프리팹")]
+    public GameObject slotBackgroundPrefab;
+    [Tooltip("배경 프리팹 생성 개수")]
+    public int        slotBackgroundCount = 6;
 
     // 카드 컨텍스트로 열렸을 때 사용 대상 직원 (null이면 일반 플로우)
     public string TargetEmployeeId { get; private set; }
@@ -32,6 +38,7 @@ public class ItemPanelUI : MonoBehaviour
     public void Open()
     {
         GameTimeManager.Instance?.StopTime();
+        ItemDetailUI.Instance?.HideDetail();
         itemListPanel.SetActive(true);
         Refresh();
     }
@@ -46,8 +53,21 @@ public class ItemPanelUI : MonoBehaviour
 
     public void Refresh()
     {
+        // slotParent 자식 청소 — BgContent(slotBackgroundParent)는 유지
         foreach (Transform child in slotParent)
+        {
+            if (slotBackgroundParent != null && child == slotBackgroundParent) continue;
             Destroy(child.gameObject);
+        }
+
+        // 배경 슬롯 생성 (BgContent 안)
+        var bgParent = slotBackgroundParent != null ? slotBackgroundParent : slotParent;
+        if (slotBackgroundPrefab != null)
+        {
+            foreach (Transform child in bgParent) Destroy(child.gameObject);
+            for (int i = 0; i < slotBackgroundCount; i++)
+                Instantiate(slotBackgroundPrefab, bgParent);
+        }
 
         foreach (var kv in ItemChartLoader.Cache)
         {

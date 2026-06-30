@@ -25,5 +25,5 @@ trait_enhance_discount_s,s2,강화비용 15% 감소,S,enhanceCostDiscount,15
 trait_high_enhance_success,s3,15성 이상 강화 성공 확률 5% 상승,S,highEnhanceSuccess,5
 trait_yearly_all_recover,s4,1년에 1번 5% 확률로 직원 전원 만족도 95 회복,S,yearlyAllRecover,5
 trait_monthly_sat_reduce,s5,월간 만족도 감소량 1 감소,S,monthlySatDropReduce,1
-trait_large_sale,s7,대작 게임 발매 시 매출 +5%,S,largeScaleSaleBonus,5
+trait_large_sale,s7,대형 게임 발매 시 매출 +5%,S,largeScaleSaleBonus,5
 trait_perfect_sale,s8,평론가 점수 100점 달성 시 매출 +5%,S,perfectScoreSaleBonus,5

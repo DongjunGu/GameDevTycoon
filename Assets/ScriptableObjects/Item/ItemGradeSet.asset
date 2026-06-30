@@ -1,0 +1,19 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 80b53c6e16773504ba8a518bb68bd9a2, type: 3}
+  m_Name: ItemGradeSet
+  m_EditorClassIdentifier: Assembly-CSharp::ItemGradeSet
+  frames:
+  - {fileID: 21300000, guid: 0bcab5c5795cd384089f8a181b2271b4, type: 3}
+  - {fileID: 21300000, guid: bfcdc0a4ceefaed4b86575bb45163590, type: 3}
+  - {fileID: 21300000, guid: 6eb2ce7f0806f2148840dc67b2f98186, type: 3}
+  - {fileID: 21300000, guid: b4a0f43da1f53784da38cd8fa81726c2, type: 3}
