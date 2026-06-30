@@ -418,15 +418,15 @@ public class DevelopmentManager : MonoBehaviour
 
     int[] BuildTickOrder(int total, bool overtime, int stat, System.Random rng = null)
     {
-        // 0:잭팟, 1:성공, 2:창의성, 3:버그, 4:꽝
-        // 일반: 잭팟 10%, 성공 35%, 버그 10%, 창의성 = 10 + stat/50, 꽝 = 나머지
-        // 야근: 잭팟 15%, 성공 30%, 버그 15%, 창의성 = 10 + stat/50, 꽝 = 나머지
-        float jackpotP    = overtime ? 0.15f : 0.10f;
-        float successP    = overtime ? 0.30f : 0.35f;
-        float bugP        = overtime ? 0.15f : 0.10f;
-        // creativity 상한: 다른 카테고리 합이 음수 안 되게 캡 (일반 45%, 야근 40%)
-        float creativityCap = overtime ? 0.40f : 0.45f;
-        float creativityP = Mathf.Clamp((10f + stat / 50f) / 100f, 0.10f, creativityCap);
+        // 0:잭팟, 1:성공, 2:창의성, 3:버그, 4:꽝  (stat = 창의성 스탯)
+        // 일반: 잭팟 10%, 성공 28.5%, 버그 25%, 창의성 = 0.15 + 0.05×C, 꽝 = 나머지(= 0.365 - 창의성)
+        // 야근: 잭팟 15%, 성공 35%,   버그 25%, 창의성 = 0.15 + 0.05×C, 꽝 = 나머지(= 0.25  - 창의성)
+        // C(창의성 계수) = (창의성스탯 - 17.5) / 707.5, [0,1] 클램프
+        float jackpotP = overtime ? 0.15f : 0.10f;
+        float successP = overtime ? 0.35f : 0.285f;
+        float bugP     = 0.25f;
+        float creativityC = Mathf.Clamp01((stat - 17.5f) / 707.5f);
+        float creativityP = 0.15f + 0.05f * creativityC;
 
         // 테크트리 '각성 상태(money_awaken)' 미해금 시 잭팟 미발동, 확률은 성공으로 흡수
         bool awakenUnlocked = TechTreeManager.Instance != null && TechTreeManager.Instance.IsUnlocked("money_awaken");
@@ -664,32 +664,44 @@ public class DevelopmentManager : MonoBehaviour
             }
             elapsed = 0f;
 
-            float bugFixChance = 0.8f; // [임시] 디버깅 성공률 80% 고정 — 테스트용, 나중에 삭제하고 아래 원본 복구할 것
-            // 원본: float bugFixChance = IsOvertimeMode ? 0.6f : 0.5f;
-            // 테크트리 '버그 잡기 달인(money_bugmaster)' — 해결 확률 +10% (= 실패 확률 -10%)
+            // 작업 가능한 직원(근무중·파견제외) — 팀 평균 창의성으로 확률·해결량 산출 (야근모드 동일)
+            var workers = EmployeeManager.Instance.ownedEmployees
+                .Where(e => OfficeManager.Instance.GetState(e.id) == CharacterState.Working
+                            && !(DispatchManager.Instance != null && DispatchManager.Instance.IsDispatched(e.id))) // 파견중 제외
+                .ToList();
+            if (workers.Count == 0)
+            {
+                yield return null;
+                continue;
+            }
+
+            float creativitySum = 0f;
+            foreach (var e in workers) creativitySum += e.EffectiveCreativitySkill;
+            float avgCreativity = creativitySum / workers.Count;
+            float creSafe = Mathf.Max(1f, avgCreativity);
+
+            // 해결 확률 = 0.60 + 0.30 × 창의성정규화,  창의성정규화 = (창의성 - 17.5) / 707.5 [0,1]
+            float creNorm = Mathf.Clamp01((avgCreativity - 17.5f) / 707.5f);
+            float bugFixChance = 0.60f + 0.30f * creNorm;
+            // 테크트리 '버그 잡기 달인(money_bugmaster)' — 해결 확률 +10%
             if (TechTreeManager.Instance != null && TechTreeManager.Instance.IsUnlocked("money_bugmaster"))
                 bugFixChance += 0.10f;
             bugFixChance = Mathf.Clamp01(bugFixChance);
+
             if (UnityEngine.Random.value < bugFixChance)
             {
-                var workers = EmployeeManager.Instance.ownedEmployees
-                    .Where(e => OfficeManager.Instance.GetState(e.id) == CharacterState.Working
-                                && !(DispatchManager.Instance != null && DispatchManager.Instance.IsDispatched(e.id))) // 파견중 제외
-                    .ToList();
-
-                if (workers.Count == 0)
-                {
-                    yield return null;
-                    continue;
-                }
-
                 float remainingBug = DevelopmentPanelUI.Instance.GetBug();
-                float creativitySum = 0f;
-                foreach (var e in workers) creativitySum += e.EffectiveCreativitySkill;
-                float avgCreativity = creativitySum / workers.Count;
 
+                // 창의성처리보정 = 0.40 + 1.20 × 창의성로그정규화 [0.40~1.60],
+                // 창의성로그정규화 = (ln(창의성) - ln(17.5)) / 3.7240 [0,1]
+                float creLogNorm = Mathf.Clamp01((Mathf.Log(creSafe) - Mathf.Log(17.5f)) / 3.7240f);
+                float creProcMul = 0.40f + 1.20f * creLogNorm;
+                // 감속계수 = (잔여버그 / 초기버그)^0.35 — 버그가 줄수록 해결량 감소
+                float slowFactor = Mathf.Pow(remainingBug / initialBug, 0.35f);
+
+                // 해결량 = max(1, ceil(7.0 × 창의성처리보정 × 감속계수 × Random(0.5~1.5)))
                 float fixAmount = Mathf.Max(1f,
-                    Mathf.Ceil((avgCreativity / 80f) * Mathf.Sqrt(remainingBug / initialBug)));
+                    Mathf.Ceil(7.0f * creProcMul * slowFactor * UnityEngine.Random.Range(0.5f, 1.5f)));
 
                 DevelopmentPanelUI.Instance.SetBug(Mathf.Max(0f, remainingBug - fixAmount));
 
@@ -1516,17 +1528,15 @@ public class DevelopmentManager : MonoBehaviour
         // → 슬롯/카드에 표시되는 Effective 능력치와 실제 개발 산출이 일치
         int skill = (int)(employee.GetEffectiveMainStat() * otakuMultiplier);
 
-        int effectiveCreativity = employee.EffectiveCreativitySkill;
+        // 성공 기준점수 S = 1.2982 + 0.040680 × 주스탯^0.9076  (잭팟 = 3×S×R, 성공 = S×R)
+        float S = 1.2982f + 0.040680f * Mathf.Pow(Mathf.Max(0, skill), 0.9076f);
 
         float planning = 0f, develop = 0f, art = 0f, bug = 0f, creativity = 0f;
 
         switch (tickType)
         {
-            case 0: // 잭팟
-                int jackpotVal = UnityEngine.Random.Range(1, 4)
-                    + (int)(skill / 50)
-                    + (int)System.Math.Pow(skill / 300.0, 2);
-                float jackpot = Mathf.Max(1, jackpotVal);
+            case 0: // 잭팟 — 3 × S × Random(0.5~1.5)
+                float jackpot = Mathf.Max(1, Mathf.RoundToInt(3f * S * UnityEngine.Random.Range(0.5f, 1.5f)));
                 {
                     Color jackpotColor = new Color(1f, 0.85f, 0f);
                     switch (employee.role)
@@ -1547,11 +1557,8 @@ public class DevelopmentManager : MonoBehaviour
                 }
                 break;
 
-            case 1: // 성공
-                int successVal = UnityEngine.Random.Range(0, 2)
-                    + (int)(skill / 100)
-                    + (int)System.Math.Pow(skill / 400.0, 2);
-                float success = Mathf.Max(0, successVal);
+            case 1: // 성공 — S × Random(0.8~1.2)
+                float success = Mathf.Max(0, Mathf.RoundToInt(S * UnityEngine.Random.Range(0.8f, 1.2f)));
                 switch (employee.role)
                 {
                     case EmployeeRole.Planner:
@@ -1579,15 +1586,12 @@ public class DevelopmentManager : MonoBehaviour
                 break;
             }
 
-            case 3: // 버그
-                int creativityReduction = (int)(effectiveCreativity / 100);
+            case 3: // 버그 — 규모별 RANDBETWEEN (소규모 1~4 / 중형 2~6 / 대작 4~8)
                 int bugRaw = ProjectSetupUI.SelectedScale switch
                 {
-                    ProjectScale.Small  => UnityEngine.Random.Range(3, 7)  - creativityReduction,
-                    ProjectScale.Medium => UnityEngine.Random.Range(6, 10) - creativityReduction,
-                    ProjectScale.Large  => (IsOvertimeMode || employee.isOvertimeWorker)
-                        ? UnityEngine.Random.Range(10, 21) - creativityReduction
-                        : UnityEngine.Random.Range(10, 16) - creativityReduction,
+                    ProjectScale.Small  => UnityEngine.Random.Range(1, 5), // 1~4
+                    ProjectScale.Medium => UnityEngine.Random.Range(2, 7), // 2~6
+                    ProjectScale.Large  => UnityEngine.Random.Range(4, 9), // 4~8
                     _ => 1
                 };
                 bug = Mathf.Max(1, bugRaw);

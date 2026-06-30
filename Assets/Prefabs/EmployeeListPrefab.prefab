@@ -369,6 +369,8 @@ MonoBehaviour:
   employeePortraitImage: {fileID: 8996118546273461559}
   levelText: {fileID: 6405636458399925314}
   selectButton: {fileID: 6389085484720838736}
+  roleIcon: {fileID: 0}
+  roleIconSet: {fileID: 0}
   dispatchedBadge: {fileID: 0}
   portraitImage: {fileID: 8996118546273461559}
   bgImage: {fileID: 6017072350305373681}
@@ -658,6 +660,8 @@ MonoBehaviour:
   employeePortraitImage: {fileID: 8996118546273461559}
   levelText: {fileID: 6405636458399925314}
   selectButton: {fileID: 6389085484720838736}
+  roleIcon: {fileID: 5500120788045438776}
+  roleIconSet: {fileID: 11400000, guid: 61255f422a0dfc24ba3a4ac3e02b00f1, type: 2}
   dispatchedBadge: {fileID: 0}
   portraitImage: {fileID: 8996118546273461559}
   bgImage: {fileID: 6017072350305373681}

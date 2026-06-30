@@ -255,18 +255,19 @@ public class DevelopmentResultUI : MonoBehaviour
 
                     float rawScore = CalcRawScore(p, d, a, c, ProjectSetupUI.SelectedPlatform);
 
-                    // 케이스 감점 (중형, 대작) - criticScore/sAdj 공통 적용
+                    // 쏠린 케이스 감점 (중형, 대작만) - criticScore/sAdj 공통 적용
+                    // 불균형 = (max(P,D,A) - avg(P,D,A)) / avg(P,D,A)
+                    // 감점% = MIN(30%, 30% × MAX(0, 불균형 - 0.30) / 0.50)
                     float casePenalty = 0f;
                     if (ProjectSetupUI.SelectedScale == ProjectScale.Medium || ProjectSetupUI.SelectedScale == ProjectScale.Large)
                     {
-                        float maxStat = Mathf.Max(p, Mathf.Max(d, a));
-                        float minStat = Mathf.Min(p, Mathf.Min(d, a));
-                        float statDiff = maxStat - minStat;
-
-                        if (statDiff > maxStat * 0.4f)
-                            casePenalty = UnityEngine.Random.Range(0.04f, 0.08f);
-                        else if (statDiff > maxStat * 0.2f)
-                            casePenalty = UnityEngine.Random.Range(0.02f, 0.04f);
+                        float avgStat = (p + d + a) / 3f;
+                        if (avgStat > 0f)
+                        {
+                            float maxStat = Mathf.Max(p, Mathf.Max(d, a));
+                            float imbalance = (maxStat - avgStat) / avgStat;
+                            casePenalty = Mathf.Min(0.30f, 0.30f * Mathf.Max(0f, imbalance - 0.30f) / 0.50f);
+                        }
                     }
 
                     float criticScore = (rawScore * (1f - DevelopmentManager.Instance.BugPenalty)
@@ -361,9 +362,9 @@ public class DevelopmentResultUI : MonoBehaviour
     {
         return ProjectSetupUI.SelectedGenrePopularity switch
         {
-            1 => 0.8f,
+            1 => 0.97f,
             2 => 1.0f,
-            3 => 1.3f,
+            3 => 1.03f,
             _ => 1.0f
         };
     }
@@ -374,37 +375,44 @@ public class DevelopmentResultUI : MonoBehaviour
         return fatigue switch
         {
             0 => 1.0f,
-            1 => 0.9f,
-            2 => 0.8f,
-            3 => 0.7f,
-            _ => 0.7f
+            1 => 0.98f,
+            2 => 0.96f,
+            3 => 0.93f,
+            _ => 0.93f
         };
     }
 
     float CalcMarketingMultiplier()
     {
-        // 마케팅의 신 trait — 마케팅 개수/비용 무관하게 최고치 1.3 적용
+        // 마케팅의 신 trait — 마케팅 개수/비용 무관하게 최고치(매출변화 +15% → M=1.15) 적용
         if (TraitEffectApplier.HasMarketingFree())
         {
-            Debug.Log($"[마케팅] 마케팅의 신 발동 → M=1.3");
-            return 1.3f;
+            Debug.Log($"[마케팅] 마케팅의 신 발동 → M=1.15");
+            return 1.15f;
         }
 
-        int devCost = ProjectData.GetCost(ProjectSetupUI.SelectedScale);
-        if (devCost <= 0) return 1.0f;
+        // P = 마케팅비 / 전체 직원 연봉 (퍼센트 단위)
+        int totalSalary = EmployeeManager.Instance != null ? EmployeeManager.Instance.GetTotalSalary() : 0;
+        if (totalSalary <= 0) return 1.0f;
 
         int marketingCost = MarketingUI.Instance.GetTotalCost();
-        float P = (float)marketingCost / devCost * 100f; // 퍼센트 단위
+        float P = (float)marketingCost / totalSalary * 100f;
 
-        float M;
-        if (P < 30f)
-            M = 0.8f + 0.02f * (P - 20f);
-        else if (P < 40f)
-            M = 1.0f + 0.02f * (P - 30f);
+        // 매출변화(%) 구간별 선형 보간 → M = 1 + 매출변화/100
+        float salesChange;
+        if (P < 10f)
+            salesChange = -15f;
+        else if (P < 15f)
+            salesChange = -15f + (P - 10f) * 2f; // -15% → -5%
+        else if (P < 20f)
+            salesChange = -5f + (P - 15f) * 2f;  // -5%  → +5%
+        else if (P < 25f)
+            salesChange = 5f + (P - 20f) * 2f;   // +5%  → +15%
         else
-            M = Mathf.Min(1.3f, 1.2f + 0.1f * Mathf.Log(1f + (P - 40f) / 10f));
+            salesChange = 15f;
 
-        Debug.Log($"[마케팅] 개발금: {devCost} / 마케팅비: {marketingCost} / P: {P:F1}% / M: {M:F3}");
+        float M = 1f + salesChange / 100f;
+        Debug.Log($"[마케팅] 전체연봉: {totalSalary} / 마케팅비: {marketingCost} / P: {P:F1}% / 매출변화: {salesChange:F1}% / M: {M:F3}");
         return M;
     }
 }

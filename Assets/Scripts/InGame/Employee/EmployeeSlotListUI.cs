@@ -16,6 +16,8 @@ public class EmployeeSlotListUI : MonoBehaviour
     public Image employeePortraitImage; // 초상화 컨테이너 (자식 bgImage/portraitImage 의 탐색 기준)
     public TextMeshProUGUI levelText;          // 강화 레벨 "Lv.{}"
     public Button selectButton;
+    public Image roleIcon;          // 역할 아이콘
+    public RoleIconSet roleIconSet; // 역할 아이콘 세트 (공용)
     [Header("파견중 표시 (옵션)")]
     public GameObject dispatchedBadge;
 
@@ -73,6 +75,8 @@ public class EmployeeSlotListUI : MonoBehaviour
 
         // 파견중이면 희미하게 + badge (blockSelect=false — 상세 보기는 가능)
         DispatchSlotVisual.Apply(this, dispatchedBadge, data.id, blockSelect: false);
+
+        RoleIconSet.Apply(roleIcon, roleIconSet, data.role);
 
         _grade = data.grade;
         ApplyGrade(_grade);

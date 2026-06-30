@@ -148,7 +148,7 @@ public class CriticReviewUI : MonoBehaviour
 
     IEnumerator RevealCritics(float rawScore)
     {
-        int variation = UnityEngine.Random.Range(-3, 4);
+        int variation = UnityEngine.Random.Range(-5, 6); // Random(-5 ~ +5)
         int score = Mathf.Clamp(CalcCriticScore(rawScore) + variation, 0, 100);
         LastCriticTotal = score;
 
@@ -210,9 +210,9 @@ public class CriticReviewUI : MonoBehaviour
 
 int CalcCriticScore(float x)
 {
-    if (x <= 25f) return 0;
-    float score = 26f * Mathf.Log(x - 25f) - 112f;
-    return Mathf.Clamp(Mathf.RoundToInt(score), 0, 100);
+    // Y = 53.46·ln(원천 + 248) − 302.9  (변동분 Random(-5~+5)은 호출부에서 가산, 클램프도 호출부에서)
+    float score = 53.46f * Mathf.Log(x + 248f) - 302.9f;
+    return Mathf.RoundToInt(score);
 }
 
     string GetComment(int score, int criticIndex)

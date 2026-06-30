@@ -18,18 +18,36 @@ public class MarketingUI : MonoBehaviour
     [Header("UI")]
     public TextMeshProUGUI totalCostText;
 
-    private readonly (string name, int cost)[] _marketingData =
+    private readonly (string name, int cost, string desc)[] _marketingData =
     {
-        ("전단지 및 커뮤니티 홍보",          500),
-        ("SNS 광고 및 포털 배너",           2000),
-        ("유명 인플루언서 협찬",            3000),
-        ("대도시 전광판 및 TV 광고",        5000),
-        ("글로벌 게임 페스티벌 참가",       10000),
+        ("전단지 돌리기",        500,    "광고할 돈이 없으면 전단지라도 돌리자"),
+        ("PC방 광고",           1000,   "잼민이 모니터 구석 기습 광고"),
+        ("카페 배너 광고",       4000,   "진짜 게이머를 대상으로 한 가성비 광고"),
+        ("체험판 광고",         12000,   "맛보기 게임 배포로 입소문 내기"),
+        ("지하철 광고",         60000,   "직장인 타겟의 무난한 홍보 방법"),
+        ("게임쇼 대형 부스",    120000,   "화려한 천막으로 시선 강탈"),
+        ("스트리머 방송",       300000,   "인기 방송 버프! 낮은 확률로 대박 발생"),
+        ("영끌 마케팅",         400000,   "다음 신작 매출 감소하는 대신 이번 게임 매출 폭발"),
+        ("야구 스폰서",         600000,   "가장 비싸지만 효과 만점"),
     };
 
     private Dictionary<string, int> _countMap = new();
     private int _totalCost;
     private System.Action _onComplete;
+
+    // 슬롯 버튼 직속 자식 "description"(TMP) 캐시 — 인스펙터 배선 없이 코드로 바인딩
+    private TextMeshProUGUI[] _slotDescCache;
+    TextMeshProUGUI GetSlotDescription(int i)
+    {
+        if (slotButtons == null || i < 0 || i >= slotButtons.Length) return null;
+        _slotDescCache ??= new TextMeshProUGUI[slotButtons.Length];
+        if (_slotDescCache[i] == null && slotButtons[i] != null)
+        {
+            var t = slotButtons[i].transform.Find("description");
+            if (t != null) _slotDescCache[i] = t.GetComponent<TextMeshProUGUI>();
+        }
+        return _slotDescCache[i];
+    }
 
     void Awake()
     {
@@ -53,6 +71,8 @@ public class MarketingUI : MonoBehaviour
         {
             slotPlatformTexts[i].text = "";
             slotCostTexts[i].text = "";
+            var descText = GetSlotDescription(i);
+            if (descText != null) descText.text = "";
             slotButtons[i].onClick.RemoveAllListeners();
             slotButtons[i].interactable = false;
         }
@@ -60,12 +80,14 @@ public class MarketingUI : MonoBehaviour
         // 데이터 있는 슬롯만 텍스트 + 클릭 설정
         for (int i = 0; i < _marketingData.Length; i++)
         {
-            var (name, cost) = _marketingData[i];
+            var (name, cost, desc) = _marketingData[i];
             _countMap[name] = 0;
 
             int displayCost = marketingFree ? 0 : cost;
             slotPlatformTexts[i].text = name;
             slotCostTexts[i].text = $"{displayCost:N0}G";
+            var descText = GetSlotDescription(i);
+            if (descText != null) descText.text = desc;
             slotButtons[i].interactable = true;
 
             int capturedIndex = i;

@@ -1,9 +1,19 @@
 using UnityEngine;
 using TMPro;
+using System.Collections;
 
 public class DevelopmentPanelUI : MonoBehaviour
 {
-    public static DevelopmentPanelUI Instance { get; private set; }
+    private static DevelopmentPanelUI _instance;
+    public static DevelopmentPanelUI Instance
+    {
+        get
+        {
+            if (_instance == null) _instance = FindObjectOfType<DevelopmentPanelUI>(true);
+            return _instance;
+        }
+        private set => _instance = value;
+    }
 
     [Header("UI")]
     public TextMeshProUGUI planningText;
@@ -14,6 +24,16 @@ public class DevelopmentPanelUI : MonoBehaviour
 
     [Tooltip("프로젝트 개발 중이 아닐 때만 표시되는 기본 텍스트 (개발 중이면 자동 비활성)")]
     public GameObject defaultText;
+
+    [Header("슬라이드인 패널")]
+    [Tooltip("개발 시작 시 아래에서 위로 슬라이드인할 패널들 순서대로 (PlanningPanel/DevPanel/ArtPanel/CreativityPanel)")]
+    public RectTransform[] statPanels;
+    [Tooltip("슬라이드인 소요 시간 (초)")]
+    public float slideInDuration = 0.35f;
+    [Tooltip("시작 위치 오프셋 — 아래로 몇 픽셀 내려간 곳에서 시작할지")]
+    public float slideInOffset = 80f;
+    [Tooltip("패널 간 순차 딜레이 (초)")]
+    public float slideInStagger = 0.06f;
 
     [Header("애니메이션")]
     [Tooltip("값이 목표까지 차오르는 데 걸리는 시간 (초). 델타 크기와 무관하게 항상 이 시간에 완료. 0 이하면 즉시 반영")]
@@ -54,10 +74,23 @@ public class DevelopmentPanelUI : MonoBehaviour
     private float _bugReveal;
     private float _creativityReveal;
 
+    private Vector2[] _panelOriginalPos;
+    private Coroutine _showAnim;
+    private bool _panelsVisible;
+
     void Awake()
     {
-        if (Instance != null) { Destroy(gameObject); return; }
-        Instance = this;
+        if (_instance != null && _instance != this) { Destroy(gameObject); return; }
+        _instance = this;
+
+        // 씬 저장 시점의 원래 위치를 캐시 (슬라이드인 목표)
+        if (statPanels != null)
+        {
+            _panelOriginalPos = new Vector2[statPanels.Length];
+            for (int i = 0; i < statPanels.Length; i++)
+                if (statPanels[i] != null)
+                    _panelOriginalPos[i] = statPanels[i].anchoredPosition;
+        }
     }
 
     void Start() => UpdateDefaultText();
@@ -225,6 +258,7 @@ public class DevelopmentPanelUI : MonoBehaviour
     };
 
     // 개발 중에만 스탯/타이머 텍스트 표시. enabled 토글로 layout 자리 유지.
+    // 패널 자체는 비활성→활성 시 슬라이드인 애니메이션.
     void SetStatTextsVisible(bool visible)
     {
         if (planningText   != null) planningText.enabled   = visible;
@@ -233,6 +267,57 @@ public class DevelopmentPanelUI : MonoBehaviour
         if (creativityText != null) creativityText.enabled = visible;
         if (bugText        != null) bugText.enabled        = visible;
         DevelopmentTimerUI.Instance?.SetTextVisible(visible);
+
+        if (visible && !_panelsVisible)  { _panelsVisible = true;  ShowPanels(); }
+        else if (!visible && _panelsVisible) { _panelsVisible = false; HidePanels(); }
+    }
+
+    void ShowPanels()
+    {
+        if (statPanels == null || statPanels.Length == 0) return;
+        if (_showAnim != null) StopCoroutine(_showAnim);
+        _showAnim = StartCoroutine(SlideInPanels());
+    }
+
+    void HidePanels()
+    {
+        if (_showAnim != null) { StopCoroutine(_showAnim); _showAnim = null; }
+        if (statPanels == null) return;
+        foreach (var p in statPanels)
+            if (p != null) p.gameObject.SetActive(false);
+    }
+
+    IEnumerator SlideInPanels()
+    {
+        for (int i = 0; i < statPanels.Length; i++)
+        {
+            var p = statPanels[i];
+            if (p == null) continue;
+            Vector2 origin = (_panelOriginalPos != null && i < _panelOriginalPos.Length)
+                ? _panelOriginalPos[i]
+                : p.anchoredPosition;
+            // 시작 위치: 원래 위치에서 slideInOffset 만큼 아래
+            p.anchoredPosition = origin + Vector2.down * slideInOffset;
+            p.gameObject.SetActive(true);
+            StartCoroutine(SlidePanel(p, origin, i * slideInStagger));
+        }
+        yield break;
+    }
+
+    IEnumerator SlidePanel(RectTransform panel, Vector2 target, float delay)
+    {
+        if (delay > 0f) yield return new WaitForSecondsRealtime(delay);
+        Vector2 from = panel.anchoredPosition;
+        float elapsed = 0f;
+        while (elapsed < slideInDuration)
+        {
+            if (panel == null) yield break;
+            elapsed += Time.unscaledDeltaTime;
+            float t = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(elapsed / slideInDuration));
+            panel.anchoredPosition = Vector2.LerpUnclamped(from, target, t);
+            yield return null;
+        }
+        if (panel != null) panel.anchoredPosition = target;
     }
 
     public void SetBug(float value)
