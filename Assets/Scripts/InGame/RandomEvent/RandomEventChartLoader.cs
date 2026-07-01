@@ -15,6 +15,7 @@ using UnityEngine;
 //   portraitId  (string)   — 고정 초상화 없으면 빈칸
 //   requiresPatrol (bool)
 //   requiredPatrolPointId (string)
+//   titleType (int)        — 0=부정, 1=중립, 2=긍정
 
 public class RandomEventChartRow
 {
@@ -27,6 +28,7 @@ public class RandomEventChartRow
     public string portraitId;
     public bool   requiresPatrol;
     public string requiredPatrolPointId;
+    public int    titleType; // 0=부정, 1=중립, 2=긍정
 }
 
 public static class RandomEventChartLoader
@@ -49,11 +51,12 @@ public static class RandomEventChartLoader
         if (chart == null || !chart.TryGetValue(evt.type.ToString(), out var row)) return;
 
         if (!string.IsNullOrEmpty(row.title)) evt.title = row.title;
-        evt.weight  = row.weight;
-        evt.categoryMin = row.categoryMin;
-        evt.categoryMax = row.categoryMax;
+        evt.weight                = row.weight;
+        evt.categoryMin           = row.categoryMin;
+        evt.categoryMax           = row.categoryMax;
         evt.requiresPatrol        = row.requiresPatrol;
         evt.requiredPatrolPointId = row.requiredPatrolPointId;
+        evt.titleType             = row.titleType;
 
         // 동적으로 onSetup에서 세팅하는 값은 빈칸이면 코드 기본값 유지
         if (!string.IsNullOrEmpty(row.description))   evt.description   = row.description;
@@ -118,6 +121,7 @@ public static class RandomEventChartLoader
                 portraitId            = S(row, "portraitId"),
                 requiresPatrol        = B(row, "requiresPatrol"),
                 requiredPatrolPointId = S(row, "requiredPatrolPointId"),
+                titleType             = N(row, "titleType"),
             };
         }
 

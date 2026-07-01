@@ -194,10 +194,10 @@ public static class CharacterTraitApplier
         var row = GetActiveTrait(emp);
         if (row == null || AlertUI.Instance == null) return;
 
-        string msg = $"[{row.name}]\n{row.description}";
+        string desc = row.description ?? "";
         if (ResolveTraitId(emp) == "ctrait_otaku" && !string.IsNullOrEmpty(emp.otakuFixedGenre))
-            msg += $"\n\n고정 장르: {GenreKorName(emp.otakuFixedGenre)}";
-        AlertUI.Instance.Show(msg);
+            desc += $"\n\n고정 장르: {GenreKorName(emp.otakuFixedGenre)}";
+        AlertUI.Instance.ShowPortrait(desc, emp.portraitId, row.name);
     }
 
     // 특성 설명 문자열만 반환(이름 없이) — 이력서 패널 등 자체 표시용. 특성 없으면 빈 문자열.

@@ -7,16 +7,20 @@ using UnityEngine;
 //   eventType   (string)
 //   title       (string)
 //   description1~3 (string) — 복수 문구 랜덤 선택용, 비어있는 항목은 무시
-//   systemMessage  (string)
+//   systemMessage  (string) — ResultBG에 표시
+//   systemMessage2 (string) — ResultBG2에 표시
+//   titleType   (int)      — 0=부정, 1=중립, 2=긍정
 
 public class RandomEventConditionChartRow
 {
     public string   title;
     public string[] descriptions; // description1~3 중 비어있지 않은 것만
     public string   systemMessage;
+    public string   systemMessage2;
     public string   portraitId;
     public bool     requiresPatrol;
     public string   requiredPatrolPointId;
+    public int      titleType; // 0=부정, 1=중립, 2=긍정
 }
 
 public static class RandomEventConditionChartLoader
@@ -91,9 +95,11 @@ public static class RandomEventConditionChartLoader
                 title                 = S(row, "title"),
                 descriptions          = descList.ToArray(),
                 systemMessage         = S(row, "systemMessage"),
+                systemMessage2        = S(row, "systemMessage2"),
                 portraitId            = S(row, "portraitId"),
                 requiresPatrol        = B(row, "requiresPatrol"),
                 requiredPatrolPointId = S(row, "requiredPatrolPointId"),
+                titleType             = N(row, "titleType"),
             };
         }
 
@@ -103,5 +109,6 @@ public static class RandomEventConditionChartLoader
 
     // ── 헬퍼 ───────────────────────────────────────────────────────
     static string S(JsonData r, string k) { try { return r[k].ToString(); } catch { return ""; } }
+    static int    N(JsonData r, string k) { try { return int.Parse(r[k].ToString()); } catch { return 0; } }
     static bool   B(JsonData r, string k) { try { return r[k].ToString().ToLower() == "true"; } catch { return false; } }
 }

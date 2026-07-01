@@ -150,6 +150,8 @@ public class EmployeeListUI : MonoBehaviour
         _emps.Clear();
 
         var sorted = new List<EmployeeData>(EmployeeManager.Instance.ownedEmployees);
+        if (_useItemMode && _useItemRoleFilter.HasValue)
+            sorted.RemoveAll(e => e.role != _useItemRoleFilter.Value);
         sorted.Sort((a, b) =>
         {
             int c = b.grade.CompareTo(a.grade);                  // 등급 내림차순

@@ -205,7 +205,7 @@ public class ProjectSetupUI : MonoBehaviour
         int cost = CurrentDevCost;
         if (!MoneyManager.Instance.CanAfford(cost))
         {
-            AlertUI.Instance.Show($"개발금이 부족합니다.\n필요: {cost:N0}G / 보유: {MoneyManager.Instance.Gold:N0}G");
+            AlertUI.Instance.ShowMoney($"개발금이 부족합니다.\n필요: {cost:N0}G / 보유: {MoneyManager.Instance.Gold:N0}G", null);
             return;
         }
 

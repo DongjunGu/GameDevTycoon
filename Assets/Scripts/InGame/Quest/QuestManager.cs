@@ -211,8 +211,9 @@ public class QuestManager : MonoBehaviour
             MoneyManager.Instance.AddGold(quest.rewardGold);
             quest.isRewarded = true;
 
-            AlertUI.Instance.Show(
-                $"퀘스트 완료!\n{quest.title}\n보상: {quest.rewardGold:N0}G",
+            AlertUI.Instance.ShowMoney(
+                $"퀘스트 완료!\n{quest.title}",
+                quest.rewardGold,
                 () => QuestUI.Instance?.Show()
             );
         }

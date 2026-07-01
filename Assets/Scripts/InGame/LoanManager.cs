@@ -102,8 +102,9 @@ public class LoanManager : MonoBehaviour
 
         var loan = dueLoans[index];
 
-        AlertUI.Instance.Show(
+        AlertUI.Instance.ShowMoney(
             $"대출 만기일입니다.\n원금: {loan.amount:N0}G\n이자율: {LoanManager.Instance.interestRate * 100:F0}%\n상환금액: {loan.repayAmount:N0}G",
+            null,
             () =>
             {
                 int goldAfter = MoneyManager.Instance.Gold - loan.repayAmount;
@@ -116,8 +117,9 @@ public class LoanManager : MonoBehaviour
 
                 if (goldAfter < 0)
                 {
-                    AlertUI.Instance.Show(
-                        $"대출을 상환할 자본이 없습니다.\n파산합니다.",
+                    AlertUI.Instance.ShowMoney(
+                        "대출을 상환할 자본이 없습니다.\n파산합니다.",
+                        null,
                         () =>
                         {
                             Debug.Log("[파산] RunState.EndRun → OutGameScene");

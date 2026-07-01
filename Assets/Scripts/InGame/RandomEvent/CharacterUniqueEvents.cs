@@ -149,7 +149,7 @@ public static class CharacterUniqueEvents
         CharacterUniqueEventChartLoader.Cache?.TryGetValue(eventType, out row);
         if (row == null) return;
         string desc = (row.descriptions != null && row.descriptions.Length > 0) ? row.descriptions[0] : "";
-        AlertUI.Instance.Show($"[{row.title}]\n{desc}");
+        AlertUI.Instance.ShowPortrait(desc, emp.portraitId, row.title);
     }
 
     // 전용 이벤트 설명 문자열만 반환(제목 없이) — 이력서 패널 등 자체 표시용. 없으면 빈 문자열.

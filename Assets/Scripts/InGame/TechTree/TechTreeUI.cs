@@ -237,32 +237,21 @@ public class TechTreeUI : MonoBehaviour
     // 해금 가능(포인트 충분 + 선행 해금)하면 '해금' 버튼 활성, 아니면 표시는 하되 비활성(터치 불가).
     void OnClickNode(TechNodeData node)
     {
-        // 이미 해금된 노드 — 설명만 표시(필요/보유 포인트는 공백), 해금 동작 없음.
-        if (node.isUnlocked)
-        {
-            ConfirmUI.Instance.Show(
-                $"{node.name}\n{node.description}",
-                onConfirm: () => { },
-                onCancel: () => { },
-                confirmText: "확인",
-                cancelText: "닫기"
-            );
-            return;
-        }
+        bool canUnlock = !node.isUnlocked && TechTreeManager.Instance.CanUnlock(node);
 
-        bool canUnlock = TechTreeManager.Instance.CanUnlock(node);
-
-        ConfirmUI.Instance.Show(
-            $"{node.name}\n{node.description}\n\n필요 포인트: {node.requiredPoints} P\n보유 포인트: {TechTreeManager.Instance.CurrentPoints} P",
+        TechTreeConfirmUI.Instance.Show(
+            node,
+            isUnlocked: node.isUnlocked,
+            canUnlock:  canUnlock,
             onConfirm: () =>
             {
-                TechTreeManager.Instance.Unlock(node); // 버튼이 활성일 때만 호출됨 + Unlock 내부 CanUnlock 재확인
+                if (!node.isUnlocked)
+                    TechTreeManager.Instance.Unlock(node); // Unlock 내부 CanUnlock 재확인
                 // OnUnlockChanged → RefreshPointsAndCategory 에서 ShowCategory 재호출
             },
-            onCancel: () => { },
+            onCancel: null,
             confirmText: "해금",
-            cancelText: "취소",
-            confirmInteractable: canUnlock
+            cancelText:  "취소"
         );
     }
 }
