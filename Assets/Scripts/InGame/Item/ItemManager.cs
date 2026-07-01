@@ -92,6 +92,25 @@ public class ItemManager : MonoBehaviour
     public int GetCount(string itemId) =>
         _inventory.TryGetValue(itemId, out int count) ? count : 0;
 
+    // 보유 아이템 중 랜덤 1개 ID를 골라서 반환. 인벤토리가 비어있으면 null. 차감하지 않음.
+    public string PickRandomItemId()
+    {
+        var owned = new List<string>();
+        foreach (var kv in _inventory)
+            if (kv.Value > 0) owned.Add(kv.Key);
+        return owned.Count == 0 ? null : owned[UnityEngine.Random.Range(0, owned.Count)];
+    }
+
+    // 특정 아이템 1개를 강제 차감하고 저장. 도난 등 사용 조건 무시.
+    public void StealSpecificItem(string itemId)
+    {
+        if (!_inventory.TryGetValue(itemId, out int count) || count <= 0) return;
+        _inventory[itemId]--;
+        if (_inventory[itemId] <= 0) _inventory.Remove(itemId);
+        Save();
+        if (ItemPanelUI.Instance != null) ItemPanelUI.Instance.Refresh();
+    }
+
     public void AddItem(string itemId, int count = 1)
     {
         _inventory.TryGetValue(itemId, out int cur);
@@ -267,7 +286,7 @@ public class ItemManager : MonoBehaviour
             EmployeeRole.Artist     => "아트",
             _ => ""
         };
-        AlertUI.Instance?.Show($"{emp.employeeName}가 게임성을 업그레이드 했습니다.\n{roleName}점수 +{rounded}");
+        AlertUI.Instance?.ShowPortrait($"{emp.employeeName}가 게임성을 업그레이드 했습니다.\n{roleName}점수 +{rounded}", emp.portraitId, emp.employeeName);
     }
 
     // 잠 깨우기 (천재 GeniusUnique 전용 이벤트): 개발 진행 중 Unique+ 천재에게 커피 사용 시
@@ -320,6 +339,7 @@ public class ItemManager : MonoBehaviour
                 target.ChangeSatisfaction(row.effectValue);
                 OfficeManager.Instance?.ShowStatPopup(
                     target.id, $"만족도 +{row.effectValue}", new Color(1f, 0.4f, 0.4f));
+                AlertUI.Instance?.ShowPortrait($"{target.employeeName}에게 {row.name}을 사용했습니다.\n만족도 +{row.effectValue}", target.portraitId, target.employeeName);
                 break;
         }
 
@@ -329,6 +349,7 @@ public class ItemManager : MonoBehaviour
             target.ClearAllStatDebuffs();
             OfficeManager.Instance?.ShowStatPopup(
                 target.id, "디버프 회복", new Color(0.5f, 1f, 0.5f));
+            AlertUI.Instance?.ShowPortrait($"{target.employeeName}의 능력치 디버프가\n모두 회복됐습니다.", target.portraitId, target.employeeName);
         }
 
         // 각성의 물약: 4~8주간 +10% 버프 스택 추가. 기존 버프와 합연산 (20% + 10% → 30%).
@@ -338,6 +359,7 @@ public class ItemManager : MonoBehaviour
             target.ApplyStatBuff(weeks, 10);
             OfficeManager.Instance?.ShowStatPopup(
                 target.id, $"능력치 +10% ({weeks}주)", new Color(1f, 0.9f, 0.3f));
+            AlertUI.Instance?.ShowPortrait($"{target.employeeName}에게 각성의 물약을 사용했습니다.\n능력치 +10% ({weeks}주간)", target.portraitId, target.employeeName);
         }
 
         // 게임 카테고리 직군 아이템 → role 매핑 후 업그레이드 적용

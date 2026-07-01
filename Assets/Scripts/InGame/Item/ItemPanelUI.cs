@@ -69,16 +69,73 @@ public class ItemPanelUI : MonoBehaviour
                 Instantiate(slotBackgroundPrefab, bgParent);
         }
 
+        EmployeeData targetEmp = null;
+        if (!string.IsNullOrEmpty(TargetEmployeeId))
+            targetEmp = EmployeeManager.Instance?.GetEmployee(TargetEmployeeId);
+
+        var usableItems   = new System.Collections.Generic.List<(ItemChartRow row, int count)>();
+        var unusableItems = new System.Collections.Generic.List<(ItemChartRow row, int count)>();
+
         foreach (var kv in ItemChartLoader.Cache)
         {
             int count = ItemManager.Instance.GetCount(kv.Key);
             if (count <= 0) continue;
-
-            var go   = Instantiate(itemSlotPrefab, slotParent);
-            var slot = go.GetComponent<ItemSlotUI>();
-            slot.Setup(kv.Value, count);
+            if (IsSlotUsable(kv.Value, targetEmp))
+                usableItems.Add((kv.Value, count));
+            else
+                unusableItems.Add((kv.Value, count));
         }
+
+        foreach (var (row, count) in usableItems)
+            CreateSlot(row, count, true);
+        foreach (var (row, count) in unusableItems)
+            CreateSlot(row, count, false);
     }
+
+    void CreateSlot(ItemChartRow row, int count, bool usable)
+    {
+        var go   = Instantiate(itemSlotPrefab, slotParent);
+        var slot = go.GetComponent<ItemSlotUI>();
+        slot.Setup(row, count, usable);
+    }
+
+    static bool IsSlotUsable(ItemChartRow row, EmployeeData emp)
+    {
+        if (!ItemManager.IsUsableNow(row)) return false;
+        if (IsEventReadyCategory(row)) return false;
+        if (IsGameUpgradeAlreadyUsed(row)) return false;
+        if (emp != null && IsWrongRoleUpgrade(row, emp)) return false;
+        if (IsRelaxButNoDebuffedEmployee(row)) return false;
+        return true;
+    }
+
+    static bool IsEventReadyCategory(ItemChartRow row)
+        => row != null && row.category == "이벤트 대비";
+
+    static bool IsGameUpgradeAlreadyUsed(ItemChartRow row)
+    {
+        if (row == null || row.category != "게임") return false;
+        return DevelopmentManager.Instance != null && DevelopmentManager.Instance.IsGameUpgradeUsed(row.itemId);
+    }
+
+    static bool IsRelaxButNoDebuffedEmployee(ItemChartRow row)
+    {
+        if (row == null || row.itemId != "relax") return false;
+        var employees = EmployeeManager.Instance?.ownedEmployees;
+        if (employees == null || employees.Count == 0) return true;
+        foreach (var emp in employees)
+            if (emp.HasAnyStatDebuff()) return false;
+        return true;
+    }
+
+    static bool IsWrongRoleUpgrade(ItemChartRow row, EmployeeData emp)
+        => row.itemId switch
+        {
+            "upgradeDevelop" => emp.role != EmployeeRole.Programmer,
+            "upgradeArt"     => emp.role != EmployeeRole.Artist,
+            "upgradePlan"    => emp.role != EmployeeRole.Planner,
+            _ => false
+        };
 
     public void OnClickClose()
     {

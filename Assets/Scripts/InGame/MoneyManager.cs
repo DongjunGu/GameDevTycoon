@@ -74,8 +74,9 @@ public class MoneyManager : MonoBehaviour
             // 가난한 회사 특성 — 잔액 부족 시 1회 발동. AlertUI 확인 후 보너스 G 지급 + 그래도 부족하면 대출 prompt.
             if (TraitEffectApplier.TryConsumeBrokeRescue(out int rescueSalary, out string rescueName))
             {
-                AlertUI.Instance?.Show(
-                    $"가난한 회사 발동!\n{rescueName}의 연봉 {rescueSalary:N0}G를 지급합니다.",
+                AlertUI.Instance?.ShowMoney(
+                    $"가난한 회사 발동!\n{rescueName}의 연봉을 지급합니다.",
+                    rescueSalary,
                     () =>
                     {
                         AddGold(rescueSalary);

@@ -345,8 +345,9 @@ public class GameTimeManager : MonoBehaviour
 
         int totalSalary = EmployeeManager.Instance.GetTotalSalary();
         // 잔액 충분 여부 무관하게 새해 알림(지불하기) 먼저. 확인 후 자금 부족 분기.
-        AlertUI.Instance.Show(
-            $"새해가 밝았습니다!\n직원들에게 임금을 지급합니다.\n지급액: {totalSalary:N0}G",
+        AlertUI.Instance.ShowMoney(
+            "새해가 밝았습니다!\n직원들에게 임금을 지급합니다.",
+            totalSalary,
             () => TryPaySalary(totalSalary)
         );
     }
@@ -369,8 +370,9 @@ public class GameTimeManager : MonoBehaviour
 
         if (TraitEffectApplier.TryConsumeBrokeRescue(out int rescueSalary, out string rescueName))
         {
-            AlertUI.Instance.Show(
-                $"가난한 회사 발동!\n{rescueName}의 연봉 {rescueSalary:N0}G를 지급합니다.",
+            AlertUI.Instance.ShowMoney(
+                $"가난한 회사 발동!\n{rescueName}의 연봉을 지급합니다.",
+                rescueSalary,
                 () =>
                 {
                     MoneyManager.Instance.AddGold(rescueSalary);
@@ -422,7 +424,7 @@ public class GameTimeManager : MonoBehaviour
 
         if (goldAfter < 0)
         {
-            AlertUI.Instance.Show($"파산하셨습니다!\n현재 재화: {goldAfter:N0}G", () =>
+            AlertUI.Instance.ShowMoney("파산하셨습니다!", goldAfter, () =>
             {
                 SaveGameTime();
                 MoneyManager.Instance?.SaveMoney();
@@ -442,8 +444,9 @@ public class GameTimeManager : MonoBehaviour
     {
         int yearFee = HUDUI.Instance != null ? HUDUI.Instance.CurrentYearFee : 0;
 
-        AlertUI.Instance.Show(
-            $"연세 {yearFee:N0}G가 차감됩니다.",
+        AlertUI.Instance.ShowMoney(
+            "연세가 차감됩니다.",
+            yearFee,
             () =>
             {
                 int goldAfter = MoneyManager.Instance.Gold - yearFee;

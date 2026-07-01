@@ -13,6 +13,9 @@ using UnityEngine.UI;
 // 가격은 ItemChartRow.price 사용 (GetPrice). 장착 특성 '중고 거래/중고 거래+' 가 있으면 할인가 적용.
 public class MerchantShopPanelUI : MonoBehaviour
 {
+    [Header("Panel")]
+    public GameObject panel;
+
     [Header("Header")]
     public TMP_Text counterText; // "아이템 일람 1/3"
     public Button prevButton;
@@ -21,6 +24,8 @@ public class MerchantShopPanelUI : MonoBehaviour
 
     [Header("Body")]
     public Image itemImage;
+    public Image frameImage;
+    public ItemGradeSet gradeSet;
     public TMP_Text nameText;
     public TMP_Text descriptionText;
     public TMP_Text ownedText;     // "보유 N"
@@ -43,7 +48,6 @@ public class MerchantShopPanelUI : MonoBehaviour
         if (nextButton != null) { nextButton.onClick.RemoveAllListeners(); nextButton.onClick.AddListener(OnClickNext); }
         if (buyButton  != null) { buyButton.onClick.RemoveAllListeners();  buyButton.onClick.AddListener(OnClickBuy); }
         if (closeButton != null){ closeButton.onClick.RemoveAllListeners();closeButton.onClick.AddListener(OnClickClose); }
-        // 시작 비활성은 씬에서 이미 inactive 로 둠. 여기서 SetActive(false) 하면 Open 시 무한 재비활성 버그.
     }
 
     public void Open(List<string> itemIds, System.Action onClosed)
@@ -51,7 +55,7 @@ public class MerchantShopPanelUI : MonoBehaviour
         _itemIds = new List<string>(itemIds ?? new List<string>());
         _onClosed = onClosed;
         _index = 0;
-        gameObject.SetActive(true);
+        if (panel != null) panel.SetActive(true);
         Refresh();
     }
 
@@ -59,7 +63,7 @@ public class MerchantShopPanelUI : MonoBehaviour
     {
         var cb = _onClosed;
         _onClosed = null;
-        gameObject.SetActive(false);
+        if (panel != null) panel.SetActive(false);
         cb?.Invoke();
     }
 
@@ -120,7 +124,7 @@ public class MerchantShopPanelUI : MonoBehaviour
 
         if (!hasItems)
         {
-            if (counterText != null) counterText.text = "아이템 일람 0/0";
+            if (counterText != null) counterText.text = "아이템 0/0";
             if (nameText != null) nameText.text = "";
             if (descriptionText != null) descriptionText.text = "";
             if (ownedText != null) ownedText.text = "";
@@ -133,12 +137,13 @@ public class MerchantShopPanelUI : MonoBehaviour
         var row = GetRow(id);
         if (row == null) return;
 
-        if (counterText != null) counterText.text = $"아이템 일람 {_index + 1}/{_itemIds.Count}";
+        if (counterText != null) counterText.text = $"아이템 {_index + 1}/{_itemIds.Count}";
         if (nameText != null) nameText.text = row.name;
         if (descriptionText != null) descriptionText.text = row.description;
-        if (ownedText != null) ownedText.text = $"보유 {(ItemManager.Instance?.GetCount(id) ?? 0)}";
+        ItemGradeSet.Apply(frameImage, gradeSet, row.grade);
+        if (ownedText != null) ownedText.text = $"(보유 {(ItemManager.Instance?.GetCount(id) ?? 0)})";
         int price = GetPrice(row);
-        if (priceText != null) priceText.text = $"가격 {price:N0}G";
+        if (priceText != null) priceText.text = $"{price:N0}G";
 
         if (itemImage != null)
         {

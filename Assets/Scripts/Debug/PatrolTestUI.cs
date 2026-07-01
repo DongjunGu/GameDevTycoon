@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using System;
+using System.Collections.Generic;
 
 /// <summary>
 /// patrol 테스트용 버튼 UI.
@@ -26,6 +27,23 @@ public class PatrolTestUI : MonoBehaviour
     [Header("상인 방문")]
     public Button btnMerchantVisit;
 
+    // RandomEventType enum 개수 (경계 구분용)
+    static readonly string[] _enumNames = Enum.GetNames(typeof(RandomEventType));
+
+    // 조건 이벤트 목록 (CSV eventType 기준)
+    static readonly string[] _conditionEventKeys =
+    {
+        "BadRumor",
+        "AnxietyInducing",
+        "CompanyBadReview",
+        "OfficeRomance",
+        "RomanceBrokeUp",
+        "CoupleResignation",
+        "LeaderBurnout",
+        "LeaderJealousy",
+        "VoluntaryOvertime",
+    };
+
     void Start()
     {
         btnPatrolRandom?.onClick.AddListener(OnClickRandom);
@@ -47,8 +65,10 @@ public class PatrolTestUI : MonoBehaviour
         if (eventDropdown == null) return;
 
         eventDropdown.ClearOptions();
-        var names = Enum.GetNames(typeof(RandomEventType));
-        eventDropdown.AddOptions(new System.Collections.Generic.List<string>(names));
+        var options = new List<string>(_enumNames);
+        foreach (var key in _conditionEventKeys)
+            options.Add($"[조건] {key}");
+        eventDropdown.AddOptions(options);
     }
 
     void OnClickRandom()
@@ -70,10 +90,76 @@ public class PatrolTestUI : MonoBehaviour
     void OnClickTestEvent()
     {
         if (eventDropdown == null) return;
-        var names = Enum.GetNames(typeof(RandomEventType));
-        if (eventDropdown.value >= names.Length) return;
+        int idx = eventDropdown.value;
 
-        if (Enum.TryParse(names[eventDropdown.value], out RandomEventType type))
-            RandomEventManager.Instance?.TriggerEventTest(type);
+        // ── 일반 RandomEventType ──
+        if (idx < _enumNames.Length)
+        {
+            if (Enum.TryParse(_enumNames[idx], out RandomEventType type))
+                RandomEventManager.Instance?.TriggerEventTest(type);
+            return;
+        }
+
+        // ── 조건 이벤트 ──
+        string key = _conditionEventKeys[idx - _enumNames.Length];
+        TriggerConditionEvent(key);
+    }
+
+    void TriggerConditionEvent(string key)
+    {
+        var mgr  = RandomEventManager.Instance;
+        var year = GameTimeManager.Instance?.Year ?? 2000;
+
+        // 직원 1명 (비CEO, 비파견)
+        EmployeeData emp1 = null, emp2 = null;
+        if (EmployeeManager.Instance != null)
+        {
+            foreach (var e in EmployeeManager.Instance.ownedEmployees)
+            {
+                if (e.isCEO) continue;
+                if (DispatchManager.Instance != null && DispatchManager.Instance.IsDispatched(e.id)) continue;
+                if (emp1 == null) { emp1 = e; continue; }
+                if (emp2 == null) { emp2 = e; break; }
+            }
+        }
+
+        switch (key)
+        {
+            case "BadRumor":
+                if (mgr != null) RandomEvents_Condition.TriggerBadRumorEvent(mgr, year);
+                break;
+            case "AnxietyInducing":
+                RandomEvents_Condition.TriggerAnxietyInducingEvent();
+                break;
+            case "CompanyBadReview":
+                if (mgr != null) RandomEvents_Condition.TriggerCompanyBadReviewEvent(mgr, year);
+                break;
+            case "OfficeRomance":
+                if (mgr != null && emp1 != null && emp2 != null)
+                    RandomEvents_Condition.TriggerOfficeRomanceEvent(mgr, emp1.id, emp2.id);
+                else Debug.LogWarning("[PatrolTestUI] OfficeRomance: 직원 2명 이상 필요");
+                break;
+            case "RomanceBrokeUp":
+                if (mgr != null && emp1 != null && emp2 != null)
+                    RandomEvents_Condition.TriggerRomanceBrokeUpEvent(mgr, emp1.id, emp2.id);
+                else Debug.LogWarning("[PatrolTestUI] RomanceBrokeUp: 직원 2명 이상 필요");
+                break;
+            case "CoupleResignation":
+                if (emp1 != null)
+                    RandomEvents_Condition.TriggerCoupleResignationEvent(emp1.id);
+                break;
+            case "LeaderBurnout":
+                if (emp1 != null)
+                    RandomEvents_Condition.TriggerLeaderBurnoutEvent(emp1, 3, null);
+                break;
+            case "LeaderJealousy":
+                if (emp1 != null)
+                    RandomEvents_Condition.TriggerLeaderJealousyEvent(emp1, null);
+                break;
+            case "VoluntaryOvertime":
+                if (emp1 != null)
+                    RandomEvents_Condition.TriggerVoluntaryOvertimeEvent(emp1);
+                break;
+        }
     }
 }

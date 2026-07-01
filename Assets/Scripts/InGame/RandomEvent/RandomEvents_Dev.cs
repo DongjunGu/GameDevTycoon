@@ -237,23 +237,43 @@ public static class RandomEvents_Dev
         // CDN 로드 실패 시 차트 기본값 (RandomEvent_Chart.csv > ThiefEvent):
         //   title       = "도둑이야!"
         //   description = "어제 회사에 도둑이 들었습니다! 확인해보니 내부자의 소행인 것 같기도?"
-        //   systemMessage = "{0}G가 감소하였습니다"  ({0} → 도난 금액)
+        //   systemMessage = onSetup에서 결과에 맞게 직접 설정 (CSV값 무시)
         //   weight=1, categoryMin=1, categoryMax=4, portraitId=portrait_secretary
         {
-            int stolenGold = 0;
-            RandomEventData thiefEvt = null;
+            int    stolenGold          = 0;
+            string preselectedItemId   = null; // onSetup에서 미리 선정, onApply에서 실제 차감
+            bool   stealItemMode       = false;
+            RandomEventData thiefEvt   = null;
             thiefEvt = new RandomEventData
             {
                 type = RandomEventType.ThiefEvent,
                 onSetup = () =>
                 {
-                    stolenGold = Mathf.Max(1, (int)(MoneyManager.Instance.Gold * 0.05f));
-                    if (!string.IsNullOrEmpty(thiefEvt.systemMessage))
-                        thiefEvt.systemMessage = string.Format(thiefEvt.systemMessage, stolenGold);
+                    // 50:50 — 아이템이 없으면 돈 도난으로 fallback
+                    if (UnityEngine.Random.value < 0.5f && ItemManager.Instance != null)
+                        preselectedItemId = ItemManager.Instance.PickRandomItemId();
+
+                    stealItemMode = !string.IsNullOrEmpty(preselectedItemId);
+
+                    if (stealItemMode)
+                    {
+                        var itemChart = ItemChartLoader.Cache;
+                        string itemName = itemChart.TryGetValue(preselectedItemId, out var row)
+                            ? row.name : preselectedItemId;
+                        thiefEvt.systemMessage = $"'{itemName}'을(를) 도난당했습니다!";
+                    }
+                    else
+                    {
+                        stolenGold = Mathf.Max(1, (int)(MoneyManager.Instance.Gold * 0.05f));
+                        thiefEvt.systemMessage = $"{stolenGold}G가 감소하였습니다";
+                    }
                 },
                 onApply = () =>
                 {
-                    MoneyManager.Instance.ForceSpendGold(stolenGold);
+                    if (stealItemMode)
+                        ItemManager.Instance?.StealSpecificItem(preselectedItemId);
+                    else
+                        MoneyManager.Instance.ForceSpendGold(stolenGold);
                 }
             };
             Add(pool, chart, thiefEvt);

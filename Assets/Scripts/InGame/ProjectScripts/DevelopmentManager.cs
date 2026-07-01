@@ -248,6 +248,7 @@ public class DevelopmentManager : MonoBehaviour
     private Dictionary<string, int> _midDevSeeds = new();
     private Dictionary<string, float> _midDevElapsed = new();
     private Coroutine _bugFixCoroutine;
+    private Coroutine _characterSlowCoroutine;
     private bool _bugFixReleased = false;
     private int _tickSeed;
 
@@ -586,6 +587,13 @@ public class DevelopmentManager : MonoBehaviour
     {
         FireRemainingTicks();
         _isRunning = false;
+        // 개발 완료 시 캐릭터 감속·진행도 보정 즉시 해제 — SaveProject 전에 클리어해야 stale 복원 방지
+        if (_characterSlowCoroutine != null) { StopCoroutine(_characterSlowCoroutine); _characterSlowCoroutine = null; }
+        _characterSlowEndElapsed = 0f;
+        _progressVisualOffset = 0f;
+        _progressOffsetElapsedAtEvent = 0f;
+        _progressOffsetExtension = 0f;
+        OfficeManager.Instance?.SetCharacterSpeedMultiplier(1f);
         OfficeManager.Instance?.StopDevelopmentPatrol();
         GameTimeManager.Instance.StopTime();
         AlertUI.Instance.Show("개발 완료!", () =>
@@ -1195,7 +1203,8 @@ public class DevelopmentManager : MonoBehaviour
         if (networkSlowEndElapsed > elapsed)
         {
             OfficeManager.Instance?.SetCharacterSpeedMultiplier(0.5f);
-            StartCoroutine(RestoreCharacterSpeedAfter(networkSlowEndElapsed - elapsed));
+            if (_characterSlowCoroutine != null) StopCoroutine(_characterSlowCoroutine);
+            _characterSlowCoroutine = StartCoroutine(RestoreCharacterSpeedAfter(networkSlowEndElapsed - elapsed));
         }
         _triggered25 = triggered25;
         _triggered75 = triggered75;
@@ -1337,7 +1346,7 @@ public class DevelopmentManager : MonoBehaviour
 
         float t = Mathf.Clamp01((_elapsed - _progressOffsetElapsedAtEvent) / _progressOffsetExtension);
         float offset = _progressVisualOffset * (1f - t);
-        return actual + offset;
+        return Mathf.Clamp01(actual + offset);
     }
 
     // 강화도(성수, 0~25) → 팀장 단계(1~4) 확률 추첨. 인접 두 단계 사이에서만 분포.
@@ -1635,6 +1644,7 @@ public class DevelopmentManager : MonoBehaviour
         _progressOffsetElapsedAtEvent = 0f;
         _progressOffsetExtension = 0f;
         _characterSlowEndElapsed = 0f;
+        if (_characterSlowCoroutine != null) { StopCoroutine(_characterSlowCoroutine); _characterSlowCoroutine = null; }
         OfficeManager.Instance?.SetCharacterSpeedMultiplier(1f);
         OfficeManager.Instance?.StopDevelopmentPatrol();
 
@@ -1706,7 +1716,8 @@ public class DevelopmentManager : MonoBehaviour
         // 캐릭터 속도 50% 감소 → slowdownSeconds 후 복귀 (연장과 분리 가능)
         _characterSlowEndElapsed = _elapsed + slowdownSeconds;
         OfficeManager.Instance?.SetCharacterSpeedMultiplier(0.5f);
-        StartCoroutine(RestoreCharacterSpeedAfter(slowdownSeconds));
+        if (_characterSlowCoroutine != null) StopCoroutine(_characterSlowCoroutine);
+        _characterSlowCoroutine = StartCoroutine(RestoreCharacterSpeedAfter(slowdownSeconds));
     }
 
     IEnumerator RestoreCharacterSpeedAfter(float extensionSeconds)

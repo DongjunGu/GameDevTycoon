@@ -17,7 +17,6 @@ public static class RandomEvents_Condition
         Chart != null && Chart.TryGetValue(key, out var r) ? r.systemMessage : null;
 
     // ── 도망 메시지 ───────────────────────────────────────────────
-    // [CDN fallback]
     // "책상 위에 놓인 사원증이 반으로 쪼개져 있습니다."
     // "프로필 상태가 '구직 중'으로 바뀌었습니다."
     // "책상 위에 포스트잇 한 장이 붙어 있습니다.\n'회사 탈출은 지능순'"
@@ -28,8 +27,6 @@ public static class RandomEvents_Condition
     }
 
     // ── Register ─────────────────────────────────────────────────
-    // BadCompany는 빈 stub 호출이라 dead였음 — 등록 제거
-    // (실제 BadCompany 발동은 TriggerCompanyBadReviewEvent 등 별도 경로)
     public static void Register(List<RandomEventData> pool, RandomEventManager mgr,
                                 Dictionary<string, RandomEventChartRow> chart = null)
     {
@@ -54,7 +51,6 @@ public static class RandomEvents_Condition
         return false;
     }
 
-    // 예약된 UnstableCompany 이벤트 실제 발동 (OnWeekChanged 카운트다운 만료 시)
     public static void TriggerUnstableCompanyEvent(RandomEventManager mgr, int currentYear)
     {
         if (Random.value < 0.5f)
@@ -64,11 +60,7 @@ public static class RandomEvents_Condition
     }
 
     // ── 안좋은 소문 ───────────────────────────────────────────────
-    // [CDN fallback]
-    // title: "안좋은 소문"
-    // desc:  "회사에서 나간 직원들이 사장님에 대한 안 좋은 소문을 내서\n지원자들의 경쟁률이 계속 줄고 있어요!"
-    // sys:   "안 좋은 소문으로 인해 지원 인원이 감소하고 있습니다\n채용 지원 인원 1명 감소"
-    // portrait: "portrait_secretary"
+    // sys: "1년간 채용 지원 인원 1명 감소"
     public static void TriggerBadRumorEvent(RandomEventManager mgr, int currentYear)
     {
         mgr.HiringPenalty        = Mathf.Max(1, mgr.HiringPenalty + 1);
@@ -77,32 +69,30 @@ public static class RandomEvents_Condition
         RandomEventConditionChartRow row = null;
         Chart?.TryGetValue("BadRumor", out row);
 
+        string sysMsg = row?.systemMessage ?? "1년간 채용 지원 인원 1명 감소";
+
         RandomEventUI.Instance.Show(
-            row?.title ?? "",
+            row?.title ?? "안좋은 소문",
             row?.portraitId ?? "",
             row?.descriptions?.Length > 0 ? row.descriptions[0] : "",
-            () => AlertUI.Instance.Show(
-                row?.systemMessage ?? "",
-                () =>
-                {
-                    GameTimeManager.Instance?.ForceStartTime();
-                    GameTimeManager.Instance?.SaveGameTime();
-                }
-            )
+            sysMsg,
+            null,
+            () =>
+            {
+                GameTimeManager.Instance?.ForceStartTime();
+                GameTimeManager.Instance?.SaveGameTime();
+            }
         );
     }
 
     // ── 불안감 조성 ───────────────────────────────────────────────
-    // [CDN fallback]
-    // title: "불안감 조성"
-    // desc:  "사장님 이번에는 제가 나갈 차롄가요…? 너무 많이 잘리니까 잘릴까봐 불안해서 일을 못하겠어요!"
-    // sys:   "직원이 불안에 떨고 있습니다\n만족도 -5 / {직원이름} 능력치 -20%"
+    // sys:  "{직원이름} 만족도 -5"
+    // sys2: "{직원이름} 능력치 n주 동안 -10%"  (1·2단계 5~15주 / 3·4단계 10~20주)
     public static void TriggerAnxietyInducingEvent()
     {
         var all = EmployeeManager.Instance?.ownedEmployees;
         if (all == null || all.Count == 0) return;
 
-        // 파견중(부재) 직원 제외 — 자리에 없는 직원에게 불안감 이벤트가 뜨면 안 됨
         var employees = new List<EmployeeData>();
         foreach (var e in all)
             if (DispatchManager.Instance == null || !DispatchManager.Instance.IsDispatched(e.id)) employees.Add(e);
@@ -110,35 +100,40 @@ public static class RandomEvents_Condition
 
         var emp = employees[Random.Range(0, employees.Count)];
 
+        int stage = StageManager.Instance != null ? StageManager.Instance.CurrentStage : 1;
+        int n = stage <= 2 ? Random.Range(5, 16) : Random.Range(10, 21);
+
         RandomEventConditionChartRow row = null;
         Chart?.TryGetValue("AnxietyInducing", out row);
+
         string sysMsg = !string.IsNullOrEmpty(row?.systemMessage)
-            ? row.systemMessage.Replace("{직원이름}", emp.employeeName) : "";
+            ? row.systemMessage.Replace("{직원이름}", emp.employeeName)
+            : $"{emp.employeeName} 만족도 -5";
+        string sysMsg2 = !string.IsNullOrEmpty(row?.systemMessage2)
+            ? row.systemMessage2.Replace("{직원이름}", emp.employeeName).Replace("n주", $"{n}주")
+            : $"{emp.employeeName} 능력치 {n}주 동안 -10%";
 
         RandomEventUI.Instance.Show(
-            row?.title ?? "",
+            row?.title ?? "불안감 조성",
             emp.portraitId,
-            row?.descriptions?.Length > 0 ? row.descriptions[0] : "",
+            row?.descriptions?.Length > 0 ? row.descriptions[Random.Range(0, row.descriptions.Length)] : "",
+            sysMsg,
+            sysMsg2,
             () =>
             {
                 emp.ChangeSatisfaction(-5);
-                emp.ApplyStatDebuff(Random.Range(4, 9));
+                emp.ApplyStatBuff(n, -10);
                 EmployeeManager.Instance.UpdateEmployee(emp);
-                AlertUI.Instance.Show(sysMsg, () =>
-                {
-                    GameTimeManager.Instance?.ForceStartTime();
-                    GameTimeManager.Instance?.SaveGameTime();
-                });
+                OfficeManager.Instance?.ShowStatPopup(emp.id, "만족도 -5", new Color(0.4f, 0.6f, 1f));
+                OfficeManager.Instance?.ShowStatPopup(emp.id, $"능력치 {n}주 -10%", new Color(0.4f, 0.6f, 1f));
+                GameTimeManager.Instance?.ForceStartTime();
+                GameTimeManager.Instance?.SaveGameTime();
             }
         );
     }
 
     // ── 회사 평점 1점 ─────────────────────────────────────────────
-    // [CDN fallback]
-    // title:   "회사 평점 1점"
-    // desc:    "이전에 만족도가 낮아서 퇴사한 직원이 회사에 욕설이 가득한 리뷰를 남겨서 평판이 안좋아졌네요…"
-    // sys:     "최악의 리뷰로 인해 지원자들의 발길이 끊깁니다.."
-    // portrait: "portrait_secretary"
+    // sys: "최악의 리뷰로 인해 지원자들의 발길이 끊깁니다.."
     public static void TriggerCompanyBadReviewEvent(RandomEventManager mgr, int currentYear)
     {
         mgr.HiringPenalty        = Mathf.Max(1, mgr.HiringPenalty + 1);
@@ -147,29 +142,32 @@ public static class RandomEvents_Condition
         RandomEventConditionChartRow row = null;
         Chart?.TryGetValue("CompanyBadReview", out row);
 
+        string sysMsg = row?.systemMessage ?? "최악의 리뷰로 인해 지원자들의 발길이 끊깁니다..";
+
         RandomEventUI.Instance.Show(
-            row?.title ?? "",
+            row?.title ?? "회사 평점 1점",
             row?.portraitId ?? "",
             row?.descriptions?.Length > 0 ? row.descriptions[0] : "",
-            () => AlertUI.Instance.Show(
-                row?.systemMessage ?? "",
-                () => GameTimeManager.Instance?.SaveGameTime()
-            )
+            sysMsg,
+            null,
+            () => GameTimeManager.Instance?.SaveGameTime()
         );
     }
 
     // ── 사내 연애 ─────────────────────────────────────────────────
-    // [CDN fallback]
-    // title:  "사내 연애"
-    // desc1 (남자 보고): "사장님 저 {상대이름}과 사귀기로 했습니다! 만세!"
-    // desc2 (여자 보고): "{상대이름}님이랑 오늘부터 1일이에요 축하해주세요!"
-    // sys:    "{이름1}, {이름2} 만족도 +10, 능력치 +10%"
+    // sys:  "{이름1}, {이름2} 만족도 +10"
+    // sys2: "{이름1}, {이름2} 능력치 n주 동안 +10%"  (1·2단계 5~15주 / 3·4단계 10~20주)
+    // desc1: 기존 직원이 남성일 때 ("사장님 저 {상대이름}과 사귀기로 했습니다! 만세!")
+    // desc2: 기존 직원이 여성일 때 ("{상대이름}님이랑 오늘부터 1일이에요 축하해주세요!")
     public static void TriggerOfficeRomanceEvent(RandomEventManager mgr,
                                                   string newEmpId, string existingEmpId)
     {
         var newEmp      = EmployeeManager.Instance?.GetEmployee(newEmpId);
         var existingEmp = EmployeeManager.Instance?.GetEmployee(existingEmpId);
         if (newEmp == null || existingEmp == null) return;
+
+        int stage = StageManager.Instance != null ? StageManager.Instance.CurrentStage : 1;
+        int n = stage <= 2 ? Random.Range(5, 16) : Random.Range(10, 21);
 
         RandomEventConditionChartRow row = null;
         Chart?.TryGetValue("OfficeRomance", out row);
@@ -182,26 +180,36 @@ public static class RandomEvents_Condition
         string sysMsg = (row?.systemMessage ?? "")
             .Replace("{이름1}", existingEmp.employeeName)
             .Replace("{이름2}", newEmp.employeeName);
+        string sysMsg2 = !string.IsNullOrEmpty(row?.systemMessage2)
+            ? row.systemMessage2
+                .Replace("{이름1}", existingEmp.employeeName)
+                .Replace("{이름2}", newEmp.employeeName)
+                .Replace("n주", $"{n}주")
+            : $"{n}주간 능력치 +10%";
 
         mgr.SetActiveCouple(newEmpId, existingEmpId);
 
-        RandomEventUI.Instance.Show(row?.title ?? "", existingEmp.portraitId, desc, () =>
-        {
-            existingEmp.ChangeSatisfaction(10);
-            newEmp.ChangeSatisfaction(10);
-            existingEmp.romanceBuffWeeksLeft = Mathf.Max(existingEmp.romanceBuffWeeksLeft, 8);
-            newEmp.romanceBuffWeeksLeft      = Mathf.Max(newEmp.romanceBuffWeeksLeft, 8);
-            EmployeeManager.Instance.UpdateEmployee(existingEmp);
-            EmployeeManager.Instance.UpdateEmployee(newEmp);
-            AlertUI.Instance.Show(sysMsg, () => GameTimeManager.Instance?.SaveGameTime());
-        });
+        RandomEventUI.Instance.Show(
+            row?.title ?? "사내 연애",
+            existingEmp.portraitId,
+            desc,
+            sysMsg,
+            sysMsg2,
+            () =>
+            {
+                existingEmp.ChangeSatisfaction(10);
+                newEmp.ChangeSatisfaction(10);
+                existingEmp.romanceBuffWeeksLeft = n;
+                newEmp.romanceBuffWeeksLeft      = n;
+                EmployeeManager.Instance.UpdateEmployee(existingEmp);
+                EmployeeManager.Instance.UpdateEmployee(newEmp);
+                GameTimeManager.Instance?.SaveGameTime();
+            }
+        );
     }
 
-    // ── 동반 퇴사 ─────────────────────────────────────────────
-    // [CDN fallback]
-    // title: "혼자선 못 살아요"
-    // desc:  "우린 원래 1+1이에요! 저도 같이 퇴사할껍니다!"
-    // sys:   "{이름}도 같이 퇴사합니다"
+    // ── 동반 퇴사 ─────────────────────────────────────────────────
+    // sys: "{이름}도 같이 퇴사합니다"
     public static void TriggerCoupleResignationEvent(string partnerEmpId)
     {
         var partner = EmployeeManager.Instance?.GetEmployee(partnerEmpId);
@@ -213,23 +221,22 @@ public static class RandomEvents_Condition
         string sysMsg = (row?.systemMessage ?? "").Replace("{이름}", partner.employeeName);
 
         RandomEventUI.Instance.Show(
-            row?.title ?? "",
+            row?.title ?? "혼자선 못 살아요",
             partner.portraitId,
             row?.descriptions?.Length > 0 ? row.descriptions[0] : "",
+            sysMsg,
+            null,
             () =>
             {
                 EmployeeManager.Instance.FireEmployee(partner, countAsExit: false);
                 HUDUI.Instance?.RefreshAll();
-                AlertUI.Instance.Show(sysMsg, () => GameTimeManager.Instance?.SaveGameTime());
+                GameTimeManager.Instance?.SaveGameTime();
             }
         );
     }
 
-    // ── 사내 연애 이별 ────────────────────────────────────────
-    // [CDN fallback]
-    // title: "사내 연애의 결말…"
-    // desc:  "사장님… 최대한 마주칠일 없게 부탁드립니다… 헤어졌어요"
-    // sys:   "{이름1}, {이름2} 만족도 -20"
+    // ── 사내 연애 이별 ────────────────────────────────────────────
+    // sys: "{이름1}, {이름2} 만족도 -20"
     public static void TriggerRomanceBrokeUpEvent(RandomEventManager mgr, string empId1, string empId2)
     {
         var emp1 = EmployeeManager.Instance?.GetEmployee(empId1);
@@ -246,26 +253,24 @@ public static class RandomEvents_Condition
         mgr.ClearCoupleIfInvolved(empId1);
 
         RandomEventUI.Instance.Show(
-            row?.title ?? "",
+            row?.title ?? "사내 연애의 결말…",
             emp1.portraitId,
             row?.descriptions?.Length > 0 ? row.descriptions[0] : "",
+            sysMsg,
+            null,
             () =>
             {
                 emp1.ChangeSatisfaction(-20);
                 emp2.ChangeSatisfaction(-20);
                 EmployeeManager.Instance.UpdateEmployee(emp1);
                 EmployeeManager.Instance.UpdateEmployee(emp2);
-                AlertUI.Instance.Show(sysMsg, () => GameTimeManager.Instance?.SaveGameTime());
+                GameTimeManager.Instance?.SaveGameTime();
             }
         );
     }
 
     // ── 자발적 야근 ──────────────────────────────────────────────
-    // [CDN fallback]
-    // title: "자발적 야근"
-    // desc1: "이렇게 좋은 회사는 살면서 처음이네요! 목숨을 바쳐서 일하겠습니다"
-    // desc2: "이대로는 잠이 안올 것 같아요 전 오늘 야근하겠습니다"
-    // sys:   "{직원이름}이 자발적으로 야근합니다. 만족도 하락 없이 야근 모드가 활성화됩니다"
+    // sys: "{직원이름}이 자발적으로 야근합니다. 만족도 하락 없이 야근 모드가 활성화됩니다"
     public static void TriggerVoluntaryOvertimeEvent(EmployeeData emp)
     {
         RandomEventConditionChartRow row = null;
@@ -281,22 +286,25 @@ public static class RandomEvents_Condition
             row?.title ?? "자발적 야근",
             emp.portraitId,
             desc,
-            () => AlertUI.Instance.Show(sysMsg, () =>
+            sysMsg,
+            null,
+            () =>
             {
                 GameTimeManager.Instance?.ForceStartTime();
+                MoneyManager.Instance?.SaveMoney();
                 GameTimeManager.Instance?.SaveGameTime();
-            })
+                ProjectSaveManager.Instance?.SaveProject();
+            }
         );
     }
 
     // ── 팀장 번아웃 ──────────────────────────────────────────────
-    // [CDN fallback]
-    // title: "팀장 멈춰!"
-    // desc1: "저 지금 팀장 {n}번 연속 하고 있어요…\n저 이제 그만 좀 시켜주세요…"
-    // desc2: "저희 팀은 왜 맨날 저만 일하나요…\n저 말고 다른 사람 시켜주세요..."
-    // sys:   "{직원이름} 능력치가 20% 하락합니다"
+    // sys: "{직원이름} 능력치 n주간 -20%"  (1·2단계 5~15주 / 3·4단계 10~20주)
     public static void TriggerLeaderBurnoutEvent(EmployeeData emp, int consecutiveCount, System.Action onDone)
     {
+        int stage = StageManager.Instance != null ? StageManager.Instance.CurrentStage : 1;
+        int n = stage <= 2 ? Random.Range(5, 16) : Random.Range(10, 21);
+
         RandomEventConditionChartRow row = null;
         Chart?.TryGetValue("LeaderBurnout", out row);
 
@@ -304,25 +312,27 @@ public static class RandomEvents_Condition
         string rawDesc = descs != null && descs.Length > 0
             ? descs[Random.Range(0, Mathf.Min(descs.Length, 2))]
             : "";
-        string desc = rawDesc.Replace("{n}", consecutiveCount.ToString());
-        string sysMsg = (row?.systemMessage ?? "").Replace("{직원이름}", emp.employeeName);
+        string desc   = rawDesc.Replace("{n}", consecutiveCount.ToString());
+        string sysMsg = (row?.systemMessage ?? "")
+            .Replace("{직원이름}", emp.employeeName)
+            .Replace("n주", $"{n}주");
 
-        emp.ApplyStatDebuff(8);
+        emp.ApplyStatDebuff(n);
         EmployeeManager.Instance.UpdateEmployee(emp);
+        OfficeManager.Instance?.ShowStatPopup(emp.id, $"능력치 {n}주 -20%", new Color(0.4f, 0.6f, 1f));
 
         RandomEventUI.Instance.Show(
             row?.title ?? "팀장 멈춰!",
             emp.portraitId,
             desc,
-            () => AlertUI.Instance.Show(sysMsg, () => onDone?.Invoke())
+            sysMsg,
+            null,
+            () => onDone?.Invoke()
         );
     }
 
     // ── 팀장 질투 ─────────────────────────────────────────────────
-    // [CDN fallback]
-    // title: "나도 팀장..."
-    // desc:  "뭐 이번에도 팀장은 아니네요. 이제는 기대도 안 하고 그냥 시키는 일이나 하다가 조용히 퇴근하렵니다."
-    // sys:   "{직원이름} 만족도 -20"
+    // sys: "{직원이름} 만족도 -15"
     public static void TriggerLeaderJealousyEvent(EmployeeData emp, System.Action onDone)
     {
         RandomEventConditionChartRow row = null;
@@ -331,14 +341,16 @@ public static class RandomEvents_Condition
         string desc   = row?.descriptions?.Length > 0 ? row.descriptions[0] : "";
         string sysMsg = (row?.systemMessage ?? "").Replace("{직원이름}", emp.employeeName);
 
-        emp.ChangeSatisfaction(-20);
+        emp.ChangeSatisfaction(-15);
         EmployeeManager.Instance.UpdateEmployee(emp);
 
         RandomEventUI.Instance.Show(
             row?.title ?? "나도 팀장...",
             emp.portraitId,
             desc,
-            () => AlertUI.Instance.Show(sysMsg, () => onDone?.Invoke())
+            sysMsg,
+            null,
+            () => onDone?.Invoke()
         );
     }
 

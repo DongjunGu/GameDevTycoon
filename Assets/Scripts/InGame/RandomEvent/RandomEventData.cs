@@ -74,6 +74,7 @@ public class RandomEventData
     public int    categoryMax;
     public string portraitId;       // 특정 직원 이벤트일 때 설정, 없으면 ""
     public string systemMessage;   // 시스템 효과 안내 문구, 없으면 ""
+    public int    titleType;       // 0=부정, 1=중립, 2=긍정
     public bool   keepSystemMessageActive = false; // true 면 systemMessage 가 비어도 systemMessageText GameObject 활성 유지
 
     // 패트롤 도착 트리거 설정
