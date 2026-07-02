@@ -16,7 +16,11 @@ public class ModalBlocker : MonoBehaviour
 {
     const int   BASE_ORDER = 50;   // 인게임 캔버스(10~14)보다 충분히 높은 기준 정렬값
     const int   STEP       = 2;    // 모달마다 +2 (모달 order, 블로커는 그 바로 아래)
-    const float DIM_ALPHA  = 0.30f; // 배경 어둡기 (블러 위에 살짝 dim)
+
+    [Header("Dim 배경 어둡기 (0~1, 클수록 진함)")]
+    [Range(0f, 1f)]
+    [SerializeField] float dimAlpha = 0.7f; // 기존 고정값(0.30) 대비 기본을 더 진하게 + 조절 가능하게 노출
+                                             // 런타임 자동생성 오브젝트라 Play 모드에서 Hierarchy 의 [ModalBlocker] 선택 후 조절
 
     // 배경 블러 (모달 뒤 화면). 모달=시간정지라 열릴 때 1회만 렌더. RT 는 화면 1/4 다운샘플.
     const float BLUR_SIZE  = 1.0f;  // 셰이더 _BlurSize (px)
@@ -53,6 +57,12 @@ public class ModalBlocker : MonoBehaviour
         EnsureBlocker();
     }
 
+    // Play 모드에서 Hierarchy 의 [ModalBlocker] 를 선택해 dimAlpha 슬라이더를 조절하면 즉시 반영.
+    void OnValidate()
+    {
+        if (_image != null) _image.color = new Color(0f, 0f, 0f, dimAlpha);
+    }
+
     void EnsureBlocker()
     {
         if (_canvas != null) return;
@@ -65,8 +75,12 @@ public class ModalBlocker : MonoBehaviour
         _canvas.sortingOrder = BASE_ORDER;
         gameObject.AddComponent<GraphicRaycaster>();
 
-        _image = gameObject.AddComponent<Image>();
-        _image.color = new Color(0f, 0f, 0f, DIM_ALPHA);
+        // 블러(_blurImage)와의 렌더 순서를 sibling index 로 확실히 제어하기 위해 딤도 캔버스의 "자식"으로 둔다.
+        // (루트(캔버스) 자신에 바로 붙이면 자식인 블러가 항상 그 위에 그려져서 SetAsLastSibling 이 무의미해짐)
+        var dimGo = new GameObject("DimBG");
+        dimGo.transform.SetParent(_canvas.transform, false);
+        _image = dimGo.AddComponent<Image>();
+        _image.color = new Color(0f, 0f, 0f, dimAlpha);
         _image.raycastTarget = true;             // 알파 0 이어도 raycast 는 막힘 (여기선 dim 까지)
         var rt = (RectTransform)_image.transform;
         rt.anchorMin = Vector2.zero; rt.anchorMax = Vector2.one;

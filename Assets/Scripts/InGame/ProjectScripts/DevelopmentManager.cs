@@ -310,7 +310,7 @@ public class DevelopmentManager : MonoBehaviour
                 IsPendingLeaderSelect = true;
                 ProjectSaveManager.Instance.SaveProject();
 
-                LeaderSelectUI.Instance.Open(LeaderType.Planner, () =>
+                DispatchPanelUI.Instance.OpenForLeaderSelect(LeaderType.Planner, () =>
                 {
                     IsPendingLeaderSelect = false;
                     GameTimeManager.Instance.ForceStartTime();
@@ -527,7 +527,7 @@ public class DevelopmentManager : MonoBehaviour
 
                 // pending 없음: 시간도 멈추고 팀장 선택 UI 표시
                 GameTimeManager.Instance.StopTime();
-                LeaderSelectUI.Instance.Open(LeaderType.Programmer, null);
+                DispatchPanelUI.Instance.OpenForLeaderSelect(LeaderType.Programmer, null);
                 yield break;
             }
 
@@ -545,7 +545,7 @@ public class DevelopmentManager : MonoBehaviour
 
                 // pending 없음: 시간도 멈추고 팀장 선택 UI 표시
                 GameTimeManager.Instance.StopTime();
-                LeaderSelectUI.Instance.Open(LeaderType.Artist, null);
+                DispatchPanelUI.Instance.OpenForLeaderSelect(LeaderType.Artist, null);
                 yield break;
             }
 
@@ -1276,7 +1276,7 @@ public class DevelopmentManager : MonoBehaviour
                 {
                     IsPendingLeaderSelect = false;
                     GameTimeManager.Instance.StopTime(); // GameSceneInitializer.StartTime() 상쇄
-                    LeaderSelectUI.Instance.Open(LeaderType.Planner, () =>
+                    DispatchPanelUI.Instance.OpenForLeaderSelect(LeaderType.Planner, () =>
                     {
                         _isRunning = true;
                         GameTimeManager.Instance.ForceStartTime();
@@ -1287,13 +1287,13 @@ public class DevelopmentManager : MonoBehaviour
                 {
                     _pendingLeaderScore75 = false;
                     GameTimeManager.Instance.StopTime(); // GameSceneInitializer.StartTime() 상쇄
-                    LeaderSelectUI.Instance.Open(LeaderType.Artist, null);
+                    DispatchPanelUI.Instance.OpenForLeaderSelect(LeaderType.Artist, null);
                 }
                 else if (pendingLeaderScore25)
                 {
                     _pendingLeaderScore25 = false;
                     GameTimeManager.Instance.StopTime(); // GameSceneInitializer.StartTime() 상쇄
-                    LeaderSelectUI.Instance.Open(LeaderType.Programmer, null);
+                    DispatchPanelUI.Instance.OpenForLeaderSelect(LeaderType.Programmer, null);
                 }
                 else if (pendingCreativityGame)
                 {
@@ -1760,7 +1760,7 @@ public class DevelopmentManager : MonoBehaviour
         {
             _pendingLeaderScore75 = false;
             // PauseForEvent()가 이미 시간을 멈췄으므로 그대로 팀장 선택 UI 표시
-            LeaderSelectUI.Instance.Open(LeaderType.Artist, null);
+            DispatchPanelUI.Instance.OpenForLeaderSelect(LeaderType.Artist, null);
             return;
         }
 
@@ -1768,7 +1768,7 @@ public class DevelopmentManager : MonoBehaviour
         {
             _pendingLeaderScore25 = false;
             // PauseForEvent()가 이미 시간을 멈췄으므로 그대로 팀장 선택 UI 표시
-            LeaderSelectUI.Instance.Open(LeaderType.Programmer, null);
+            DispatchPanelUI.Instance.OpenForLeaderSelect(LeaderType.Programmer, null);
             return;
         }
 

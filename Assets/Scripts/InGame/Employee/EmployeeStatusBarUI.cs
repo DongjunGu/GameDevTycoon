@@ -115,7 +115,10 @@ public class EmployeeStatusBarUI : MonoBehaviour
             if (kv.Value != null) Destroy(kv.Value.gameObject);
         _slots.Clear();
 
-        foreach (var emp in EmployeeManager.Instance.ownedEmployees)
+        // 등급 내림차순 → 레벨 내림차순 → 직군(기획>개발>아트) — DispatchPanelUI/EmployeeListUI 와 동일 규칙
+        var sorted = new List<EmployeeData>(EmployeeManager.Instance.ownedEmployees);
+        sorted.Sort(CompareEmployees);
+        foreach (var emp in sorted)
             AddSlot(emp.id);
     }
 
@@ -135,7 +138,38 @@ public class EmployeeStatusBarUI : MonoBehaviour
         }
         slot.SetEmployee(employeeId);
         _slots[employeeId] = slot;
+
+        // 정렬 유지 — 새로 추가된 슬롯을 정렬 기준에 맞는 위치로 이동 (Rebuild 순차 추가 시엔 항상 맨 뒤라 그대로 유지됨)
+        var emp = EmployeeManager.Instance?.GetEmployee(employeeId);
+        if (emp != null)
+        {
+            int index = 0;
+            foreach (var kv in _slots)
+            {
+                if (kv.Key == employeeId) continue;
+                var otherEmp = EmployeeManager.Instance.GetEmployee(kv.Key);
+                if (otherEmp != null && CompareEmployees(otherEmp, emp) <= 0) index++;
+            }
+            go.transform.SetSiblingIndex(index);
+        }
     }
+
+    static int CompareEmployees(EmployeeData a, EmployeeData b)
+    {
+        int c = b.grade.CompareTo(a.grade);
+        if (c != 0) return c;
+        c = b.enhancementLevel.CompareTo(a.enhancementLevel);
+        if (c != 0) return c;
+        return RoleOrder(a.role).CompareTo(RoleOrder(b.role));
+    }
+
+    static int RoleOrder(EmployeeRole role) => role switch
+    {
+        EmployeeRole.Planner    => 0,
+        EmployeeRole.Programmer => 1,
+        EmployeeRole.Artist     => 2,
+        _ => 3
+    };
 
     public void RemoveSlot(string employeeId)
     {
