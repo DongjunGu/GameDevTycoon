@@ -62,18 +62,17 @@ public class EmployeeResumePanel : MonoBehaviour
         // 등급별 이미지 교체 (색 변경 대신 sprite 세트)
         GradeSpriteSet.Apply(gradePanel, gradeSpriteSet, emp.grade);
 
-        // 특성/이벤트 — 등급 무관 이름을 항상 표시(다 출력). 등급 충족이면 클릭 시 설명 패널 토글,
-        // 미충족이면 덮개(lockedPanel) 활성화로 클릭 차단. (EmployeeCardUI 와 동일 규칙)
-        ResolveDescRefs();
+        // 특성/이벤트 — 등급 무관 이름을 항상 표시(다 출력). 등급 충족이면 클릭 시 AlertUI3(ShowPortrait)로 설명,
+        // 미충족이면 덮개(lockedPanel) 활성화로 클릭 차단. (EmployeeCardUI/DispatchPanelUI 와 동일 규칙)
         string traitName = (!emp.isCEO) ? CharacterTraitApplier.GetTraitNameAnyGrade(emp) : "";
         bool traitUnlocked = (!emp.isCEO) && CharacterTraitApplier.IsTraitUnlocked(emp);
-        WireDesc(traitText, _traitDescImg, _traitDescText, traitName,
-                 CharacterTraitApplier.GetTraitDescription(emp), "특성", traitUnlocked, traitLockedPanel);
+        WireDesc(traitText, traitName,
+                 CharacterTraitApplier.GetTraitDescription(emp), "특성", traitUnlocked, traitLockedPanel, emp.portraitId);
 
         string eventName = CharacterUniqueEvents.GetEventNameAnyGrade(emp);
         bool eventUnlocked = CharacterUniqueEvents.IsEventUnlocked(emp);
-        WireDesc(eventText, _eventDescImg, _eventDescText, eventName,
-                 CharacterUniqueEvents.GetEventDescription(emp), "이벤트", eventUnlocked, eventLockedPanel);
+        WireDesc(eventText, eventName,
+                 CharacterUniqueEvents.GetEventDescription(emp), "이벤트", eventUnlocked, eventLockedPanel, emp.portraitId);
 
         if (enhancementText != null) enhancementText.text = $"+{emp.enhancementLevel}";
 
@@ -113,37 +112,11 @@ public class EmployeeResumePanel : MonoBehaviour
         return i >= 0 ? labeled.Substring(i + 1).Trim() : labeled;
     }
 
-    // ── 특성/이벤트 설명 패널 (자식 이름으로 자동 탐색 → 수동 배선 불필요, 복제 패널도 자동 동작) ──
-    Image _traitDescImg; TMP_Text _traitDescText;
-    Image _eventDescImg; TMP_Text _eventDescText;
-    bool _descResolved;
-
-    void ResolveDescRefs()
-    {
-        if (_descResolved) return;
-        _descResolved = true;
-        var tp = FindDescendant("traitDescriptionPanel");
-        if (tp != null) { _traitDescImg = tp.GetComponent<Image>(); _traitDescText = tp.GetComponentInChildren<TMP_Text>(true); }
-        var ep = FindDescendant("eventDescriptionPanel");
-        if (ep != null) { _eventDescImg = ep.GetComponent<Image>(); _eventDescText = ep.GetComponentInChildren<TMP_Text>(true); }
-    }
-
-    Transform FindDescendant(string n)
-    {
-        // 이름 끝 공백 등 사소한 오타에도 견고하게 Trim 비교 (예: "traitDescriptionPanel ")
-        foreach (var t in GetComponentsInChildren<Transform>(true))
-            if (t.name.Trim() == n) return t;
-        return null;
-    }
-
-    // 라벨에 "{kind} : {이름}"(없으면 "{kind} : 없음") 표시 + 설명 있으면 클릭 토글 부착. 설명 패널은 기본 숨김.
+    // 라벨에 "{kind} : {이름}"(없으면 "{kind} : 없음") 표시 + 등급 충족(unlocked)이고 설명 있으면 클릭 시 AlertUI3(ShowPortrait)로 최상단 표시.
     // unlocked=false(등급 미충족)면 lockedPanel 덮개 활성화 + 클릭(설명) 비활성.
-    void WireDesc(TMP_Text label, Image descImg, TMP_Text descText, string name, string desc, string kind,
-                  bool unlocked, GameObject lockedPanel)
+    void WireDesc(TMP_Text label, string name, string desc, string kind,
+                  bool unlocked, GameObject lockedPanel, string portraitId)
     {
-        if (descImg  != null) descImg.enabled = false;
-        if (descText != null) descText.gameObject.SetActive(false);
-
         bool has = !string.IsNullOrEmpty(name);
 
         // 특성/이벤트가 있는데 등급 미충족일 때만 덮개 노출 (미보유는 덮을 게 없음)
@@ -152,17 +125,21 @@ public class EmployeeResumePanel : MonoBehaviour
         if (label == null) return;
         label.text = has ? $"{kind} : {name}" : $"{kind} : 없음";
 
-        // 등급 충족(unlocked) + 설명 존재일 때만 클릭으로 설명 토글. 미충족이면 덮개가 클릭 차단.
-        bool clickable = has && unlocked && !string.IsNullOrEmpty(desc) && (descImg != null || descText != null);
+        bool clickable = has && unlocked && !string.IsNullOrEmpty(desc);
         label.raycastTarget = clickable;
 
-        var toggle = label.GetComponent<ResumeDescriptionToggle>();
+        var btn = label.GetComponent<Button>();
         if (clickable)
         {
-            if (toggle == null) toggle = label.gameObject.AddComponent<ResumeDescriptionToggle>();
-            toggle.Setup(descImg, descText, desc);
+            if (btn == null) btn = label.gameObject.AddComponent<Button>();
+            btn.transition = Selectable.Transition.None;
+            btn.onClick.RemoveAllListeners();
+            btn.onClick.AddListener(() => AlertUI.Instance?.ShowPortrait(desc, portraitId, name));
         }
-        else if (toggle != null) toggle.Setup(null, null, null);
+        else if (btn != null)
+        {
+            btn.onClick.RemoveAllListeners();
+        }
     }
 
 }

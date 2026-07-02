@@ -98,15 +98,16 @@ public class ResumeFlipper : MonoBehaviour
         if (rightPaper != null) { var p = RightSlot(_centerHome); rightPaper.anchoredPosition3D = new Vector3(p.x, p.y, 0f); rightPaper.localScale = SideScaleV; rightPaper.localEulerAngles = RightRot; }
     }
 
-    // 쉬는 상태: 세 종이를 "모달 기준 order"(같은 값)로 맞춘다.
-    // - 모달 블로커보다 1 높은 모달 order 를 상속받는 값이라 셋 다 블로커 위 → 좌/우 종이도 클릭 OK.
-    // - 쉬는 상태에선 좌/우가 가운데와 겹치지 않아(좌우 오프셋) 깊이 차가 시각적으로 무의미.
+    // 쉬는 상태: 가운데는 "모달 기준 order"(b), 좌/우는 그보다 1 낮게(b-1).
+    // - 셋 다 블로커보다는 위라 좌/우 종이도 클릭 OK.
+    // - 좌/우가 가운데와 겹치는 구간이 있어(카드 폭/스케일에 따라) 같은 order 면 그 구간 레이캐스트가 애매해져
+    //   터치가 안 먹는 문제가 있었음 → 가운데를 항상 1 위로 둬서 겹침 구간은 가운데가 우선되게 함.
     void RestoreSorting()
     {
         int b = ModalBaseOrder();
         if (_centerCanvas != null) { _centerCanvas.overrideSorting = true; _centerCanvas.sortingOrder = b; }
-        if (_leftCanvas  != null) { _leftCanvas.overrideSorting  = true; _leftCanvas.sortingOrder  = b; }
-        if (_rightCanvas != null) { _rightCanvas.overrideSorting = true; _rightCanvas.sortingOrder = b; }
+        if (_leftCanvas  != null) { _leftCanvas.overrideSorting  = true; _leftCanvas.sortingOrder  = b - 1; }
+        if (_rightCanvas != null) { _rightCanvas.overrideSorting = true; _rightCanvas.sortingOrder = b - 1; }
     }
 
     // 종이 Canvas 가 따라갈 기준 정렬값 = 위쪽(모달) Canvas 의 sortingOrder.

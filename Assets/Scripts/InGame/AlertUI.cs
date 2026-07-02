@@ -88,6 +88,13 @@ public class AlertUI : MonoBehaviour
     {
         if (_queue.Count == 0) { _isShowing = false; return; }
         _isShowing = true;
+
+        // Portrait(특성/이벤트 설명, 아이템 사용 결과 등)는 "지금 보고 있는 패널 위에 즉시 뜨는" 정보 팝업이라
+        // 다른 UI 가 점유 중인 ModalGate 를 기다리지 않고 바로 표시한다(자기 자신도 아래서 ModalGate.Register 됨).
+        // 안 그러면 예: HiringUI 가 ConfirmHirePanel 이 떠 있는 동안 게이트를 쥐고 있어서, 그 안에서 특성/이벤트
+        // 버튼을 눌러도 안 뜨고 ConfirmHirePanel 이 닫혀 게이트가 풀리는 순간에야 뒤늦게 뜨는 문제가 있었음.
+        if (_queue.Peek().type == AlertType.Portrait) { DisplayDequeued(); return; }
+
         ModalGate.I.WhenFree(DisplayDequeued);
     }
 
