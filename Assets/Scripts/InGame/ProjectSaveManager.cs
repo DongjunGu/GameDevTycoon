@@ -395,7 +395,7 @@ public class ProjectSaveManager : MonoBehaviour
             {
                 dm.IsPendingLeaderSelect = true;
                 SaveProject();
-                LeaderSelectUI.Instance.Open(LeaderType.Planner, () =>
+                DispatchPanelUI.Instance.OpenForLeaderSelect(LeaderType.Planner, () =>
                 {
                     dm.IsPendingLeaderSelect = false;
                     GameTimeManager.Instance.ForceStartTime();

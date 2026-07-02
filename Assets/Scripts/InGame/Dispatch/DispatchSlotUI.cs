@@ -8,6 +8,9 @@ public class DispatchSlotUI : MonoBehaviour
     [Header("UI")]
     public Image portraitImage;
     public TextMeshProUGUI nameText;
+    [Header("등급별 배경 (공용 GradeSpriteSet 에셋)")]
+    public Image bgImage;
+    public GradeSpriteSet bgGradeSet;
     [Header("Role 아이콘 — roleIcons 는 enum 순서 [Planner, Programmer, Artist] 로 인스펙터에서 할당")]
     public Image roleIcon;
     public Sprite[] roleIcons;
@@ -23,6 +26,8 @@ public class DispatchSlotUI : MonoBehaviour
     {
         _empId = data.id;
 
+        GradeSpriteSet.Apply(bgImage, bgGradeSet, data.grade);
+
         if (nameText != null) nameText.text = data.employeeName;
         if (roleIcon != null && roleIcons != null
             && (int)data.role >= 0 && (int)data.role < roleIcons.Length
@@ -36,7 +41,7 @@ public class DispatchSlotUI : MonoBehaviour
         if (portraitImage != null)
         {
             Sprite sp = !string.IsNullOrEmpty(data.portraitId)
-                ? Resources.Load<Sprite>($"Portraits/{data.portraitId}") : null;
+                ? Resources.Load<Sprite>($"Portraits/Mini/{data.portraitId}") : null;
             portraitImage.sprite = sp;
             portraitImage.enabled = sp != null;
         }

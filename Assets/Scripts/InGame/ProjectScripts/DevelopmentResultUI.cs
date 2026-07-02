@@ -9,13 +9,13 @@ public class DevelopmentResultUI : MonoBehaviour
 
     [Header("Panel")]
     public GameObject resultPanel;
+    public GameObject shadowBG;    // resultPanel 과 항상 같이 켜지고 꺼지는 배경 딤
     public GameObject editNamePanel;
 
     [Header("UI")]
     public TextMeshProUGUI planningText;
     public TextMeshProUGUI developText;
     public TextMeshProUGUI artText;
-    public TextMeshProUGUI bugText;
     public TextMeshProUGUI creativityText;
     [Header("Project Info")]
     public TextMeshProUGUI scaleResultText;
@@ -24,17 +24,19 @@ public class DevelopmentResultUI : MonoBehaviour
 
     [Header("Contribution (기여도 1등)")]
     public Image contributorPortrait;          // Row2/PortraitPanel/portraitImage
-    public TextMeshProUGUI contributorNameText;// Row2/ContributionPanel/nameText
-    public TextMeshProUGUI contributorRateText;// Row2/ContributionPanel/contributionRateText
 
     [Header("Contribution Detail (전체 순위)")]
-    public GameObject contributionDetailPanel; // 중앙 순위 패널 (closeBtn 자식)
-    public Button contributionCheckBtn;        // 상세 열기 버튼
-    public Button contributionCloseBtn;        // 전체화면 백드롭 닫기 버튼 (CEOInfoUI 방식)
+    public GameObject rightPanel;              // 기본 상태 패널 (RightPanel) — 상세 볼 때 비활성
+    public GameObject contributionDetailPanel; // 순위 상세 패널 (RightPanelDetail) — RightPanel 과 서로 반대로 토글
+    public Button contributionCheckBtn;        // 상세 열기/닫기 겸용 토글 버튼 (ContributionCheckBtn)
+    public TextMeshProUGUI contributionCheckBtnText; // 버튼 라벨 — "기여도 확인" ↔ "돌아가기" 토글
     public GameObject rowPrefab;               // RowPanel 프리팹 (numberPanel/namePanel/contriPanel)
     public Transform contributionContent;      // 행이 생성될 부모 (Content)
-    public int defaultRowCount = 10;           // 기본 확보 행 수 (부족하면 추가 생성)
+    [Tooltip("RowPanel 배경 등급색 — DispatchSlotUI 와 동일 공용 GradeSpriteSet 에셋 재사용")]
+    public GradeSpriteSet rowBgGradeSet;
     private readonly List<GameObject> _rowPool = new();
+    const string ContributionCheckLabel = "기여도 확인";
+    const string ContributionBackLabel  = "돌아가기";
     [Header("Project Name")]
     public TextMeshProUGUI projectNameText;
     public TMP_InputField projectNameInput;
@@ -91,57 +93,55 @@ public class DevelopmentResultUI : MonoBehaviour
     {
         if (Instance != null) { Destroy(gameObject); return; }
         Instance = this;
-        resultPanel.SetActive(false);
+        SetResultPanelActive(false);
         editNamePanel.SetActive(false);
-        if (contributionDetailPanel != null) contributionDetailPanel.SetActive(false);
-        if (contributionCloseBtn != null) contributionCloseBtn.gameObject.SetActive(false);
+        SetContributionDetailShown(false);
         if (contributionCheckBtn != null)
         {
             contributionCheckBtn.onClick.RemoveAllListeners();
-            contributionCheckBtn.onClick.AddListener(OnClickContributionDetail);
+            contributionCheckBtn.onClick.AddListener(OnClickContributionCheck);
         }
-        if (contributionCloseBtn != null)
+    }
+
+    // RightPanel ↔ RightPanelDetail 반대로 토글 + 버튼 라벨 갱신 ("기여도 확인" ↔ "돌아가기")
+    void SetContributionDetailShown(bool shown)
+    {
+        if (rightPanel != null) rightPanel.SetActive(!shown);
+        if (contributionDetailPanel != null) contributionDetailPanel.SetActive(shown);
+        if (contributionCheckBtnText != null)
+            contributionCheckBtnText.text = shown ? ContributionBackLabel : ContributionCheckLabel;
+    }
+
+    // ContributionCheckBtn 클릭 — 상세 표시 중이면 되돌리고, 아니면 순위를 채워서 보여준다.
+    public void OnClickContributionCheck()
+    {
+        bool shown = contributionDetailPanel != null && contributionDetailPanel.activeSelf;
+        if (shown)
         {
-            contributionCloseBtn.onClick.RemoveAllListeners();
-            contributionCloseBtn.onClick.AddListener(OnCloseContributionDetail);
+            SetContributionDetailShown(false);
+            return;
         }
-    }
 
-    // 닫기 — 전체화면 백드롭 + 순위 패널 끄고 메인 복귀 (CEOInfoUI.OnClickClose 방식)
-    public void OnCloseContributionDetail()
-    {
-        if (contributionDetailPanel != null) contributionDetailPanel.SetActive(false);
-        if (contributionCloseBtn != null) contributionCloseBtn.gameObject.SetActive(false);
-        resultPanel.SetActive(true);
-    }
-
-    // 기여도 상세 — 메인 끄고 백드롭 + 순위 패널 켜기. 기본 defaultRowCount 행 확보, 부족하면 추가 생성.
-    public void OnClickContributionDetail()
-    {
         if (contributionDetailPanel == null || rowPrefab == null || contributionContent == null) return;
 
-        resultPanel.SetActive(false);
-        if (contributionCloseBtn != null) contributionCloseBtn.gameObject.SetActive(true);
-        contributionDetailPanel.SetActive(true);
-
+        // 기여도 내림차순(GetContributionRanking 이 이미 내림차순 정렬) — 해당 직원 수만큼만 행 생성, 빈 패딩 없음.
         var ranking = DevelopmentManager.Instance.GetContributionRanking();
-        int rowCount = Mathf.Max(defaultRowCount, ranking.Count); // 기본 10행 활성, 부족하면 빈 행
-        EnsureRowPool(rowCount);
+        EnsureRowPool(ranking.Count);
 
         for (int i = 0; i < _rowPool.Count; i++)
         {
             var row = _rowPool[i];
             if (row == null) continue;
-            if (i < rowCount)
+            if (i < ranking.Count)
             {
+                var grade = ranking[i].emp != null ? ranking[i].emp.grade : EmployeeGrade.Normal;
                 row.SetActive(true);
-                if (i < ranking.Count)
-                    SetContributionRow(row, i + 1, ranking[i].name, $"{ranking[i].percent:F0}%");
-                else
-                    SetContributionRow(row, i + 1, "", ""); // 빈 슬롯 — 번호만, 이름·기여도 공백
+                SetContributionRow(row, i + 1, ranking[i].name, $"{ranking[i].percent:F0}%", grade, ranking[i].portraitId);
             }
-            else row.SetActive(false);
+            else row.SetActive(false); // 이전에 더 많은 행을 표시했을 때 풀에 남아있던 여분
         }
+
+        SetContributionDetailShown(true);
     }
 
     // Content 아래 행 풀을 count 개 이상 확보 (모자라면 프리팹 생성)
@@ -155,7 +155,7 @@ public class DevelopmentResultUI : MonoBehaviour
         }
     }
 
-    void SetContributionRow(GameObject row, int rank, string name, string rate)
+    void SetContributionRow(GameObject row, int rank, string name, string rate, EmployeeGrade grade, string portraitId)
     {
         var numberText = row.transform.Find("numberPanel")?.GetComponentInChildren<TextMeshProUGUI>();
         var nameText   = row.transform.Find("namePanel")?.GetComponentInChildren<TextMeshProUGUI>();
@@ -163,6 +163,16 @@ public class DevelopmentResultUI : MonoBehaviour
         if (numberText != null) numberText.text = rank.ToString();
         if (nameText != null)   nameText.text   = name;
         if (rateText != null)   rateText.text   = rate;
+
+        var portraitImage = row.transform.Find("portraitPanel/Image")?.GetComponent<Image>();
+        if (portraitImage != null)
+        {
+            var sprite = !string.IsNullOrEmpty(portraitId) ? Resources.Load<Sprite>($"Portraits/Mini/{portraitId}") : null;
+            portraitImage.sprite  = sprite;
+            portraitImage.enabled = sprite != null;
+        }
+
+        GradeSpriteSet.Apply(row.GetComponent<Image>(), rowBgGradeSet, grade);
     }
 
     public void Show(float planning, float develop, float art, float bug, float creativity)
@@ -177,13 +187,12 @@ public class DevelopmentResultUI : MonoBehaviour
         if (planningText != null)   planningText.text = $"{Mathf.RoundToInt(planning)}";
         if (developText != null)    developText.text = $"{Mathf.RoundToInt(develop)}";
         if (artText != null)        artText.text = $"{Mathf.RoundToInt(art)}";
-        if (bugText != null)        bugText.text = $"{Mathf.RoundToInt(bug)}";
         if (creativityText != null) creativityText.text = $"{Mathf.RoundToInt(creativity)}";
 
         // Row1 — 규모/장르/플랫폼을 각 텍스트에 개별 출력
-        if (scaleResultText != null)    scaleResultText.text    = $"규모: {GetScaleString(ProjectSetupUI.SelectedScale)}";
-        if (genreResultText != null)    genreResultText.text    = $"장르: {GetGenreString(ProjectSetupUI.SelectedGenre)}";
-        if (platformResultText != null) platformResultText.text = $"플랫폼: {GetPlatformString(ProjectSetupUI.SelectedPlatform)}";
+        if (scaleResultText != null)    scaleResultText.text    = $"{GetScaleString(ProjectSetupUI.SelectedScale)}";
+        if (genreResultText != null)    genreResultText.text    = $"{GetGenreString(ProjectSetupUI.SelectedGenre)}";
+        if (platformResultText != null) platformResultText.text = $"{GetPlatformString(ProjectSetupUI.SelectedPlatform)}";
 
         // Row2 — 기여도 1등 초상화 + 이름(퇴사면 "(퇴사)") + 기여도%
         var top = DevelopmentManager.Instance.GetTopContributor();
@@ -191,18 +200,22 @@ public class DevelopmentResultUI : MonoBehaviour
         {
             if (contributorPortrait != null && !string.IsNullOrEmpty(top.portraitId))
             {
-                var sprite = Resources.Load<Sprite>($"Portraits/Mini/{top.portraitId}");
+                var sprite = Resources.Load<Sprite>($"Portraits/{top.portraitId}");
                 if (sprite != null) contributorPortrait.sprite = sprite;
             }
-            if (contributorNameText != null) contributorNameText.text = top.name;
-            if (contributorRateText != null) contributorRateText.text = $"기여도 {top.percent:F0}%";
         }
 
         projectNameText.text = "프로젝트명";
         GameTimeManager.Instance?.StopTime();
-        if (contributionDetailPanel != null) contributionDetailPanel.SetActive(false);
-        if (contributionCloseBtn != null) contributionCloseBtn.gameObject.SetActive(false);
-        resultPanel.SetActive(true);
+        SetContributionDetailShown(false); // 결과창 새로 열 때는 항상 기본(RightPanel) 상태로
+        SetResultPanelActive(true);
+    }
+
+    // resultPanel 과 shadowBG(뒤 배경 딤)를 항상 함께 토글
+    void SetResultPanelActive(bool active)
+    {
+        resultPanel.SetActive(active);
+        if (shadowBG != null) shadowBG.SetActive(active);
     }
 
     // 이름변경 버튼
@@ -238,13 +251,13 @@ public class DevelopmentResultUI : MonoBehaviour
 
     public void OnClickClose()
     {
-        resultPanel.SetActive(false);
+        SetResultPanelActive(false);
         GameTimeManager.Instance?.StartTime();
     }
     public void OnClickRelease()
     {
         ProjectSaveManager.Instance.SetProjectName(_lastProjectName);
-        resultPanel.SetActive(false);
+        SetResultPanelActive(false);
         GameTimeManager.Instance?.StartTime();
 
         float p = DevelopmentPanelUI.Instance.GetPlanning();
