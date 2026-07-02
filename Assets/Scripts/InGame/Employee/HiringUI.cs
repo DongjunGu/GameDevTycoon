@@ -17,6 +17,8 @@ public class HiringUI : MonoBehaviour
     [Header("Tier Buttons")]
     [Tooltip("티어 버튼 GameObject 3개를 순서대로 인스펙터에 할당 (1단계/2단계/3단계). 2/3단계는 hire_tier2/3 해금 시 노출.")]
     public GameObject[] tierButtons;
+    [Tooltip("TierPanel/confirmBtn — 선택된 티어로 채용을 확정하는 버튼")]
+    public Button tierConfirmButton;
 
     [Header("Refresh")]
     [Tooltip("후보 리스트(HiringPanel) 새로고침 버튼. 'hire_refresh' 해금 시 활성, 같은 세션 1회만 사용 가능.")]
@@ -91,6 +93,8 @@ public class HiringUI : MonoBehaviour
     private readonly List<int> _hireCosts = new();  // 후보별 채용 비용 캐시 — 화살표로 넘길 때 재추첨 방지
 
     private int  _currentTierIndex = -1;        // hire_refresh 재로드용 — 마지막 OnClickTier 의 티어
+    private int  _selectedTierIndex = -1;       // 선택 표시(스프라이트 스왑+알파)용 — RefreshTierButtonVisibility 에서 초기화
+    private readonly Dictionary<int, Sprite> _tierNormalSprite = new();
     private bool _refreshUsed      = false;     // 같은 세션 1회 가드
     private bool _candidateFlowActive = false;  // 채용 공개~리스트 종료 동안 시간 정지 유지 + ModalGate 점유
 
@@ -118,6 +122,50 @@ public class HiringUI : MonoBehaviour
             prevCandidateButton.onClick.AddListener(OnClickPrevCandidate);
         if (nextCandidateButton != null)
             nextCandidateButton.onClick.AddListener(OnClickNextCandidate);
+        if (tierConfirmButton != null)
+            tierConfirmButton.onClick.AddListener(OnClickTierConfirm);
+
+        InitTierSpriteState();
+    }
+
+    // TierPanel/tier1~3 — Sprite Swap 을 hover/press 마다 Unity가 자체 되돌리는 걸 막기 위해 Transition.None,
+    // 원래(Normal) 스프라이트는 미리 캐싱(선택된 게 아닐 때 복원용).
+    void InitTierSpriteState()
+    {
+        if (tierButtons == null) return;
+        for (int i = 0; i < tierButtons.Length; i++)
+        {
+            var go = tierButtons[i];
+            if (go == null) continue;
+            var btn = go.GetComponent<Button>();
+            if (btn != null) btn.transition = Selectable.Transition.None;
+            var img = go.GetComponent<Image>();
+            if (img != null) _tierNormalSprite[i] = img.sprite;
+        }
+    }
+
+    // 선택된 티어 버튼만 Button.spriteState.selectedSprite 로 교체 + 알파 255, 나머지는 원본 스프라이트 + 알파 0.
+    void SetTierSelected(int selectedIndex)
+    {
+        _selectedTierIndex = selectedIndex;
+        if (tierButtons == null) return;
+        for (int i = 0; i < tierButtons.Length; i++)
+        {
+            var go = tierButtons[i];
+            if (go == null) continue;
+            var img = go.GetComponent<Image>();
+            if (img == null) continue;
+
+            bool selected = i == selectedIndex;
+            var normal = _tierNormalSprite.TryGetValue(i, out var s) ? s : img.sprite;
+            var btn = go.GetComponent<Button>();
+            var state = btn != null ? btn.spriteState : default;
+            img.sprite = selected && state.selectedSprite != null ? state.selectedSprite : normal;
+
+            var c = img.color;
+            c.a = selected ? 1f : 0f;
+            img.color = c;
+        }
     }
 
     // ── 티어 선택 패널 열기 ───────────────────
@@ -165,6 +213,7 @@ public class HiringUI : MonoBehaviour
         SetTierButtonState(0, true);
         SetTierButtonState(1, tier2Unlocked);
         SetTierButtonState(2, tier3Unlocked);
+        SetTierSelected(-1); // 패널을 새로 열 때는 항상 선택 표시 초기화
     }
 
     // 티어 버튼: 항상 활성 + 잠금 시 어둡게(alpha) 표시. 클릭은 항상 가능(잠금 안내는 OnClickTier).
@@ -180,8 +229,25 @@ public class HiringUI : MonoBehaviour
         cg.blocksRaycasts = true;
     }
 
-    // 티어 버튼 클릭 (0~2)
+    // 티어 버튼 클릭 (0~2) — 이제 선택 표시만 하고 채용 진행은 안 함(확정은 confirmBtn/OnClickTierConfirm).
     public void OnClickTier(int tierIndex)
+    {
+        SetTierSelected(tierIndex);
+    }
+
+    // TierPanel/confirmBtn 클릭 — 선택된 티어로 채용 진행.
+    public void OnClickTierConfirm()
+    {
+        if (_selectedTierIndex < 0)
+        {
+            AlertUI.Instance.Show("채용 단계를 선택해주세요.");
+            return;
+        }
+        ConfirmTierHire(_selectedTierIndex);
+    }
+
+    // 선택된 티어로 실제 채용 요청 진행 (구 OnClickTier 본체).
+    void ConfirmTierHire(int tierIndex)
     {
         // 안전망 — 해금 안 된 티어가 다른 경로로 호출되는 케이스 차단
         if (tierIndex == 1 && (TechTreeManager.Instance == null || !TechTreeManager.Instance.IsUnlocked("hire_tier2")))

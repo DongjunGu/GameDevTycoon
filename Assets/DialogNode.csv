@@ -18,7 +18,7 @@ dlg_proj_analyze_001,event_project_analyze,1,NPC,npc_secretary,비서,portrait_s
 dlg_proj_analyze_002,event_project_analyze,2,NPC,npc_secretary,비서,portrait_secretary,다음엔 반드시 더 좋은 결과가 있을 거예요. 힘내세요 사장님!,Normal,false,,happy,false,,,false,0,true
 dlg_proj_pass_001,event_project_pass,1,NPC,npc_secretary,비서,portrait_secretary,알겠습니다. 다음 프로젝트 준비를 도와드릴게요.,Normal,false,,default,false,,,false,0,true
 dlg_proj_meh_001,event_project_meh,1,NPC,npc_secretary,비서,portrait_secretary,다음 프로젝트에서 더 좋은 결과를 내봐요. 천천히 성장하면 됩니다.,Normal,false,,default,false,,,false,0,true
-dlg_sal_proposal_01,event_salary_negotiation,1,NPC,,{employeeName},{portraitId},현재 연봉 {salary}G → {newSalary}G 인상을 요청드립니다.,Normal,true,,default,false,,,false,0,false
+dlg_sal_proposal_01,event_salary_negotiation,1,NPC,,{employeeName},{portraitId},현재 연봉 {salary}G -> {newSalary}G 인상을 요청드립니다.,Normal,true,,default,false,,,false,0,false
 dlg_sal_hs_common_01,event_sal_hs_common,1,NPC,,{employeeName},{portraitId},딱 보니까 나 없으면 회사 안 돌아가는데 연봉 더 주시죠,Normal,false,dlg_sal_proposal_01,default,false,,,false,0,true
 dlg_sal_hs_female_01,event_sal_hs_female,1,NPC,,{employeeName},{portraitId},사장님.. 누가 봐도 제가 제일 잘하는데 연봉 좀 올려주시면 안될까요?,Normal,false,dlg_sal_proposal_01,default,false,,,false,0,true
 dlg_sal_ls_low_enh_01,event_sal_ls_low_enh,1,NPC,,{employeeName},{portraitId},사장님 삼각김밥 말고 도시락이라도 먹게 해주세요…,Normal,false,dlg_sal_proposal_01,default,false,,,false,0,true

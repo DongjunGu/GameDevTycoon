@@ -152,20 +152,23 @@ public static class CharacterTraitApplier
         return row != null ? row.name : "";
     }
 
-    // 등급 게이팅을 무시하고 직원이 (잠재적으로) 가진 특성명 반환. CEO/파견/미보유는 "".
+    // 등급 게이팅을 무시하고 직원이 (잠재적으로) 가진 특성명 반환. CEO/미보유는 "".
     // 카드 UI 가 "등급 미충족이어도 이름은 표시 + lockedPanel" 하기 위해 사용.
+    // ⚠️ 파견중이어도 이름은 표시한다 — "파견중 비활성화"는 효과 발동(GetActiveTrait/Is* 계열)만 막는 것이지
+    //    표시 자체를 숨기라는 뜻이 아님(사용자 확인).
     public static string GetTraitNameAnyGrade(EmployeeData emp)
     {
-        if (emp == null || emp.isCEO || IsOnDispatch(emp)) return "";
+        if (emp == null || emp.isCEO) return "";
         string traitId = ResolveTraitId(emp);
         if (string.IsNullOrEmpty(traitId)) return "";
         var cache = CharacterTraitChartLoader.Cache;
         return (cache != null && cache.TryGetValue(traitId, out var row)) ? row.name : "";
     }
 
-    // 특성 발동 등급(Epic 이상) 충족 여부. CEO/파견 제외.
+    // 특성 발동 등급(Epic 이상) 충족 여부 — 표시/잠금오버레이/설명 클릭 가능 여부에 쓰임. CEO 제외.
+    // ⚠️ 파견 여부는 반영 안 함 — 파견중 비활성화는 효과 발동(GetActiveTrait)만 막는 것이지 등급 충족 표시를 가리는 게 아님.
     public static bool IsTraitUnlocked(EmployeeData emp)
-        => emp != null && !emp.isCEO && !IsOnDispatch(emp) && emp.grade >= EmployeeGrade.Epic;
+        => emp != null && !emp.isCEO && emp.grade >= EmployeeGrade.Epic;
 
     // 슬롯/카드 공통 — traitText 에 특성명 세팅 + 클릭 시 설명을 띄우는 버튼으로 만든다(런타임 컴포넌트 부착, 에디터 배선 불필요).
     // 특성 없음/CEO 면 빈 문자열 + raycastTarget off → 클릭이 슬롯 버튼으로 통과(가로채지 않음).
