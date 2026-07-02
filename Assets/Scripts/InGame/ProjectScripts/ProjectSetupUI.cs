@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.Serialization;
@@ -22,8 +23,9 @@ public class ProjectSetupUI : MonoBehaviour
     public Button scaleButtonSmall;
     public Button scaleButtonMedium;
     public Button scaleButtonLarge;
-    public Color scaleSelectedColor = new Color(0.93f, 0.93f, 0.99f); // 선택된 규모 강조색
-    public Color scaleNormalColor   = Color.white;
+    public Color scaleTextNormalColor   = new Color32(0xB3, 0xA1, 0x8B, 0xFF);
+    public Color scaleTextSelectedColor = new Color32(0xFF, 0xFF, 0xFF, 0xFF);
+    public Color scaleTextDisabledColor = new Color32(0x87, 0x78, 0x66, 0xFF);
 
     // ── 플랫폼 / 장르 바 (누르면 별도 패널) ────
     [Header("Platform / Genre Bar")]
@@ -60,6 +62,9 @@ public class ProjectSetupUI : MonoBehaviour
     private ProjectData _projectData = new();
     private bool _genreChosen;
     private bool _platformChosen;
+    private readonly Dictionary<Button, Sprite> _scaleNormalSprite = new();
+    private readonly Dictionary<Button, Sprite> _platformNormalSprite = new();
+    private readonly Dictionary<Button, Sprite> _genreNormalSprite = new();
 
     void Awake()
     {
@@ -73,6 +78,32 @@ public class ProjectSetupUI : MonoBehaviour
         if (scaleButtonSmall  != null) scaleButtonSmall.onClick.AddListener(()  => OnClickScale(0));
         if (scaleButtonMedium != null) scaleButtonMedium.onClick.AddListener(() => OnClickScale(1));
         if (scaleButtonLarge  != null) scaleButtonLarge.onClick.AddListener(()  => OnClickScale(2));
+        InitScaleSpriteState(scaleButtonSmall);
+        InitScaleSpriteState(scaleButtonMedium);
+        InitScaleSpriteState(scaleButtonLarge);
+        if (platformButtons != null)
+            foreach (var pb in platformButtons) InitPlatformSpriteState(pb);
+
+        WireGenreButton(genreButtonRPG,               "RPG");
+        WireGenreButton(genreButtonFPS,                "FPS");
+        WireGenreButton(genreButtonArcade,             "Arcade");
+        WireGenreButton(genreButtonHealingSimulation,  "HealingSimulation");
+        WireGenreButton(genreButtonHorror,             "Horror");
+        WireGenreButton(genreButtonIdle,               "Idle");
+        WireGenreButton(genreButtonRTS,                "RTS");
+        WireGenreButton(genreButtonVisualNovel,        "VisualNovel");
+        WireGenreButton(genreButtonSports,             "Sports");
+        WireGenreButton(genreButtonPuzzle,             "Puzzle");
+        InitGenreSpriteState(genreButtonRPG);
+        InitGenreSpriteState(genreButtonFPS);
+        InitGenreSpriteState(genreButtonArcade);
+        InitGenreSpriteState(genreButtonHealingSimulation);
+        InitGenreSpriteState(genreButtonHorror);
+        InitGenreSpriteState(genreButtonIdle);
+        InitGenreSpriteState(genreButtonRTS);
+        InitGenreSpriteState(genreButtonVisualNovel);
+        InitGenreSpriteState(genreButtonSports);
+        InitGenreSpriteState(genreButtonPuzzle);
         if (platformButton != null) platformButton.onClick.AddListener(OpenPlatformPanel);
         if (genreButton    != null) genreButton.onClick.AddListener(OpenGenrePanel);
 
@@ -123,10 +154,32 @@ public class ProjectSetupUI : MonoBehaviour
     // 메인 패널 표시값 일괄 갱신
     void RefreshMain()
     {
+        UpdateScaleAvailability();
         RefreshScaleHighlight();
         UpdateDevCost();
         if (platformValueText != null) platformValueText.text = _platformChosen ? _projectData.PlatformToString() : unselectedText;
         if (genreValueText    != null) genreValueText.text    = _genreChosen    ? _projectData.GenreToString()    : unselectedText;
+    }
+
+    // StageManager 단계에 따라 규모 버튼 잠금(1단계=소, 2단계=중까지, 3단계 이상=대까지). 잠긴 규모가 선택돼 있으면 사용 가능한 최대 규모로 낮춤.
+    void UpdateScaleAvailability()
+    {
+        int stage = StageManager.Instance != null ? StageManager.Instance.CurrentStage : 1;
+        SetScaleLocked(scaleButtonSmall,  stage < 1);
+        SetScaleLocked(scaleButtonMedium, stage < 2);
+        SetScaleLocked(scaleButtonLarge,  stage < 3);
+
+        if (stage < 3 && _projectData.scale == ProjectScale.Large)  _projectData.scale = ProjectScale.Medium;
+        if (stage < 2 && _projectData.scale == ProjectScale.Medium) _projectData.scale = ProjectScale.Small;
+    }
+
+    // interactable 토글 + 버튼 자식의 "lockImage" 활성화/비활성화 (Small 은 항상 해금이라 자식 없음 — null 무시)
+    void SetScaleLocked(Button b, bool locked)
+    {
+        if (b == null) return;
+        b.interactable = !locked;
+        var lockTf = b.transform.Find("lockImage");
+        if (lockTf != null) lockTf.gameObject.SetActive(locked);
     }
 
     void RefreshScaleHighlight()
@@ -136,11 +189,65 @@ public class ProjectSetupUI : MonoBehaviour
         SetScaleBtnColor(scaleButtonLarge,  _projectData.scale == ProjectScale.Large);
     }
 
+    // Sprite Swap 트랜지션은 hover/press 마다 overrideSprite 를 건드려 선택 표시가 지워지므로 Transition.None 으로 끄고
+    // 원래(Normal) 스프라이트만 캐싱 — Selected/Disabled 스프라이트는 인스펙터에 이미 세팅된 spriteState 를 그대로 사용.
+    void InitScaleSpriteState(Button b)
+    {
+        if (b == null) return;
+        b.transition = Selectable.Transition.None;
+        var img = b.GetComponent<Image>();
+        if (img != null) _scaleNormalSprite[b] = img.sprite;
+    }
+
     void SetScaleBtnColor(Button b, bool selected)
     {
         if (b == null) return;
+
         var img = b.GetComponent<Image>();
-        if (img != null) img.color = selected ? scaleSelectedColor : scaleNormalColor;
+        if (img != null)
+        {
+            var normal = _scaleNormalSprite.TryGetValue(b, out var s) ? s : img.sprite;
+            var state = b.spriteState;
+            img.sprite = !b.interactable && state.disabledSprite != null ? state.disabledSprite
+                       : selected && state.selectedSprite != null         ? state.selectedSprite
+                       : normal;
+        }
+
+        var text = b.GetComponentInChildren<TextMeshProUGUI>();
+        if (text != null)
+            text.color = !b.interactable ? scaleTextDisabledColor : (selected ? scaleTextSelectedColor : scaleTextNormalColor);
+    }
+
+    // PBottomPanel 플랫폼 버튼도 규모 버튼과 동일 패턴: Transition.None + spriteState.selectedSprite 캐싱.
+    void InitPlatformSpriteState(Button b)
+    {
+        if (b == null) return;
+        b.transition = Selectable.Transition.None;
+        var img = b.GetComponent<Image>();
+        if (img != null) _platformNormalSprite[b] = img.sprite;
+    }
+
+    // 선택된 플랫폼만 스프라이트를 selectedSprite 로 교체 + 알파 255, 그 외에는 원래 스프라이트 + 알파 0(숨김).
+    void RefreshPlatformHighlight()
+    {
+        if (platformButtons == null) return;
+        for (int i = 0; i < platformButtons.Length; i++)
+        {
+            var b = platformButtons[i];
+            if (b == null) continue;
+            bool selected = _platformChosen && _projectData.platform == (ProjectPlatform)i;
+
+            var img = b.GetComponent<Image>();
+            if (img == null) continue;
+
+            var normal = _platformNormalSprite.TryGetValue(b, out var s) ? s : img.sprite;
+            var state = b.spriteState;
+            img.sprite = selected && state.selectedSprite != null ? state.selectedSprite : normal;
+
+            var c = img.color;
+            c.a = selected ? 1f : 0f;
+            img.color = c;
+        }
     }
 
     // 장착 특성 'c1'(devCostDiscount) 적용한 실제 개발금 — 표시·차감 공통 소스.
@@ -148,7 +255,7 @@ public class ProjectSetupUI : MonoBehaviour
 
     void UpdateDevCost()
     {
-        if (devCostText != null) devCostText.text = $"개발금: {CurrentDevCost:N0}G";
+        if (devCostText != null) devCostText.text = $"{CurrentDevCost:N0} G";
     }
 
     // ── 규모 선택 (인라인 토글, 패널 전환 없음) ──
@@ -175,6 +282,7 @@ public class ProjectSetupUI : MonoBehaviour
     {
         _projectData.platform = (ProjectPlatform)platform;
         _platformChosen = true;
+        RefreshPlatformHighlight();
         RefreshMain();
         ShowOnly(mainPanel);
     }
@@ -189,8 +297,17 @@ public class ProjectSetupUI : MonoBehaviour
             ? GenreFatigueManager.Instance.GetFatigue(_projectData.genre) : 0;
 
         _genreChosen = true;
+        UpdateGenreButtonLabels();
         RefreshMain();
         ShowOnly(mainPanel);
+    }
+
+    // GenreBtn1~5 (Left/Right 10개) 코드 배선 — 인스펙터 persistent call 없이 Start() 에서 일괄 연결.
+    void WireGenreButton(Button b, string genre)
+    {
+        if (b == null) return;
+        b.onClick.RemoveAllListeners();
+        b.onClick.AddListener(() => OnClickGenre(genre));
     }
 
     // ── 개발 시작 ─────────────────────────────
@@ -289,50 +406,27 @@ public class ProjectSetupUI : MonoBehaviour
         if (mainPanel     != null) mainPanel.SetActive(target == mainPanel);
         if (genrePanel    != null) genrePanel.SetActive(target == genrePanel);
         if (platformPanel != null) platformPanel.SetActive(target == platformPanel);
+
+        // 비활성 상태에서 미리 적용한 색은 Button.OnEnable 상태전환(targetGraphic 리셋)에 덮이고,
+        // GetComponentInChildren 도 비활성 계층에서는 텍스트를 못 찾으므로 활성화 "이후" 재적용.
+        if (target == mainPanel) RefreshMain();
+        if (target == platformPanel) RefreshPlatformHighlight();
     }
 
     // ══════════════════════════════════════════
-    // 장르 패널 라벨 (인기도/피로도) — 기존 유지
+    // 장르 패널 인기도/피로도 — GenreBtnN 자식(PopPnael/FatPanel) 이미지 활성화 방식
     // ══════════════════════════════════════════
-    [Header("Genre Icon Sprite Names")]
-    public string popularSpriteName = "popular";
-    public string fatigueSpriteName = "skull";
-
-    [Header("Genre Buttons - Name")]
-    public TextMeshProUGUI genreLabelRPG;
-    public TextMeshProUGUI genreLabelFPS;
-    public TextMeshProUGUI genreLabelArcade;
-    public TextMeshProUGUI genreLabelHealingSimulation;
-    public TextMeshProUGUI genreLabelHorror;
-    public TextMeshProUGUI genreLabelIdle;
-    public TextMeshProUGUI genreLabelRTS;
-    public TextMeshProUGUI genreLabelVisualNovel;
-    public TextMeshProUGUI genreLabelSports;
-    public TextMeshProUGUI genreLabelPuzzle;
-
-    [Header("Genre Buttons - Popular")]
-    public TextMeshProUGUI genrePopularRPG;
-    public TextMeshProUGUI genrePopularFPS;
-    public TextMeshProUGUI genrePopularArcade;
-    public TextMeshProUGUI genrePopularHealingSimulation;
-    public TextMeshProUGUI genrePopularHorror;
-    public TextMeshProUGUI genrePopularIdle;
-    public TextMeshProUGUI genrePopularRTS;
-    public TextMeshProUGUI genrePopularVisualNovel;
-    public TextMeshProUGUI genrePopularSports;
-    public TextMeshProUGUI genrePopularPuzzle;
-
-    [Header("Genre Buttons - Fatigue")]
-    public TextMeshProUGUI genreFatigueRPG;
-    public TextMeshProUGUI genreFatigueFPS;
-    public TextMeshProUGUI genreFatigueArcade;
-    public TextMeshProUGUI genreFatigueHealingSimulation;
-    public TextMeshProUGUI genreFatigueHorror;
-    public TextMeshProUGUI genreFatigueIdle;
-    public TextMeshProUGUI genreFatigueRTS;
-    public TextMeshProUGUI genreFatigueVisualNovel;
-    public TextMeshProUGUI genreFatigueSports;
-    public TextMeshProUGUI genreFatiguePuzzle;
+    [Header("Genre Buttons - Click")]
+    public Button genreButtonRPG;
+    public Button genreButtonFPS;
+    public Button genreButtonArcade;
+    public Button genreButtonHealingSimulation;
+    public Button genreButtonHorror;
+    public Button genreButtonIdle;
+    public Button genreButtonRTS;
+    public Button genreButtonVisualNovel;
+    public Button genreButtonSports;
+    public Button genreButtonPuzzle;
 
     void UpdateGenreButtonLabels()
     {
@@ -340,33 +434,64 @@ public class ProjectSetupUI : MonoBehaviour
         if (CompletedProjectManager.Instance != null && GenreFatigueManager.Instance != null)
             GenreFatigueManager.Instance.RebuildFromHistory(CompletedProjectManager.Instance.completedProjects);
 
-        SetGenreLabel(genreLabelRPG,               genrePopularRPG,               genreFatigueRPG,               "RPG",           ProjectGenre.RPG);
-        SetGenreLabel(genreLabelFPS,               genrePopularFPS,               genreFatigueFPS,               "FPS",           ProjectGenre.FPS);
-        SetGenreLabel(genreLabelArcade,            genrePopularArcade,            genreFatigueArcade,            "아케이드",       ProjectGenre.Arcade);
-        SetGenreLabel(genreLabelHealingSimulation, genrePopularHealingSimulation, genreFatigueHealingSimulation, "힐링시뮬레이션", ProjectGenre.HealingSimulation);
-        SetGenreLabel(genreLabelHorror,            genrePopularHorror,            genreFatigueHorror,            "공포",           ProjectGenre.Horror);
-        SetGenreLabel(genreLabelIdle,              genrePopularIdle,              genreFatigueIdle,              "방치형",         ProjectGenre.Idle);
-        SetGenreLabel(genreLabelRTS,               genrePopularRTS,               genreFatigueRTS,               "실시간전략",     ProjectGenre.RTS);
-        SetGenreLabel(genreLabelVisualNovel,       genrePopularVisualNovel,       genreFatigueVisualNovel,       "미연시",         ProjectGenre.VisualNovel);
-        SetGenreLabel(genreLabelSports,            genrePopularSports,            genreFatigueSports,            "스포츠",         ProjectGenre.Sports);
-        SetGenreLabel(genreLabelPuzzle,            genrePopularPuzzle,            genreFatiguePuzzle,            "퍼즐",           ProjectGenre.Puzzle);
+        RefreshGenreIndicators(genreButtonRPG,               ProjectGenre.RPG);
+        RefreshGenreIndicators(genreButtonFPS,               ProjectGenre.FPS);
+        RefreshGenreIndicators(genreButtonArcade,            ProjectGenre.Arcade);
+        RefreshGenreIndicators(genreButtonHealingSimulation, ProjectGenre.HealingSimulation);
+        RefreshGenreIndicators(genreButtonHorror,            ProjectGenre.Horror);
+        RefreshGenreIndicators(genreButtonIdle,              ProjectGenre.Idle);
+        RefreshGenreIndicators(genreButtonRTS,               ProjectGenre.RTS);
+        RefreshGenreIndicators(genreButtonVisualNovel,       ProjectGenre.VisualNovel);
+        RefreshGenreIndicators(genreButtonSports,            ProjectGenre.Sports);
+        RefreshGenreIndicators(genreButtonPuzzle,            ProjectGenre.Puzzle);
     }
 
-    void SetGenreLabel(TextMeshProUGUI nameLabel, TextMeshProUGUI popularLabel, TextMeshProUGUI fatigueLabel, string genreName, ProjectGenre genre)
+    // FatPanel/FatImage1~3 는 피로도만큼, PopPnael/defaultImage(x3)의 자식 FireImage 는 인기도만큼 누적 활성화.
+    // defaultImage 자체는 항상 표시되는 기본 이미지라 건드리지 않음.
+    void RefreshGenreIndicators(Button genreButton, ProjectGenre genre)
     {
-        int fatigue = GenreFatigueManager.Instance   != null ? GenreFatigueManager.Instance.GetFatigue(genre)      : 0;
+        if (genreButton == null) return;
+
+        int fatigue = GenreFatigueManager.Instance    != null ? GenreFatigueManager.Instance.GetFatigue(genre)      : 0;
         int popular = GenrePopularityManager.Instance != null ? GenrePopularityManager.Instance.GetPopularity(genre) : 1;
 
-        if (nameLabel    != null) nameLabel.text    = genreName;
-        if (popularLabel != null) popularLabel.text = RepeatSprite(popularSpriteName, popular);
-        if (fatigueLabel != null) fatigueLabel.text = RepeatSprite(fatigueSpriteName, fatigue);
+        var fatPanel = genreButton.transform.Find("FatPanel");
+        if (fatPanel != null)
+            for (int i = 1; i <= 3; i++)
+            {
+                var img = fatPanel.Find($"FatImage{i}");
+                if (img != null) img.gameObject.SetActive(fatigue >= i);
+            }
+
+        var popPanel = genreButton.transform.Find("PopPnael");
+        if (popPanel != null)
+            for (int i = 0; i < popPanel.childCount; i++)
+            {
+                var defaultImage = popPanel.GetChild(i);
+                if (defaultImage.childCount == 0) continue;
+                defaultImage.GetChild(0).gameObject.SetActive(popular >= i + 1);
+            }
+
+        bool selected = _genreChosen && _projectData.genre == genre;
+        var btnImg = genreButton.GetComponent<Image>();
+        if (btnImg != null)
+        {
+            var normal = _genreNormalSprite.TryGetValue(genreButton, out var s) ? s : btnImg.sprite;
+            var state = genreButton.spriteState;
+            btnImg.sprite = selected && state.selectedSprite != null ? state.selectedSprite : normal;
+
+            var c = btnImg.color;
+            c.a = selected ? 1f : 0f;
+            btnImg.color = c;
+        }
     }
 
-    string RepeatSprite(string spriteName, int count)
+    // GenreBtn1~10 도 규모/플랫폼 버튼과 동일 패턴: Transition.None + 원래(Normal) 스프라이트 캐싱.
+    void InitGenreSpriteState(Button b)
     {
-        var sb = new System.Text.StringBuilder();
-        for (int i = 0; i < count; i++)
-            sb.Append($"<sprite name=\"{spriteName}\">");
-        return sb.ToString();
+        if (b == null) return;
+        b.transition = Selectable.Transition.None;
+        var img = b.GetComponent<Image>();
+        if (img != null) _genreNormalSprite[b] = img.sprite;
     }
 }
