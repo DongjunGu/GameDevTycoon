@@ -36,6 +36,7 @@ public class EmployeeStatusBarUI : MonoBehaviour
     private readonly Dictionary<string, EmployeeSatisfactionSlider> _slots = new();
     private bool _isShown;
     private Coroutine _slideCo;
+    private float? _buttonImageBaseY; // flip 전 원래 localPosition.y (최초 1회 캐싱)
 
     void Awake()
     {
@@ -92,13 +93,18 @@ public class EmployeeStatusBarUI : MonoBehaviour
         _slideCo = StartCoroutine(SlideTo(rect, hiddenAnchoredPos));
     }
 
-    // 패널이 슬라이드로 들어가 있는(Show) 상태면 Y축 flip, 나가 있으면(Hide) 원래대로.
+    // 패널이 슬라이드로 들어가 있는(Show) 상태면 Y축 flip + ypos -25, 나가 있으면(Hide) 원래대로.
     void UpdateButtonImageFlip()
     {
         if (buttonImage == null) return;
         var s = buttonImage.localScale;
         s.y = _isShown ? -Mathf.Abs(s.y) : Mathf.Abs(s.y);
         buttonImage.localScale = s;
+
+        if (_buttonImageBaseY == null) _buttonImageBaseY = buttonImage.localPosition.y;
+        var p = buttonImage.localPosition;
+        p.y = _isShown ? _buttonImageBaseY.Value - 25f : _buttonImageBaseY.Value;
+        buttonImage.localPosition = p;
     }
 
     IEnumerator SlideTo(RectTransform rect, Vector2 target)
