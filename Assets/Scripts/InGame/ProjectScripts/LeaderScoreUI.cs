@@ -25,7 +25,7 @@ public class LeaderScoreUI : MonoBehaviour
 
     [Header("스트레스 경고 (LeaderScoreEntirePanel)")]
     public Image stressWarningImage;          // LeaderScoreEntirePanel의 Image — 기본 alpha 0
-    public float stressPulseSpeed = 1f;       // ds 90~99 구간 alpha 50~70 펄스 속도
+    public float stressBlinkInterval = 0.3f;  // 깜빡임 on/off 각 구간 길이(초)
     private float _currentDs = 0f;
 
     [Header("연출")]
@@ -322,18 +322,21 @@ public class LeaderScoreUI : MonoBehaviour
         UpdateStressWarning();
     }
 
-    // ds < 90: 완전히 안 보임(alpha 0) / 90~99: alpha 50~70 펄스(경고) / 100: alpha 100~120 펄스(위험).
-    // 100 구간 펄스는 회차 연출이 끝나(StopWorkingAnimations 이후)도 멈추지 않음 — LateUpdate가 _currentDs만 보고
-    // 계속 도는 구조라 코루틴 종료와 무관하게 계속 펄스된다.
+    // ds < 90: 완전히 안 보임(alpha 0) / 90~99: alpha 50~70 사이 깜빡임(경고) / 100: alpha 100~120 사이 깜빡임(위험).
+    // 부드럽게 lerp하지 않고 두 값 사이를 사각파로 툭툭 전환해야 "깜빡이는" 느낌이 남 — 계속 반복, 안 멈춤.
+    // 100 구간 깜빡임은 회차 연출이 끝나(StopWorkingAnimations 이후)도 멈추지 않음 — LateUpdate가 _currentDs만 보고
+    // 계속 도는 구조라 코루틴 종료와 무관하게 계속 깜빡인다.
     void UpdateStressWarning()
     {
         if (stressWarningImage == null) return;
 
         float targetA;
+        float interval = Mathf.Max(0.01f, stressBlinkInterval);
+        bool blinkOn = Mathf.Repeat(Time.time, interval * 2f) < interval;
         if (_currentDs >= 100f)
-            targetA = Mathf.Lerp(100f / 255f, 120f / 255f, Mathf.PingPong(Time.time * stressPulseSpeed, 1f));
+            targetA = blinkOn ? 120f / 255f : 100f / 255f;
         else if (_currentDs >= 90f)
-            targetA = Mathf.Lerp(50f / 255f, 70f / 255f, Mathf.PingPong(Time.time * stressPulseSpeed, 1f));
+            targetA = blinkOn ? 70f / 255f : 50f / 255f;
         else
             targetA = 0f;
 

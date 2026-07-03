@@ -62,7 +62,7 @@ public static class RandomEvents_Choice
                     birthdayEvt.targetEmployeeId = birthdayEmp.id;
 
                     int cost = Mathf.Max(1, (int)(EmployeeManager.Instance.GetTotalSalary() * 0.03f));
-                    birthdayEvt.choices[1].buttonLabel += $"-{cost}G";
+                    birthdayEvt.choices[1].buttonLabel += $"<color=#F3C01D>-{cost}G</color>";
 
                     birthdayEvt.choices[0].resultSystemMessage =
                         birthdayEvt.choices[0].resultSystemMessage
@@ -70,7 +70,7 @@ public static class RandomEvents_Choice
                     birthdayEvt.choices[1].resultSystemMessage =
                         birthdayEvt.choices[1].resultSystemMessage
                             ?.Replace("{해당직원이름}", birthdayEmp.employeeName)
-                             .Replace("{비용}", cost.ToString());
+                             .Replace("-{비용}G", $"<color=#F3C01D>-{cost}G</color>");
                 }
             };
             Apply(birthdayEvt, chart);
@@ -161,7 +161,7 @@ public static class RandomEvents_Choice
                 equipCostSnapshot = Mathf.Max(1, (int)(EmployeeManager.Instance.GetTotalSalary() * 0.03f));
 
                 equipEvt.choices[0].buttonLabel =
-                    equipLabel0Template.Replace("{N}", equipCostSnapshot.ToString());
+                    equipLabel0Template.Replace("-{N}G", $"<color=#F3C01D>-{equipCostSnapshot}G</color>");
                 equipEvt.choices[0].resultSystemMessage =
                     equipSystem0Template.Replace("{해당직원이름}", equipEmp.employeeName);
             };
@@ -221,8 +221,8 @@ public static class RandomEvents_Choice
                             RandomEventChoiceChartRow dcRow = null;
                             chart?.TryGetValue("CompanyDinner", out dcRow);
                             var dc2 = dcRow?.choices.Count > 1 ? dcRow.choices[1] : null;
-                            string happySys = (dc2?.resultSystemMessage  ?? "").Replace("{비용}", dinnerCost5.ToString());
-                            string mehSys   = (dc2?.resultSystemMessage2 ?? "").Replace("{비용}", dinnerCost5.ToString());
+                            string happySys = (dc2?.resultSystemMessage  ?? "").Replace("-{비용}G", $"<color=#F3C01D>-{dinnerCost5}G</color>");
+                            string mehSys   = (dc2?.resultSystemMessage2 ?? "").Replace("-{비용}G", $"<color=#F3C01D>-{dinnerCost5}G</color>");
                             dinnerEvt.choices[1].resultSystemMessage = happy ? happySys : mehSys;
                         }
                     },
@@ -258,12 +258,12 @@ public static class RandomEvents_Choice
                 dinnerCost5  = Mathf.Max(1, (int)(total * 0.05f));
                 dinnerCost10 = Mathf.Max(1, (int)(total * 0.10f));
 
-                dinnerEvt.choices[1].buttonLabel = dinnerLabel1Template.Replace("{N}", dinnerCost5.ToString());
-                dinnerEvt.choices[2].buttonLabel = dinnerLabel2Template.Replace("{N}", dinnerCost10.ToString());
+                dinnerEvt.choices[1].buttonLabel = dinnerLabel1Template.Replace("-{N}G", $"<color=#F3C01D>-{dinnerCost5}G</color>");
+                dinnerEvt.choices[2].buttonLabel = dinnerLabel2Template.Replace("-{N}G", $"<color=#F3C01D>-{dinnerCost10}G</color>");
                 dinnerEvt.choices[1].resultDescriptions.Clear();
                 if (!string.IsNullOrEmpty(dinnerDesc2Happy)) dinnerEvt.choices[1].resultDescriptions.Add(dinnerDesc2Happy);
                 if (!string.IsNullOrEmpty(dinnerDesc2Meh))   dinnerEvt.choices[1].resultDescriptions.Add(dinnerDesc2Meh);
-                dinnerEvt.choices[2].resultSystemMessage = dinnerSystem2Template.Replace("{비용}", dinnerCost10.ToString());
+                dinnerEvt.choices[2].resultSystemMessage = dinnerSystem2Template.Replace("-{비용}G", $"<color=#F3C01D>-{dinnerCost10}G</color>");
             };
             pool.Add(dinnerEvt);
         }

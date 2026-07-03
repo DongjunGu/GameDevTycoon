@@ -280,12 +280,15 @@ public class EmployeeManager : MonoBehaviour
             candidates.Add(availablePool[idx].Clone());
         }
 
+        var uniqueEligible = new List<EmployeeData>();
+
         foreach (var employee in candidates)
         {
             // Grade / Potential 결정 — 등급 상한은 OutGameEmployeeManager의 도달 maxGrade 기준
             var maxGrade = OutGameEmployeeManager.Instance != null
                 ? OutGameEmployeeManager.Instance.GetMaxGrade(employee.id)
                 : EmployeeGrade.Normal;
+            if (maxGrade >= EmployeeGrade.Unique) uniqueEligible.Add(employee);
             employee.grade = RollGrade(maxGrade);
             employee.potential = RollPotential(employee.grade, tierIndex);
 
@@ -299,6 +302,29 @@ public class EmployeeManager : MonoBehaviour
             int steps = (employee.salaryMax - employee.salaryMin) / 50;
             int rolledSalary = employee.salaryMin + (UnityEngine.Random.Range(0, steps + 1) * 50);
             employee.salary = CharacterTraitApplier.ApplyGoldspoonSalary(employee, rolledSalary);
+        }
+
+        // OwnedCard 기준 Unique 이상을 보유한(=maxGrade 도달) 후보가 이 배치에 있는데 아무도 Unique 이상으로
+        // 안 뽑혔으면, 그중 한 명을 강제로 Unique 확정 (potential도 확정된 등급 기준으로 재추첨).
+        if (uniqueEligible.Count > 0 && !uniqueEligible.Exists(e => e.grade >= EmployeeGrade.Unique))
+        {
+            var pick = uniqueEligible[UnityEngine.Random.Range(0, uniqueEligible.Count)];
+            pick.grade = EmployeeGrade.Unique;
+            pick.potential = RollPotential(pick.grade, tierIndex);
+        }
+
+        // 최종 등급이 Rare 이상이면 주스탯(역할 일치 스탯) 실제 수치에도 인터벌 보너스 반영
+        // (EmployeeData.GradeIntervalBonus·*DisplayText()의 표시 인터벌과 일치시킴). 등급 강제 보정 이후에 적용.
+        foreach (var employee in candidates)
+        {
+            if (employee.grade < EmployeeGrade.Rare) continue;
+            int bonus = employee.GradeIntervalBonus;
+            switch (employee.role)
+            {
+                case EmployeeRole.Programmer: employee.developSkill  += bonus; break;
+                case EmployeeRole.Planner:    employee.planningSkill += bonus; break;
+                case EmployeeRole.Artist:     employee.artSkill      += bonus; break;
+            }
         }
 
         onComplete?.Invoke(candidates);

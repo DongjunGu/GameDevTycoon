@@ -9770,7 +9770,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &111365284
 RectTransform:
   m_ObjectHideFlags: 0
@@ -11889,7 +11889,7 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 1887894975}
-  m_Father: {fileID: 823827453}
+  m_Father: {fileID: 1048756823}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &145540251
 MonoBehaviour:
@@ -15695,7 +15695,7 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 870386808}
-  m_Father: {fileID: 823827453}
+  m_Father: {fileID: 1048756823}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &179671562
 MonoBehaviour:
@@ -17639,6 +17639,7 @@ GameObject:
   m_Component:
   - component: {fileID: 201705370}
   - component: {fileID: 201705371}
+  - component: {fileID: 201705372}
   m_Layer: 5
   m_Name: InvestmentProgressUI
   m_TagString: Untagged
@@ -17681,6 +17682,19 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::InvestmentProgressUI
   progressPanel: {fileID: 307854838}
   progressText: {fileID: 135107489}
+--- !u!114 &201705372
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 201705369}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: da22831dd4a346d4a8e37ade5e8d2a37, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EndingPanelUI
+  panelRoot: {fileID: 111365283}
 --- !u!1 &208055523
 GameObject:
   m_ObjectHideFlags: 0
@@ -23761,7 +23775,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: "\uACE0\uD004\uB9AC\uD2F0 PC\uB294 \uD0C4\uD0C4\uD55C \uAC1C\uBC1C\uB825\uC774
+  m_text: "\uACE0\uD004\uB9AC\uD2F0 PC\uB294 \uD0C4\uD0C4\uD55C <color=#2E8FA3>\uAC1C\uBC1C\uB825</color>\uC774
     \uCE58\uD2B8\uD0A4"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 0762af7de54282a498c99314c894507c, type: 2}
@@ -45966,7 +45980,7 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 842898088}
-  m_Father: {fileID: 823827453}
+  m_Father: {fileID: 1048756823}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &523343088
 MonoBehaviour:
@@ -54141,7 +54155,7 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 823827453}
+  m_Father: {fileID: 1048756823}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &617603668
 MonoBehaviour:
@@ -73911,7 +73925,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &823827453
 RectTransform:
   m_ObjectHideFlags: 0
@@ -73923,30 +73937,13 @@ RectTransform:
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
-  m_Children:
-  - {fileID: 1829746699}
-  - {fileID: 1372113176}
-  - {fileID: 1129646024}
-  - {fileID: 1780481301}
-  - {fileID: 145540250}
-  - {fileID: 1056415361}
-  - {fileID: 1555226744}
-  - {fileID: 2129205466}
-  - {fileID: 1757084899}
-  - {fileID: 2043405670}
-  - {fileID: 523343087}
-  - {fileID: 1203915083}
-  - {fileID: 179671561}
-  - {fileID: 617603667}
-  - {fileID: 1374258138}
-  - {fileID: 1917571078}
-  - {fileID: 1194957430}
+  m_Children: []
   m_Father: {fileID: 1048756823}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 50, y: -50}
+  m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1001 &824061222
 PrefabInstance:
@@ -78301,6 +78298,7 @@ MonoBehaviour:
   hiddenAnchoredPos: {x: 0, y: -130}
   slideDuration: 0.2
   startHidden: 0
+  buttonImage: {fileID: 1788634725}
 --- !u!114 &877883998
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -93775,6 +93773,23 @@ RectTransform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
+  - {fileID: 1829746699}
+  - {fileID: 1372113176}
+  - {fileID: 1129646024}
+  - {fileID: 1780481301}
+  - {fileID: 145540250}
+  - {fileID: 1056415361}
+  - {fileID: 1555226744}
+  - {fileID: 2129205466}
+  - {fileID: 1757084899}
+  - {fileID: 2043405670}
+  - {fileID: 523343087}
+  - {fileID: 1203915083}
+  - {fileID: 179671561}
+  - {fileID: 617603667}
+  - {fileID: 1374258138}
+  - {fileID: 1917571078}
+  - {fileID: 1194957430}
   - {fileID: 823827453}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -94338,7 +94353,7 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 823827453}
+  m_Father: {fileID: 1048756823}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!483693784 &1056415362
 TilemapRenderer:
@@ -97310,6 +97325,23 @@ MonoBehaviour:
   cameraZoomController: {fileID: 1246210065}
   panelsToDeactivate:
   - {fileID: 1048756821}
+  - {fileID: 1829746698}
+  - {fileID: 1372113175}
+  - {fileID: 1129646023}
+  - {fileID: 1780481300}
+  - {fileID: 145540249}
+  - {fileID: 1056415360}
+  - {fileID: 1555226743}
+  - {fileID: 2129205465}
+  - {fileID: 1757084898}
+  - {fileID: 2043405669}
+  - {fileID: 523343086}
+  - {fileID: 1203915082}
+  - {fileID: 179671560}
+  - {fileID: 617603666}
+  - {fileID: 1374258137}
+  - {fileID: 1917571077}
+  - {fileID: 1194957429}
   - {fileID: 1000598806}
   panelsToActivate:
   - {fileID: 1055196680}
@@ -101053,7 +101085,7 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 766740197}
-  m_Father: {fileID: 823827453}
+  m_Father: {fileID: 1048756823}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &1129646025
 MonoBehaviour:
@@ -107027,7 +107059,7 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 823827453}
+  m_Father: {fileID: 1048756823}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &1194957431
 MonoBehaviour:
@@ -108267,7 +108299,7 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 1320156392}
-  m_Father: {fileID: 823827453}
+  m_Father: {fileID: 1048756823}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &1203915084
 MonoBehaviour:
@@ -115632,7 +115664,7 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls: []
   m_text: "\uAC10\uC131\uC758 \uB2CC\uD150\uB3C4\uB294 \uB208\uC774 \uC990\uAC70\uC6B4
-    \uC544\uD2B8\uAC00 \uC815\uB2F5"
+    <color=#2E8FA3>\uC544\uD2B8</color>\uAC00 \uC815\uB2F5"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 0762af7de54282a498c99314c894507c, type: 2}
   m_sharedMaterial: {fileID: -3318507174629680496, guid: 0762af7de54282a498c99314c894507c, type: 2}
@@ -123228,7 +123260,7 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 1027071971}
-  m_Father: {fileID: 823827453}
+  m_Father: {fileID: 1048756823}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!212 &1372113177
 SpriteRenderer:
@@ -123430,7 +123462,7 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 823827453}
+  m_Father: {fileID: 1048756823}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &1374258139
 MonoBehaviour:
@@ -125912,7 +125944,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: "\uBB35\uC9C1\uD55C \uD50C\uC2A4\uB294 \uC644\uBCBD\uD55C \uADE0\uD615\uC774
+  m_text: "\uBB35\uC9C1\uD55C \uD50C\uC2A4\uB294 \uC644\uBCBD\uD55C <color=#2E8FA3>\uADE0\uD615</color>\uC774
     \uD575\uC2EC"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 0762af7de54282a498c99314c894507c, type: 2}
@@ -140338,7 +140370,7 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 823827453}
+  m_Father: {fileID: 1048756823}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!483693784 &1555226745
 TilemapRenderer:
@@ -145483,7 +145515,19 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 1603357171}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 201705372}
+        m_TargetAssemblyTypeName: EndingPanelUI, Assembly-CSharp
+        m_MethodName: OnClickEnding
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: 
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!114 &1603357171
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -150004,7 +150048,7 @@ MonoBehaviour:
   totalText: {fileID: 1549010830}
   confirmButton: {fileID: 337000434}
   stressWarningImage: {fileID: 492888946}
-  stressPulseSpeed: 1
+  stressBlinkInterval: 0.3
   rollDuration: 1.3
   roundGap: 1.3
   iconPrefab: {fileID: 8732268080103809368, guid: c4dc401786d94894990d13f5faa82c01, type: 3}
@@ -160318,7 +160362,7 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 845020010}
-  m_Father: {fileID: 823827453}
+  m_Father: {fileID: 1048756823}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &1757084900
 MonoBehaviour:
@@ -162871,7 +162915,7 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 1430544169}
-  m_Father: {fileID: 823827453}
+  m_Father: {fileID: 1048756823}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &1780481302
 MonoBehaviour:
@@ -167461,7 +167505,7 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 823827453}
+  m_Father: {fileID: 1048756823}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!483693784 &1829746700
 TilemapRenderer:
@@ -175490,7 +175534,7 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 823827453}
+  m_Father: {fileID: 1048756823}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &1917571079
 MonoBehaviour:
@@ -184670,8 +184714,8 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: "\uD2B8\uB80C\uB514\uD55C \uBAA8\uBC14\uC77C\uC740 \uC2E0\uC120\uD55C \uAE30\uD68D\uC774
-    \uACF5\uC2DD"
+  m_text: "\uD2B8\uB80C\uB514\uD55C \uBAA8\uBC14\uC77C\uC740 \uC2E0\uC120\uD55C <color=#2E8FA3>\uAE30\uD68D</color>\uC774
+    \uACF5\uC2DD "
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 0762af7de54282a498c99314c894507c, type: 2}
   m_sharedMaterial: {fileID: -3318507174629680496, guid: 0762af7de54282a498c99314c894507c, type: 2}
@@ -186773,7 +186817,7 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 208055524}
-  m_Father: {fileID: 823827453}
+  m_Father: {fileID: 1048756823}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &2043405671
 MonoBehaviour:
@@ -194268,7 +194312,7 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 823827453}
+  m_Father: {fileID: 1048756823}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!19719996 &2129205467
 TilemapCollider2D:

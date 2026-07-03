@@ -340,15 +340,18 @@ public class EmployeeData
     public string ArtText()        => $"아트: {EffectiveArtSkill}";
     public string CreativityText() => $"창의성: {EffectiveCreativitySkill}";
 
+    // 채용 인터벌 등급 보너스 — Rare 이상은 주스탯 인터벌 +50 (기본 20~50 → 70~100).
+    public int GradeIntervalBonus => grade >= EmployeeGrade.Rare ? 50 : 0;
+
     // 주스탯은 강화 반영 범위, 부스탯은 확정 수치로 표시
     public string DevelopDisplayText()  => role == EmployeeRole.Programmer
-        ? $"개발: {developMin + mainStatEnhanceGain}~{developMax + mainStatEnhanceGain}"
+        ? $"개발: {developMin + mainStatEnhanceGain + GradeIntervalBonus}~{developMax + mainStatEnhanceGain + GradeIntervalBonus}"
         : DevelopText();
     public string PlanningDisplayText() => role == EmployeeRole.Planner
-        ? $"기획: {planningMin + mainStatEnhanceGain}~{planningMax + mainStatEnhanceGain}"
+        ? $"기획: {planningMin + mainStatEnhanceGain + GradeIntervalBonus}~{planningMax + mainStatEnhanceGain + GradeIntervalBonus}"
         : PlanningText();
     public string ArtDisplayText()      => role == EmployeeRole.Artist
-        ? $"아트: {artMin + mainStatEnhanceGain}~{artMax + mainStatEnhanceGain}"
+        ? $"아트: {artMin + mainStatEnhanceGain + GradeIntervalBonus}~{artMax + mainStatEnhanceGain + GradeIntervalBonus}"
         : ArtText();
     public string SatisfactionText() => $"만족도: {satisfaction}";
 

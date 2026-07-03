@@ -27,6 +27,10 @@ public class TestMenuButtons : MonoBehaviour
         if (panelsToDeactivate != null)
             foreach (var p in panelsToDeactivate) if (p != null) p.SetActive(false);
 
+        // 이름에 "(Clone)"이 붙은 오브젝트(잔여 인스턴스화 산물)도 함께 정리.
+        foreach (var go in FindObjectsByType<GameObject>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+            if (go.name.Contains("(Clone)")) go.SetActive(false);
+
         if (panelsToActivate != null)
             foreach (var p in panelsToActivate) if (p != null) p.SetActive(true);
     }
