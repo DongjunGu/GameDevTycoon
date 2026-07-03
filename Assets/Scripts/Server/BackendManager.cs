@@ -4,8 +4,22 @@ using UnityEngine.SceneManagement;
 
 public class BackendManager : MonoBehaviour
 {
+    // 이번 앱 프로세스에서 로그인+전체 데이터 로드가 이미 한 번 완료됐는지 (DontDestroyOnLoad 매니저들이
+    // 전부 메모리에 살아있는 상태). true면 LoadingScene을 다시 돌아도 뒤끝 재로그인/데이터 재로드를 스킵한다 —
+    // 안 그러면 Backend.Initialize()/재로그인이 두 번째부턴 실패해서 Progress가 90%에서 영영 멈춘다
+    // (TestResetBtn처럼 게임 중간에 LoadingScene으로 재진입하는 경우).
+    public static bool HasInitializedThisSession = false;
+
     void Start()
     {
+        if (HasInitializedThisSession)
+        {
+            var p = FindAnyObjectByType<Progress>();
+            p?.SetLoginComplete();
+            p?.SetAllDataLoaded();
+            return;
+        }
+
         if (BackendRetry.Instance == null)
             gameObject.AddComponent<BackendRetry>();
 
@@ -81,6 +95,7 @@ public class BackendManager : MonoBehaviour
                                             ItemManager.Instance.Load(() =>
                                             {
                                                 DialogManager.Instance.Initialize();
+                                                HasInitializedThisSession = true;
                                                 FindAnyObjectByType<Progress>()?.SetAllDataLoaded();
                                             });
                                         });

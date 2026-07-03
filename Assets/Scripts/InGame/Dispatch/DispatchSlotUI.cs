@@ -26,17 +26,30 @@ public class DispatchSlotUI : MonoBehaviour
     {
         _empId = data.id;
 
-        GradeSpriteSet.Apply(bgImage, bgGradeSet, data.grade);
+        GradeSpriteSet.Apply(bgImage, bgGradeSet, data.isCEO, data.grade);
 
         if (nameText != null) nameText.text = data.employeeName;
-        if (roleIcon != null && roleIcons != null
-            && (int)data.role >= 0 && (int)data.role < roleIcons.Length
-            && roleIcons[(int)data.role] != null)
+
+        // CEO는 역할/강화레벨 개념이 없음 — roleIconPanel 자식 Image 비활성화 + 강화텍스트 공백.
+        if (data.isCEO)
         {
-            roleIcon.sprite = roleIcons[(int)data.role];
-            roleIcon.enabled = true;
+            if (roleIcon != null) roleIcon.gameObject.SetActive(false);
+            if (enhancementText != null) enhancementText.text = "";
         }
-        if (enhancementText != null) enhancementText.text = $"Lv {data.enhancementLevel}";
+        else
+        {
+            if (roleIcon != null)
+            {
+                roleIcon.gameObject.SetActive(true);
+                if (roleIcons != null && (int)data.role >= 0 && (int)data.role < roleIcons.Length
+                    && roleIcons[(int)data.role] != null)
+                {
+                    roleIcon.sprite = roleIcons[(int)data.role];
+                    roleIcon.enabled = true;
+                }
+            }
+            if (enhancementText != null) enhancementText.text = $"Lv {data.enhancementLevel}";
+        }
 
         if (portraitImage != null)
         {

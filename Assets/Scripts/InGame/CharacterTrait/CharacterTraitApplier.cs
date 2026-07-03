@@ -75,9 +75,9 @@ public static class CharacterTraitApplier
 
     // ──────────── 오타쿠(otaku_01) ────────────
     // 채용 시마다 랜덤 장르 1개를 emp.otakuFixedGenre 에 고정(재추첨). 그 장르 개발 시:
-    //   - 오타쿠 본인 능력치 +20% (개발 틱 누적 + 팀장 점수 양쪽). DevelopmentManager 가 GetOtakuStatMultiplier 호출.
+    //   - 오타쿠 본인 능력치 +20% 버프 (EmployeeData.GetOtakuBuffAmount 가 Effective*Skill 안에 포함해서 계산 — 다른 버프와 동일 취급).
     //   - 프로젝트 매출 +20% (보유 오타쿠의 고정장르가 프로젝트 장르와 일치 시). SalesUI 가 GetOtakuSalesBonus 호출.
-    public const float OTAKU_STAT_MULT  = 1.2f;  // 능력치 ×1.2
+    public const float OTAKU_STAT_MULT  = 1.2f;  // 능력치 +20% (EmployeeData.GetOtakuBuffAmount 가 GetMainStat()*0.2 로 환산)
     public const float OTAKU_SALES_BONUS = 0.2f; // 매출 bonusSum 합연산 +0.20
 
     public static bool IsOtaku(EmployeeData emp)
@@ -88,10 +88,6 @@ public static class CharacterTraitApplier
         => IsOtaku(emp)
            && !string.IsNullOrEmpty(emp.otakuFixedGenre)
            && emp.otakuFixedGenre == genre.ToString();
-
-    // 개발 틱/팀장 점수용 능력치 배율 — 오타쿠 본인 + 고정장르 매칭 시 1.2, 그 외 1.0.
-    public static float GetOtakuStatMultiplier(EmployeeData emp, ProjectGenre genre)
-        => IsOtakuGenreMatch(emp, genre) ? OTAKU_STAT_MULT : 1.0f;
 
     // 매출 보너스 — 보유 직원 중 고정장르가 프로젝트 장르와 일치하는 오타쿠가 한 명이라도 있으면 +0.20.
     public static float GetOtakuSalesBonus(ProjectGenre genre)

@@ -173,7 +173,10 @@ public class SalesUI : MonoBehaviour
         }
 
         foreach (Transform child in chartArea)
+        {
+            if (child.name == "LineImage") continue; // 기준선 이미지는 재생성 대상 아님 — 유지
             Destroy(child.gameObject);
+        }
 
         // 규모배율 1/2/4/8 — 대작은 직원 7명 이상이면 8, 그 외(6명 등)는 4
         int scaleMultiplier = scale switch
@@ -293,7 +296,7 @@ public class SalesUI : MonoBehaviour
 
         int adjustedTotalRevenue = 0;
         foreach (var r in revenuePerPeriod) adjustedTotalRevenue += r;
-        totalRevenueText.text = $"총 매출: {adjustedTotalRevenue:N0}G";
+        totalRevenueText.text = $"{adjustedTotalRevenue:N0} G";
 
         // 폴드 잔재 복원 후 활성화
         panelRT.DOKill();
@@ -309,8 +312,11 @@ public class SalesUI : MonoBehaviour
         yield return null; // ← 한 프레임 대기 후 높이 계산
         maxBarHeight = chartArea.rect.height * 0.8f;
 
-        // bar 너비 — Small/Medium은 85 고정, Large(9개)만 ChartArea 너비에 맞춰 축소
-        float barWidth = barCount >= 9 ? chartArea.rect.width / barCount - 20f : 85f;
+        // bar 너비/간격 — Large(9개)는 좁고 촘촘하게, Small/Medium은 넓고 여유있게.
+        bool isLarge = barCount >= 9;
+        float barWidth = isLarge ? 11f : 26f;
+        var chartLayout = chartArea.GetComponent<HorizontalLayoutGroup>();
+        if (chartLayout != null) chartLayout.spacing = isLarge ? 40f : 95f;
 
         int cumulativeRevenue = 0;
 
@@ -327,8 +333,18 @@ public class SalesUI : MonoBehaviour
             var barObj = Instantiate(barPrefab, chartArea);
             var barRT = barObj.GetComponent<RectTransform>();
             barRT.sizeDelta = new Vector2(barWidth, barRT.sizeDelta.y);
+            // ChartArea의 HorizontalLayoutGroup이 childControlWidth=true라 sizeDelta만으론 폭이 안 먹힘 —
+            // min/preferred/flexible을 모두 고정값으로 명시하고, Bar 루트의 내부 VerticalLayoutGroup(우선순위 낮음)보다
+            // 확실히 이기도록 layoutPriority도 높여서 폭을 고정.
+            var barLayoutElement = barObj.GetComponent<LayoutElement>();
+            if (barLayoutElement == null) barLayoutElement = barObj.AddComponent<LayoutElement>();
+            barLayoutElement.minWidth       = barWidth;
+            barLayoutElement.preferredWidth = barWidth;
+            barLayoutElement.flexibleWidth  = 0f;
+            barLayoutElement.layoutPriority = 10;
+            LayoutRebuilder.ForceRebuildLayoutImmediate(chartArea); // 폭 반영을 다음 프레임까지 안 미루고 즉시 확정
             var barImage = barObj.transform.Find("BarImage").GetComponent<RectTransform>();
-            var valueLabel = barObj.transform.Find("ValueLabel").GetComponent<TMPro.TextMeshProUGUI>();
+            
             var periodLabel = barObj.transform.Find("PeriodLabel").GetComponent<TMPro.TextMeshProUGUI>();
             periodLabel.text = $"{i + 1}주";
 
@@ -336,15 +352,15 @@ public class SalesUI : MonoBehaviour
             if (i < completedWeeks)
             {
                 barImage.sizeDelta = new Vector2(barImage.sizeDelta.x, targetHeight);
-                valueLabel.text = $"{revenuePerPeriod[i]:N0}G";
+                
                 cumulativeRevenue = endRevenue;
-                totalRevenueText.text = $"총 매출: {cumulativeRevenue:N0}G";
+                totalRevenueText.text = $"{cumulativeRevenue:N0} G";
                 UpdateBestRank(CalcRank(revenuePerPeriod[i])); // 복원 시에도 최고순위 누적
                 continue;
             }
 
             // 미완료 주차 - 애니메이션
-            valueLabel.text = "";
+            
             barImage.sizeDelta = new Vector2(barImage.sizeDelta.x, 0f);
 
             int startRevenue = cumulativeRevenue;
@@ -361,7 +377,7 @@ public class SalesUI : MonoBehaviour
 
                 barImage.sizeDelta = new Vector2(barImage.sizeDelta.x, t * targetHeight);
                 int currentRevenue = Mathf.RoundToInt(Mathf.Lerp(startRevenue, endRevenue, t));
-                totalRevenueText.text = $"총 매출: {currentRevenue:N0}G";
+                totalRevenueText.text = $"{currentRevenue:N0} G";
 
                 yield return null;
             }
@@ -374,10 +390,10 @@ public class SalesUI : MonoBehaviour
                 weeklyRevenue = Mathf.RoundToInt(weeklyRevenue * (1f + firstSaleBonusPct / 100f));
             int rank = CalcRank(weeklyRevenue);
             UpdateBestRank(rank);
-            valueLabel.text = $"{revenuePerPeriod[i]:N0}G";
+            
             if (rankText != null)
                 rankText.text = rank > 0 ? $"{rank}위" : "순위권 밖";
-            totalRevenueText.text = $"총 매출: {endRevenue:N0}G";
+            totalRevenueText.text = $"{endRevenue:N0} G";
 
             MoneyManager.Instance.AddGold(weeklyRevenue);
             QuestManager.Instance?.UpdateProgress(QuestType.TotalRevenue, weeklyRevenue);

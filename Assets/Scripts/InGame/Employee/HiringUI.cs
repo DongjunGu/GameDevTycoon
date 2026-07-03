@@ -83,7 +83,9 @@ public class HiringUI : MonoBehaviour
     [Header("Settings")]
     public int candidateCount = 4;
     const int INTERVIEW_WEEKS = 3; // 채용 클릭 → 후보 리스트 공개까지 대기 주차
-    public static bool InstantInterview = false; // [테스트] 켜면 대기 없이 즉시 후보 리스트 공개 (CharacterEventTester 토글)
+    // [임시테스트] 빌드에서도 적용되도록 기본값 true로 강제 — CharacterEventTester(에디터 전용) 없이도 동작.
+    // 실제 배포 전 반드시 false로 되돌릴 것.
+    public static bool InstantInterview = true;
 
     private EmployeeData _selectedEmployee;
     private EmployeeData _conflictingOwned;     // 동일 masterEmployeeId 보유 직원
@@ -144,7 +146,8 @@ public class HiringUI : MonoBehaviour
         }
     }
 
-    // 선택된 티어 버튼만 Button.spriteState.selectedSprite 로 교체 + 알파 255, 나머지는 원본 스프라이트 + 알파 0.
+    // 선택된 티어 버튼만 Button.spriteState.selectedSprite 로 교체 + 알파 255, tier1은 나머지 알파 0.
+    // [임시] tier2/tier3는 lockImage로 잠금 표시할 예정이라 선택 여부 상관없이 알파 항상 255로 노출 — 추후 수정 예정.
     void SetTierSelected(int selectedIndex)
     {
         _selectedTierIndex = selectedIndex;
@@ -163,7 +166,7 @@ public class HiringUI : MonoBehaviour
             img.sprite = selected && state.selectedSprite != null ? state.selectedSprite : normal;
 
             var c = img.color;
-            c.a = selected ? 1f : 0f;
+            c.a = (selected || i > 0) ? 1f : 0f; // [임시] tier2(1)/tier3(2)는 항상 255
             img.color = c;
         }
     }
@@ -202,8 +205,8 @@ public class HiringUI : MonoBehaviour
         return null;
     }
 
-    // 모든 티어 버튼을 항상 표시. 해금 안 된 티어(2/3단계)는 어둡게 표시하되 클릭은 가능
-    // (클릭 시 OnClickTier 가 "해금되지 않았습니다" 안내). 1단계는 항상 해금.
+    // 모든 티어 버튼을 항상 표시. 해금 안 된 티어(2/3단계)는 interactable=false(자동 Disabled 스프라이트)
+    // + lockImage 활성화로 잠금 표시. 1단계는 항상 해금.
     void RefreshTierButtonVisibility()
     {
         if (tierButtons == null) return;
@@ -213,20 +216,22 @@ public class HiringUI : MonoBehaviour
         SetTierButtonState(0, true);
         SetTierButtonState(1, tier2Unlocked);
         SetTierButtonState(2, tier3Unlocked);
-        SetTierSelected(-1); // 패널을 새로 열 때는 항상 선택 표시 초기화
+        SetTierSelected(0); // 패널을 새로 열 때 tier1 기본 선택(alpha 255) — 이후 다른 티어 선택 시 자동으로 0으로 전환(SetTierSelected 기존 로직)
     }
 
-    // 티어 버튼: 항상 활성 + 잠금 시 어둡게(alpha) 표시. 클릭은 항상 가능(잠금 안내는 OnClickTier).
+    // 티어 버튼: interactable 토글(잠기면 false → 버튼 Disabled 스프라이트로 자동 전환)
+    // + 자식 "lockImage" 활성화/비활성화 (1단계는 항상 해금이라 lockImage 없음 — null 무시).
     void SetTierButtonState(int index, bool unlocked)
     {
         if (tierButtons == null || index >= tierButtons.Length || tierButtons[index] == null) return;
         var go = tierButtons[index];
         go.SetActive(true);
-        var cg = go.GetComponent<CanvasGroup>();
-        if (cg == null) cg = go.AddComponent<CanvasGroup>();
-        cg.alpha = unlocked ? 1f : 0.45f;  // 잠금 시 어둡게
-        cg.interactable = true;            // 클릭 유지
-        cg.blocksRaycasts = true;
+
+        var btn = go.GetComponent<Button>();
+        if (btn != null) btn.interactable = unlocked;
+
+        var lockTf = go.transform.Find("lockImage");
+        if (lockTf != null) lockTf.gameObject.SetActive(!unlocked);
     }
 
     // 티어 버튼 클릭 (0~2) — 이제 선택 표시만 하고 채용 진행은 안 함(확정은 confirmBtn/OnClickTierConfirm).
@@ -299,7 +304,6 @@ public class HiringUI : MonoBehaviour
 
         // 채용 UI 닫고 "면접 확정" 비서 안내 → 확인 시 시간 재개(OpenHiring 의 StopTime 해소). 이후 게임 진행하며 INTERVIEW_WEEKS 주 경과.
         tierPanel.SetActive(false);
-        gameObject.SetActive(false);
 
         // [테스트] 즉시 공개 모드면 대기 없이 바로 후보 리스트.
         // OpenHiring 에서 건 StopTime 을 먼저 해소(원래 ShowSecretaryEvent 콜백이 하던 일) 후 RevealHiring 호출.
@@ -308,11 +312,19 @@ public class HiringUI : MonoBehaviour
         if (InstantInterview)
         {
             GameTimeManager.Instance?.StartTime();
-            RevealHiring(tierIndex);
+            StartCoroutine(RevealHiringAfterDelay(tierIndex, TEST_INTERVIEW_DELAY_SECONDS));
             return;
         }
 
         ShowSecretaryEvent("면접 확정 후 알려드리겠습니다.", () => GameTimeManager.Instance?.StartTime());
+    }
+
+    // [임시테스트] InstantInterview 켰을 때 즉시(0초) 대신 짧게 대기 후 공개 — 실제 대기 흐름 테스트용.
+    const float TEST_INTERVIEW_DELAY_SECONDS = 2f;
+    System.Collections.IEnumerator RevealHiringAfterDelay(int tierIndex, float delay)
+    {
+        yield return new WaitForSeconds(delay);
+        RevealHiring(tierIndex);
     }
 
     // 면접 대기 만료(EmployeeManager.OnWeekPassed) 또는 재접속 복원 시 호출 — "최종 리스트" 안내 후 후보 리스트 표시.

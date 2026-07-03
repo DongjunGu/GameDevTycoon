@@ -31,6 +31,10 @@ public class DevelopmentManager : MonoBehaviour
     public EmployeeData artistLeader;
     public float GetElapsed() => _elapsed;
 
+    [Header("개발 완료 축하 patrol — CEO/비서 포함 랜덤 2명, 서로 다른 지점으로 이동")]
+    public string developCompletePatrolPointA;
+    public string developCompletePatrolPointB;
+
     // 직원별 프로젝트 기여도 (팀장점수 + 상시개발값 누적) — ResetProject 시 초기화
     private readonly Dictionary<string, float> _employeeContribution = new();
     // 퇴사 후에도 표시할 수 있도록 id별 이름/초상화 캐시 (재직 중일 때 최신값 갱신, 저장에도 포함)
@@ -78,6 +82,7 @@ public class DevelopmentManager : MonoBehaviour
     }
 
     // 기여도 1등 엔트리 반환. 기여 기록 없으면 default(ContributionEntry) (name == null).
+    // CEO는 1등 표시에서 제외 — CEO가 최고 기여자여도 그 다음 순위 직원을 1등으로 표시(단, CEO 외 기여자가 아예 없으면 예외적으로 CEO 표시).
     public ContributionEntry GetTopContributor()
     {
         if (_employeeContribution.Count == 0) return default;
@@ -85,9 +90,18 @@ public class DevelopmentManager : MonoBehaviour
         foreach (var v in _employeeContribution.Values) total += v;
         if (total <= 0f) return default;
 
+        string ceoId = EmployeeManager.Instance?.CEO?.id;
+
         string topId = null; float topVal = -1f;
         foreach (var kv in _employeeContribution)
+        {
+            if (!string.IsNullOrEmpty(ceoId) && kv.Key == ceoId) continue;
             if (kv.Value > topVal) { topVal = kv.Value; topId = kv.Key; }
+        }
+
+        if (topId == null) // CEO 외 기여자 없음 — 부득이 CEO를 그대로 1등으로
+            foreach (var kv in _employeeContribution)
+                if (kv.Value > topVal) { topVal = kv.Value; topId = kv.Key; }
 
         return BuildEntry(topId, topVal, total);
     }
@@ -310,13 +324,10 @@ public class DevelopmentManager : MonoBehaviour
                 IsPendingLeaderSelect = true;
                 ProjectSaveManager.Instance.SaveProject();
 
-                DispatchPanelUI.Instance.OpenForLeaderSelect(LeaderType.Planner, () =>
-                {
-                    IsPendingLeaderSelect = false;
-                    GameTimeManager.Instance.ForceStartTime();
-                    _isRunning = true;
-                    StartCoroutine(DevelopmentCoroutine());
-                });
+                // onComplete=null — 개발 재개(ForceStartTime+DevelopmentCoroutine)는 팀장 선택 직후가 아니라
+                // 팀장점수(LeaderScoreUI) 확정 후 ContinueAfterLeaderScore.StartDeveloping()에서 처리된다.
+                // 여기서 콜백으로 미리 재개해버리면 점수 연출이 재생되는 동안 시간/개발진행도가 새는 버그가 생긴다.
+                DispatchPanelUI.Instance.OpenForLeaderSelect(LeaderType.Planner, null);
             });
         }
 
@@ -870,7 +881,7 @@ public class DevelopmentManager : MonoBehaviour
         else
         {
             // 신규 추첨 (또는 non-overflow 재접속 재추첨)
-            // 팀장 점수 = Effective 주스탯(만족도·버프/디버프·사내연애 포함) × 오타쿠 배율
+            // 팀장 점수 = Effective 주스탯(만족도·버프/디버프·사내연애·오타쿠 전부 포함)
             int skill = type switch
             {
                 LeaderType.Planner    => employee.EffectivePlanningSkill,
@@ -878,7 +889,6 @@ public class DevelopmentManager : MonoBehaviour
                 LeaderType.Artist     => employee.EffectiveArtSkill,
                 _ => 0
             };
-            skill = Mathf.RoundToInt(skill * CharacterTraitApplier.GetOtakuStatMultiplier(employee, ProjectSetupUI.SelectedGenre));
 
             // 강화도(성수) 기반 단계 추첨 → 추천가중치 M
             int stage = RollLeaderStage(employee.enhancementLevel);
@@ -1276,12 +1286,8 @@ public class DevelopmentManager : MonoBehaviour
                 {
                     IsPendingLeaderSelect = false;
                     GameTimeManager.Instance.StopTime(); // GameSceneInitializer.StartTime() 상쇄
-                    DispatchPanelUI.Instance.OpenForLeaderSelect(LeaderType.Planner, () =>
-                    {
-                        _isRunning = true;
-                        GameTimeManager.Instance.ForceStartTime();
-                        StartCoroutine(DevelopmentCoroutine());
-                    });
+                    // onComplete=null — 개발 재개는 팀장점수 확정 후 ContinueAfterLeaderScore.StartDeveloping()이 처리.
+                    DispatchPanelUI.Instance.OpenForLeaderSelect(LeaderType.Planner, null);
                 }
                 else if (pendingLeaderScore75)
                 {
@@ -1530,12 +1536,9 @@ public class DevelopmentManager : MonoBehaviour
 
     void AccumulateByType(EmployeeData employee, int tickType)
     {
-        // 오타쿠 특성: 고정 장르 프로젝트 개발 시 본인 능력치 ×1.2 (그 외 1.0)
-        float otakuMultiplier = CharacterTraitApplier.GetOtakuStatMultiplier(employee, ProjectSetupUI.SelectedGenre);
-
-        // 개발 틱 산출 = Effective 주스탯(만족도 배율 + 버프/디버프 스택 + 사내연애 포함) × 오타쿠 배율
+        // 개발 틱 산출 = Effective 주스탯(만족도 배율 + 버프/디버프 스택 + 사내연애 + 오타쿠 포함)
         // → 슬롯/카드에 표시되는 Effective 능력치와 실제 개발 산출이 일치
-        int skill = (int)(employee.GetEffectiveMainStat() * otakuMultiplier);
+        int skill = employee.GetEffectiveMainStat();
 
         // 성공 기준점수 S = 1.2982 + 0.040680 × 주스탯^0.9076  (잭팟 = 3×S×R, 성공 = S×R)
         float S = 1.2982f + 0.040680f * Mathf.Pow(Mathf.Max(0, skill), 0.9076f);

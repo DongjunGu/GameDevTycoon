@@ -77,6 +77,7 @@ public class EmployeeData
     public bool isDefault; // true = 항상 채용 풀 등장, false = 획득 필요
     public int hiredYear; // 채용된 게임 연도 (연봉협상 첫해 제외 조건에 사용)
     public bool isFemale; // 여직원 여부 (연봉협상 특수 대사 조건, EmployeeMasterData 차트 isFemale 컬럼 필요)
+    public string introduction = ""; // 캐릭터 대사 (EmployeeMasterData 차트 introduction 컬럼). 비어있으면 EmployeeResumePanel 코드 fallback 사용.
 
     // ── 캐릭터별 등급 특징 (CEO 특성과 별개, 마스터 데이터 귀속) ──
     // 발동 기준은 채용 시 roll 된 현재 grade. 누적: Epic 이상 → 특성, Unique 이상 → 특성 + 전용 이벤트.
@@ -112,7 +113,8 @@ public class EmployeeData
         salaryMin, salaryMax,
         maxGrade
     ) { portraitId = this.portraitId, isDefault = this.isDefault, isFemale = this.isFemale,
-        epicTraitId = this.epicTraitId, uniqueEventType = this.uniqueEventType };
+        epicTraitId = this.epicTraitId, uniqueEventType = this.uniqueEventType,
+        introduction = this.introduction };
 
     // ── 생성자 (EmployeePool 마스터 데이터용) ──
     public EmployeeData(string id, string name, EmployeeRole role,
@@ -177,6 +179,7 @@ public class EmployeeData
         data.isFemale  = SafeBool(row, "isFemale", false);
         data.epicTraitId     = SafeString(row, "epicTraitId", "");
         data.uniqueEventType = SafeString(row, "uniqueEventType", "");
+        data.introduction     = SafeString(row, "introduction", "");
         data.otakuFixedGenre          = SafeString(row, "otakuFixedGenre", "");
         data.lastUniqueEventYear      = SafeInt(row, "lastUniqueEventYear", -1);
         data.glassMentalCooldownWeeks = SafeInt(row, "glassMentalCooldownWeeks", 0);
@@ -229,6 +232,7 @@ public class EmployeeData
         param.Add("isFemale",  isFemale);
         param.Add("epicTraitId",     epicTraitId);
         param.Add("uniqueEventType", uniqueEventType);
+        param.Add("introduction",    introduction);
         param.Add("otakuFixedGenre",          otakuFixedGenre);
         param.Add("lastUniqueEventYear",      lastUniqueEventYear);
         param.Add("glassMentalCooldownWeeks", glassMentalCooldownWeeks);
@@ -313,14 +317,23 @@ public class EmployeeData
         => (godBlessingStatPercent > 0 && CharacterUniqueEvents.HasUniqueUgi())
            ? (int)(GetMainStat() * godBlessingStatPercent / 100f) : 0;
 
+    // 오타쿠 특성 — 고정 장르가 현재 프로젝트 장르와 일치하면 상시 버프(조건 유지되는 한 주차 감소 없음).
+    // 예전엔 DevelopmentManager 가 Effective 값 바깥에서 별도로 ×1.2 곱해서 카드/슬롯 표시엔 안 보였는데,
+    // 이제 다른 버프들과 동일하게 여기 포함시켜서 실제 산출값과 표시값이 항상 일치하게 한다.
+    public int GetOtakuBuffAmount()
+        => CharacterTraitApplier.IsOtakuGenreMatch(this, ProjectSetupUI.SelectedGenre)
+           ? (int)(GetMainStat() * (CharacterTraitApplier.OTAKU_STAT_MULT - 1f)) : 0;
+
     // 우기 우주의 기운: 이번 주 능력치 배율 (비-우기/비활성은 100 → ×1.0, 영향 없음).
     // Effective*Skill 의 외곽 곱으로 적용 → (raw → 만족도 → ±버프/디버프) × 우주배율 순서.
     public float GetCosmicMultiplier() => cosmicEnergyPercent / 100f;
 
-    public int EffectivePlanningSkill   => Mathf.RoundToInt(((int)(planningSkill   * GetSatisfactionMultiplier()) - (role == EmployeeRole.Planner    ? GetStatDebuffAmount() : 0) + (role == EmployeeRole.Planner    ? GetStatBuffAmount() : 0) + (role == EmployeeRole.Planner    ? GetRomanceBuffAmount() : 0) + (role == EmployeeRole.Planner    ? GetGodBlessingBuffAmount() : 0)) * GetCosmicMultiplier());
-    public int EffectiveDevelopSkill    => Mathf.RoundToInt(((int)(developSkill    * GetSatisfactionMultiplier()) - (role == EmployeeRole.Programmer ? GetStatDebuffAmount() : 0) + (role == EmployeeRole.Programmer ? GetStatBuffAmount() : 0) + (role == EmployeeRole.Programmer ? GetRomanceBuffAmount() : 0) + (role == EmployeeRole.Programmer ? GetGodBlessingBuffAmount() : 0)) * GetCosmicMultiplier());
-    public int EffectiveArtSkill        => Mathf.RoundToInt(((int)(artSkill        * GetSatisfactionMultiplier()) - (role == EmployeeRole.Artist     ? GetStatDebuffAmount() : 0) + (role == EmployeeRole.Artist     ? GetStatBuffAmount() : 0) + (role == EmployeeRole.Artist     ? GetRomanceBuffAmount() : 0) + (role == EmployeeRole.Artist     ? GetGodBlessingBuffAmount() : 0)) * GetCosmicMultiplier());
-    public int EffectiveCreativitySkill => Mathf.RoundToInt((int)(creativitySkill * GetSatisfactionMultiplier()) * GetCosmicMultiplier());
+    // 버프/디버프(statDebuff·statBuff·romance·godBlessing·otaku)는 예전엔 역할별 주스탯에만 적용됐지만,
+    // 이제 네 스탯(기획/개발/아트/창의성) 전부에 동일하게 적용한다. 증감폭 자체는 여전히 GetMainStat() 기준.
+    public int EffectivePlanningSkill   => Mathf.RoundToInt(((int)(planningSkill   * GetSatisfactionMultiplier()) - GetStatDebuffAmount() + GetStatBuffAmount() + GetRomanceBuffAmount() + GetGodBlessingBuffAmount() + GetOtakuBuffAmount()) * GetCosmicMultiplier());
+    public int EffectiveDevelopSkill    => Mathf.RoundToInt(((int)(developSkill    * GetSatisfactionMultiplier()) - GetStatDebuffAmount() + GetStatBuffAmount() + GetRomanceBuffAmount() + GetGodBlessingBuffAmount() + GetOtakuBuffAmount()) * GetCosmicMultiplier());
+    public int EffectiveArtSkill        => Mathf.RoundToInt(((int)(artSkill        * GetSatisfactionMultiplier()) - GetStatDebuffAmount() + GetStatBuffAmount() + GetRomanceBuffAmount() + GetGodBlessingBuffAmount() + GetOtakuBuffAmount()) * GetCosmicMultiplier());
+    public int EffectiveCreativitySkill => Mathf.RoundToInt(((int)(creativitySkill * GetSatisfactionMultiplier()) - GetStatDebuffAmount() + GetStatBuffAmount() + GetRomanceBuffAmount() + GetGodBlessingBuffAmount() + GetOtakuBuffAmount()) * GetCosmicMultiplier());
 
     public string DevelopText()    => $"개발: {EffectiveDevelopSkill}";
     public string PlanningText()   => $"기획: {EffectivePlanningSkill}";

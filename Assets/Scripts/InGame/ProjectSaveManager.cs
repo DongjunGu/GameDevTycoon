@@ -395,12 +395,8 @@ public class ProjectSaveManager : MonoBehaviour
             {
                 dm.IsPendingLeaderSelect = true;
                 SaveProject();
-                DispatchPanelUI.Instance.OpenForLeaderSelect(LeaderType.Planner, () =>
-                {
-                    dm.IsPendingLeaderSelect = false;
-                    GameTimeManager.Instance.ForceStartTime();
-                    dm.BeginDevelopmentCoroutine();
-                });
+                // onComplete=null — 개발 재개는 팀장점수 확정 후 ContinueAfterLeaderScore.StartDeveloping()이 처리.
+                DispatchPanelUI.Instance.OpenForLeaderSelect(LeaderType.Planner, null);
             });
             return;
         }

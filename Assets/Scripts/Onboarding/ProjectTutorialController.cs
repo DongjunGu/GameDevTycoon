@@ -29,10 +29,13 @@ public class ProjectTutorialController : MonoBehaviour
 
     void Start()
     {
+        // [임시 비활성화] 프로젝트 튜토리얼 실행 안 함
+        /*
         if (OnboardingState.ProjectTutorialDone) { Destroy(gameObject); return; }
         Instance = this;
         if (GameTimeManager.Instance != null) GameTimeManager.Instance.OnTimeChanged += OnWeek;
         TryFire(); // pending==0(직전 만료, 리로드 복구)이면 즉시 실행
+        */
     }
 
     void OnDestroy()

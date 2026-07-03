@@ -135,8 +135,9 @@ public class DevelopmentResultUI : MonoBehaviour
             if (i < ranking.Count)
             {
                 var grade = ranking[i].emp != null ? ranking[i].emp.grade : EmployeeGrade.Normal;
+                bool isCEO = ranking[i].emp != null && ranking[i].emp.isCEO;
                 row.SetActive(true);
-                SetContributionRow(row, i + 1, ranking[i].name, $"{ranking[i].percent:F0}%", grade, ranking[i].portraitId);
+                SetContributionRow(row, i + 1, ranking[i].name, $"{ranking[i].percent:F0}%", grade, isCEO, ranking[i].portraitId);
             }
             else row.SetActive(false); // 이전에 더 많은 행을 표시했을 때 풀에 남아있던 여분
         }
@@ -155,7 +156,7 @@ public class DevelopmentResultUI : MonoBehaviour
         }
     }
 
-    void SetContributionRow(GameObject row, int rank, string name, string rate, EmployeeGrade grade, string portraitId)
+    void SetContributionRow(GameObject row, int rank, string name, string rate, EmployeeGrade grade, bool isCEO, string portraitId)
     {
         var numberText = row.transform.Find("numberPanel")?.GetComponentInChildren<TextMeshProUGUI>();
         var nameText   = row.transform.Find("namePanel")?.GetComponentInChildren<TextMeshProUGUI>();
@@ -172,7 +173,7 @@ public class DevelopmentResultUI : MonoBehaviour
             portraitImage.enabled = sprite != null;
         }
 
-        GradeSpriteSet.Apply(row.GetComponent<Image>(), rowBgGradeSet, grade);
+        GradeSpriteSet.Apply(row.GetComponent<Image>(), rowBgGradeSet, isCEO, grade);
     }
 
     public void Show(float planning, float develop, float art, float bug, float creativity)
@@ -307,6 +308,10 @@ public class DevelopmentResultUI : MonoBehaviour
 
                 ProjectSaveManager.Instance.SetQualityScore(quality, ProjectSetupUI.SelectedScale);
                 DevelopmentManager.Instance.CurrentStage = ProjectStage.Marketing;
+                // 마케팅까지 끝나고 판매 시작 전 — 랜덤 2인 patrol (CEO/비서 포함)
+                OfficeManager.Instance?.TriggerDevelopmentCompletePatrol(
+                    DevelopmentManager.Instance.developCompletePatrolPointA,
+                    DevelopmentManager.Instance.developCompletePatrolPointB);
                 MoneyManager.Instance.SaveMoney();
                 ProjectSaveManager.Instance.SaveProject();
                 GameTimeManager.Instance.SaveGameTime();

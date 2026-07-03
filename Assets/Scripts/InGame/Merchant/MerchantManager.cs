@@ -190,6 +190,7 @@ public class MerchantManager : MonoBehaviour
             string stageStr = stage.ToString();
             foreach (var kv in cache)
             {
+                if (kv.Value.category == "강화") continue; // 강화권/초심 회복기 등 강화 계열은 상인 판매 제외
                 var stages = kv.Value.appearStages;
                 if (string.IsNullOrEmpty(stages)) continue;
                 foreach (var s in stages.Split(','))
@@ -199,7 +200,8 @@ public class MerchantManager : MonoBehaviour
         if (ids.Count == 0)
         {
             Debug.LogWarning($"[Merchant] stage={stage} 매칭 아이템 없음 — 전체 풀 폴백");
-            ids.AddRange(cache.Keys);
+            foreach (var kv in cache)
+                if (kv.Value.category != "강화") ids.Add(kv.Key);
         }
         Shuffle(ids);
         int n = Mathf.Min(itemsPerVisit, ids.Count);

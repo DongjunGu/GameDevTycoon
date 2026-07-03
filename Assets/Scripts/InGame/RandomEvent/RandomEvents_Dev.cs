@@ -33,7 +33,7 @@ public static class RandomEvents_Dev
         // CDN 로드 실패 시 차트 기본값 (RandomEvent_Chart.csv > CompetitorGame):
         //   title       = "대형 게임사의 경쟁작 출시"
         //   description = "사장님 대기업에서 역대급 게임이 나와서 직원들의 기가 죽고 있습니다"
-        //   systemMessage = "전체 직원 만족도 -10"
+        //   systemMessage = "전체 직원 만족도 -5"
         //   weight=4, categoryMin=4, categoryMax=4, portraitId=portrait_secretary
         Add(pool, chart, new RandomEventData
         {
@@ -42,7 +42,7 @@ public static class RandomEvents_Dev
             {
                 foreach (var emp in EmployeeManager.Instance.ownedEmployees)
                 {
-                    emp.ChangeSatisfaction(-10);
+                    emp.ChangeSatisfaction(-5);
                     OfficeManager.Instance?.ShowStatPopup(emp.id, "만족도 -10", new Color(0.4f, 0.6f, 1f));
                 }
             }

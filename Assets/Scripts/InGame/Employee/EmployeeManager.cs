@@ -197,6 +197,7 @@ public class EmployeeManager : MonoBehaviour
                 // 캐릭터별 등급 특징 (차트에 컬럼 없으면 빈 문자열 — 뒤끝 차트 미반영 환경 대비)
                 data.epicTraitId     = row.ContainsKey("epicTraitId")     ? row["epicTraitId"].ToString()     : "";
                 data.uniqueEventType = row.ContainsKey("uniqueEventType") ? row["uniqueEventType"].ToString() : "";
+                data.introduction    = row.ContainsKey("introduction")    ? row["introduction"].ToString()    : "";
                 poolEmployees.Add(data);
             }
             catch (System.Exception e)
@@ -351,6 +352,7 @@ public class EmployeeManager : MonoBehaviour
         inGameEmployee.isFemale  = poolEmployee.isFemale;
         inGameEmployee.epicTraitId     = poolEmployee.epicTraitId;
         inGameEmployee.uniqueEventType = poolEmployee.uniqueEventType;
+        inGameEmployee.introduction    = poolEmployee.introduction;
         
         int epochAtCall = _runEpoch;
         Backend.GameData.Insert("Employee", inGameEmployee.ToParam(), bro =>
