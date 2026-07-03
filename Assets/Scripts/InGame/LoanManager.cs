@@ -122,11 +122,11 @@ public class LoanManager : MonoBehaviour
                         null,
                         () =>
                         {
-                            Debug.Log("[파산] RunState.EndRun → OutGameScene");
+                            Debug.Log("[파산] RunState.EndRun → EndingPanel");
                             if (RunStateManager.Instance != null)
                                 EndRunAndLoad();
                             else
-                                UnityEngine.SceneManagement.SceneManager.LoadScene("OutGameScene");
+                                EndingPanelUI.Instance?.Show();
                         }
                     );
                     return;
@@ -146,7 +146,7 @@ public class LoanManager : MonoBehaviour
         {
             if (success)
             {
-                UnityEngine.SceneManagement.SceneManager.LoadScene("OutGameScene");
+                EndingPanelUI.Instance?.Show();
                 return;
             }
             AlertUI.Instance.Show(

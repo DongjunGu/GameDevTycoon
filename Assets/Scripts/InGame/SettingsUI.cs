@@ -1,6 +1,5 @@
 using UnityEngine;
 using UnityEngine.UI;
-using UnityEngine.SceneManagement;
 
 // 인게임 설정창. 메인메뉴 이동 + 배경음/효과음 볼륨 조절.
 public class SettingsUI : MonoBehaviour
@@ -82,7 +81,7 @@ public class SettingsUI : MonoBehaviour
     {
         if (RunStateManager.Instance == null)
         {
-            SceneManager.LoadScene("OutGameScene");
+            EndingPanelUI.Instance?.Show();
             return;
         }
 
@@ -90,7 +89,7 @@ public class SettingsUI : MonoBehaviour
         {
             if (success)
             {
-                SceneManager.LoadScene("OutGameScene");
+                EndingPanelUI.Instance?.Show();
                 return;
             }
             AlertUI.Instance?.Show(
