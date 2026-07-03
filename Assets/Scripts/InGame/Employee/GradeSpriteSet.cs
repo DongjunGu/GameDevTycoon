@@ -14,6 +14,8 @@ public class GradeSpriteSet : ScriptableObject
     public Sprite epic;
     public Sprite unique;
     public Sprite legendary;
+    [Tooltip("CEO 전용 프레임 — 등급과 무관하게 최우선 적용")]
+    public Sprite ceo;
 
     public Sprite Get(EmployeeGrade grade) => grade switch
     {
@@ -24,11 +26,22 @@ public class GradeSpriteSet : ScriptableObject
         _                       => normal,
     };
 
+    // CEO 여부까지 고려한 조회 — CEO면 등급 무관 ceo 스프라이트 우선(없으면 등급 스프라이트로 폴백).
+    public Sprite Get(bool isCEO, EmployeeGrade grade) => isCEO && ceo != null ? ceo : Get(grade);
+
     // 등급 스프라이트를 Image 에 적용. set/스프라이트 누락 시 변경 없음(기존 유지).
     public static void Apply(Image target, GradeSpriteSet set, EmployeeGrade grade)
     {
         if (target == null || set == null) return;
         var s = set.Get(grade);
+        if (s != null) target.sprite = s;
+    }
+
+    // CEO 여부까지 반영하는 오버로드.
+    public static void Apply(Image target, GradeSpriteSet set, bool isCEO, EmployeeGrade grade)
+    {
+        if (target == null || set == null) return;
+        var s = set.Get(isCEO, grade);
         if (s != null) target.sprite = s;
     }
 }

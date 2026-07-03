@@ -60,8 +60,7 @@ public static class OnboardingState
         SetProjectTutorialPending(weeks);
     }
 
-#if UNITY_EDITOR
-    // 테스트용 — 온보딩 재노출
+    // 테스트용 — 온보딩 재노출 (TestResetBtn 등에서 빌드에서도 호출 가능하도록 UNITY_EDITOR 가드 제거)
     public static void ResetAll()
     {
         PlayerPrefs.DeleteKey(KEY_INTRO);
@@ -72,5 +71,4 @@ public static class OnboardingState
         PlayerPrefs.Save();
         Debug.Log("[Onboarding] 플래그 리셋 — 다음 진입 시 컷씬+튜토리얼 재노출");
     }
-#endif
 }

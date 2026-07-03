@@ -131,8 +131,11 @@ public static class RandomEvents_Condition_Choice
             {
                 if (!string.IsNullOrEmpty(spillDesc))
                     evt.choices[0].resultDescriptions  = new List<string> { spillDesc };
-                if (!string.IsNullOrEmpty(spillSysTpl))
-                    evt.choices[0].resultSystemMessage = spillSysTpl.Replace("{주수}", delayWeeks[0].ToString());
+                // spillSysTpl(choice1_systemMessage2)이 비어있으면 Apply() 직후의 미치환 원본 템플릿
+                // ("...{직원이름}...")이 그대로 남아 화면에 노출되므로, 항상 명시적으로 값을 세팅한다.
+                evt.choices[0].resultSystemMessage = !string.IsNullOrEmpty(spillSysTpl)
+                    ? spillSysTpl.Replace("{주수}", delayWeeks[0].ToString())
+                    : "";
             }
             else
             {
@@ -140,8 +143,9 @@ public static class RandomEvents_Condition_Choice
                 if (!string.IsNullOrEmpty(okDesc1)) okDescs.Add(okDesc1);
                 if (!string.IsNullOrEmpty(okDesc2)) okDescs.Add(okDesc2);
                 if (okDescs.Count > 0) evt.choices[0].resultDescriptions = okDescs;
-                if (!string.IsNullOrEmpty(okSys))
-                    evt.choices[0].resultSystemMessage = okSys.Replace("{직원이름}", targetEmp.employeeName);
+                evt.choices[0].resultSystemMessage = !string.IsNullOrEmpty(okSys)
+                    ? okSys.Replace("{직원이름}", targetEmp.employeeName)
+                    : "";
             }
 
             var c2Descs = new List<string>();

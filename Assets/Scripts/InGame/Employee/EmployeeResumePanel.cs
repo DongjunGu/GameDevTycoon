@@ -13,6 +13,7 @@ public class EmployeeResumePanel : MonoBehaviour
     [Header("Identity")]
     public Image portraitImage;
     public TextMeshProUGUI nameText;
+    public TextMeshProUGUI introductionText; // 캐릭터별 대사 (masterEmployeeId 매핑, 없으면 공백)
     public TextMeshProUGUI potentialText;   // "{잠재력}"
     public TextMeshProUGUI gradeText;
     public Image gradePanel;                // 등급별 이미지 (색 대신 sprite 교체)
@@ -43,6 +44,18 @@ public class EmployeeResumePanel : MonoBehaviour
     [Header("Salary")]
     public TextMeshProUGUI salaryText;      // "연봉: {}G"
 
+    // [CDN fallback] EmployeeMasterData 차트의 introduction 컬럼이 비어있을 때(미업로드/구버전 저장)만 쓰는
+    // masterEmployeeId → 캐릭터별 대사 매핑. 차트 값이 있으면 그게 항상 우선.
+    static readonly System.Collections.Generic.Dictionary<string, string> IntroductionLinesFallback = new()
+    {
+        ["kim_01"]       = "멘탈 약하니까 항상 칭찬만 부탁드려요!",
+        ["otaku_01"]     = "지, 질문은 메신저로만... 그치만 최애 장르는 장인입니다.",
+        ["goldspoon_01"] = "제 통장 잔고 보시면 깜짝 놀라실걸요? 자, 선물이에요.",
+        ["ugi_01"]       = "신의 축복을 믿으세요! 주사위 굴립니다!",
+        ["genius_01"]    = "잠이 많긴 한데, 일이 밀릴일은 없을꺼니까 잔소리하지 마세요",
+        ["hunsu_01"]     = "답답해서 참을 수가 없네. 옆자리 피드백 좀 해줄까요?",
+    };
+
     // showActualStats=false(채용): 주스탯 강화 반영 "범위"(interval) 표시.
     // showActualStats=true(해고): 확정된 실제 수치 + 버프/디버프 색상(버프 빨강 / 디버프 파랑) 표시.
     public void Setup(EmployeeData emp, bool showActualStats = false)
@@ -55,6 +68,8 @@ public class EmployeeResumePanel : MonoBehaviour
             if (sprite != null) portraitImage.sprite = sprite;
         }
         if (nameText != null)      nameText.text      = emp.employeeName;
+        if (introductionText != null)
+            introductionText.text = ResolveIntroduction(emp);
         if (potentialText != null) potentialText.text = emp.PotentialToString();
         if (gradeText != null)     gradeText.text     = emp.GradeToString();
         RoleIconSet.Apply(roleBadge, roleIconSet, emp.role);
@@ -102,6 +117,17 @@ public class EmployeeResumePanel : MonoBehaviour
         }
 
         if (salaryText != null) salaryText.text = ValueOnly(emp.SalaryRangeText());  // "연봉: nG" → "nG"
+    }
+
+    // 캐릭터 대사 — EmployeeMasterData 차트 introduction 컬럼 우선, 비어있으면 코드 fallback.
+    // 후보(미채용) emp 는 masterEmployeeId 가 비어있고 id 자체가 마스터 ID(kim_01 등)라 id 도 함께 확인.
+    static string ResolveIntroduction(EmployeeData emp)
+    {
+        if (!string.IsNullOrEmpty(emp.introduction)) return emp.introduction;
+
+        string masterId = !string.IsNullOrEmpty(emp.masterEmployeeId) ? emp.masterEmployeeId : emp.id;
+        return !string.IsNullOrEmpty(masterId) && IntroductionLinesFallback.TryGetValue(masterId, out var line)
+            ? line : "";
     }
 
     // "기획: 50~200" → "50~200" 처럼 라벨(콜론 앞)을 떼고 값만 반환

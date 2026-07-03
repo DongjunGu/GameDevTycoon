@@ -37,49 +37,22 @@ public class CriticReviewUI : MonoBehaviour
 
     private static readonly string[] CriticNames =
     {
-        "김게임 (게임월드)",
-        "이리뷰 (게임인사이드)",
-        "박평점 (겜스코어)"
+        "망겜감별사",
+        "빛의전사",
+        "김이병"
     };
 
-    // 점수별 멘트 풀
+    // 50점 미만 전용 멘트풀 (3개만)
+    private static readonly string[] LowScoreComments =
+    {
+        "억빠들 전멸ㅋㅋㅋ 퀄리티 실화냐",
+        "10분 하고 환불함. 내 돈 내놔",
+        "겉만 번지르르한 10년 전 게임",
+    };
+
+    // 점수별 멘트 풀 (50점 이상만 — 50점 미만은 LowScoreComments 사용)
     private static readonly string[][] Comments =
     {
-        // 1점 (20 미만)
-        new[] {
-            "이게 게임인가요?",
-            "환불 요청합니다.",
-            "개발을 다시 배우세요.",
-            "역대급 실망작입니다."
-        },
-        // 2점 (20~25)
-        new[] {
-            "출시를 서두른 것 같습니다.",
-            "기초가 너무 부족합니다.",
-            "아이디어만 있고 창의성이 없네요.",
-            "더 많은 준비가 필요했습니다."
-        },
-        // 3점 (25~30)
-        new[] {
-            "가능성은 보이나 창의성이 아쉽습니다.",
-            "방향성은 있지만 디테일이 부족합니다.",
-            "기본기가 흔들립니다.",
-            "좀 더 다듬었어야 했습니다."
-        },
-        // 4점 (30~35)
-        new[] {
-            "평균 이하의 작품입니다.",
-            "몇 가지 좋은 요소가 있지만 전반적으로 부족합니다.",
-            "할인 때 구매를 고려해보세요.",
-            "아직 갈 길이 멉니다."
-        },
-        // 5점 (35~40)
-        new[] {
-            "그저 그런 게임입니다.",
-            "특별함이 없는 평범한 작품입니다.",
-            "기대에 못 미치는 결과물입니다.",
-            "무난하지만 기억에 남지 않을 것 같습니다."
-        },
         // 6점 (40~50, 60~70)
         new[] {
             "어느 정도 즐길 수 있는 게임입니다.",
@@ -131,7 +104,7 @@ public class CriticReviewUI : MonoBehaviour
         // 점수 패널은 계속 활성 — 텍스트만 라벨 상태로 비워둔다
         if (totalScoreObject != null) totalScoreObject.SetActive(true);
         if (nameText != null)       nameText.text       = "게임명: ";
-        if (totalScoreText != null) totalScoreText.text = "유저 평점: ";
+        if (totalScoreText != null) totalScoreText.text = "";
 
         // 도장 숨김 (평점 출력 후 찍힘)
         if (stampImage != null) stampImage.SetActive(false);
@@ -161,38 +134,38 @@ public class CriticReviewUI : MonoBehaviour
         if (nameText != null) nameText.text = $"게임명: {gameName}";
         yield return new WaitForSeconds(0.5f);
 
-        // 유저 평점 출력
-        if (totalScoreText != null) totalScoreText.text = $"유저 평점: {score}점";
-
-        // 평점 출력 후 도장 "쾅"
-        yield return new WaitForSeconds(stampDelay);
-        yield return StartCoroutine(StampPunch());
-
-        // 슬롯 순서대로 활성화 (각 슬롯에 이름/점수/코멘트 분배)
+        // 슬롯 순서대로 활성화 (이름/코멘트만 — 개별 점수는 표시 안 함, 총점만 마지막에 한 번)
         for (int i = 0; i < criticSlots.Length; i++)
         {
             if (i < criticNameTexts.Length && criticNameTexts[i] != null)
                 criticNameTexts[i].text = CriticNames[i % CriticNames.Length];
             if (i < criticScoreTexts.Length && criticScoreTexts[i] != null)
-                criticScoreTexts[i].text = $"{score}점";
+                criticScoreTexts[i].text = "";
             if (i < criticCommentTexts.Length && criticCommentTexts[i] != null)
                 criticCommentTexts[i].text = GetComment(score, i);
 
             if (criticSlots[i] != null) criticSlots[i].SetActive(true);
             yield return new WaitForSeconds(0.5f);
         }
+
+        // 슬롯이 모두 등장한 뒤 — 총점 + 도장이 동시에 "꽝"
+        yield return new WaitForSeconds(stampDelay);
+        if (totalScoreText != null) totalScoreText.text = $"{score}";
+        yield return StartCoroutine(ScoreAndStampPunch());
     }
 
-    IEnumerator StampPunch()
+    // 총점 텍스트 + 도장 이미지가 동시에 확대 상태에서 축소되며 "쾅" 박히는 연출.
+    IEnumerator ScoreAndStampPunch()
     {
-        if (stampImage == null) yield break;
+        Transform stampT = stampImage    != null ? stampImage.transform    : null;
+        Transform scoreT = totalScoreText != null ? totalScoreText.transform : null;
+        if (stampT == null && scoreT == null) yield break;
 
-        Transform t = stampImage.transform;
         Vector3 from = Vector3.one * stampStartScale;
         Vector3 to   = Vector3.one;
 
-        t.localScale = from;
-        stampImage.SetActive(true);
+        if (stampT != null) { stampT.localScale = from; stampImage.SetActive(true); }
+        if (scoreT != null) scoreT.localScale = from;
 
         float dur = Mathf.Max(0.01f, stampPunchDuration);
         float el = 0f;
@@ -202,10 +175,12 @@ public class CriticReviewUI : MonoBehaviour
             float k = Mathf.Clamp01(el / dur);
             // ease-out — 빠르게 줄어들며 "쾅" 찍히는 느낌
             float eased = 1f - (1f - k) * (1f - k);
-            t.localScale = Vector3.LerpUnclamped(from, to, eased);
+            if (stampT != null) stampT.localScale = Vector3.LerpUnclamped(from, to, eased);
+            if (scoreT != null) scoreT.localScale = Vector3.LerpUnclamped(from, to, eased);
             yield return null;
         }
-        t.localScale = to;
+        if (stampT != null) stampT.localScale = to;
+        if (scoreT != null) scoreT.localScale = to;
     }
 
 int CalcCriticScore(float x)
@@ -217,7 +192,10 @@ int CalcCriticScore(float x)
 
     string GetComment(int score, int criticIndex)
     {
-        int idx = Mathf.Clamp(score / 10, 0, Comments.Length - 1);
+        if (score < 50)
+            return LowScoreComments[criticIndex % LowScoreComments.Length];
+
+        int idx = Mathf.Clamp(score / 10 - 5, 0, Comments.Length - 1);
         var pool = Comments[idx];
         return pool[criticIndex % pool.Length];
     }

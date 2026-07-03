@@ -1,10 +1,11 @@
+using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 
 // 창의성 미니게임 상단 블록 아이템 패널.
 // 보유 중인 블록 아이템(랜덤/전설)만 한 번에 하나씩 표시하고 SlideBtn 으로 순환한다.
-// - 열릴 때 보유한 첫 블록(랜덤 우선)부터 표시. 하나도 없으면 패널 내용 숨김(빈 "0개"도 안 띄움).
+// - 열릴 때 보유한 첫 블록(랜덤 우선)부터 표시. 하나도 없으면 비활성화 대신 우측으로 슬라이드해 접음(빈 "0개"도 안 띄움).
 // - Text: 아이템 이름 / CountText: 잔여 수량(N개) / BlockItemImage: 이미지(에셋 없으면 비움)
 // - UseBtn: 현재 표시 중인 아이템 사용
 public class BlockItemPanelUI : MonoBehaviour
@@ -12,15 +13,31 @@ public class BlockItemPanelUI : MonoBehaviour
     public static BlockItemPanelUI Instance { get; private set; }
 
     [Header("UI")]
-    [SerializeField] Image           itemImage; // BlockItemImage
-    [SerializeField] TextMeshProUGUI nameText;  // Text
-    [SerializeField] Button          slideBtn;  // 다음 아이템으로 전환
-    [SerializeField] Button          useBtn;    // 현재 아이템 사용
-    [SerializeField] TextMeshProUGUI countText; // 잔여량 n개
+    [SerializeField] Image           itemImage;  // BlockItemImage
+    [SerializeField] Image           frameImage; // 등급 프레임 (ItemSlotUI와 동일)
+    [SerializeField] ItemGradeSet    gradeSet;
+    [SerializeField] TextMeshProUGUI nameText;   // Text
+    [SerializeField] Button          slideBtn;   // 다음 아이템으로 전환
+    [SerializeField] Button          useBtn;     // 현재 아이템 사용
+    [SerializeField] TextMeshProUGUI countText;  // 잔여량 (숫자만)
+
+    [Header("접힘/펼침 슬라이드 (전용 버튼은 추후 별도 연결 — OnClickToggleSlide 를 그 버튼 OnClick 에 연결)")]
+    [Tooltip("우측으로 슬라이드될 대상 — 비우면 이 오브젝트의 RectTransform")]
+    [SerializeField] RectTransform slideTarget;
+    [Tooltip("접힘 상태 표시용 화살표. 비우면 slideBtn 자식 \"ArrowImage\" 자동 탐색")]
+    [SerializeField] Image arrowImage;
+    [Tooltip("우측으로 이동할 거리(px). 0 이하면 slideTarget 자기 너비만큼 이동")]
+    [SerializeField] float slideDistance = 0f;
+    [SerializeField] float slideDuration = 0.3f;
 
     // 표시할 블록 아이템 (순서대로 순환). 처음 = 랜덤 블록.
     static readonly string[] BlockItemIds = { "blockRandom", "blockLegendary" };
     int _index;
+
+    bool _slideCollapsed;
+    Coroutine _slideCo;
+    float _slideOriginX;
+    bool _slideOriginCaptured;
 
     void Awake()
     {
@@ -59,6 +76,73 @@ public class BlockItemPanelUI : MonoBehaviour
         }
     }
 
+    // 접힘/펼침 토글 — 전용 버튼(추후 추가) OnClick 에 연결. 우측으로 슬라이드(접힘) ↔ 원위치(펼침) + 화살표 X축 반전.
+    public void OnClickToggleSlide() => SetCollapsed(!_slideCollapsed);
+
+    // collapsed=true → 우측으로 슬라이드(접힘), false → 원위치(펼침). 이미 목표 상태면 무시(중복 애니메이션 방지).
+    void SetCollapsed(bool collapsed)
+    {
+        if (slideTarget == null) slideTarget = (RectTransform)transform;
+        if (!_slideOriginCaptured)
+        {
+            _slideOriginX = slideTarget.anchoredPosition.x;
+            _slideOriginCaptured = true;
+        }
+        if (_slideCollapsed == collapsed) return;
+
+        _slideCollapsed = collapsed;
+
+        float dist = slideDistance > 0f ? slideDistance : slideTarget.rect.width;
+        float targetX = _slideOriginX + (_slideCollapsed ? dist : 0f);
+
+        if (_slideCo != null) StopCoroutine(_slideCo);
+        _slideCo = StartCoroutine(SlideRoutine(targetX));
+
+        UpdateArrow();
+    }
+
+    IEnumerator SlideRoutine(float targetX)
+    {
+        float startX = slideTarget.anchoredPosition.x;
+        float dur = Mathf.Max(0.01f, slideDuration);
+        float t = 0f;
+        while (t < dur)
+        {
+            t += Time.unscaledDeltaTime;
+            float k = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(t / dur));
+            var p = slideTarget.anchoredPosition;
+            p.x = Mathf.Lerp(startX, targetX, k);
+            slideTarget.anchoredPosition = p;
+            yield return null;
+        }
+        var final = slideTarget.anchoredPosition;
+        final.x = targetX;
+        slideTarget.anchoredPosition = final;
+        _slideCo = null;
+    }
+
+    // 접힘 상태에 따라 화살표 X축 반전(스케일 부호) — EmployeeListUI.SetStatArrow 와 동일 방식(축만 X로).
+    void UpdateArrow()
+    {
+        var img = ResolveArrowImage();
+        if (img == null) return;
+        var rt = img.rectTransform;
+        var s  = rt.localScale;
+        float magX = Mathf.Abs(s.x);
+        rt.localScale = new Vector3(_slideCollapsed ? -magX : magX, s.y, s.z);
+    }
+
+    Image ResolveArrowImage()
+    {
+        if (arrowImage != null) return arrowImage;
+        if (slideBtn != null)
+        {
+            var t = slideBtn.transform.Find("ArrowImage");
+            if (t != null) arrowImage = t.GetComponent<Image>();
+        }
+        return arrowImage;
+    }
+
     void OnClickUse()
     {
         if (ItemManager.Instance == null) return;
@@ -84,24 +168,11 @@ public class BlockItemPanelUI : MonoBehaviour
         return false;
     }
 
-    // 보유 아이템이 없을 때 패널 내용(이미지/이름/수량/버튼 + 배경)을 숨김.
-    // 루트 GameObject 는 살려둬 다음 OnEnable/Refresh 가 정상 동작하도록 함.
-    void SetContentActive(bool on)
-    {
-        if (nameText  != null) nameText.gameObject.SetActive(on);
-        if (countText != null) countText.gameObject.SetActive(on);
-        if (slideBtn  != null) slideBtn.gameObject.SetActive(on);
-        if (useBtn    != null) useBtn.gameObject.SetActive(on);
-        if (!on && itemImage != null) itemImage.gameObject.SetActive(false);
-        var bg = GetComponent<Image>();
-        if (bg != null) bg.enabled = on;
-    }
-
     public void Refresh()
     {
-        // 보유한 블록 아이템이 하나도 없으면 내용 숨김 (빈 "0개"도 안 띄움)
+        // 보유한 블록 아이템이 하나도 없으면 비활성화 대신 우측으로 슬라이드해 접음(다시 생기면 자동 펼침).
         bool anyOwned = AnyOwned();
-        SetContentActive(anyOwned);
+        SetCollapsed(!anyOwned);
         if (!anyOwned) return;
 
         // 현재 항목이 0개면 보유한 항목으로 이동 — 항상 보유 항목만 표시
@@ -132,9 +203,17 @@ public class BlockItemPanelUI : MonoBehaviour
             }
         }
 
-        // 잔여량
+        // 등급 프레임 — ItemSlotUI와 동일 (ItemGradeSet.Apply)
+        if (frameImage != null)
+        {
+            frameImage.gameObject.SetActive(owned);
+            if (owned && row != null)
+                ItemGradeSet.Apply(frameImage, gradeSet, row.grade);
+        }
+
+        // 잔여량 (숫자만)
         if (countText != null)
-            countText.text = $"{count}개";
+            countText.text = $"{count}";
 
         // 사용 버튼 — 소지 중일 때만
         if (useBtn != null)

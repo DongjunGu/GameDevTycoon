@@ -3,7 +3,8 @@ using UnityEngine;
 using UnityEngine.UI;
 
 // 첫 게임씬 진입 시 1회 실행되는 온보딩 튜토리얼.
-// 흐름: 비서 대사 → 메뉴 버튼 강조 → (클릭→메뉴 열림) → 직원 버튼 강조 → (클릭→서브 열림) → 채용하기 버튼 강조 → 완료.
+// 흐름: 비서 대사 → 메뉴 버튼 강조 → (클릭→메뉴 열림) → 직원 버튼 강조 → (클릭→서브 열림) → 채용하기 버튼 강조
+//      → (클릭→TierPanel 열림) → tier1 버튼 강조(1단계만 선택 가능) → (클릭) → confirmBtn 강조 → (클릭) → 완료.
 //
 // 강조 방식: 반투명 dim 풀스크린(클릭 차단) 위로 "대상 버튼만" 정렬을 올려(overrideSorting) 밝게+클릭 가능하게 하고 펄스.
 // → 다른 모든 UI 는 dim 에 막혀 대상만 누를 수 있음. 대사 내용은 DialogManager 그룹(데이터)에서.
@@ -13,9 +14,11 @@ using UnityEngine.UI;
 public class TutorialController : MonoBehaviour
 {
     [Header("강조할 버튼 (순서대로)")]
-    public Button menuButton;       // 1) 메뉴 열기
-    public Button employeeButton;   // 2) 직원(상위)
-    public Button hireButton;       // 3) 채용하기(하위)
+    public Button menuButton;         // 1) 메뉴 열기
+    public Button employeeButton;     // 2) 직원(상위)
+    public Button hireButton;         // 3) 채용하기(하위) — 클릭 시 HiringUI.OpenHiring 이 열림
+    public Button tier1Button;        // 4) TierPanel/tier1 — 채용 튜토리얼 중엔 1단계만 선택 가능
+    public Button hireConfirmButton;  // 5) TierPanel/confirmBtn — 선택 확정
 
     [Header("비서 대사")]
     [Tooltip("DialogManager 그룹 ID. 그룹이 없으면 대사 스킵하고 바로 강조 진행. tutorial_intro 는 DialogManager 가 코드로 주입(비서 2줄).")]
@@ -74,6 +77,10 @@ public class TutorialController : MonoBehaviour
         yield return Highlight(employeeButton);
         yield return new WaitForSecondsRealtime(settleDelay); // 서브 메뉴 펼침
         yield return Highlight(hireButton);
+        yield return new WaitForSecondsRealtime(settleDelay); // 채용 패널(TierPanel) 펼침
+        yield return Highlight(tier1Button);
+        yield return new WaitForSecondsRealtime(settleDelay);
+        yield return Highlight(hireConfirmButton);
 
         _dimCanvas.enabled = false;
         EndDimTimeStop();

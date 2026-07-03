@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using UnityEngine;
 using TMPro;
 using UnityEngine.UI;
@@ -15,9 +14,6 @@ public class MarketingUI : MonoBehaviour
     public TextMeshProUGUI[] slotPlatformTexts; // 16개
     public TextMeshProUGUI[] slotCostTexts;     // 16개
 
-    [Header("UI")]
-    public TextMeshProUGUI totalCostText;
-
     private readonly (string name, int cost, string desc)[] _marketingData =
     {
         ("전단지 돌리기",        500,    "광고할 돈이 없으면 전단지라도 돌리자"),
@@ -31,7 +27,8 @@ public class MarketingUI : MonoBehaviour
         ("야구 스폰서",         600000,   "가장 비싸지만 효과 만점"),
     };
 
-    private Dictionary<string, int> _countMap = new();
+    private int[] _slotCosts;      // 표시 비용 캐시 (marketingFree 반영)
+    private int _selectedIndex = -1;
     private int _totalCost;
     private System.Action _onComplete;
 
@@ -61,10 +58,11 @@ public class MarketingUI : MonoBehaviour
         GameTimeManager.Instance?.StopTime();
         _onComplete = onComplete;
         _totalCost = 0;
-        _countMap.Clear();
+        _selectedIndex = -1;
 
         // 마케팅의 신 trait — 모든 슬롯 비용 0G + 차감 스킵 (이 세션 동안 캡처)
         bool marketingFree = TraitEffectApplier.HasMarketingFree();
+        _slotCosts = new int[_marketingData.Length];
 
         // 전체 슬롯 텍스트 초기화 (비활성화 없이 공백)
         for (int i = 0; i < slotButtons.Length; i++)
@@ -75,15 +73,16 @@ public class MarketingUI : MonoBehaviour
             if (descText != null) descText.text = "";
             slotButtons[i].onClick.RemoveAllListeners();
             slotButtons[i].interactable = false;
+            SetSlotSelected(i, false);
         }
 
         // 데이터 있는 슬롯만 텍스트 + 클릭 설정
         for (int i = 0; i < _marketingData.Length; i++)
         {
             var (name, cost, desc) = _marketingData[i];
-            _countMap[name] = 0;
 
             int displayCost = marketingFree ? 0 : cost;
+            _slotCosts[i] = displayCost;
             slotPlatformTexts[i].text = name;
             slotCostTexts[i].text = $"{displayCost:N0}G";
             var descText = GetSlotDescription(i);
@@ -91,21 +90,34 @@ public class MarketingUI : MonoBehaviour
             slotButtons[i].interactable = true;
 
             int capturedIndex = i;
-            slotButtons[i].onClick.AddListener(() =>
-                OnClickMarketing(_marketingData[capturedIndex].name, displayCost));
+            slotButtons[i].onClick.AddListener(() => OnClickSlot(capturedIndex));
         }
-
-        UpdateUI();
         marketingPanel.SetActive(true);
     }
-    void OnClickMarketing(string name, int cost)
+
+    void OnClickSlot(int index)
     {
-        string msg = $"{cost:N0}G를 사용하여\n{name} 마케팅을\n하시겠습니까?";
-        ConfirmUI.Instance.Show(msg, () => ApplyMarketing(name, cost), null, "네", "아니오");
+        _selectedIndex = (_selectedIndex == index) ? -1 : index;
+        for (int i = 0; i < _marketingData.Length; i++)
+            SetSlotSelected(i, i == _selectedIndex);
     }
 
-    void ApplyMarketing(string name, int cost)
+    // 기본 alpha 0(안 보임) / 선택 시 255 — HiringUI.SetTierSelected, ProjectSetupUI 선택 표시와 동일 패턴.
+    void SetSlotSelected(int index, bool selected)
     {
+        if (slotButtons == null || index < 0 || index >= slotButtons.Length || slotButtons[index] == null) return;
+        var img = slotButtons[index].image;
+        if (img == null) return;
+        var c = img.color;
+        c.a = selected ? 1f : 0f;
+        img.color = c;
+    }
+
+    public void OnClickComplete()
+    {
+        // 선택 없이도 완료 가능 — 미선택이면 마케팅 비용 0으로 그냥 진행.
+        int cost = _selectedIndex >= 0 ? _slotCosts[_selectedIndex] : 0;
+
         if (cost > 0 && !MoneyManager.Instance.CanAfford(cost))
         {
             GameUIHelper.ShowLoanPrompt();
@@ -113,27 +125,14 @@ public class MarketingUI : MonoBehaviour
         }
 
         if (cost > 0)
-            MoneyManager.Instance.SpendGold(cost, saveImmediately: false); // ← 저장 안 함 (Complete 시 일괄)
+            MoneyManager.Instance.SpendGold(cost, saveImmediately: false);
+        _totalCost = cost;
 
-        _countMap[name]++;
-        _totalCost += cost;
-        UpdateUI();
-    }
-
-    public void OnClickComplete()
-    {
         MoneyManager.Instance.SaveMoney(); // ← 완료 시 한 번만 저장
         marketingPanel.SetActive(false);
         GameTimeManager.Instance.StartTime();
         _onComplete?.Invoke();
     }
-
-    void UpdateUI()
-    {
-        totalCostText.text = $"총 비용: {_totalCost:N0}G";
-    }
-
-    public Dictionary<string, int> GetCountMap() => _countMap;
     public int GetTotalCost() => _totalCost;
     public void TestMarketing()
     {

@@ -21,6 +21,15 @@ public class LogoScenario : MonoBehaviour
 
 		//Screen.sleepTimeout = SleepTimeout.NeverSleep;
 
+		// BackendManager는 EmployeeManager와 같은 GameObject에 있고 그쪽이 DontDestroyOnLoad라
+		// 두 번째부터는 Start()가 다시 안 돈다 — 그럼 Progress가 로그인/데이터로드 완료를 영원히 못 받으므로,
+		// 이미 이번 세션에 로그인+로드가 끝났으면(TestResetBtn 등으로 LoadingScene 재진입) 여기서 바로 완료 처리.
+		if (BackendManager.HasInitializedThisSession)
+		{
+			progress.SetLoginComplete();
+			progress.SetAllDataLoaded();
+		}
+
 		progress.Play(OnAfterProgress);
 	}
 

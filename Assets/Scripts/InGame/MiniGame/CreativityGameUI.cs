@@ -56,6 +56,8 @@ public class CreativityGameUI : MonoBehaviour
 
     [Header("블록 트레이 (오른쪽 세로 배치)")]
     [SerializeField] Transform _blockTray;   // VerticalLayoutGroup
+    [Tooltip("블록 뒤에 깔리는 슬롯 배경 프리팹 (Image 1개, 인스펙터에서 스프라이트/색상 커스텀 가능)")]
+    [SerializeField] GameObject _blockSlotPrefab;
 
     [Header("UI")]
     [SerializeField] TextMeshProUGUI _scoreText;
@@ -129,6 +131,7 @@ public class CreativityGameUI : MonoBehaviour
 
     // ── 런타임 ───────────────────────────────────────────────────────────────
     private int _score;
+    private bool _bonusGranted; // 퍼펙트 보너스 즉시 지급 여부 (라운드당 1회만 지급 — 재충전 악용 방지)
     private readonly List<CreativityGameBlockUI> _activeBlocks = new();
     private readonly List<CreativityGameData.BlockShape> _earnedBlocks = new();
     private CreativityGameData.GridShape _fixedGrid;
@@ -136,6 +139,14 @@ public class CreativityGameUI : MonoBehaviour
 
     // ── 생명주기 ─────────────────────────────────────────────────────────────
     private bool _initialized;
+    // 인스펙터에 미리 세팅된 BlockTray GridLayoutGroup.cellSize — 있으면(양수) 자동계산보다 우선 사용.
+    private Vector2 _fixedSlotSize = Vector2.zero;
+    // 인스펙터에 미리 세팅된 BlockTray GridLayoutGroup.constraintCount — 있으면 우선 사용, 없으면 3열 기본.
+    private int _fixedColumns = 0;
+    int Columns => _fixedColumns > 0 ? _fixedColumns : 3;
+    // 인스펙터에 미리 세팅된 BlockTray GridLayoutGroup.spacing — 있으면 우선 사용, 없으면 20,20 기본.
+    private Vector2 _fixedSpacing = Vector2.zero;
+    Vector2 Spacing => (_fixedSpacing.x > 0f || _fixedSpacing.y > 0f) ? _fixedSpacing : new Vector2(20f, 20f);
 
     void Awake()
     {
@@ -152,6 +163,16 @@ public class CreativityGameUI : MonoBehaviour
         if (_debugFillBtn != null) _debugFillBtn.onClick.AddListener(OnClickDebugFill);
         if (_blockRandomUseBtn != null) _blockRandomUseBtn.onClick.AddListener(() => OnClickUseItem("blockRandom"));
         if (_blockLegendaryUseBtn != null) _blockLegendaryUseBtn.onClick.AddListener(() => OnClickUseItem("blockLegendary"));
+
+        // Spawn* 가 매번 덮어쓰기 전, 인스펙터에 미리 세팅해둔 GridLayoutGroup.cellSize/constraintCount를 캡처.
+        var glg = _blockTray != null ? _blockTray.GetComponent<GridLayoutGroup>() : null;
+        if (glg != null && glg.cellSize.x > 0f && glg.cellSize.y > 0f)
+            _fixedSlotSize = glg.cellSize;
+        if (glg != null && glg.constraint == GridLayoutGroup.Constraint.FixedColumnCount && glg.constraintCount > 0)
+            _fixedColumns = glg.constraintCount;
+        if (glg != null && (glg.spacing.x > 0f || glg.spacing.y > 0f))
+            _fixedSpacing = glg.spacing;
+
         _initialized = true;
     }
 
@@ -162,6 +183,7 @@ public class CreativityGameUI : MonoBehaviour
     {
         _onClose = onClose;
         _score   = 0;
+        _bonusGranted = false;
         _panel.SetActive(true);
         GameTimeManager.Instance?.StopTime(); // 미니게임 동안 시간 정지 (OnClickConfirm 의 StartTime 과 1:1)
 
@@ -178,9 +200,9 @@ public class CreativityGameUI : MonoBehaviour
     void RefreshLevelTexts()
     {
         if (_gridBagLevelText != null)
-            _gridBagLevelText.text = $"창의성 {CreativityLevel}단계";
+            _gridBagLevelText.text = $"<color=#663D45>창의성 가방</color> <color=#E63356>{CreativityLevel}단계</color>";
         if (_gridBlockLevelText != null)
-            _gridBlockLevelText.text = $"블록 가치 {BlockValueLevel}단계";
+            _gridBlockLevelText.text = $"<color=#663D45>블록 가치</color> <color=#E63356>{BlockValueLevel}단계</color>";
     }
 
     // ── 아이템 (랜덤/전설 블록) ─────────────────────────────────────────────
@@ -214,6 +236,22 @@ public class CreativityGameUI : MonoBehaviour
             SpawnSingleBlock(def);
     }
 
+    // 블록 뒤 슬롯 배경 — 프리팹 지정 시 그걸로, 없으면 기존 방식(기본 Image)으로 생성.
+    GameObject CreateSlot(int index)
+    {
+        if (_blockSlotPrefab != null)
+        {
+            var prefabGO = Instantiate(_blockSlotPrefab, _blockTray);
+            prefabGO.name = $"Slot_{index}";
+            return prefabGO;
+        }
+
+        var slotGO = new GameObject($"Slot_{index}");
+        slotGO.AddComponent<RectTransform>().SetParent(_blockTray, false);
+        slotGO.AddComponent<Image>().color = new Color(0.9f, 0.93f, 1f, 0.4f);
+        return slotGO;
+    }
+
     void SpawnSingleBlock(CreativityGameData.BlockShape def)
     {
         Canvas.ForceUpdateCanvases();
@@ -223,14 +261,12 @@ public class CreativityGameUI : MonoBehaviour
         var glg = _blockTray.GetComponent<GridLayoutGroup>();
         if (glg == null) glg = _blockTray.gameObject.AddComponent<GridLayoutGroup>();
         glg.constraint      = GridLayoutGroup.Constraint.FixedColumnCount;
-        glg.constraintCount = 4;
+        glg.constraintCount = Columns;
         glg.cellSize        = new Vector2(slotSz, slotSz);
-        glg.spacing         = new Vector2(20f, 20f);
-        glg.childAlignment  = TextAnchor.MiddleCenter;
+        glg.spacing         = Spacing;
+        glg.childAlignment  = TextAnchor.UpperLeft;
 
-        var slotGO = new GameObject($"Slot_{_blockTray.childCount}");
-        slotGO.AddComponent<RectTransform>().SetParent(_blockTray, false);
-        slotGO.AddComponent<Image>().color = new Color(0.9f, 0.93f, 1f, 0.4f);
+        var slotGO = CreateSlot(_blockTray.childCount);
 
         var blockGO = new GameObject("Block");
         var blockRT = blockGO.AddComponent<RectTransform>();
@@ -253,27 +289,32 @@ public class CreativityGameUI : MonoBehaviour
         var (slotSz, _) = CalcSlotAndPreviewCell(10);
 
         var glg = _blockTray.GetComponent<GridLayoutGroup>();
-        if (glg != null) { glg.constraintCount = 4; glg.cellSize = new Vector2(slotSz, slotSz); glg.spacing = new Vector2(20, 20); glg.childAlignment = TextAnchor.MiddleCenter; }
+        if (glg != null) { glg.constraintCount = Columns; glg.cellSize = new Vector2(slotSz, slotSz); glg.spacing = Spacing; glg.childAlignment = TextAnchor.UpperLeft; }
 
         for (int i = 0; i < 10; i++)
-        {
-            var slotGO = new GameObject($"Slot_{i}");
-            slotGO.AddComponent<RectTransform>().SetParent(_blockTray, false);
-            slotGO.AddComponent<Image>().color = new Color(0.9f, 0.93f, 1f, 0.4f);
-        }
+            CreateSlot(i);
     }
 
     (float slotSz, float previewCell) CalcSlotAndPreviewCell(int count)
     {
-        var trayRT = _blockTray.GetComponent<RectTransform>();
-        float trayW = trayRT.rect.width;
+        float slotSz;
+        if (_fixedSlotSize.x > 0f)
+        {
+            // 인스펙터에 미리 세팅된 GridLayoutGroup.cellSize 우선 — 자동계산 안 함.
+            slotSz = _fixedSlotSize.x;
+        }
+        else
+        {
+            var trayRT = _blockTray.GetComponent<RectTransform>();
+            float trayW = trayRT.rect.width;
 
-        int cols    = 4;
-        float space = 20f;
+            int cols    = Columns;
+            float space = Spacing.x;
 
-        // 세로 스크롤: 셀 크기는 너비(5열)에 맞춰 고정, 행이 늘면 ContentSizeFitter가 높이를 늘려 스크롤됨
-        float byW = (trayW - space * (cols - 1)) / cols;
-        float slotSz     = Mathf.Max(byW, 60f);
+            // 세로 스크롤: 셀 크기는 너비(5열)에 맞춰 고정, 행이 늘면 ContentSizeFitter가 높이를 늘려 스크롤됨
+            float byW = (trayW - space * (cols - 1)) / cols;
+            slotSz = Mathf.Max(byW, 60f);
+        }
         float previewCell = Mathf.Floor(slotSz / 5f);
         return (slotSz, previewCell);
     }
@@ -292,18 +333,16 @@ public class CreativityGameUI : MonoBehaviour
         var glg = _blockTray.GetComponent<GridLayoutGroup>();
         if (glg == null) glg = _blockTray.gameObject.AddComponent<GridLayoutGroup>();
         glg.constraint      = GridLayoutGroup.Constraint.FixedColumnCount;
-        glg.constraintCount = 4;
+        glg.constraintCount = Columns;
         glg.cellSize        = new Vector2(slotSz, slotSz);
-        glg.spacing         = new Vector2(20f, 20f);
-        glg.childAlignment  = TextAnchor.MiddleCenter;
+        glg.spacing         = Spacing;
+        glg.childAlignment  = TextAnchor.UpperLeft;
 
         for (int i = 0; i < count; i++)
         {
             var def = CreativityGameData.Blocks[Random.Range(0, CreativityGameData.Blocks.Length)];
 
-            var slotGO = new GameObject($"Slot_{i}");
-            slotGO.AddComponent<RectTransform>().SetParent(_blockTray, false);
-            slotGO.AddComponent<Image>().color = new Color(0.9f, 0.93f, 1f, 0.4f);
+            var slotGO = CreateSlot(i);
 
             var blockGO = new GameObject("Block");
             var blockRT = blockGO.AddComponent<RectTransform>();
@@ -335,18 +374,16 @@ public class CreativityGameUI : MonoBehaviour
         var glg = _blockTray.GetComponent<GridLayoutGroup>();
         if (glg == null) glg = _blockTray.gameObject.AddComponent<GridLayoutGroup>();
         glg.constraint      = GridLayoutGroup.Constraint.FixedColumnCount;
-        glg.constraintCount = 4;
+        glg.constraintCount = Columns;
         glg.cellSize        = new Vector2(slotSz, slotSz);
-        glg.spacing         = new Vector2(20f, 20f);
-        glg.childAlignment  = TextAnchor.MiddleCenter;
+        glg.spacing         = Spacing;
+        glg.childAlignment  = TextAnchor.UpperLeft;
 
         for (int i = 0; i < count; i++)
         {
             var def = _earnedBlocks[i];
 
-            var slotGO = new GameObject($"Slot_{i}");
-            slotGO.AddComponent<RectTransform>().SetParent(_blockTray, false);
-            slotGO.AddComponent<Image>().color = new Color(0.9f, 0.93f, 1f, 0.4f);
+            var slotGO = CreateSlot(i);
 
             var blockGO = new GameObject("Block");
             var blockRT = blockGO.AddComponent<RectTransform>();
@@ -406,9 +443,6 @@ public class CreativityGameUI : MonoBehaviour
                               && _gridUI.CountFilledCells() >= _gridUI.ValidCellCount;
     int GetBonusScore() => IsGridFullyFilled ? _score / 10 : 0;
 
-    // 최종 적용 점수 = 기본 점수 + 보너스
-    public int GetFinalScore() => _score + GetBonusScore();
-
     // CreativityGameBlockUI.OnEndDrag 에서 호출
     public void OnBlockPlaced(CreativityGameBlockUI block)
     {
@@ -434,6 +468,13 @@ public class CreativityGameUI : MonoBehaviour
         }
         if (_perfectBonusText != null)
             _perfectBonusText.text = bonus > 0 ? "퍼펙트 보너스!" : "";
+
+        // 퍼펙트 보너스 최초 달성 시 즉시 지급 — 이후 블록을 뗐다 다시 채워도 라운드당 1회만.
+        if (bonus > 0 && !_bonusGranted)
+        {
+            _bonusGranted = true;
+            DevelopmentPanelUI.Instance?.AddValuesInstant(0f, 0f, 0f, 0f, bonus);
+        }
     }
 
     // 디버그: 그리드 전부 강제 채움 → 퍼펙트 보너스 표시 테스트
@@ -449,15 +490,16 @@ public class CreativityGameUI : MonoBehaviour
     {
         _gridUI.ResetPlacedBlocks();
         _score = 0;
+        _bonusGranted = false;
         UpdateScore();
     }
 
     // 확인 버튼 (항상 활성 — Inspector에서 Button.onClick 에 연결)
     public void OnClickConfirm()
     {
-        float score = GetFinalScore();
-        if (score > 0f)
-            DevelopmentPanelUI.Instance.AddValuesInstant(0f, 0f, 0f, 0f, score);
+        // 퍼펙트 보너스는 UpdateScore()에서 이미 즉시 지급됐으므로 여기선 기본 점수만 지급.
+        if (_score > 0f)
+            DevelopmentPanelUI.Instance.AddValuesInstant(0f, 0f, 0f, 0f, _score);
 
         _panel.SetActive(false);
         GameTimeManager.Instance?.StartTime(); // Open 의 StopTime 해소 (이후 콜백의 AlertUI 가 자체적으로 다시 정지)

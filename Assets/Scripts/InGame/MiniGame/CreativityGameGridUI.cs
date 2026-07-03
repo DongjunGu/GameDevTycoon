@@ -12,6 +12,10 @@ public class CreativityGameGridUI : MonoBehaviour, IBeginDragHandler, IDragHandl
     [SerializeField] float _cellSize = 68f;
     [SerializeField] float _cellGap  = 5f;
 
+    [Header("셀 스프라이트")]
+    [Tooltip("유효 칸(활성화되는 칸)의 Image에 적용할 스프라이트. 비워두면 기본(민무늬 사각형).")]
+    [SerializeField] Sprite _cellSprite;
+
     [Header("색상")]
     [SerializeField] Color _emptyColor        = new Color(0.86f, 0.91f, 0.98f);
     [SerializeField] Color _inactiveCellColor = new Color(0f, 0f, 0f, 0f);
@@ -132,6 +136,7 @@ public class CreativityGameGridUI : MonoBehaviour, IBeginDragHandler, IDragHandl
             return;
 
         var img = go.AddComponent<Image>();
+        img.sprite        = _cellSprite;
         img.color         = color;
         img.raycastTarget = false;
         _cellImages[(r, c)] = img;
@@ -248,7 +253,10 @@ public class CreativityGameGridUI : MonoBehaviour, IBeginDragHandler, IDragHandl
             _filled[r, c]    = true;
             _cellToBlock[(r, c)] = block;
             if (_cellImages.TryGetValue((r, c), out var img))
-                img.color = color;
+            {
+                img.color  = color;
+                img.sprite = null; // 블록이 놓이면 셀 스프라이트 제거
+            }
         }
         return true;
     }
@@ -276,7 +284,10 @@ public class CreativityGameGridUI : MonoBehaviour, IBeginDragHandler, IDragHandl
         {
             _filled[r, c] = false;
             if (_cellImages.TryGetValue((r, c), out var img))
-                img.color = _emptyColor;
+            {
+                img.color  = _emptyColor;
+                img.sprite = _cellSprite; // 블록 제거 시 셀 스프라이트 복원
+            }
             _cellToBlock.Remove((r, c));
         }
         return true;
@@ -309,7 +320,10 @@ public class CreativityGameGridUI : MonoBehaviour, IBeginDragHandler, IDragHandl
         {
             _filled[r, c] = false;
             if (_cellImages.TryGetValue((r, c), out var img))
-                img.color = _emptyColor;
+            {
+                img.color  = _emptyColor;
+                img.sprite = _cellSprite; // 리셋 시 셀 스프라이트 복원
+            }
         }
         _cellToBlock.Clear();
         foreach (var block in placed)

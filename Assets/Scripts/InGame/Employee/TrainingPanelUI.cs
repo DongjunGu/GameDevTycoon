@@ -64,6 +64,9 @@ public class TrainingPanelUI : MonoBehaviour
 
         // 결과 오버레이는 강화 결과가 나올 때만 표시 — 시작 시 숨김.
         if (trainingResultPanel != null) trainingResultPanel.SetActive(false);
+
+        // 선택 전(첫 실행 포함) 에디터 디자인타임 더미 텍스트가 그대로 노출되지 않도록 시작 시 비움.
+        HideDetail();
     }
 
     // ── 열기/닫기 ─────────────────────────────
@@ -105,6 +108,18 @@ public class TrainingPanelUI : MonoBehaviour
     void HideDetail()
     {
         _selected = null;
+
+        // 선택 해제 시 이전(또는 에디터 디자인타임) 텍스트가 남아있지 않도록 전부 비움.
+        SetText(curEnhanceText, "");    SetText(curDevelopText, "");   SetText(curPlanningText, "");
+        SetText(curArtText, "");        SetText(curCreativityText, ""); SetText(curSalaryText, "");
+        SetText(expEnhanceText, "");    SetText(expDevelopText, "");   SetText(expPlanningText, "");
+        SetText(expArtText, "");        SetText(expCreativityText, ""); SetText(expSalaryText, "");
+        SetText(successRateText, "");   SetText(failRateText, "");     SetText(costText, "");
+
+        ResolveBadge();
+        SetText(_badgeEnhanceText, ""); SetText(_badgePotentialText, ""); SetText(_badgeGradeText, "");
+
+        if (enhanceButton != null) enhanceButton.interactable = false;
     }
 
     // ── 상세 갱신 ─────────────────────────────

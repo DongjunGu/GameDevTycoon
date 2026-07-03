@@ -108,11 +108,12 @@ public class DispatchPanelUI : MonoBehaviour
 
     IEnumerator OpenLeaderAfterPopups(LeaderType type, System.Action onComplete)
     {
-        // 호출자가 미리 StopTime 했어도 카운트업 끝까지 시간을 풀어줌 (deadlock 방지).
-        bool wasStopped = GameTimeManager.Instance != null && !GameTimeManager.Instance.IsRunning;
-        if (wasStopped) GameTimeManager.Instance.ForceStartTime();
-
-        // ActiveCount 가 stale 이면 시간이 흘러도 안 줄어 무한 대기 → real-time 3초 타임아웃 후 강제 진행.
+        // [주의] 예전엔 여기서 ForceStartTime()으로 시간을 풀었다가 다시 StopTime() 1회로 되돌렸는데,
+        // 호출 전 stopCount가 1보다 크면 복원이 덜 돼서(강제 리셋 후 1회만 재적립) 이후 시점에 시간이
+        // 조기 재개되는 버그(팀장 선택 중 시계가 도는 것처럼 보임)로 이어졌다. GameTimeManager.IsRunning은
+        // 여기 진입 전 이미 항상 정지 상태이므로, 시간을 건드리지 않고 real-time으로만 대기한다.
+        // StatTickPopup 애니메이션은 GameTimeManager.IsRunning을 봐서 진행하므로(StatTickPopup.cs),
+        // 정지 상태에선 자연 완료되지 않고 아래 3초 타임아웃으로 강제 종료된다 — 의도된 동작.
         float waited = 0f;
         while (StatTickPopup.ActiveCount > 0 && waited < 3f)
         {
@@ -125,7 +126,6 @@ public class DispatchPanelUI : MonoBehaviour
             StatTickPopup.ActiveCount = 0;
         }
 
-        if (wasStopped) GameTimeManager.Instance?.StopTime();
         OpenLeaderInternal(type, onComplete);
     }
 
@@ -173,7 +173,11 @@ public class DispatchPanelUI : MonoBehaviour
     // 닫기/취소 버튼에 연결
     public void Close()
     {
-        GameTimeManager.Instance?.StartTime();
+        // 팀장 선택 모드는 확정 즉시 팀장점수(LeaderScoreUI) 모달로 바로 이어지므로 여기서 시간을 풀면 안 됨 —
+        // (StopTime/StartTime 카운트가 우연히 맞아떨어지는 것에 의존하던 게 실제로 새는 원인이었음).
+        // 시간 재개는 그 뒤 이어지는 모달 체인의 최종 ForceStartTime()에서만 처리한다.
+        if (_mode != PanelMode.Leader)
+            GameTimeManager.Instance?.StartTime();
         var root = panelRoot != null ? panelRoot : gameObject;
         root.SetActive(false);
         if (_mode == PanelMode.Leader) ModalGate.I.Unregister(this);
