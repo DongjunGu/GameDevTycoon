@@ -130,6 +130,7 @@ GameObject:
   - component: {fileID: 14625463}
   - component: {fileID: 14625462}
   - component: {fileID: 14625464}
+  - component: {fileID: 14625465}
   m_Layer: 0
   m_Name: SoundManager
   m_TagString: Untagged
@@ -181,6 +182,21 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GlobalUiClickSfx
   clickSound: {fileID: 11400000, guid: a0637ec55ccef3748bbb3f0d5da5c2dd, type: 2}
+--- !u!114 &14625465
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 14625461}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3b808420d65cec646af614c3b9f78ec2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::GlobalButtonClickBounce
+  shrinkScale: 0.9
+  shrinkDuration: 0.06
+  growDuration: 0.12
 --- !u!1 &46911841
 GameObject:
   m_ObjectHideFlags: 0
@@ -1515,8 +1531,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: "Apple\uB85C \uB85C\uADF8\uC778"
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 0762af7de54282a498c99314c894507c, type: 2}
-  m_sharedMaterial: {fileID: -3318507174629680496, guid: 0762af7de54282a498c99314c894507c, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 258b366e1df110941a30ebe7a999e60f, type: 2}
+  m_sharedMaterial: {fileID: -86639295217220609, guid: 258b366e1df110941a30ebe7a999e60f, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -2134,8 +2150,8 @@ MonoBehaviour:
   m_text: "\uC5EC\uAE34 \uC5B4\uB514\uC9C0...? \uB09C \uBD84\uBA85 \uBE4C\uB529 \uC625\uC0C1\uC5D0\uC11C
     \uB5A8\uC5B4\uC9C0\uACE0 \uC788\uC5C8\uB294\uB370...?"
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 0762af7de54282a498c99314c894507c, type: 2}
-  m_sharedMaterial: {fileID: -3318507174629680496, guid: 0762af7de54282a498c99314c894507c, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 258b366e1df110941a30ebe7a999e60f, type: 2}
+  m_sharedMaterial: {fileID: -86639295217220609, guid: 258b366e1df110941a30ebe7a999e60f, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -2365,8 +2381,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: Now Loading...
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 0762af7de54282a498c99314c894507c, type: 2}
-  m_sharedMaterial: {fileID: -3318507174629680496, guid: 0762af7de54282a498c99314c894507c, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 258b366e1df110941a30ebe7a999e60f, type: 2}
+  m_sharedMaterial: {fileID: -86639295217220609, guid: 258b366e1df110941a30ebe7a999e60f, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []

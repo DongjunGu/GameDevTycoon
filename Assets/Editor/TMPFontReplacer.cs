@@ -5,32 +5,85 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using TMPro;
 
-// 프로젝트 전체에서 NeoDunggeunmoPro-Regular SDF 를 쓰는 TMP_Text 만 DNFBitBitTTF SDF 로 일괄 변경.
-// - TMP 기본 폰트(TMP Settings) 변경
-// - 모든 프리팹 + 모든 씬에서 .font 가 oldFont 인 TMP_Text 만 newFont 로 교체 (다른 폰트/아웃라인 머티리얼 커스텀은 그대로 유지)
-// 메뉴: Tools/Font/Set All TMP To NeoDunggeunmo
-public static class TMPFontReplacer
+// 프로젝트 전체(모든 프리팹 + 모든 씬)에서 지정한 Old Font 를 쓰는 TMP_Text 만 New Font 로 일괄 변경.
+// 메뉴: Tools/Font/Font Replacer
+public class TMPFontReplacer : EditorWindow
 {
-    const string OldFontPath = "Assets/TextMesh Pro/Resources/Fonts & Materials/DNFBitBitTTF SDF.asset";
-    const string NewFontPath = "Assets/TextMesh Pro/Resources/Fonts & Materials/DNFBitBitv2 SDF.asset";
     const string SettingsPath = "Assets/TextMesh Pro/Resources/TMP Settings.asset";
 
-    [MenuItem("Tools/Font/Set All TMP To NeoDunggeunmo")]
-    public static void Run()
-    {
-        var oldFont = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(OldFontPath);
-        var newFont = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(NewFontPath);
-        if (oldFont == null) { Debug.LogError("[TMPFont] 기존 폰트 못 찾음: " + OldFontPath); return; }
-        if (newFont == null) { Debug.LogError("[TMPFont] 새 폰트 못 찾음: " + NewFontPath); return; }
+    TMP_FontAsset oldFont;
+    TMP_FontAsset newFont;
+    bool alsoSetDefaultFont = true;
 
+    TMP_FontAsset filterTargetFont;
+
+    [MenuItem("Tools/Font/Font Replacer")]
+    static void Open()
+    {
+        GetWindow<TMPFontReplacer>("Font Replacer");
+    }
+
+    void OnGUI()
+    {
+        EditorGUILayout.LabelField("TMP 폰트 일괄 교체", EditorStyles.boldLabel);
+        EditorGUILayout.Space();
+
+        oldFont = (TMP_FontAsset)EditorGUILayout.ObjectField("Old Font (바꿀 대상)", oldFont, typeof(TMP_FontAsset), false);
+        newFont = (TMP_FontAsset)EditorGUILayout.ObjectField("New Font (바뀔 결과)", newFont, typeof(TMP_FontAsset), false);
+        alsoSetDefaultFont = EditorGUILayout.Toggle("TMP Settings 기본 폰트도 변경", alsoSetDefaultFont);
+
+        EditorGUILayout.Space();
+
+        using (new EditorGUI.DisabledScope(oldFont == null || newFont == null))
+        {
+            if (GUILayout.Button("교체 실행", GUILayout.Height(30)))
+                Run(oldFont, newFont, alsoSetDefaultFont);
+        }
+
+        if (oldFont != null && newFont != null && oldFont == newFont)
+            EditorGUILayout.HelpBox("Old Font 와 New Font 가 같습니다.", MessageType.Warning);
+
+        EditorGUILayout.Space(20);
+        EditorGUILayout.LabelField("픽셀폰트 아틀라스 Filter Mode → Point", EditorStyles.boldLabel);
+        EditorGUILayout.HelpBox("임베디드 아틀라스 텍스처는 Import Settings가 없어서 여기서 Point(no filter)로 강제 설정해야 함.", MessageType.Info);
+
+        filterTargetFont = (TMP_FontAsset)EditorGUILayout.ObjectField("대상 Font", filterTargetFont, typeof(TMP_FontAsset), false);
+
+        using (new EditorGUI.DisabledScope(filterTargetFont == null))
+        {
+            if (GUILayout.Button("Filter Mode를 Point로 설정", GUILayout.Height(30)))
+                SetAtlasFilterToPoint(filterTargetFont);
+        }
+    }
+
+    static void SetAtlasFilterToPoint(TMP_FontAsset font)
+    {
+        int changed = 0;
+        var textures = new List<Texture2D> { font.atlasTexture };
+        if (font.atlasTextures != null) textures.AddRange(font.atlasTextures);
+
+        foreach (var tex in textures)
+        {
+            if (tex == null || tex.filterMode == FilterMode.Point) continue;
+            tex.filterMode = FilterMode.Point;
+            EditorUtility.SetDirty(tex);
+            changed++;
+        }
+
+        EditorUtility.SetDirty(font);
+        AssetDatabase.SaveAssets();
+        Debug.Log($"[TMPFont] {font.name} 아틀라스 텍스처 {changed}개 Filter Mode → Point");
+    }
+
+    static void Run(TMP_FontAsset oldFont, TMP_FontAsset newFont, bool alsoSetDefaultFont)
+    {
         // 현재 열린 씬 먼저 저장 (작업 손실 방지)
         EditorSceneManager.SaveOpenScenes();
         string activeScenePath = SceneManager.GetActiveScene().path;
 
-        // 1) TMP 기본 폰트 변경
-        SetDefaultFont(newFont);
+        if (alsoSetDefaultFont) SetDefaultFont(newFont);
 
-        // 2) 프리팹
+        // 프리팹
         int prefabFiles = 0, prefabComps = 0;
         foreach (var g in AssetDatabase.FindAssets("t:Prefab"))
         {
@@ -51,7 +104,7 @@ public static class TMPFontReplacer
             PrefabUtility.UnloadPrefabContents(root);
         }
 
-        // 3) 모든 씬
+        // 모든 씬
         int sceneFiles = 0, sceneComps = 0;
         var scenePaths = new List<string>();
         foreach (var g in AssetDatabase.FindAssets("t:Scene"))
@@ -86,7 +139,7 @@ public static class TMPFontReplacer
 
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
-        Debug.Log($"[TMPFont] 완료 → DNFBitBitv2 SDF / 프리팹 {prefabFiles}파일({prefabComps} comp), 씬 {sceneFiles}파일({sceneComps} comp)");
+        Debug.Log($"[TMPFont] {oldFont.name} → {newFont.name} 완료 / 프리팹 {prefabFiles}파일({prefabComps} comp), 씬 {sceneFiles}파일({sceneComps} comp)");
     }
 
     // TextMesh Pro 예제/패키지 콘텐츠는 제외

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using DG.Tweening;
 
 // 직원 관리 패널 (구 해고-캐러셀 EmployeeListUI 를 새 디자인으로 교체).
 //  - 우(EmployeeListRightScrollView/Content): 보유 직원 슬롯 리스트(EmployeeSlotListUI 프리팹)
@@ -84,6 +85,17 @@ public class EmployeeListUI : MonoBehaviour
     [Tooltip("슬라이드 거리(px). 0이면 DetailPanel(또는 TrainingPanel) 너비 자동 사용")]
     public float slideWidth = 0f;
     public float slideDuration = 0.3f;
+    [Tooltip("슬라이드 끝에서 살짝 튕기는 정도 (0이면 오버슈트 없음, 1.7 근처가 자연스러움)")]
+    public float slideOvershoot = 1.7f;
+
+    [Header("Open 연출 (패널 열릴 때)")]
+    [Tooltip("ScrollPanel/PortraitPanel/DetailPanel 페이드인 시간(초)")]
+    public float openFadeDuration = 0.35f;
+    [Tooltip("DetailPanel 안쪽(Info/TrainingPanel)이 열릴 때 밀고 들어오는 시작 오프셋(px) — slideOvershoot 커브로 튕기며 들어옴")]
+    public float openIntroOffset = 60f;
+
+    CanvasGroup _scrollPanelCG, _portraitPanelCG, _infoPanelCG, _trainingPanelCG;
+    bool _openFxResolved;
 
     [Header("Menu")]
     [Tooltip("메뉴 '강화하기' 버튼 — 누르면 패널 열고 바로 TrainingPanel 표시")]
@@ -125,6 +137,7 @@ public class EmployeeListUI : MonoBehaviour
         Root.SetActive(true);
         ResetSlide();      // 항상 InfoPanel 부터 시작
         BuildList();       // 스냅 리스트가 맨 위 슬롯 자동 선택 → 상세 표시
+        PlayOpenIntro();
     }
 
     public void OnClickClose()
@@ -297,6 +310,7 @@ public class EmployeeListUI : MonoBehaviour
         Root.SetActive(true);
         ResetSlide();
         BuildList();
+        PlayOpenIntro();
     }
 
     void ApplyUseItemModeVisual(bool on)
@@ -514,6 +528,7 @@ public class EmployeeListUI : MonoBehaviour
         SetSlideInstant(true);    // InfoPanel 대신 TrainingPanel 부터
         BuildList();              // 동기 setup → 뜨는 즉시 emp 슬롯에 배치
         TrainingPanelUI.Instance?.OnSelectEmployee(emp); // 동기 채움 → snap 비동기 선택 전 더미 텍스트 노출 방지
+        PlayOpenIntro();
     }
 
     // ── 슬라이드 ─────────────────────────────────
@@ -560,14 +575,82 @@ public class EmployeeListUI : MonoBehaviour
         while (t < dur)
         {
             t += Time.unscaledDeltaTime;
-            float k = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(t / dur));
-            SetSlideX(infoSlidePanel,  Mathf.Lerp(infoFrom,  infoTo,  k));
-            SetSlideX(trainingSlidePanel, Mathf.Lerp(trainFrom, trainTo, k));
+            float k = EaseOutBack(Mathf.Clamp01(t / dur), slideOvershoot);
+            SetSlideX(infoSlidePanel,  Mathf.LerpUnclamped(infoFrom,  infoTo,  k));
+            SetSlideX(trainingSlidePanel, Mathf.LerpUnclamped(trainFrom, trainTo, k));
             yield return null;
         }
         SetSlideX(infoSlidePanel, infoTo);
         SetSlideX(trainingSlidePanel, trainTo);
         _slideCo = null;
+    }
+
+    // 목표값 도달 직전에 살짝 지나쳤다가(overshoot) 되돌아오는 ease-out-back 커브.
+    static float EaseOutBack(float t, float overshoot)
+    {
+        t -= 1f;
+        return t * t * ((overshoot + 1f) * t + overshoot) + 1f;
+    }
+
+    // ── Open 연출 ─────────────────────────────────
+    // ScrollPanel/PortraitPanel 은 alpha 0→1 페이드만, DetailPanel 안쪽(Info/TrainingPanel)은
+    // alpha 페이드 + slideOvershoot 커브로 살짝 밀고 들어오는 연출까지 함께.
+    void ResolveOpenFx()
+    {
+        if (_openFxResolved) return;
+        _openFxResolved = true;
+        _scrollPanelCG   = GetOrAddCG(Root.transform.Find("ScrollPanel"));
+        _portraitPanelCG = GetOrAddCG(Root.transform.Find("PortraitPanel"));
+        _infoPanelCG     = infoSlidePanel     != null ? GetOrAddCG(infoSlidePanel.transform)     : null;
+        _trainingPanelCG = trainingSlidePanel != null ? GetOrAddCG(trainingSlidePanel.transform) : null;
+    }
+
+    static CanvasGroup GetOrAddCG(Transform t)
+    {
+        if (t == null) return null;
+        var cg = t.GetComponent<CanvasGroup>();
+        if (cg == null) cg = t.gameObject.AddComponent<CanvasGroup>();
+        return cg;
+    }
+
+    void PlayOpenIntro()
+    {
+        ResolveOpenFx();
+        FadeIn(_scrollPanelCG);
+        FadeIn(_portraitPanelCG);
+        PlayDetailIntro(infoSlidePanel,     _infoPanelCG);
+        PlayDetailIntro(trainingSlidePanel, _trainingPanelCG);
+    }
+
+    void FadeIn(CanvasGroup cg)
+    {
+        if (cg == null) return;
+        cg.DOKill();
+        cg.alpha = 0f;
+        cg.DOFade(1f, openFadeDuration).SetUpdate(true);
+    }
+
+    void PlayDetailIntro(RectTransform rt, CanvasGroup cg)
+    {
+        if (rt == null) return;
+        FadeIn(cg);
+        StartCoroutine(IntroSlideRoutine(rt));
+    }
+
+    IEnumerator IntroSlideRoutine(RectTransform rt)
+    {
+        float targetX = rt.anchoredPosition.x;
+        float fromX = targetX + openIntroOffset;
+        float dur = Mathf.Max(0.01f, slideDuration);
+        float t = 0f;
+        while (t < dur)
+        {
+            t += Time.unscaledDeltaTime;
+            float k = EaseOutBack(Mathf.Clamp01(t / dur), slideOvershoot);
+            SetSlideX(rt, Mathf.LerpUnclamped(fromX, targetX, k));
+            yield return null;
+        }
+        SetSlideX(rt, targetX);
     }
 
     static void SetSlideX(RectTransform rt, float x)

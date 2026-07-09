@@ -174,6 +174,7 @@ public class SalaryNegotiationManager : MonoBehaviour
 
         Debug.Log($"연봉협상 시작: {emp.employeeName} / 기준: {criteria} / 인상율: {raisePercent}%");
         GameTimeManager.Instance.StopTime();
+        ModalGate.I.Register(this); // 협상 중 다른 모달(랜덤이벤트 등) 차단·큐잉 — Finish 에서 해제
         ShowEmployeeSlot(emp);
 
         DialogManager.Instance.SetPlaceholder("employeeName", emp.employeeName);
@@ -279,7 +280,11 @@ public class SalaryNegotiationManager : MonoBehaviour
         GameTimeManager.Instance.SaveGameTime();
         MoneyManager.Instance?.SaveMoney();
         ProjectSaveManager.Instance?.SaveProject();
-        GameTimeManager.Instance.ForceStartTime();
+        // ForceStartTime()은 다른 시스템(예: ProjectSetupUI)이 걸어둔 정지 카운트까지 강제로 0으로
+        // 씹어버려서, 협상 도중 다른 모달이 겹쳐 있었을 경우 그 모달이 떠 있는 채로 시간이 새는 버그가
+        // 있었다. StartTime()으로 이 협상분(StopTime 1회)만 정확히 상쇄한다.
+        GameTimeManager.Instance.StartTime();
+        ModalGate.I.Unregister(this);
         DialogManager.Instance.ClearPlaceholders();
     }
 

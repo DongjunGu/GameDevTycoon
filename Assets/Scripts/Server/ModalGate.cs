@@ -34,6 +34,7 @@ public class ModalGate : MonoBehaviour
 
     readonly HashSet<MonoBehaviour> _active = new();
     readonly List<Action> _pending = new();
+    Coroutine _flushCo;
 
     public bool IsBlocked => _active.Count > 0;
     public int ActiveCount => _active.Count;
@@ -59,9 +60,22 @@ public class ModalGate : MonoBehaviour
         _pending.Add(cb);
     }
 
+    // 한 프레임 뒤로 미뤄서 큐를 비운다 — 직전 모달을 닫은 그 클릭(wasPressedThisFrame)이
+    // 같은 프레임에 새로 뜨는 다음 모달의 "탭하면 스킵/선택" 입력 감지에 그대로 새어들어가는 것을 방지.
+    // (예: 채용 완료 버튼 클릭 → 같은 프레임에 다음 랜덤이벤트 패널이 뜨면서 그 클릭을 스킵/선택 입력으로 오인)
     void TryFlush()
     {
         if (IsBlocked || _pending.Count == 0) return;
+        if (_flushCo != null) return; // 이미 다음 프레임 플러시 예약됨
+        _flushCo = StartCoroutine(FlushNextFrame());
+    }
+
+    IEnumerator FlushNextFrame()
+    {
+        yield return null;
+        _flushCo = null;
+
+        if (IsBlocked || _pending.Count == 0) yield break;
         var snapshot = new List<Action>(_pending);
         _pending.Clear();
         foreach (var cb in snapshot)
@@ -70,6 +84,9 @@ public class ModalGate : MonoBehaviour
             catch (Exception e) { Debug.LogException(e); }
             if (IsBlocked) break; // 한 콜백이 새 모달을 띄우면 거기서 멈추고 그 모달 닫힐 때 이어감
         }
+
+        // 콜백들이 아무것도 재등록 안 했는데 그 사이 새 pending 이 더 쌓였으면 이어서 플러시.
+        if (!IsBlocked && _pending.Count > 0) TryFlush();
     }
 
     public IEnumerable<string> GetActiveNames()

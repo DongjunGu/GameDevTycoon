@@ -25,8 +25,14 @@ public class LeaderScoreUI : MonoBehaviour
 
     [Header("스트레스 경고 (LeaderScoreEntirePanel)")]
     public Image stressWarningImage;          // LeaderScoreEntirePanel의 Image — 기본 alpha 0
-    public float stressBlinkInterval = 0.3f;  // 깜빡임 on/off 각 구간 길이(초)
+    public float stressBlinkInterval = 0.3f;  // sin파 반 주기(초) — 값↔값 왕복 한 방향 시간
     private float _currentDs = 0f;
+
+    [Header("좌우 커튼 (팀장점수 진행 중 alpha 왕복)")]
+    public Image leftCurtain;
+    public Image rightCurtain;
+    public float curtainBlinkPeriod = 0.3f;   // 206→255→206 한 바퀴 도는 데 걸리는 시간(초)
+    private bool _curtainActive = false;
 
     [Header("연출")]
     public float rollDuration = 1f;   // 회차 점수/ds 상승 시간
@@ -102,6 +108,7 @@ public class LeaderScoreUI : MonoBehaviour
         GameTimeManager.Instance?.StopTime(); // 팀장 점수 연출 동안 시간 정지
         ModalGate.I.Register(this); // 점수 표시 중 다른 모달(상인 Alert 등) 차단
         SpawnCharacterPreview(employee);
+        _curtainActive = true;
 
         StartCoroutine(PlayCoroutine(type, fullRoundScores, roundScores, cumDsAfter,
                                      total, overflowRound, cutFactor, hunsuBonus, hunsuBonusTarget));
@@ -176,6 +183,8 @@ public class LeaderScoreUI : MonoBehaviour
         _applyDevelop  = dv;
         _applyArt      = ar;
 
+        _curtainActive = false;
+        ResetCurtainAlpha();
         StopWorkingAnimations();
 
         yield return new WaitForSeconds(0.5f);
@@ -320,23 +329,53 @@ public class LeaderScoreUI : MonoBehaviour
             characterImage.sprite = _previewSpriteRenderer.sprite;
 
         UpdateStressWarning();
+        UpdateCurtainBlink();
     }
 
-    // ds < 90: 완전히 안 보임(alpha 0) / 90~99: alpha 50~70 사이 깜빡임(경고) / 100: alpha 100~120 사이 깜빡임(위험).
-    // 부드럽게 lerp하지 않고 두 값 사이를 사각파로 툭툭 전환해야 "깜빡이는" 느낌이 남 — 계속 반복, 안 멈춤.
-    // 100 구간 깜빡임은 회차 연출이 끝나(StopWorkingAnimations 이후)도 멈추지 않음 — LateUpdate가 _currentDs만 보고
-    // 계속 도는 구조라 코루틴 종료와 무관하게 계속 깜빡인다.
+    // 팀장점수 연출이 진행되는 동안(Show ~ 점수 확정) LeftCurtain/RightCurtain의 alpha를
+    // 206~255 사이에서 sin파로 부드럽게 왕복시킨다. curtainBlinkPeriod초에 한 바퀴(206→255→206).
+    void UpdateCurtainBlink()
+    {
+        if (!_curtainActive) return;
+
+        float period = Mathf.Max(0.01f, curtainBlinkPeriod);
+        float wave = (Mathf.Sin(Time.time * (2f * Mathf.PI / period)) + 1f) * 0.5f; // 0~1
+        float a = Mathf.Lerp(206f / 255f, 1f, wave);
+
+        SetCurtainAlpha(leftCurtain, a);
+        SetCurtainAlpha(rightCurtain, a);
+    }
+
+    void ResetCurtainAlpha()
+    {
+        SetCurtainAlpha(leftCurtain, 1f);
+        SetCurtainAlpha(rightCurtain, 1f);
+    }
+
+    void SetCurtainAlpha(Image img, float a)
+    {
+        if (img == null) return;
+        var c = img.color;
+        c.a = a;
+        img.color = c;
+    }
+
+    // ds < 90: 완전히 안 보임(alpha 0) / 90~99: alpha 50~70 사이를 sin파로 스무스하게 오감(경고) /
+    // 100: alpha 100~120 사이를 sin파로 스무스하게 오감(위험). 계속 반복, 안 멈춤.
+    // 100 구간은 회차 연출이 끝나(StopWorkingAnimations 이후)도 멈추지 않음 — LateUpdate가 _currentDs만 보고
+    // 계속 도는 구조라 코루틴 종료와 무관하게 계속 오간다.
     void UpdateStressWarning()
     {
         if (stressWarningImage == null) return;
 
+        float period = Mathf.Max(0.01f, stressBlinkInterval) * 2f;
+        float wave = (Mathf.Sin(Time.time * (2f * Mathf.PI / period)) + 1f) * 0.5f; // 0~1
+
         float targetA;
-        float interval = Mathf.Max(0.01f, stressBlinkInterval);
-        bool blinkOn = Mathf.Repeat(Time.time, interval * 2f) < interval;
         if (_currentDs >= 100f)
-            targetA = blinkOn ? 120f / 255f : 100f / 255f;
+            targetA = Mathf.Lerp(80f / 255f, 120f / 255f, wave);
         else if (_currentDs >= 90f)
-            targetA = blinkOn ? 70f / 255f : 50f / 255f;
+            targetA = Mathf.Lerp(50f / 255f, 70f / 255f, wave);
         else
             targetA = 0f;
 

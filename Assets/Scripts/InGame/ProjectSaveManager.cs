@@ -391,6 +391,9 @@ public class ProjectSaveManager : MonoBehaviour
         if (DevelopmentManager.Instance.PendingInvestmentUIRestore)
         {
             var dm = DevelopmentManager.Instance;
+            // GameSceneInitializer가 위에서 이미 StartTime()을 호출한 상태 — RandomEventChoiceUI.Show()는
+            // 자체적으로 시간을 멈추지 않으므로(호출자 책임) 여기서 직접 멈춰야 함.
+            GameTimeManager.Instance?.StopTime();
             RandomEvents_Condition_Choice.RestoreInvestmentUI(() =>
             {
                 dm.IsPendingLeaderSelect = true;
