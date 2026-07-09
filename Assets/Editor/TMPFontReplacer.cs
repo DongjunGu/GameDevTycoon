@@ -5,19 +5,22 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using TMPro;
 
-// 프로젝트 전체 TMP 폰트를 NeoDunggeunmoPro-Regular SDF 로 일괄 변경.
+// 프로젝트 전체에서 NeoDunggeunmoPro-Regular SDF 를 쓰는 TMP_Text 만 DNFBitBitTTF SDF 로 일괄 변경.
 // - TMP 기본 폰트(TMP Settings) 변경
-// - 모든 프리팹 + 모든 씬의 TMP_Text(.font) 를 새 폰트로 (머티리얼도 Unity가 자동 갱신)
+// - 모든 프리팹 + 모든 씬에서 .font 가 oldFont 인 TMP_Text 만 newFont 로 교체 (다른 폰트/아웃라인 머티리얼 커스텀은 그대로 유지)
 // 메뉴: Tools/Font/Set All TMP To NeoDunggeunmo
 public static class TMPFontReplacer
 {
-    const string NewFontPath = "Assets/TextMesh Pro/Resources/Fonts & Materials/NeoDunggeunmoPro-Regular SDF.asset";
+    const string OldFontPath = "Assets/TextMesh Pro/Resources/Fonts & Materials/DNFBitBitTTF SDF.asset";
+    const string NewFontPath = "Assets/TextMesh Pro/Resources/Fonts & Materials/DNFBitBitv2 SDF.asset";
     const string SettingsPath = "Assets/TextMesh Pro/Resources/TMP Settings.asset";
 
     [MenuItem("Tools/Font/Set All TMP To NeoDunggeunmo")]
     public static void Run()
     {
+        var oldFont = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(OldFontPath);
         var newFont = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(NewFontPath);
+        if (oldFont == null) { Debug.LogError("[TMPFont] 기존 폰트 못 찾음: " + OldFontPath); return; }
         if (newFont == null) { Debug.LogError("[TMPFont] 새 폰트 못 찾음: " + NewFontPath); return; }
 
         // 현재 열린 씬 먼저 저장 (작업 손실 방지)
@@ -42,7 +45,7 @@ public static class TMPFontReplacer
             bool changed = false;
             foreach (var t in root.GetComponentsInChildren<TMP_Text>(true))
             {
-                if (t.font != newFont) { t.font = newFont; changed = true; prefabComps++; }
+                if (t.font == oldFont) { t.font = newFont; changed = true; prefabComps++; }
             }
             if (changed) { PrefabUtility.SaveAsPrefabAsset(root, path); prefabFiles++; }
             PrefabUtility.UnloadPrefabContents(root);
@@ -67,7 +70,7 @@ public static class TMPFontReplacer
             bool changed = false;
             foreach (var rootGo in scene.GetRootGameObjects())
                 foreach (var t in rootGo.GetComponentsInChildren<TMP_Text>(true))
-                    if (t.font != newFont) { t.font = newFont; changed = true; sceneComps++; }
+                    if (t.font == oldFont) { t.font = newFont; changed = true; sceneComps++; }
 
             if (changed)
             {
@@ -83,7 +86,7 @@ public static class TMPFontReplacer
 
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
-        Debug.Log($"[TMPFont] 완료 → NeoDunggeunmoPro-Regular SDF / 프리팹 {prefabFiles}파일({prefabComps} comp), 씬 {sceneFiles}파일({sceneComps} comp)");
+        Debug.Log($"[TMPFont] 완료 → DNFBitBitv2 SDF / 프리팹 {prefabFiles}파일({prefabComps} comp), 씬 {sceneFiles}파일({sceneComps} comp)");
     }
 
     // TextMesh Pro 예제/패키지 콘텐츠는 제외

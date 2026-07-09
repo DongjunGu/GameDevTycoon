@@ -30,7 +30,7 @@ public class EmployeeStatusBarUI : MonoBehaviour
     public float slideDuration = 0.3f;
     [Tooltip("시작 시 숨김 상태로 시작")]
     public bool startHidden = true;
-    [Tooltip("toggleButton의 화살표/아이콘 — 슬라이드로 들어가면(Show) Y축 flip")]
+    [Tooltip("toggleButton의 화살표/아이콘 — 나와있으면(Show) Y축 flip")]
     public Transform buttonImage;
 
     private readonly Dictionary<string, EmployeeSatisfactionSlider> _slots = new();
@@ -93,17 +93,17 @@ public class EmployeeStatusBarUI : MonoBehaviour
         _slideCo = StartCoroutine(SlideTo(rect, hiddenAnchoredPos));
     }
 
-    // 패널이 슬라이드로 들어가 있는(Show) 상태면 Y축 flip + ypos -25, 나가 있으면(Hide) 원래대로.
+    // 패널이 나와있는(Show) 상태면 Y축 flip + ypos -25, 들어가면(Hide) 원래대로.
     void UpdateButtonImageFlip()
     {
         if (buttonImage == null) return;
         var s = buttonImage.localScale;
-        s.y = _isShown ? -Mathf.Abs(s.y) : Mathf.Abs(s.y);
+        s.y = _isShown ? Mathf.Abs(s.y) : -Mathf.Abs(s.y);
         buttonImage.localScale = s;
 
         if (_buttonImageBaseY == null) _buttonImageBaseY = buttonImage.localPosition.y;
         var p = buttonImage.localPosition;
-        p.y = _isShown ? _buttonImageBaseY.Value - 25f : _buttonImageBaseY.Value;
+        p.y = _isShown ? _buttonImageBaseY.Value : _buttonImageBaseY.Value - 25f;
         buttonImage.localPosition = p;
     }
 
