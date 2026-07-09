@@ -417,8 +417,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 1, y: 1}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: -21, y: -21}
-  m_SizeDelta: {x: 100, y: 20.9684}
+  m_AnchoredPosition: {x: -21, y: -16.54309}
+  m_SizeDelta: {x: 100, y: 28.457}
   m_Pivot: {x: 1, y: 1}
 --- !u!222 &4373242573885273821
 CanvasRenderer:
@@ -475,15 +475,15 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 24
-  m_fontSizeBase: 24
+  m_fontSize: 30
+  m_fontSizeBase: 30
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
   m_fontSizeMax: 72
   m_fontStyle: 0
   m_HorizontalAlignment: 4
-  m_VerticalAlignment: 256
+  m_VerticalAlignment: 512
   m_textAlignment: 65535
   m_characterSpacing: 0
   m_characterHorizontalScale: 1
@@ -671,7 +671,7 @@ MonoBehaviour:
   shimmerSprite: {fileID: 21300000, guid: 48243128837a1f841b1f5f70ba756c90, type: 3}
   selectedScale: {x: 1, y: 1, z: 1}
   unselectedScale: {x: 0.8125, y: 0.8125, z: 0.8125}
-  shimmerScale: 1.7
+  shimmerScale: 1.45
   scaleLerpDuration: 0.2
 --- !u!1 &7906485273826117116
 GameObject:

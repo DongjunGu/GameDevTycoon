@@ -69,6 +69,10 @@ public class RandomEventChoiceUI : MonoBehaviour
     private bool _awaitingChoiceReveal;
     private List<RandomEventChoiceOption> _pendingChoices;
 
+    // 패널이 활성화된 바로 그 프레임의 클릭은 무시 — 직전에 다른 모달(채용 완료 버튼 등)을 닫은 클릭이
+    // ModalGate 큐를 타고 같은 프레임에 이 패널을 띄우면서 그대로 스킵/선택 입력으로 새어들어오는 것을 방지.
+    private int _shownFrame = -1;
+
     // ── 초기화 ──────────────────────────────────────────────────
     void Awake()
     {
@@ -105,6 +109,7 @@ public class RandomEventChoiceUI : MonoBehaviour
 
         eventPanel.SetActive(true);
         ModalGate.I.Register(this);
+        _shownFrame = Time.frameCount;
 
         // description 타이핑 → 완료 후 "클릭해야" 선택지 버튼 표시 (Update 의 reveal 클릭이 SpawnChoiceButtons 호출).
         // 선택지가 없으면(정보성 이벤트 — ChoiceButtonContainer 미사용) 확인 버튼을 바로 노출해 닫을 수 있게 함.
@@ -128,6 +133,7 @@ public class RandomEventChoiceUI : MonoBehaviour
     void Update()
     {
         if (eventPanel == null || !eventPanel.activeSelf) return;
+        if (Time.frameCount == _shownFrame) return; // 표시된 첫 프레임의 클릭(직전 모달 닫은 클릭)은 무시
 
         // 타이핑 중: 클릭하면 즉시 완성 (선택지는 아직 표시 안 함).
         if (!_isTypingDone)

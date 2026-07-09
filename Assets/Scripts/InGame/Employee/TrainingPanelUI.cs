@@ -302,8 +302,15 @@ public class TrainingPanelUI : MonoBehaviour
     [Tooltip("스탯 패널이 아래에서 위로 올라오는 거리(px)")]
     public float riseOffset = 60f;
 
+    [Tooltip("Portrait 뒤에서 가운데서 펼쳐지듯 나타나는 글로우 연출 시간(초)")]
+    public float portraitEllipseRevealDuration = 0.35f;
+    [Tooltip("EllipseImage 최종 alpha (0~255, 기존 리소스 기준 36)")]
+    public float portraitEllipseRestAlpha255 = 36f;
+
     bool _resultResolved;
     GameObject _successRoot, _failRoot, _ellipse;
+    RectTransform _portraitEllipseRT;
+    Image _portraitEllipseImg;
     GameObject _nameTextGo, _enhBeforeGo, _enhArrowGo, _enhAfterGo;
     RectTransform _resultImageRT, _detailRT;
     TextMeshProUGUI _nameText, _enhBefore, _enhAfter, _touchText, _failDetailText;
@@ -324,6 +331,9 @@ public class TrainingPanelUI : MonoBehaviour
         _successRoot   = FindDeep(root, "TrainingSuccessPanel")?.gameObject;
         _failRoot      = FindDeep(root, "TrainingFailPanel")?.gameObject;
         _ellipse = FindDeep(root, "EllipseImage")?.gameObject;
+        var portraitEllipseT = FindDeep(root, "EllipseImage");
+        _portraitEllipseRT  = portraitEllipseT as RectTransform;
+        _portraitEllipseImg = portraitEllipseT != null ? portraitEllipseT.GetComponent<Image>() : null;
         _resultImageRT = FindDeep(root, "ResultImage") as RectTransform;
         _detailRT      = FindDeep(root, "ResultDetailPanel") as RectTransform;
         _vlg           = _detailRT != null ? _detailRT.GetComponent<VerticalLayoutGroup>() : null;
@@ -422,6 +432,9 @@ public class TrainingPanelUI : MonoBehaviour
         SetActiveSafe(_ellipse, false);
         SetActiveSafe(successPortraitImage?.gameObject, false);
         if (_resultImageRT != null) { _resultImageRT.gameObject.SetActive(true); SetScaleY(_resultImageRT, 0f); }
+        if (_portraitEllipseRT != null) { _portraitEllipseRT.gameObject.SetActive(false); _portraitEllipseRT.localScale = Vector3.zero; }
+        if (_portraitEllipseImg != null) { var c = _portraitEllipseImg.color; c.a = 1f; _portraitEllipseImg.color = c; }
+        if (successPortraitImage != null) { var pc = successPortraitImage.color; pc.a = 0f; successPortraitImage.color = pc; }
         SetActiveSafe(_nameTextGo, false);
         SetActiveSafe(_enhBeforeGo, false);
         SetActiveSafe(_enhArrowGo, false);
@@ -439,9 +452,22 @@ public class TrainingPanelUI : MonoBehaviour
 
         _animSeq = DOTween.Sequence().SetUpdate(true);
 
-        // 1) 0.05초 후 Ellipse + Portrait 활성
+        // 1) 0.05초 후 EllipseImage 활성 — 가운데서 펼쳐지듯(scale 0→1) 나타나며 alpha 255→36 으로 가라앉음.
+        // 그 조정이 끝난 뒤에는 Portrait 는 별도 애니메이션 없이 그냥 활성화만 한다.
         _animSeq.AppendInterval(0.05f);
-        _animSeq.AppendCallback(() => { SetActiveSafe(_ellipse, true); SetActiveSafe(successPortraitImage?.gameObject, true); });
+        _animSeq.AppendCallback(() =>
+        {
+            SetActiveSafe(_ellipse, true);
+            if (_portraitEllipseRT != null) _portraitEllipseRT.gameObject.SetActive(true);
+        });
+        if (_portraitEllipseRT != null)
+            _animSeq.Join(_portraitEllipseRT.DOScale(1f, portraitEllipseRevealDuration).SetEase(Ease.OutCubic).SetUpdate(true));
+        if (_portraitEllipseImg != null)
+            _animSeq.Join(_portraitEllipseImg.DOFade(Mathf.Clamp01(portraitEllipseRestAlpha255 / 255f), portraitEllipseRevealDuration).SetUpdate(true));
+
+        _animSeq.AppendCallback(() => SetActiveSafe(successPortraitImage?.gameObject, true));
+        if (successPortraitImage != null)
+            _animSeq.Join(successPortraitImage.DOFade(1f, portraitEllipseRevealDuration).SetUpdate(true));
 
         // 2) ResultImage ScaleY 0→1
         if (_resultImageRT != null)
@@ -452,23 +478,17 @@ public class TrainingPanelUI : MonoBehaviour
         _animSeq.AppendInterval(0.1f);
         _animSeq.AppendCallback(() => SetActiveSafe(_enhArrowGo, true));
         _animSeq.AppendInterval(0.1f);
-        _animSeq.AppendCallback(() => SetActiveSafe(_enhAfterGo, true));
-        _animSeq.AppendInterval(0.5f);
 
-        // 4) 스탯 패널 4개 동시 fade in (stagger 0.06s)
-        // HorizontalLayoutGroup 자식 위치 조작 불가 → 패널 자체 CanvasGroup alpha 사용
+        // 4) afterText 출력되는 시점에 스탯 패널 4개 전부 한꺼번에 fade in (stagger 없이 동시)
+        // HorizontalLayoutGroup 하에서 자식 anchoredPosition 제어 불가 → 패널 자체 CanvasGroup alpha 사용
         float fadeDur = 0.35f;
-        float stagger = 0.06f;
-        for (int i = 0; i < 4; i++)
+        _animSeq.AppendCallback(() =>
         {
-            int idx = i;
-            _animSeq.AppendCallback(() =>
-            {
-                if (_statPanelCGs[idx] != null)
-                    _statPanelCGs[idx].DOFade(1f, fadeDur).SetUpdate(true);
-            });
-            if (i < 3) _animSeq.AppendInterval(stagger);
-        }
+            SetActiveSafe(_enhAfterGo, true);
+            for (int i = 0; i < 4; i++)
+                if (_statPanelCGs[i] != null)
+                    _statPanelCGs[i].DOFade(1f, fadeDur).SetUpdate(true);
+        });
         _animSeq.AppendInterval(fadeDur);
 
         // 5) TouchText 깜빡임 + ConfirmBtn 활성화

@@ -48,6 +48,10 @@ public class DialogUI : MonoBehaviour
     private List<ChoiceData> _pendingChoices;
     private List<GameObject> _choiceButtons = new List<GameObject>();
 
+    // 노드가 표시된 바로 그 프레임의 클릭은 무시 — 직전 모달을 닫거나 이전 노드를 넘긴 클릭이
+    // 같은 프레임에 새 노드를 여는 경우(ModalGate 큐, 선택지 클릭 즉시 전환 등) 타이핑 스킵으로 새어들어가는 것을 방지.
+    private int _shownFrame = -1;
+
     void Awake()
     {
         DialogManager.Instance.SetDialogUI(this);
@@ -108,6 +112,7 @@ public class DialogUI : MonoBehaviour
         };
         if (_typingCoroutine != null) StopCoroutine(_typingCoroutine);
         _typingCoroutine = StartCoroutine(TypeText(displayText, speed));
+        _shownFrame = Time.frameCount;
 
         // 연출
         if (node.shakeEffect) StartCoroutine(ShakePanel());
@@ -129,6 +134,7 @@ public class DialogUI : MonoBehaviour
     private void Update()
     {
         if (_dialogPanel == null || !_dialogPanel.activeSelf) return;
+        if (Time.frameCount == _shownFrame) return; // 표시된 첫 프레임의 클릭은 무시
         if (!_isTypingDone && ClickedThisFrame()) SkipTyping();
     }
 
