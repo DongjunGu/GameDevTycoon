@@ -422,8 +422,9 @@ public class OfficeManager : MonoBehaviour
         oc.ForcePatrolTo(point.transform, stayDuration);
     }
 
-    // 개발 완료 시 호출 — CEO/비서 포함 전 캐릭터 중 랜덤 2명을 서로 다른 pointId로 patrol 보냄.
-    // 후보를 셔플한 뒤 앞 2명을 서로 다른 지점에 1명씩 배정하는 방식이라 같은 지점에 겹칠 수 없음.
+    // 개발 완료 시 호출 — CEO/비서를 제외한 일반 직원 중 랜덤으로 patrol 보냄.
+    // 후보를 셔플한 뒤 앞에서부터 서로 다른 지점(A/B)에 1명씩 배정하는 방식이라 같은 지점에 겹칠 수 없음.
+    // 후보가 1명뿐이면 그 1명만 pointA로, 0명이면 아무도 보내지 않음.
     public void TriggerDevelopmentCompletePatrol(string pointIdA, string pointIdB, float stayDuration = 5f)
     {
         if (string.IsNullOrEmpty(pointIdA) || string.IsNullOrEmpty(pointIdB)) return;
@@ -439,16 +440,24 @@ public class OfficeManager : MonoBehaviour
             return;
         }
 
-        var candidates = new List<OfficeCharacter>(_characters.Values);
+        string ceoId = EmployeeManager.Instance?.CEO?.id;
+        var candidates = new List<OfficeCharacter>();
+        foreach (var oc in _characters.Values)
+        {
+            if (oc.employeeId == secretaryId) continue;
+            if (!string.IsNullOrEmpty(ceoId) && oc.employeeId == ceoId) continue;
+            candidates.Add(oc);
+        }
         for (int i = candidates.Count - 1; i > 0; i--)
         {
             int j = Random.Range(0, i + 1);
             (candidates[i], candidates[j]) = (candidates[j], candidates[i]);
         }
-        if (candidates.Count < 2) return;
+        if (candidates.Count == 0) return;
 
         candidates[0].ForcePatrolTo(pointA.transform, stayDuration);
-        candidates[1].ForcePatrolTo(pointB.transform, stayDuration);
+        if (candidates.Count >= 2)
+            candidates[1].ForcePatrolTo(pointB.transform, stayDuration);
     }
 
     // 랜덤 n명 patrol 발동 (스케줄러 자동 호출 or 외부에서 직접 호출)

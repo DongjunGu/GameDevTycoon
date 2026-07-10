@@ -4,35 +4,55 @@ using UnityEngine.UI;
 using TMPro;
 
 // 창의성 미니게임 상단 블록 아이템 패널.
-// 보유 중인 블록 아이템(랜덤/전설)만 한 번에 하나씩 표시하고 SlideBtn 으로 순환한다.
-// - 열릴 때 보유한 첫 블록(랜덤 우선)부터 표시. 하나도 없으면 비활성화 대신 우측으로 슬라이드해 접음(빈 "0개"도 안 띄움).
-// - Text: 아이템 이름 / CountText: 잔여 수량(N개) / BlockItemImage: 이미지(에셋 없으면 비움)
-// - UseBtn: 현재 표시 중인 아이템 사용
+// blockRandom → ItemPanel1, blockLegendary → ItemPanel2 에 각각 항상 함께 표시한다(더 이상 순환 X).
+// 패널을 클릭하면 선택(DimImage 활성화 + BlockItemImage 스프라이트 교체) — ItemPanel1/2 중 하나만
+// 선택 가능. 선택된 상태에서 UseBtn 을 누르면 그 아이템을 사용한다. 둘 다 미보유면 이 오브젝트
+// (BlockItemPanel) 자체를 비활성화.
+// SlideBtn: 패널 전체를 오른쪽으로 슬라이드해 접었다 펼쳤다 하는 토글(자동 숨김과는 별개, 수동 조작).
 public class BlockItemPanelUI : MonoBehaviour
 {
     public static BlockItemPanelUI Instance { get; private set; }
 
-    [Header("UI")]
-    [SerializeField] Image           itemImage;  // BlockItemImage
-    [SerializeField] Image           frameImage; // 등급 프레임 (ItemSlotUI와 동일)
-    [SerializeField] ItemGradeSet    gradeSet;
-    [SerializeField] TextMeshProUGUI nameText;   // Text
-    [SerializeField] Button          slideBtn;   // 다음 아이템으로 전환
-    [SerializeField] Button          useBtn;     // 현재 아이템 사용
-    [SerializeField] TextMeshProUGUI countText;  // 잔여량 (숫자만)
+    [System.Serializable]
+    public class Slot
+    {
+        public string           itemId;
+        [Tooltip("ItemPanel1/2 — 클릭 대상이자 owned 여부에 따라 상호작용 제어")]
+        public Button           selectButton;
+        public Image            itemImage;
+        public Image            frameImage; // 등급 프레임 (ItemSlotUI와 동일)
+        public ItemGradeSet     gradeSet;
+        public TextMeshProUGUI  nameText;
+        public TextMeshProUGUI  countText;  // 잔여량 (숫자만)
+        [Tooltip("선택 시 활성화되는 Dim 오버레이")]
+        public GameObject       dimImage;
+        [Tooltip("선택 시 교체할 배경 이미지 컴포넌트")]
+        public Image            blockItemImage;
+        [Tooltip("선택 시 blockItemImage 에 적용할 스프라이트 (평소 스프라이트는 시작 시 자동 기억)")]
+        public Sprite           selectedSprite;
 
-    [Header("접힘/펼침 슬라이드 (전용 버튼은 추후 별도 연결 — OnClickToggleSlide 를 그 버튼 OnClick 에 연결)")]
+        [System.NonSerialized] public Sprite normalSprite;
+    }
+
+    [Header("슬롯")]
+    [SerializeField] Slot slot1; // blockRandom
+    [SerializeField] Slot slot2; // blockLegendary
+
+    [Header("공용")]
+    [SerializeField] Button useBtn; // 선택된 아이템 사용
+
+    [Header("접힘/펼침 슬라이드 (SlideBtn 전용)")]
     [Tooltip("우측으로 슬라이드될 대상 — 비우면 이 오브젝트의 RectTransform")]
     [SerializeField] RectTransform slideTarget;
+    [SerializeField] Button slideBtn;
     [Tooltip("접힘 상태 표시용 화살표. 비우면 slideBtn 자식 \"ArrowImage\" 자동 탐색")]
     [SerializeField] Image arrowImage;
     [Tooltip("우측으로 이동할 거리(px). 0 이하면 slideTarget 자기 너비만큼 이동")]
     [SerializeField] float slideDistance = 0f;
     [SerializeField] float slideDuration = 0.3f;
 
-    // 표시할 블록 아이템 (순서대로 순환). 처음 = 랜덤 블록.
-    static readonly string[] BlockItemIds = { "blockRandom", "blockLegendary" };
-    int _index;
+    Slot[] _slots;
+    int _selected = -1; // -1 = 선택 없음
 
     bool _slideCollapsed;
     Coroutine _slideCo;
@@ -42,44 +62,124 @@ public class BlockItemPanelUI : MonoBehaviour
     void Awake()
     {
         Instance = this;
-        if (slideBtn != null) slideBtn.onClick.AddListener(OnClickSlide);
-        if (useBtn   != null) useBtn.onClick.AddListener(OnClickUse);
+        _slots = new[] { slot1, slot2 };
+
+        for (int i = 0; i < _slots.Length; i++)
+        {
+            int idx = i;
+            var s = _slots[i];
+            if (s.blockItemImage != null) s.normalSprite = s.blockItemImage.sprite;
+            if (s.selectButton != null)
+                s.selectButton.onClick.AddListener(() => OnClickSelect(idx));
+        }
+        if (useBtn != null) useBtn.onClick.AddListener(OnClickUse);
+        if (slideBtn != null) slideBtn.onClick.AddListener(OnClickToggleSlide);
     }
 
-    void OnEnable()
-    {
-        _index = FirstOwnedIndex(); // 보유한 첫 블록(랜덤 우선)부터. 없으면 Refresh 에서 숨김.
-        Refresh();
-    }
+    void OnEnable() => Refresh();
 
     void OnDestroy()
     {
         if (Instance == this) Instance = null;
     }
 
-    string CurrentItemId => BlockItemIds[_index];
-
-    void OnClickSlide()
+    void OnClickSelect(int index)
     {
         if (ItemManager.Instance == null) return;
-        // 보유 중인 "다음" 블록 아이템으로만 이동. 넘어갈 보유 아이템이 없으면 그대로(안 넘어감).
-        int n = BlockItemIds.Length;
-        for (int step = 1; step < n; step++)
+        if (ItemManager.Instance.GetCount(_slots[index].itemId) <= 0) return; // 미보유는 선택 불가
+        _selected = (_selected == index) ? -1 : index; // 같은 걸 다시 누르면 선택 해제
+        UpdateSelectionVisual();
+    }
+
+    void OnClickUse()
+    {
+        if (_selected < 0 || ItemManager.Instance == null) return;
+        string itemId = _slots[_selected].itemId;
+        if (ItemManager.Instance.UseItemNoTarget(itemId))
         {
-            int next = (_index + step) % n;
-            if (ItemManager.Instance.GetCount(BlockItemIds[next]) > 0)
-            {
-                _index = next;
-                Refresh();
-                return;
-            }
+            _selected = -1;
+            Refresh();
         }
     }
 
-    // 접힘/펼침 토글 — 전용 버튼(추후 추가) OnClick 에 연결. 우측으로 슬라이드(접힘) ↔ 원위치(펼침) + 화살표 X축 반전.
+    void UpdateSelectionVisual()
+    {
+        for (int i = 0; i < _slots.Length; i++)
+        {
+            var s = _slots[i];
+            bool selected = i == _selected;
+            if (s.dimImage != null) s.dimImage.SetActive(selected);
+            if (s.blockItemImage != null)
+                s.blockItemImage.sprite = selected && s.selectedSprite != null ? s.selectedSprite : s.normalSprite;
+        }
+        if (useBtn != null) useBtn.interactable = _selected >= 0;
+    }
+
+    public void Refresh()
+    {
+        if (ItemManager.Instance == null) return;
+
+        bool anyOwned = false;
+        for (int i = 0; i < _slots.Length; i++)
+        {
+            bool owned = ItemManager.Instance.GetCount(_slots[i].itemId) > 0;
+            anyOwned |= owned;
+            PopulateSlot(_slots[i], owned);
+        }
+
+        gameObject.SetActive(anyOwned);
+        if (!anyOwned)
+        {
+            _selected = -1;
+            return;
+        }
+
+        // 선택된 항목을 사용해 0개가 됐으면 선택 해제
+        if (_selected >= 0 && ItemManager.Instance.GetCount(_slots[_selected].itemId) <= 0)
+            _selected = -1;
+
+        UpdateSelectionVisual();
+    }
+
+    void PopulateSlot(Slot s, bool owned)
+    {
+        ItemChartLoader.Cache.TryGetValue(s.itemId, out var row);
+        int count = ItemManager.Instance.GetCount(s.itemId);
+
+        if (s.nameText != null)
+            s.nameText.text = row != null ? row.name : "";
+        if (s.countText != null)
+            s.countText.text = $"{count}";
+
+        // 이미지 — 소지 중일 때만 활성화, 이미지 에셋 없으면 비워둠
+        if (s.itemImage != null)
+        {
+            s.itemImage.gameObject.SetActive(owned);
+            if (owned)
+            {
+                Sprite sp = row != null && !string.IsNullOrEmpty(row.imageId)
+                    ? Resources.Load<Sprite>($"Items/{row.imageId}")
+                    : null;
+                s.itemImage.sprite  = sp;
+                s.itemImage.enabled = sp != null;
+            }
+        }
+
+        // 등급 프레임 — ItemSlotUI와 동일 (ItemGradeSet.Apply)
+        if (s.frameImage != null)
+        {
+            s.frameImage.gameObject.SetActive(owned);
+            if (owned && row != null)
+                ItemGradeSet.Apply(s.frameImage, s.gradeSet, row.grade);
+        }
+
+        if (s.selectButton != null) s.selectButton.interactable = owned;
+        if (s.dimImage != null && !owned) s.dimImage.SetActive(false);
+    }
+
+    // ── 접힘/펼침 슬라이드 ─────────────────────────────
     public void OnClickToggleSlide() => SetCollapsed(!_slideCollapsed);
 
-    // collapsed=true → 우측으로 슬라이드(접힘), false → 원위치(펼침). 이미 목표 상태면 무시(중복 애니메이션 방지).
     void SetCollapsed(bool collapsed)
     {
         if (slideTarget == null) slideTarget = (RectTransform)transform;
@@ -121,7 +221,7 @@ public class BlockItemPanelUI : MonoBehaviour
         _slideCo = null;
     }
 
-    // 접힘 상태에 따라 화살표 X축 반전(스케일 부호) — EmployeeListUI.SetStatArrow 와 동일 방식(축만 X로).
+    // 나와있는 상태(펼침) = 원래 방향, 슬라이드로 들어간 상태(접힘) = X축 반전
     void UpdateArrow()
     {
         var img = ResolveArrowImage();
@@ -141,82 +241,5 @@ public class BlockItemPanelUI : MonoBehaviour
             if (t != null) arrowImage = t.GetComponent<Image>();
         }
         return arrowImage;
-    }
-
-    void OnClickUse()
-    {
-        if (ItemManager.Instance == null) return;
-        if (ItemManager.Instance.GetCount(CurrentItemId) <= 0) return;
-        ItemManager.Instance.UseItemNoTarget(CurrentItemId);
-        Refresh();
-    }
-
-    // 보유한 첫 블록 인덱스(랜덤 우선). 보유 없으면 0.
-    int FirstOwnedIndex()
-    {
-        if (ItemManager.Instance != null)
-            for (int i = 0; i < BlockItemIds.Length; i++)
-                if (ItemManager.Instance.GetCount(BlockItemIds[i]) > 0) return i;
-        return 0;
-    }
-
-    bool AnyOwned()
-    {
-        if (ItemManager.Instance == null) return false;
-        foreach (var id in BlockItemIds)
-            if (ItemManager.Instance.GetCount(id) > 0) return true;
-        return false;
-    }
-
-    public void Refresh()
-    {
-        // 보유한 블록 아이템이 하나도 없으면 비활성화 대신 우측으로 슬라이드해 접음(다시 생기면 자동 펼침).
-        bool anyOwned = AnyOwned();
-        SetCollapsed(!anyOwned);
-        if (!anyOwned) return;
-
-        // 현재 항목이 0개면 보유한 항목으로 이동 — 항상 보유 항목만 표시
-        if (ItemManager.Instance.GetCount(CurrentItemId) <= 0)
-            _index = FirstOwnedIndex();
-
-        string itemId = CurrentItemId;
-        ItemChartLoader.Cache.TryGetValue(itemId, out var row);
-
-        int  count = ItemManager.Instance.GetCount(itemId);
-        bool owned = count > 0;
-
-        // 이름
-        if (nameText != null)
-            nameText.text = row != null ? row.name : "";
-
-        // 이미지 — 소지 중일 때만 활성화, 이미지 에셋 없으면 비워둠
-        if (itemImage != null)
-        {
-            itemImage.gameObject.SetActive(owned);
-            if (owned)
-            {
-                Sprite sp = row != null && !string.IsNullOrEmpty(row.imageId)
-                    ? Resources.Load<Sprite>($"Items/{row.imageId}")
-                    : null;
-                itemImage.sprite  = sp;
-                itemImage.enabled = sp != null; // 이미지 없으면 비움
-            }
-        }
-
-        // 등급 프레임 — ItemSlotUI와 동일 (ItemGradeSet.Apply)
-        if (frameImage != null)
-        {
-            frameImage.gameObject.SetActive(owned);
-            if (owned && row != null)
-                ItemGradeSet.Apply(frameImage, gradeSet, row.grade);
-        }
-
-        // 잔여량 (숫자만)
-        if (countText != null)
-            countText.text = $"{count}";
-
-        // 사용 버튼 — 소지 중일 때만
-        if (useBtn != null)
-            useBtn.interactable = owned;
     }
 }
