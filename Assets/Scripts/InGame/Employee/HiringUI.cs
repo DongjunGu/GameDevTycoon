@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using TMPro;
 using UnityEngine.UI;
+using UnityEngine.EventSystems;
 using System;
 
 public class HiringUI : MonoBehaviour
@@ -95,8 +96,8 @@ public class HiringUI : MonoBehaviour
     private readonly List<int> _hireCosts = new();  // 후보별 채용 비용 캐시 — 화살표로 넘길 때 재추첨 방지
 
     private int  _currentTierIndex = -1;        // hire_refresh 재로드용 — 마지막 OnClickTier 의 티어
-    private int  _selectedTierIndex = -1;       // 선택 표시(스프라이트 스왑+알파)용 — RefreshTierButtonVisibility 에서 초기화
-    private readonly Dictionary<int, Sprite> _tierNormalSprite = new();
+    private int  _selectedTierIndex = -1;       // 선택 표시(알파 + Selected 스프라이트)용 — RefreshTierButtonVisibility 에서 초기화
+    private readonly Dictionary<int, bool>   _tierUnlocked     = new(); // SetTierButtonState 에서 기록, SetTierSelected 가 알파 계산에 참조
     private bool _refreshUsed      = false;     // 같은 세션 1회 가드
     private bool _candidateFlowActive = false;  // 채용 공개~리스트 종료 동안 시간 정지 유지 + ModalGate 점유
 
@@ -126,28 +127,13 @@ public class HiringUI : MonoBehaviour
             nextCandidateButton.onClick.AddListener(OnClickNextCandidate);
         if (tierConfirmButton != null)
             tierConfirmButton.onClick.AddListener(OnClickTierConfirm);
-
-        InitTierSpriteState();
     }
 
-    // TierPanel/tier1~3 — Sprite Swap 을 hover/press 마다 Unity가 자체 되돌리는 걸 막기 위해 Transition.None,
-    // 원래(Normal) 스프라이트는 미리 캐싱(선택된 게 아닐 때 복원용).
-    void InitTierSpriteState()
-    {
-        if (tierButtons == null) return;
-        for (int i = 0; i < tierButtons.Length; i++)
-        {
-            var go = tierButtons[i];
-            if (go == null) continue;
-            var btn = go.GetComponent<Button>();
-            if (btn != null) btn.transition = Selectable.Transition.None;
-            var img = go.GetComponent<Image>();
-            if (img != null) _tierNormalSprite[i] = img.sprite;
-        }
-    }
-
-    // 선택된 티어 버튼만 Button.spriteState.selectedSprite 로 교체 + 알파 255, tier1은 나머지 알파 0.
-    // [임시] tier2/tier3는 lockImage로 잠금 표시할 예정이라 선택 여부 상관없이 알파 항상 255로 노출 — 추후 수정 예정.
+    // 선택("Selected") 스프라이트는 Button.transition = SpriteSwap(Inspector 설정)이 EventSystem 선택 여부에
+    // 따라 자동으로 처리한다 — 코드에서 img.sprite 를 수동으로 건드리지 않는다.
+    // 여기서 관리하는 건 알파뿐: 잠긴 티어(미해금)는 선택 여부와 무관하게 항상 255(잠금 표시로 항상 보여야 함)
+    // + 터치 불가(SetTierButtonState 가 interactable=false 처리, SpriteSwap 이 disabledSprite 자동 적용).
+    // 해금된 티어(tier1 포함)는 선택됐을 때만 255, 아니면 0.
     void SetTierSelected(int selectedIndex)
     {
         _selectedTierIndex = selectedIndex;
@@ -156,19 +142,28 @@ public class HiringUI : MonoBehaviour
         {
             var go = tierButtons[i];
             if (go == null) continue;
-            var img = go.GetComponent<Image>();
+
+            // GlobalButtonClickBounce 가 첫 클릭 시 버튼 내부에 __ClickBounceWrapper/VisualCopy 를
+            // 만들고 Button.targetGraphic 을 그 사본으로 재지정한 뒤, 원본 Image 는 alpha 0으로
+            // 영구 고정해버린다. 그 상태에서 go.GetComponent<Image>()(원본, 항상 투명)를 계속
+            // 건드리면 화면엔 아무 변화가 없다 — 실제로 보이는 건 targetGraphic 쪽이므로 항상
+            // 그걸 통해 찾아야 클릭 전/후 모두(원본 or 사본) 올바르게 반영된다.
+            var btn = go.GetComponent<Button>();
+            var img = (btn != null && btn.targetGraphic is Image tg) ? tg : go.GetComponent<Image>();
             if (img == null) continue;
 
             bool selected = i == selectedIndex;
-            var normal = _tierNormalSprite.TryGetValue(i, out var s) ? s : img.sprite;
-            var btn = go.GetComponent<Button>();
-            var state = btn != null ? btn.spriteState : default;
-            img.sprite = selected && state.selectedSprite != null ? state.selectedSprite : normal;
+            bool unlocked = !_tierUnlocked.TryGetValue(i, out var u) || u; // 정보 없으면 기본 해금 취급(tier1)
 
             var c = img.color;
-            c.a = (selected || i > 0) ? 1f : 0f; // [임시] tier2(1)/tier3(2)는 항상 255
+            c.a = (!unlocked || selected) ? 1f : 0f;
             img.color = c;
         }
+
+        // EventSystem 선택을 옮겨야 Button 의 SpriteSwap 이 selectedSprite 로 자동 전환된다.
+        if (selectedIndex >= 0 && selectedIndex < tierButtons.Length
+            && tierButtons[selectedIndex] != null && EventSystem.current != null)
+            EventSystem.current.SetSelectedGameObject(tierButtons[selectedIndex]);
     }
 
     // ── 티어 선택 패널 열기 ───────────────────
@@ -216,13 +211,14 @@ public class HiringUI : MonoBehaviour
         SetTierButtonState(0, true);
         SetTierButtonState(1, tier2Unlocked);
         SetTierButtonState(2, tier3Unlocked);
-        SetTierSelected(0); // 패널을 새로 열 때 tier1 기본 선택(alpha 255) — 이후 다른 티어 선택 시 자동으로 0으로 전환(SetTierSelected 기존 로직)
+        SetTierSelected(-1); // 패널을 새로 열 때 선택 없음 — 해금된 티어(tier1 포함)는 전부 alpha 0, 사용자가 직접 눌러야 선택됨
     }
 
     // 티어 버튼: interactable 토글(잠기면 false → 버튼 Disabled 스프라이트로 자동 전환)
     // + 자식 "lockImage" 활성화/비활성화 (1단계는 항상 해금이라 lockImage 없음 — null 무시).
     void SetTierButtonState(int index, bool unlocked)
     {
+        _tierUnlocked[index] = unlocked;
         if (tierButtons == null || index >= tierButtons.Length || tierButtons[index] == null) return;
         var go = tierButtons[index];
         go.SetActive(true);

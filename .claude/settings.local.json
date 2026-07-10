@@ -11,7 +11,8 @@
       "Skill",
       "WebFetch(domain:github.com)",
       "mcp__UnityMCP",
-      "Bash(git checkout *)"
+      "Bash(git checkout *)",
+      "mcp__UnityMCP__delete_script"
     ],
     "ask": [
       "Bash(rm:*)",

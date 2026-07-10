@@ -510,12 +510,19 @@ public class EmployeeListUI : MonoBehaviour
     // 메뉴 '강화하기' 버튼 — 패널 열고 바로 TrainingPanel 표시 (선택 직원 = 맨 위 자동선택)
     public void OpenListForEnhance()
     {
-        OpenList();             // 패널 열기 + 맨 위 직원 자동선택
+        // OpenList()를 그대로 쓰면 그 내부의 PlayOpenIntro()가 "InfoPanel 노출"을 목표로 코루틴을 먼저
+        // 시작해버려서, 뒤이은 SetSlideInstant(true)로 순간이동해도 그 코루틴이 다시 InfoPanel로 되돌려놓는다.
+        // OpenForEnhance와 동일하게 슬라이드를 먼저 확정한 뒤 PlayOpenIntro()를 호출해야 한다.
+        GameTimeManager.Instance?.StopTime();
+        _selectedId = ""; // 진입 시 맨 위(첫) 직원 자동 선택
+        Root.SetActive(true);
         SetSlideInstant(true);  // InfoPanel 대신 TrainingPanel 부터 (애니 없이)
+        BuildList();             // 스냅 리스트가 맨 위 슬롯 자동 선택 → 상세 표시
         // snap 선택 콜백은 비동기라, 그 전까지 TrainingPanel 에 디자인타임 더미 텍스트(예: 창의성 7000)가 노출된다.
         // 맨 위(자동선택될) 직원으로 동기 채워 더미가 보이지 않게 한다. 이후 snap 정착 시 동일 값으로 재갱신.
         var emp = _emps.Count > 0 ? _emps[IndexOfSelected()] : null;
         if (emp != null) TrainingPanelUI.Instance?.OnSelectEmployee(emp);
+        PlayOpenIntro();
     }
 
     // 외부(EmployeeCardUI 등)에서 특정 직원 강화 — 패널 열고 그 직원 선택 + TrainingPanel 표시

@@ -1,7 +1,9 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using DG.Tweening;
 
 // ═════════════════════════════════════════════════════════════════════════════
 // 씬 세팅 가이드 (계층 구조 예시)
@@ -83,6 +85,15 @@ public class CreativityGameUI : MonoBehaviour
     [Tooltip("전설의 블록 사용하기 버튼")]
     [SerializeField] Button _blockLegendaryUseBtn;
 
+    [Header("리셋 버튼")]
+    [Tooltip("배치된 블록을 슬롯으로 되돌리는 리셋 버튼")]
+    [SerializeField] Button _resetBtn;
+    [Tooltip("리셋 버튼 자식 아이콘 — 클릭 시 z축으로 360도 회전")]
+    [SerializeField] RectTransform _resetImage;
+    [SerializeField] float _resetSpinDuration = 0.5f;
+    [Tooltip("리셋 버튼 / 그리드에서 빼기로 블록이 슬롯으로 스르륵 복귀하는 시간(초)")]
+    [SerializeField] float _blockReturnDuration = 0.5f;
+
     [Header("디버그")]
     [Tooltip("그리드 전부 채움 시뮬레이션 (퍼펙트 보너스 테스트용)")]
     [SerializeField] Button _debugFillBtn;
@@ -131,6 +142,8 @@ public class CreativityGameUI : MonoBehaviour
 
     // ── 런타임 ───────────────────────────────────────────────────────────────
     private int _score;
+    private float _displayScore;       // 화면에 현재 표시 중인 점수 (카운트업 lerp 대상)
+    private Coroutine _scoreAnimCo;    // 점수 카운트업 코루틴
     private bool _bonusGranted; // 퍼펙트 보너스 즉시 지급 여부 (라운드당 1회만 지급 — 재충전 악용 방지)
     private readonly List<CreativityGameBlockUI> _activeBlocks = new();
     private readonly List<CreativityGameData.BlockShape> _earnedBlocks = new();
@@ -160,6 +173,7 @@ public class CreativityGameUI : MonoBehaviour
         _instance = this;
         if (_panel != null) _panel.SetActive(false);
         if (_confirmBtn != null) _confirmBtn.onClick.AddListener(OnClickConfirm);
+        if (_resetBtn != null) _resetBtn.onClick.AddListener(OnClickReset);
         if (_debugFillBtn != null) _debugFillBtn.onClick.AddListener(OnClickDebugFill);
         if (_blockRandomUseBtn != null) _blockRandomUseBtn.onClick.AddListener(() => OnClickUseItem("blockRandom"));
         if (_blockLegendaryUseBtn != null) _blockLegendaryUseBtn.onClick.AddListener(() => OnClickUseItem("blockLegendary"));
@@ -252,6 +266,42 @@ public class CreativityGameUI : MonoBehaviour
         return slotGO;
     }
 
+    // ── 셀별 스프라이트 (임시: 3칸 블록을 뱀 모양으로) ──────────────────────
+    // Resources/Sprites/Snake.png (슬라이스: Snake_0/1/2) 를 로드해 이름순 정렬.
+    Sprite[] _snakeSprites;
+    Sprite[] SnakeSprites
+    {
+        get
+        {
+            if (_snakeSprites == null)
+            {
+                _snakeSprites = Resources.LoadAll<Sprite>("Sprites/Snake");
+                System.Array.Sort(_snakeSprites, (a, b) => string.CompareOrdinal(a.name, b.name));
+            }
+            return _snakeSprites;
+        }
+    }
+
+    // 이 블록에 적용할 셀별 스프라이트 (없으면 null → 단색). 임시로 3칸 블록에만 뱀 스프라이트.
+    Sprite[] CellSpritesFor(CreativityGameData.BlockShape def)
+        => (def.cells.Length == 3 && SnakeSprites != null && SnakeSprites.Length >= 3) ? SnakeSprites : null;
+
+    // 슬롯 전체를 덮는 투명 드래그 영역을 만들어 대상 블록으로 이벤트를 위임한다.
+    // → 1칸짜리처럼 작은 블록도 슬롯 아무데나 눌러 잡을 수 있다(모바일 대응).
+    void AttachSlotDragArea(GameObject slotGO, CreativityGameBlockUI block)
+    {
+        var areaGO = new GameObject("DragArea");
+        var rt = areaGO.AddComponent<RectTransform>();
+        rt.SetParent(slotGO.transform, false);
+        rt.anchorMin = Vector2.zero; rt.anchorMax = Vector2.one;
+        rt.offsetMin = Vector2.zero; rt.offsetMax = Vector2.zero;
+        rt.SetAsFirstSibling(); // 블록 비주얼 뒤에 깔림
+        var img = areaGO.AddComponent<Image>();
+        img.color = Color.clear;
+        img.raycastTarget = true;
+        areaGO.AddComponent<CreativityBlockSlotDrag>().SetTarget(block);
+    }
+
     void SpawnSingleBlock(CreativityGameData.BlockShape def)
     {
         Canvas.ForceUpdateCanvases();
@@ -276,7 +326,8 @@ public class CreativityGameUI : MonoBehaviour
         blockRT.anchoredPosition = Vector2.zero;
 
         var block = blockGO.AddComponent<CreativityGameBlockUI>();
-        block.Init(def.cells, def.color, _gridUI, this, previewCell, 2f);
+        block.Init(def.cells, def.color, _gridUI, this, previewCell, 2f, CellSpritesFor(def), _blockReturnDuration);
+        AttachSlotDragArea(slotGO, block);
         _activeBlocks.Add(block);
     }
 
@@ -352,7 +403,8 @@ public class CreativityGameUI : MonoBehaviour
             blockRT.anchoredPosition = Vector2.zero;
 
             var block = blockGO.AddComponent<CreativityGameBlockUI>();
-            block.Init(def.cells, def.color, _gridUI, this, previewCell, 2f);
+            block.Init(def.cells, def.color, _gridUI, this, previewCell, 2f, CellSpritesFor(def), _blockReturnDuration);
+            AttachSlotDragArea(slotGO, block);
             _activeBlocks.Add(block);
         }
     }
@@ -393,7 +445,8 @@ public class CreativityGameUI : MonoBehaviour
             blockRT.anchoredPosition = Vector2.zero;
 
             var block = blockGO.AddComponent<CreativityGameBlockUI>();
-            block.Init(def.cells, def.color, _gridUI, this, previewCell, 2f);
+            block.Init(def.cells, def.color, _gridUI, this, previewCell, 2f, CellSpritesFor(def), _blockReturnDuration);
+            AttachSlotDragArea(slotGO, block);
             _activeBlocks.Add(block);
         }
     }
@@ -460,12 +513,6 @@ public class CreativityGameUI : MonoBehaviour
     void UpdateScore()
     {
         int bonus = GetBonusScore();
-        if (_scoreText != null)
-        {
-            _scoreText.text = bonus > 0
-                ? $"창의성 +{_score} (+Bonus {bonus})"
-                : $"창의성 +{_score}";
-        }
         if (_perfectBonusText != null)
             _perfectBonusText.text = bonus > 0 ? "퍼펙트 보너스!" : "";
 
@@ -475,6 +522,49 @@ public class CreativityGameUI : MonoBehaviour
             _bonusGranted = true;
             DevelopmentPanelUI.Instance?.AddValuesInstant(0f, 0f, 0f, 0f, bonus);
         }
+
+        AnimateScoreText();
+    }
+
+    // 점수가 오를 때만 1초 동안 카운트업(lerp), 내려가거나 리셋될 때는 즉시 반영.
+    void AnimateScoreText()
+    {
+        if (_scoreText == null) return;
+
+        if (_score > _displayScore && isActiveAndEnabled)
+        {
+            if (_scoreAnimCo != null) StopCoroutine(_scoreAnimCo);
+            _scoreAnimCo = StartCoroutine(CountUpRoutine(_displayScore, _score));
+        }
+        else
+        {
+            if (_scoreAnimCo != null) { StopCoroutine(_scoreAnimCo); _scoreAnimCo = null; }
+            SetScoreDisplay(_score);
+        }
+    }
+
+    IEnumerator CountUpRoutine(float from, int to)
+    {
+        const float dur = 1f;
+        float t = 0f;
+        while (t < dur)
+        {
+            t += Time.unscaledDeltaTime;
+            SetScoreDisplay(Mathf.RoundToInt(Mathf.Lerp(from, to, Mathf.Clamp01(t / dur))));
+            yield return null;
+        }
+        SetScoreDisplay(to);
+        _scoreAnimCo = null;
+    }
+
+    // 현재 표시할 점수 값으로 텍스트 갱신 (보너스도 표시값 기준으로 함께 카운트업).
+    void SetScoreDisplay(int shown)
+    {
+        _displayScore = shown;
+        int bonus = IsGridFullyFilled ? shown / 10 : 0;
+        _scoreText.text = bonus > 0
+            ? $"창의성 +{shown} (+Bonus {bonus})"
+            : $"창의성 +{shown}";
     }
 
     // 디버그: 그리드 전부 강제 채움 → 퍼펙트 보너스 표시 테스트
@@ -484,6 +574,20 @@ public class CreativityGameUI : MonoBehaviour
         _gridUI.DebugFillAllCells(new Color(0.7f, 0.7f, 0.7f));
         _score = _gridUI.CountFilledCells() * BaseScorePerCell;
         UpdateScore();
+    }
+
+    // 리셋 버튼 클릭 — 블록 되돌리기 + 아이콘 z축 360도 회전 연출.
+    public void OnClickReset()
+    {
+        ResetBlocks();
+        if (_resetImage != null)
+        {
+            _resetImage.DOKill();
+            _resetImage.localEulerAngles = Vector3.zero;
+            _resetImage.DORotate(new Vector3(0f, 0f, -360f), _resetSpinDuration, RotateMode.FastBeyond360)
+                       .SetEase(Ease.OutCubic)
+                       .SetUpdate(true); // 미니게임 중 시간정지와 무관하게 회전
+        }
     }
 
     public void ResetBlocks()
