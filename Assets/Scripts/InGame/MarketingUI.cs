@@ -56,6 +56,7 @@ public class MarketingUI : MonoBehaviour
     public void Show(System.Action onComplete)
     {
         GameTimeManager.Instance?.StopTime();
+        ModalGate.I.Register(this);
         _onComplete = onComplete;
         _totalCost = 0;
         _selectedIndex = -1;
@@ -131,6 +132,7 @@ public class MarketingUI : MonoBehaviour
         MoneyManager.Instance.SaveMoney(); // ← 완료 시 한 번만 저장
         marketingPanel.SetActive(false);
         GameTimeManager.Instance.StartTime();
+        ModalGate.I.Unregister(this);
         _onComplete?.Invoke();
     }
     public int GetTotalCost() => _totalCost;

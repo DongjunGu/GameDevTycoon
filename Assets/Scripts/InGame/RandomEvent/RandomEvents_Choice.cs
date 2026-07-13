@@ -48,8 +48,8 @@ public static class RandomEvents_Choice
 
                             int cost = Mathf.Max(1, (int)(emp.salary * 0.03f));
                             MoneyManager.Instance.ForceSpendGold(cost, saveImmediately: false);
-                            emp.ChangeSatisfaction(5);
-                            OfficeManager.Instance?.ShowStatPopup(emp.id, "만족도 +5", new Color(1f, 0.4f, 0.4f));
+                            emp.ChangeSatisfaction(10);
+                            OfficeManager.Instance?.ShowStatPopup(emp.id, "만족도 +10", new Color(1f, 0.4f, 0.4f));
                         }
                     }
                 },
@@ -62,15 +62,21 @@ public static class RandomEvents_Choice
                     birthdayEvt.targetEmployeeId = birthdayEmp.id;
 
                     int cost = Mathf.Max(1, (int)(EmployeeManager.Instance.GetTotalSalary() * 0.03f));
-                    birthdayEvt.choices[1].buttonLabel += $"<color=#F3C01D>-{cost}G</color>";
+                    // 괄호까지 색상 태그 안에 포함 — "(-3000G)" 형태로 괄호도 같이 보이면서 색이 입혀지게.
+                    string costTag = $"<color=#F3C01D>(-{cost}G)</color>";
+                    birthdayEvt.choices[1].buttonLabel =
+                        birthdayEvt.choices[1].buttonLabel?.Replace("(-{N}G)", costTag);
 
-                    birthdayEvt.choices[0].resultSystemMessage =
-                        birthdayEvt.choices[0].resultSystemMessage
-                            ?.Replace("{해당직원이름}", birthdayEmp.employeeName);
-                    birthdayEvt.choices[1].resultSystemMessage =
-                        birthdayEvt.choices[1].resultSystemMessage
-                            ?.Replace("{해당직원이름}", birthdayEmp.employeeName)
-                             .Replace("-{비용}G", $"<color=#F3C01D>-{cost}G</color>");
+                    var c0 = birthdayEvt.choices[0];
+                    c0.reply1     = c0.reply1?.Replace("{해당직원이름}", birthdayEmp.employeeName);
+                    c0.resultMent1 = c0.resultMent1?.Replace("{해당직원이름}", birthdayEmp.employeeName);
+                    c0.resultMent2 = c0.resultMent2?.Replace("{해당직원이름}", birthdayEmp.employeeName);
+
+                    var c1 = birthdayEvt.choices[1];
+                    c1.reply1     = c1.reply1?.Replace("{해당직원이름}", birthdayEmp.employeeName);
+                    c1.resultMent1 = c1.resultMent1?.Replace("{해당직원이름}", birthdayEmp.employeeName);
+                    c1.resultMent2 = c1.resultMent2?.Replace("{해당직원이름}", birthdayEmp.employeeName);
+                    c1.resultMent3 = c1.resultMent3?.Replace("-{비용}G", costTag);
                 }
             };
             Apply(birthdayEvt, chart);
@@ -111,12 +117,12 @@ public static class RandomEvents_Choice
 
                             MoneyManager.Instance.ForceSpendGold(equipCostSnapshot, saveImmediately: false);
 
-                            int buffWeeks = UnityEngine.Random.Range(4, 9);
-                            emp.ApplyStatBuff(buffWeeks, 20);
+                            int buffWeeks = RandomStatBuffWeeksByStage();
+                            emp.ApplyStatBuff(buffWeeks, 10);
 
                             string weeks = buffWeeks.ToString();
-                            equipEvt.choices[0].resultSystemMessage =
-                                equipEvt.choices[0].resultSystemMessage?.Replace("{주수}", weeks);
+                            var c0 = equipEvt.choices[0];
+                            c0.resultMent2 = c0.resultMent2?.Replace("{주수}", weeks);
                         }
                     },
                     // ── 선택지 2: 거절 ───────────────────────────
@@ -130,8 +136,6 @@ public static class RandomEvents_Choice
 
             // [CDN fallback] "그래.. 알겠어 바꿔줘야지(-{N}G)"
             string equipLabel0Template  = equipEvt.choices[0].buttonLabel ?? "";
-            // [CDN fallback] "{해당직원이름} 능력치 {주수}주 동안 +20%"
-            string equipSystem0Template = equipEvt.choices[0].resultSystemMessage ?? "";
 
             // description2는 아티스트 전용 (chart row에서 직접 참조)
             RandomEventChoiceChartRow eqChartRow = null;
@@ -141,6 +145,15 @@ public static class RandomEvents_Choice
             // [CDN fallback] "사장님 태블릿 하나 새로 사주시죠"
             string equipDescArtistTemplate  = !string.IsNullOrEmpty(eqChartRow?.description2)
                 ? eqChartRow.description2 : "";
+            // 답변1(reply1) 역할 분기 — choice1_resultDescription(기본/개발)·resultDescription2(아트) 컬럼을
+            // role-alt 저장용으로 재사용(자동 resultDescriptions 랜덤픽 경로는 reply1이 우선이라 사용 안 됨).
+            var eqC1 = eqChartRow?.choices.Count > 0 ? eqChartRow.choices[0] : null;
+            string equipReplyDefaultTemplate = eqC1?.resultDescription  ?? "";
+            string equipReplyArtistTemplate  = eqC1?.resultDescription2 ?? "";
+            // [CDN fallback] "{해당직원이름} 능력치 {주수}주 동안 +10%"
+            string equipMent2Template = equipEvt.choices[0].resultMent2 ?? "";
+            // [CDN fallback] "-{비용}G"
+            string equipMent3Template = equipEvt.choices[0].resultMent3 ?? "";
 
             equipEvt.onSetup = () =>
             {
@@ -154,16 +167,26 @@ public static class RandomEvents_Choice
                 equipEvt.portraitId       = equipEmp.portraitId;
                 equipEvt.targetEmployeeId = equipEmp.id;
 
-                equipEvt.description = (equipEmp.role == EmployeeRole.Artist && !string.IsNullOrEmpty(equipDescArtistTemplate))
+                bool isArtist = equipEmp.role == EmployeeRole.Artist;
+
+                equipEvt.description = (isArtist && !string.IsNullOrEmpty(equipDescArtistTemplate))
                     ? equipDescArtistTemplate
                     : equipDescDefaultTemplate;
 
                 equipCostSnapshot = Mathf.Max(1, (int)(EmployeeManager.Instance.GetTotalSalary() * 0.03f));
+                // 괄호까지 색상 태그 안에 포함 — "(-3000G)" 형태로 괄호도 같이 노란색(#F3C01D)으로.
+                string costTag = $"<color=#F3C01D>(-{equipCostSnapshot}G)</color>";
 
                 equipEvt.choices[0].buttonLabel =
-                    equipLabel0Template.Replace("-{N}G", $"<color=#F3C01D>-{equipCostSnapshot}G</color>");
-                equipEvt.choices[0].resultSystemMessage =
-                    equipSystem0Template.Replace("{해당직원이름}", equipEmp.employeeName);
+                    equipLabel0Template.Replace("(-{N}G)", costTag);
+                equipEvt.choices[0].reply1 = (isArtist && !string.IsNullOrEmpty(equipReplyArtistTemplate))
+                    ? equipReplyArtistTemplate
+                    : equipReplyDefaultTemplate;
+                equipEvt.choices[0].resultMent1 = "장비 업그레이드 완료";
+                equipEvt.choices[0].resultMent2 = equipMent2Template
+                    .Replace("{해당직원이름}", equipEmp.employeeName);
+                equipEvt.choices[0].resultMent3 = equipMent3Template
+                    .Replace("-{비용}G", costTag);
             };
             pool.Add(equipEvt);
         }
@@ -188,6 +211,9 @@ public static class RandomEvents_Choice
             int    dinnerCost10   = 0;
             string dinnerDesc2Happy = "";
             string dinnerDesc2Meh   = "";
+            string dinnerHappyMent1Template = "";
+            string dinnerMehMent1Template   = "";
+            string dinnerMent2Template      = "";
             dinnerEvt = new RandomEventChoiceData
             {
                 type        = RandomEventType.CompanyDinner,
@@ -202,7 +228,7 @@ public static class RandomEvents_Choice
                         onChoose = () =>
                             EmployeeManager.Instance.ChangeAllSatisfaction(-5)
                     },
-                    // ── 선택지 2: 삼겹살 (50% 확률로 만족도 +5) ──
+                    // ── 선택지 2: 삼겹살 (50% 확률로 만족도 +5, happy/meh 결과팝업도 함께 분기) ──
                     new RandomEventChoiceOption
                     {
                         onChoose = () =>
@@ -213,17 +239,15 @@ public static class RandomEvents_Choice
                             if (happy)
                                 EmployeeManager.Instance.ChangeAllSatisfaction(5);
 
-                            dinnerEvt.choices[1].resultDescriptions.Clear();
-                            dinnerEvt.choices[1].resultDescriptions.Add(
-                                happy ? dinnerDesc2Happy : dinnerDesc2Meh);
-
-                            // 시스템 문구를 차트에서 참조 (happy/not-happy 분기)
-                            RandomEventChoiceChartRow dcRow = null;
-                            chart?.TryGetValue("CompanyDinner", out dcRow);
-                            var dc2 = dcRow?.choices.Count > 1 ? dcRow.choices[1] : null;
-                            string happySys = (dc2?.resultSystemMessage  ?? "").Replace("-{비용}G", $"<color=#F3C01D>-{dinnerCost5}G</color>");
-                            string mehSys   = (dc2?.resultSystemMessage2 ?? "").Replace("-{비용}G", $"<color=#F3C01D>-{dinnerCost5}G</color>");
-                            dinnerEvt.choices[1].resultSystemMessage = happy ? happySys : mehSys;
+                            var c1 = dinnerEvt.choices[1];
+                            // 괄호까지 색상 태그 안에 포함 — "(-3000G)" 형태로 괄호도 같이 노란색(#F3C01D)으로.
+                            string costTag = $"<color=#F3C01D>(-{dinnerCost5}G)</color>";
+                            c1.reply1         = happy ? dinnerDesc2Happy : dinnerDesc2Meh;
+                            c1.resultPopupType = happy ? 1 : 3;
+                            // happy 결과팝업멘트1="전 직원 만족도 +5"(choice2_ment1 원본) / meh 멘트1은
+                            // choice2_resultTitle 컬럼을 재사용해 저장(dinnerMeh1Template).
+                            c1.resultMent1 = (happy ? dinnerHappyMent1Template : dinnerMehMent1Template);
+                            c1.resultMent2 = dinnerMent2Template.Replace("-{비용}G", costTag);
                         }
                     },
                     // ── 선택지 3: 소고기 ─────────────────────────
@@ -251,6 +275,14 @@ public static class RandomEvents_Choice
             // [CDN fallback] "소고기도 아니고 삼겹살이라니... 뭐 안 먹는 것보단 낫겠네요."
             dinnerDesc2Meh   = dinnerEvt.choices[1].resultDescriptions.Count > 1
                 ? dinnerEvt.choices[1].resultDescriptions[1] : "";
+            // happy 결과팝업멘트1(choice2_ment1) / meh 결과팝업멘트1(choice2_resultTitle 재사용) / 공통 멘트2(비용)
+            dinnerHappyMent1Template = dinnerEvt.choices[1].resultMent1 ?? "";
+            dinnerMehMent1Template   = dinnerEvt.choices[1].resultTitle ?? "";
+            dinnerMent2Template      = dinnerEvt.choices[1].resultMent2 ?? "";
+            // [CDN fallback] "전 직원 만족도 +10"
+            string dinnerMent1_3Template    = dinnerEvt.choices[2].resultMent1 ?? "";
+            // [CDN fallback] "-{비용}G"
+            string dinnerMent2_3Template    = dinnerEvt.choices[2].resultMent2 ?? "";
 
             dinnerEvt.onSetup = () =>
             {
@@ -258,12 +290,17 @@ public static class RandomEvents_Choice
                 dinnerCost5  = Mathf.Max(1, (int)(total * 0.05f));
                 dinnerCost10 = Mathf.Max(1, (int)(total * 0.10f));
 
-                dinnerEvt.choices[1].buttonLabel = dinnerLabel1Template.Replace("-{N}G", $"<color=#F3C01D>-{dinnerCost5}G</color>");
-                dinnerEvt.choices[2].buttonLabel = dinnerLabel2Template.Replace("-{N}G", $"<color=#F3C01D>-{dinnerCost10}G</color>");
+                dinnerEvt.choices[1].buttonLabel = dinnerLabel1Template.Replace("(-{N}G)", $"<color=#F3C01D>(-{dinnerCost5}G)</color>");
+                dinnerEvt.choices[2].buttonLabel = dinnerLabel2Template.Replace("(-{N}G)", $"<color=#F3C01D>(-{dinnerCost10}G)</color>");
                 dinnerEvt.choices[1].resultDescriptions.Clear();
                 if (!string.IsNullOrEmpty(dinnerDesc2Happy)) dinnerEvt.choices[1].resultDescriptions.Add(dinnerDesc2Happy);
                 if (!string.IsNullOrEmpty(dinnerDesc2Meh))   dinnerEvt.choices[1].resultDescriptions.Add(dinnerDesc2Meh);
-                dinnerEvt.choices[2].resultSystemMessage = dinnerSystem2Template.Replace("-{비용}G", $"<color=#F3C01D>-{dinnerCost10}G</color>");
+                dinnerEvt.choices[2].resultSystemMessage = dinnerSystem2Template.Replace("-{비용}G", $"<color=#F3C01D>(-{dinnerCost10}G)</color>");
+
+                // 괄호까지 색상 태그 안에 포함 — "(-3000G)" 형태로 괄호도 같이 노란색(#F3C01D)으로.
+                string cost10Tag = $"<color=#F3C01D>(-{dinnerCost10}G)</color>";
+                dinnerEvt.choices[2].resultMent1 = dinnerMent1_3Template;
+                dinnerEvt.choices[2].resultMent2 = dinnerMent2_3Template.Replace("-{비용}G", cost10Tag);
             };
             pool.Add(dinnerEvt);
         }
@@ -304,16 +341,24 @@ public static class RandomEvents_Choice
                             if (emp == null) return;
                             emp.ChangeSatisfaction(-10);
                             OfficeManager.Instance?.ShowStatPopup(emp.id, "만족도 -10", new Color(0.4f, 0.6f, 1f));
+
+                            int buffWeeks = RandomStatBuffWeeksByStage();
+                            emp.ApplyStatBuff(buffWeeks, 10);
+
+                            var c1 = bossGossipEvt.choices[1];
+                            c1.resultMent3 = c1.resultMent3?.Replace("{주수}", buffWeeks.ToString());
                         }
                     }
                 }
             };
             Apply(bossGossipEvt, chart);
 
-            // [CDN fallback] "사장님 {직원이름}이 사장님 뒷담을 하는걸 제가 들었어요 어떻게 할까요?"
-            string gossipDescTemplate    = bossGossipEvt.description ?? "";
-            // [CDN fallback] "{직원이름} 만족도 -10"
-            string gossipSystem1Template = bossGossipEvt.choices[1].resultSystemMessage ?? "";
+            // [CDN fallback] "사장님 {직원이름}가 사장님 뒷담을 하는걸 제가 들었어요 어떻게 할까요?"
+            string gossipDescTemplate = bossGossipEvt.description ?? "";
+            // [CDN fallback] "{직원이름} 만족도 -5"
+            string gossipMent2Template = bossGossipEvt.choices[1].resultMent2 ?? "";
+            // [CDN fallback] "{직원이름} 능력치 {주수}주 동안 +10%"
+            string gossipMent3Template = bossGossipEvt.choices[1].resultMent3 ?? "";
 
             bossGossipEvt.onSetup = () =>
             {
@@ -323,8 +368,10 @@ public static class RandomEvents_Choice
 
                 bossGossipEvt.description =
                     gossipDescTemplate.Replace("{직원이름}", gossiperEmp.employeeName);
-                bossGossipEvt.choices[1].resultSystemMessage =
-                    gossipSystem1Template.Replace("{직원이름}", gossiperEmp.employeeName);
+                bossGossipEvt.choices[1].resultMent2 =
+                    gossipMent2Template.Replace("{직원이름}", gossiperEmp.employeeName);
+                bossGossipEvt.choices[1].resultMent3 =
+                    gossipMent3Template.Replace("{직원이름}", gossiperEmp.employeeName);
             };
             pool.Add(bossGossipEvt);
         }
@@ -372,9 +419,14 @@ public static class RandomEvents_Choice
             RandomEventChoiceChartRow ytRow = null;
             chart?.TryGetValue("YoutuberRequest", out ytRow);
             var ytC1 = ytRow?.choices.Count > 0 ? ytRow.choices[0] : null;
-            string ytSysHigh = ytC1?.resultSystemMessage  ?? "";
             string ytSysMid  = ytC1?.resultSystemMessage2 ?? "";
             string ytSysLow  = ytC1?.resultSystemMessage3 ?? "";
+
+            // [CDN fallback] 결과팝업멘트1 — 인기도별(high/mid/low) 분기. high=choice1_ment1 원본,
+            // mid/low는 systemMessage(=ytSysMid)/systemMessage3(=ytSysLow) 컬럼을 재사용해 저장.
+            string ytMent1High = youtuberEvt.choices[0].resultMent1 ?? "";
+            string ytMent1Mid  = ytSysMid;
+            string ytMent1Low  = ytSysLow;
 
             youtuberEvt.choices[0].onChoose = () =>
             {
@@ -385,26 +437,26 @@ public static class RandomEvents_Choice
                 {
                     mgr.YoutuberSalesBonus = 1.05f;
                     if (!string.IsNullOrEmpty(ytDescHigh)) youtuberEvt.choices[0].resultDescriptions.Add(ytDescHigh);
-                    if (!string.IsNullOrEmpty(ytSysHigh))  youtuberEvt.choices[0].resultSystemMessage = ytSysHigh;
+                    youtuberEvt.choices[0].resultMent1 = ytMent1High;
                 }
                 else if (pop == 2)
                 {
                     mgr.YoutuberSalesBonus = 1.0f;
                     if (!string.IsNullOrEmpty(ytDescMid)) youtuberEvt.choices[0].resultDescriptions.Add(ytDescMid);
-                    if (!string.IsNullOrEmpty(ytSysMid))  youtuberEvt.choices[0].resultSystemMessage = ytSysMid;
+                    youtuberEvt.choices[0].resultMent1 = ytMent1Mid;
                 }
                 else
                 {
                     mgr.YoutuberSalesBonus = 0.95f;
                     if (!string.IsNullOrEmpty(ytDescLow)) youtuberEvt.choices[0].resultDescriptions.Add(ytDescLow);
-                    if (!string.IsNullOrEmpty(ytSysLow))  youtuberEvt.choices[0].resultSystemMessage = ytSysLow;
+                    youtuberEvt.choices[0].resultMent1 = ytMent1Low;
                 }
             };
 
             youtuberEvt.onSetup = () =>
             {
                 youtuberEvt.choices[0].resultDescriptions.Clear();
-                youtuberEvt.choices[0].resultSystemMessage = "";
+                youtuberEvt.choices[0].resultMent1 = ytMent1High;
             };
             pool.Add(youtuberEvt);
         }
@@ -454,6 +506,7 @@ public static class RandomEvents_Choice
 
                 fightEvt.title            = chosen.title;
                 fightEvt.description      = chosen.description;
+                fightEvt.question         = chosen.question;
                 fightEvt.portraitId       = chosen.portraitId;
                 fightEvt.portraitId2      = chosen.portraitId2;
                 fightEvt.choices          = chosen.choices;
@@ -524,16 +577,17 @@ public static class RandomEvents_Choice
                             DevelopmentManager.Instance.ExtendDevelopmentDuration(delayWeeks * secondsPerWeek, delayWeeks * 2 * secondsPerWeek); // 연장 N주 / 감속 2N주
 
                             string weeks = delayWeeks.ToString();
-                            earlyLeaveEvt.choices[1].resultSystemMessage =
-                                earlyLeaveEvt.choices[1].resultSystemMessage?.Replace("{주수}", weeks);
+                            var c1 = earlyLeaveEvt.choices[1];
+                            c1.resultMent3 = c1.resultMent3?.Replace("{주수}", weeks);
                         }
                     }
                 }
             };
             Apply(earlyLeaveEvt, chart);
 
-            // [CDN fallback] "해당직원 만족도 +5 / 개발 기간 +{주수}주"
-            string earlyLeaveSystem2Template = earlyLeaveEvt.choices[1].resultSystemMessage ?? "";
+            // [CDN fallback] "{해당직원이름} 만족도 -5" / "{해당직원이름} 만족도 +5"
+            string earlyLeaveMent2_0Template = earlyLeaveEvt.choices[0].resultMent2 ?? "";
+            string earlyLeaveMent2_1Template = earlyLeaveEvt.choices[1].resultMent2 ?? "";
 
             earlyLeaveEvt.onSetup = () =>
             {
@@ -543,7 +597,8 @@ public static class RandomEvents_Choice
                 earlyLeaveEvt.portraitId       = earlyLeaveEmp.portraitId;
                 earlyLeaveEvt.targetEmployeeId = earlyLeaveEmp.id;
 
-                earlyLeaveEvt.choices[1].resultSystemMessage = earlyLeaveSystem2Template;
+                earlyLeaveEvt.choices[0].resultMent2 = earlyLeaveMent2_0Template.Replace("{해당직원이름}", earlyLeaveEmp.employeeName);
+                earlyLeaveEvt.choices[1].resultMent2 = earlyLeaveMent2_1Template.Replace("{해당직원이름}", earlyLeaveEmp.employeeName);
             };
             pool.Add(earlyLeaveEvt);
         }
@@ -607,12 +662,9 @@ public static class RandomEvents_Choice
                             };
                             DevelopmentManager.Instance.ExtendDevelopmentDuration(delayWeeks * secondsPerWeek, delayWeeks * 2 * secondsPerWeek); // 연장 N주 / 감속 2N주
                             string weeks = delayWeeks.ToString();
-                            string desc = hackyEvt.choices[1].resultDescription?.Replace("{주수}", weeks);
-                            hackyEvt.choices[1].resultDescription = desc;
-                            hackyEvt.choices[1].resultDescriptions.Clear();
-                            if (!string.IsNullOrEmpty(desc)) hackyEvt.choices[1].resultDescriptions.Add(desc);
-                            hackyEvt.choices[1].resultSystemMessage =
-                                hackyEvt.choices[1].resultSystemMessage?.Replace("{주수}", weeks);
+                            var c1 = hackyEvt.choices[1];
+                            c1.reply1     = c1.reply1?.Replace("{주수}", weeks);
+                            c1.resultMent2 = c1.resultMent2?.Replace("{주수}", weeks);
                         }
                     }
                 }
@@ -620,10 +672,9 @@ public static class RandomEvents_Choice
             Apply(hackyEvt, chart);
 
             // [CDN fallback] "후… 일단 {주수}주는 더 걸릴 것 같네요"
-            string hackyDesc2Template   = hackyEvt.choices[1].resultDescriptions.Count > 0
-                ? hackyEvt.choices[1].resultDescriptions[0] : "";
-            // [CDN fallback] "개발 기간 +{주수}주 연장"
-            string hackySystem2Template = hackyEvt.choices[1].resultSystemMessage ?? "";
+            string hackyReply1Template = hackyEvt.choices[1].reply1 ?? "";
+            // [CDN fallback] "개발 기간 +{주수}주"
+            string hackyMent2Template  = hackyEvt.choices[1].resultMent2 ?? "";
 
             hackyEvt.onSetup = () =>
             {
@@ -634,11 +685,8 @@ public static class RandomEvents_Choice
                 hackyEvt.portraitId       = hackyEmp.portraitId;
                 hackyEvt.targetEmployeeId = hackyEmp.id;
 
-                hackyEvt.choices[1].resultDescription = hackyDesc2Template;
-                hackyEvt.choices[1].resultDescriptions.Clear();
-                if (!string.IsNullOrEmpty(hackyDesc2Template))
-                    hackyEvt.choices[1].resultDescriptions.Add(hackyDesc2Template);
-                hackyEvt.choices[1].resultSystemMessage = hackySystem2Template;
+                hackyEvt.choices[1].reply1     = hackyReply1Template;
+                hackyEvt.choices[1].resultMent2 = hackyMent2Template;
             };
             pool.Add(hackyEvt);
         }
@@ -649,6 +697,16 @@ public static class RandomEvents_Choice
                       Dictionary<string, RandomEventChoiceChartRow> chart)
     {
         RandomEventChoiceChartLoader.Apply(data, data.type.ToString(), chart);
+    }
+
+    // 사무실 단계별 스탯버프 지속주수 랜덤(사용자 명세: "1,2단계 5~15 랜덤 / 3,4단계 10~20 랜덤").
+    // StageManager.CurrentStage(사무실 확장 단계) 기준 — 1~2단계 vs 3단계 이상.
+    // internal — RandomEvents_Condition_Choice(CoffeeRequest/EnergyDrinkRequest)도 동일 공식 재사용.
+    internal static int RandomStatBuffWeeksByStage()
+    {
+        int stage = StageManager.Instance != null ? StageManager.Instance.CurrentStage : 1;
+        bool highTier = stage >= 3;
+        return highTier ? UnityEngine.Random.Range(10, 21) : UnityEngine.Random.Range(5, 16);
     }
 
     // 두 직원 싸움 계열 이벤트 공통 생성 (TangsuYukFight / AntiMintchoc / AcWar)
@@ -715,6 +773,15 @@ public static class RandomEvents_Choice
         string system0Template = evt.choices[0].resultSystemMessage ?? "";
         // [CDN fallback] "{직원2파트} 팀장점수 10% 증가 / {직원2이름} 만족도 +10 / {직원1파트} 팀장점수 10% 감소 / {직원1이름} 만족도 -10"
         string system1Template = evt.choices[1].resultSystemMessage ?? "";
+        // 결과 팝업(AlertUI4 2연속) — choice0: 1차=승자(emp1) 효과, 2차=패자(emp2) 효과 / choice1은 반대.
+        string ment1_0Template = evt.choices[0].resultMent1   ?? ""; // "{직원1파트} 팀장점수 10% 증가"
+        string ment2_0Template = evt.choices[0].resultMent2   ?? ""; // "{직원1이름} 만족도 +10"
+        string ment1_0b_Template = evt.choices[0].resultMent1_2 ?? ""; // "{직원2파트} 팀장점수 10% 감소"
+        string ment2_0b_Template = evt.choices[0].resultMent2_2 ?? ""; // "{직원2이름} 만족도 -10"
+        string ment1_1Template = evt.choices[1].resultMent1   ?? "";
+        string ment2_1Template = evt.choices[1].resultMent2   ?? "";
+        string ment1_1b_Template = evt.choices[1].resultMent1_2 ?? "";
+        string ment2_1b_Template = evt.choices[1].resultMent2_2 ?? "";
         // [CDN fallback] ["사장님! 진짜 제 마음을 어쩜 그렇게 잘 알아주세요?...", "사장님이 제 편 안 들어주셨으면 저 오늘 진짜 사직서 쓸 뻔했잖아요...", "거봐요! 내가 맞다니까!"]
         var    happyDescs      = new List<string>(evt.choices[0].resultDescriptions);
         // [CDN fallback] ["말 걸지 마세요", "평생 기억하겠습니다…"]
@@ -782,6 +849,21 @@ public static class RandomEvents_Choice
             evt.choices[1].resultSystemMessage = system1Template
                 .Replace("{직원1파트}", role1).Replace("{직원1이름}", emp1.employeeName)
                 .Replace("{직원2파트}", role2).Replace("{직원2이름}", emp2.employeeName);
+
+            // 결과 팝업 — choice0(emp1 편들기): 1차=emp1(승자) 효과, 2차=emp2(패자) 효과. choice1은 반대.
+            string Sub(string t) => t
+                .Replace("{직원1파트}", role1).Replace("{직원1이름}", emp1.employeeName)
+                .Replace("{직원2파트}", role2).Replace("{직원2이름}", emp2.employeeName);
+
+            evt.choices[0].resultMent1   = Sub(ment1_0Template);
+            evt.choices[0].resultMent2   = Sub(ment2_0Template);
+            evt.choices[0].resultMent1_2 = Sub(ment1_0b_Template);
+            evt.choices[0].resultMent2_2 = Sub(ment2_0b_Template);
+
+            evt.choices[1].resultMent1   = Sub(ment1_1Template);
+            evt.choices[1].resultMent2   = Sub(ment2_1Template);
+            evt.choices[1].resultMent1_2 = Sub(ment1_1b_Template);
+            evt.choices[1].resultMent2_2 = Sub(ment2_1b_Template);
 
             evt.choices[0].resultDescriptions = new List<string>(happyDescs);
             evt.choices[0].resultTitle        = happyTitle;

@@ -8,6 +8,12 @@ public class DispatchSlotUI : MonoBehaviour
     [Header("UI")]
     public Image portraitImage;
     public TextMeshProUGUI nameText;
+    [Tooltip("CEO(주인공)일 때만 활성화되는 라벨")]
+    public GameObject CEOText;
+    static readonly Color CEONameColor = new Color32(0xFF, 0xF1, 0x94, 0xFF);
+    const string CEODisplayName = "주인공";
+    private Color _defaultNameColor = Color.white;
+    private bool  _defaultNameColorCached;
     [Header("등급별 배경 (공용 GradeSpriteSet 에셋)")]
     public Image bgImage;
     public GradeSpriteSet bgGradeSet;
@@ -28,16 +34,32 @@ public class DispatchSlotUI : MonoBehaviour
 
         GradeSpriteSet.Apply(bgImage, bgGradeSet, data.isCEO, data.grade);
 
-        if (nameText != null) nameText.text = data.employeeName;
+        if (nameText != null && !_defaultNameColorCached)
+        {
+            _defaultNameColor = nameText.color;
+            _defaultNameColorCached = true;
+        }
 
         // CEO는 역할/강화레벨 개념이 없음 — roleIconPanel 자식 Image 비활성화 + 강화텍스트 공백.
         if (data.isCEO)
         {
             if (roleIcon != null) roleIcon.gameObject.SetActive(false);
             if (enhancementText != null) enhancementText.text = "";
+            if (CEOText != null) CEOText.SetActive(true);
+            if (nameText != null)
+            {
+                nameText.text  = CEODisplayName;
+                nameText.color = CEONameColor;
+            }
         }
         else
         {
+            if (CEOText != null) CEOText.SetActive(false);
+            if (nameText != null)
+            {
+                nameText.text  = data.employeeName;
+                nameText.color = _defaultNameColor;
+            }
             if (roleIcon != null)
             {
                 roleIcon.gameObject.SetActive(true);
@@ -73,19 +95,7 @@ public class DispatchSlotUI : MonoBehaviour
 
     public void SetSelected(bool on)
     {
-        // selectButton 의 Image 알파만 토글 — 선택 시 120/255, 해제 시 0. RGB(색)는 인스펙터에서 설정한 값 유지.
-        if (selectButton != null)
-        {
-            var img = selectButton.image != null ? selectButton.image : selectButton.GetComponent<Image>();
-            if (img != null)
-            {
-                var c = img.color;
-                c.a = on ? 120f / 255f : 0f;
-                img.color = c;
-            }
-        }
-
-        // selectedIndicator 가 연결돼 있으면 함께 토글 (옵션). 슬롯 루트 자신이면 무시(전체 꺼짐 방어).
+        // selectedIndicator = SelectionBorder(#DF0F0F 3px 테두리 4바) — 슬롯 루트 자신이면 무시(전체 꺼짐 방어).
         if (selectedIndicator != null && selectedIndicator != gameObject)
             selectedIndicator.SetActive(on);
     }

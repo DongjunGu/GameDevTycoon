@@ -22,10 +22,12 @@ public class StatTickPopup : MonoBehaviour
     public float holdAfter          = 0.3f; // (구버전)
     public float blankDuration      = 1f;   // 꽝 제자리 표시 시간
 
+    [Header("카운트업")]
+    public float countUpDuration = 1f;   // 0 → target 까지 고르게 올라가는 시간
+
     [Header("흡입 연출")]
-    public float holdBeforeSuck = 1f;    // +N 표시 후 흡입 시작까지 유지 시간
+    public float holdBeforeSuck = 0.3f;  // 카운트업 종료 후 흡입 시작까지 유지 시간
     public float suckDuration   = 0.4f;  // 타겟으로 빨려드는 시간
-    public float suckEndScale   = 0.3f;  // 흡입 끝 스케일 배율
     public float suckArcHeight  = 1.5f;  // 포물선 정점 높이(월드 단위, 양수=위로 솟음)
     public float nudgeDistance  = 0.5f;  // 흡입 직전 우측으로 살짝 빼는 거리(월드 단위)
     public float nudgeDuration  = 0.15f; // 우측 이동 시간
@@ -68,7 +70,7 @@ public class StatTickPopup : MonoBehaviour
 
     IEnumerator Animate(int target)
     {
-        // ── 신규 연출: 한 번에 +N 표시 → holdBeforeSuck(1초) 유지 → 타겟 스탯 텍스트로 가속 흡입 → 소멸 ──
+        // ── 신규 연출: 0→target 고르게 카운트업 → holdBeforeSuck 유지 → 타겟 스탯 텍스트로 가속 흡입 → 소멸 ──
         if (target <= 0)
         {
             // 꽝(blank) — 숫자 없이 제자리 소멸 (빨려들어가지 않음)
@@ -77,10 +79,11 @@ public class StatTickPopup : MonoBehaviour
             yield break;
         }
 
-        if (numberLabel != null) numberLabel.text = $"+{target}"; // 카운트업 없이 즉시 표시
-        yield return WaitPaused(holdBeforeSuck);                  // 1초 유지
-        yield return NudgeRight();                                // 흡입 직전 살짝 우측으로(준비 동작)
-        yield return SuckIntoTarget();                            // 타겟으로 가속 흡입
+        if (numberLabel != null) numberLabel.text = "+0";
+        yield return CountUp(target);              // 0 → target 고르게 카운트업
+        yield return WaitPaused(holdBeforeSuck);    // 카운트업 종료 후 유지
+        yield return NudgeRight();                  // 흡입 직전 살짝 우측으로(준비 동작)
+        yield return SuckIntoTarget();              // 타겟으로 가속 흡입
         Finish();
 
         /* ── 구버전: 제자리 카운트업 (보존용 주석) ──
@@ -99,6 +102,28 @@ public class StatTickPopup : MonoBehaviour
         }
         Finish();
         */
+    }
+
+    // 0 → target 까지 countUpDuration 동안 고르게(선형) 카운트업.
+    IEnumerator CountUp(int target)
+    {
+        float elapsed = 0f;
+        float dur = Mathf.Max(0.01f, countUpDuration);
+        int shown = 0;
+        while (elapsed < dur)
+        {
+            if (GameTimeManager.Instance == null || GameTimeManager.Instance.IsRunning)
+                elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / dur);
+            int value = Mathf.RoundToInt(Mathf.Lerp(0, target, t));
+            if (value != shown)
+            {
+                shown = value;
+                if (numberLabel != null) numberLabel.text = $"+{shown}";
+            }
+            yield return null;
+        }
+        if (numberLabel != null) numberLabel.text = $"+{target}";
     }
 
     // 흡입 직전 우측으로 살짝 빠지는 준비 동작(anticipation). ease-out 으로 부드럽게 멈춤.
@@ -152,8 +177,7 @@ public class StatTickPopup : MonoBehaviour
             // 가로 진행은 가속(ease), 세로는 대칭 포물선 호(t=0,1 에서 0, 중간에서 최대)
             Vector3 pos = Vector3.LerpUnclamped(start, worldTarget, ease);
             pos.y += Mathf.Sin(t * Mathf.PI) * suckArcHeight;
-            transform.position   = pos;
-            transform.localScale = Vector3.Lerp(_baseScale, _baseScale * suckEndScale, t);
+            transform.position = pos;
             yield return null;
         }
     }

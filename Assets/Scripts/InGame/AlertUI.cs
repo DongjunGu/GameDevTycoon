@@ -29,8 +29,34 @@ public class AlertUI : MonoBehaviour
     public Image portraitImage;
     public Button portraitConfirmButton;        // 패널 전체를 덮는 투명 버튼
 
+    // ── AlertUI4 (결과 팝업 — 타이틀 + 결과 2줄) ──────────────────
+    [Header("AlertUI4 - 결과 팝업 (Title+result1+result2)")]
+    public GameObject result4Panel;
+    public TextMeshProUGUI result4TitleText;
+    public TextMeshProUGUI result4Text1;
+    public TextMeshProUGUI result4Text2;
+    public Button result4ConfirmButton;
+
+    // ── AlertUI5 (결과 팝업 — 단순 문구) ──────────────────────────
+    [Header("AlertUI5 - 결과 팝업 (TitleText만)")]
+    public GameObject result5Panel;
+    public TextMeshProUGUI result5TitleText;
+    public Button result5ConfirmButton;
+
+    // ── AlertUI6 (결과 팝업 — 타이틀 + 하단 문구) ─────────────────
+    [Header("AlertUI6 - 결과 팝업 (Title+Bottom)")]
+    public GameObject result6Panel;
+    public TextMeshProUGUI result6TitleText;
+    public TextMeshProUGUI result6BottomText;
+    public Button result6ConfirmButton;
+
+    // 결과 멘트 색상 — 버프(+/증가/상승) 계열은 빨강, 디버프(-/감소/하락/차감) 계열은 파랑.
+    // (프로젝트 공통 컬러 컨벤션: [[project_employee_visual_sets]] 능력치 버프#E63356/디버프#517FFF 와 동일 계열)
+    static readonly Color BuffMentColor   = new Color32(0xD2, 0x2E, 0x2E, 0xFF); // #D22E2E
+    static readonly Color DebuffMentColor = new Color32(0x62, 0x51, 0xD4, 0xFF); // #6251D4
+
     // ── 내부 ────────────────────────────────────────────────────
-    enum AlertType { Default, Money, Portrait }
+    enum AlertType { Default, Money, Portrait, Result4, Result5, Result6 }
 
     struct Entry
     {
@@ -40,6 +66,10 @@ public class AlertUI : MonoBehaviour
         public string        portraitId;
         public string        label;
         public int?          goldAmount;
+        // AlertUI4/5/6 전용 — title=결과팝업멘트1, resultText1=멘트2, resultText2=멘트3(4만 사용)
+        public string        title;
+        public string        resultText1;
+        public string        resultText2;
     }
 
     private Queue<Entry> _queue      = new();
@@ -54,10 +84,16 @@ public class AlertUI : MonoBehaviour
         alertPanel?.SetActive(false);
         moneyPanel?.SetActive(false);
         portraitPanel?.SetActive(false);
+        result4Panel?.SetActive(false);
+        result5Panel?.SetActive(false);
+        result6Panel?.SetActive(false);
 
-        if (alertConfirmButton   != null) alertConfirmButton.onClick.AddListener(OnClickConfirm);
-        if (moneyConfirmButton   != null) moneyConfirmButton.onClick.AddListener(OnClickConfirm);
+        if (alertConfirmButton    != null) alertConfirmButton.onClick.AddListener(OnClickConfirm);
+        if (moneyConfirmButton    != null) moneyConfirmButton.onClick.AddListener(OnClickConfirm);
         if (portraitConfirmButton != null) portraitConfirmButton.onClick.AddListener(OnClickConfirm);
+        if (result4ConfirmButton  != null) result4ConfirmButton.onClick.AddListener(OnClickConfirm);
+        if (result5ConfirmButton  != null) result5ConfirmButton.onClick.AddListener(OnClickConfirm);
+        if (result6ConfirmButton  != null) result6ConfirmButton.onClick.AddListener(OnClickConfirm);
     }
 
     // ── 공개 API ────────────────────────────────────────────────
@@ -79,6 +115,28 @@ public class AlertUI : MonoBehaviour
     public void ShowPortrait(string message, string portraitId, string label, System.Action onConfirm = null)
     {
         _queue.Enqueue(new Entry { message = message, onConfirm = onConfirm, type = AlertType.Portrait, portraitId = portraitId, label = label });
+        if (!_isShowing) ShowNext();
+    }
+
+    // 결과 팝업 종류 1 — title(결과팝업멘트1)/result1(멘트2)/result2(멘트3). 각 텍스트는 +/- 등 내용에 따라
+    // 버프(#D22E2E)/디버프(#6251D4) 자동 색상, 부호가 없으면 기본색 유지.
+    public void ShowResult4(string title, string result1, string result2, System.Action onConfirm = null)
+    {
+        _queue.Enqueue(new Entry { onConfirm = onConfirm, type = AlertType.Result4, title = title, resultText1 = result1, resultText2 = result2 });
+        if (!_isShowing) ShowNext();
+    }
+
+    // 결과 팝업 종류 2 — 간단한 문구 하나(TitleText).
+    public void ShowResult5(string title, System.Action onConfirm = null)
+    {
+        _queue.Enqueue(new Entry { onConfirm = onConfirm, type = AlertType.Result5, title = title });
+        if (!_isShowing) ShowNext();
+    }
+
+    // 결과 팝업 종류 3 — title(결과팝업멘트1, TitleText)/bottom(멘트2, BottomText).
+    public void ShowResult6(string title, string bottom, System.Action onConfirm = null)
+    {
+        _queue.Enqueue(new Entry { onConfirm = onConfirm, type = AlertType.Result6, title = title, resultText1 = bottom });
         if (!_isShowing) ShowNext();
     }
 
@@ -138,6 +196,30 @@ public class AlertUI : MonoBehaviour
                 portraitPanel.SetActive(true);
                 break;
 
+            case AlertType.Result4:
+                if (result4Panel == null) { Debug.LogError("[AlertUI] result4Panel 미연결"); goto default; }
+                SetMentText(result4TitleText, entry.title);
+                SetMentText(result4Text1,     entry.resultText1);
+                SetMentText(result4Text2,     entry.resultText2);
+                EnsureTopMost(result4Panel);
+                result4Panel.SetActive(true);
+                break;
+
+            case AlertType.Result5:
+                if (result5Panel == null) { Debug.LogError("[AlertUI] result5Panel 미연결"); goto default; }
+                SetMentText(result5TitleText, entry.title);
+                EnsureTopMost(result5Panel);
+                result5Panel.SetActive(true);
+                break;
+
+            case AlertType.Result6:
+                if (result6Panel == null) { Debug.LogError("[AlertUI] result6Panel 미연결"); goto default; }
+                SetMentText(result6TitleText,  entry.title);
+                SetMentText(result6BottomText, entry.resultText1);
+                EnsureTopMost(result6Panel);
+                result6Panel.SetActive(true);
+                break;
+
             default:
                 if (alertPanel == null) { Debug.LogError("[AlertUI] alertPanel 미연결"); return; }
                 if (messageText != null) messageText.text = entry.message;
@@ -147,6 +229,28 @@ public class AlertUI : MonoBehaviour
         }
 
         ModalGate.I.Register(this);
+    }
+
+    // AlertUI4/5/6 전용 — 텍스트를 채우고, 버프(+/증가/상승 등)면 D22E2E, 디버프(-/감소/하락/차감 등)면 6251D4로
+    // 색을 바꾼다. 부호/키워드가 없거나 둘 다 섞여 있으면 인스펙터 기본색 유지(색 변경 안 함).
+    void SetMentText(TextMeshProUGUI tmp, string content)
+    {
+        if (tmp == null) return;
+        tmp.text = content ?? "";
+        var color = DetectMentColor(content);
+        if (color.HasValue) tmp.color = color.Value;
+    }
+
+    static Color? DetectMentColor(string text)
+    {
+        if (string.IsNullOrEmpty(text)) return null;
+
+        bool buff   = text.Contains("+") || text.Contains("증가") || text.Contains("상승");
+        bool debuff = text.Contains("-") || text.Contains("감소") || text.Contains("하락") || text.Contains("차감");
+
+        if (buff && !debuff)   return BuffMentColor;
+        if (debuff && !buff)   return DebuffMentColor;
+        return null; // 둘 다 있거나(예: "+10 / -5%") 둘 다 없으면 판단 보류 — 기본색 유지
     }
 
     void EnsureTopMost(GameObject panel)
@@ -168,6 +272,9 @@ public class AlertUI : MonoBehaviour
         {
             case AlertType.Money:    moneyPanel?.SetActive(false);    break;
             case AlertType.Portrait: portraitPanel?.SetActive(false); break;
+            case AlertType.Result4:  result4Panel?.SetActive(false);  break;
+            case AlertType.Result5:  result5Panel?.SetActive(false);  break;
+            case AlertType.Result6:  result6Panel?.SetActive(false);  break;
             default:                 alertPanel?.SetActive(false);    break;
         }
 

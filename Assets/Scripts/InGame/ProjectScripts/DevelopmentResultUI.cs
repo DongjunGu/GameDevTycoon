@@ -178,7 +178,9 @@ public class DevelopmentResultUI : MonoBehaviour
 
     public void Show(float planning, float develop, float art, float bug, float creativity)
     {
-        _lastProjectName = "프로젝트명"; // ← 초기화
+        // 기본 프로젝트명 = "프로젝트명" + (기존 출시작 수 + 1). 예: 출시작 2개 → "프로젝트명3"
+        int releasedCount = CompletedProjectManager.Instance != null ? CompletedProjectManager.Instance.completedProjects.Count : 0;
+        _lastProjectName = $"프로젝트명{releasedCount + 1}"; // ← 초기화
         projectNameText.text = _lastProjectName;
         _lastPlanning = planning;
         _lastDevelop = develop;
@@ -206,8 +208,8 @@ public class DevelopmentResultUI : MonoBehaviour
             }
         }
 
-        projectNameText.text = "프로젝트명";
         GameTimeManager.Instance?.StopTime();
+        ModalGate.I.Register(this);
         SetContributionDetailShown(false); // 결과창 새로 열 때는 항상 기본(RightPanel) 상태로
         SetResultPanelActive(true);
     }
@@ -254,12 +256,14 @@ public class DevelopmentResultUI : MonoBehaviour
     {
         SetResultPanelActive(false);
         GameTimeManager.Instance?.StartTime();
+        ModalGate.I.Unregister(this);
     }
     public void OnClickRelease()
     {
         ProjectSaveManager.Instance.SetProjectName(_lastProjectName);
         SetResultPanelActive(false);
         GameTimeManager.Instance?.StartTime();
+        ModalGate.I.Unregister(this);
 
         float p = DevelopmentPanelUI.Instance.GetPlanning();
                     float d = DevelopmentPanelUI.Instance.GetDevelop();
@@ -287,6 +291,18 @@ public class DevelopmentResultUI : MonoBehaviour
                     float criticScore = (rawScore * (1f - DevelopmentManager.Instance.BugPenalty)
                                       + DevelopmentManager.Instance.BugEventBonus) * (1f - casePenalty);
 
+                    // 숙련도(Mastery) — 이번 프로젝트의 최종 점수엔 "판정 전" 현재 등급의 배율을 적용(먼저 캡처),
+                    // 승급 판정은 그 뒤에 굴려서 다음 프로젝트부터 반영되게 한다.
+                    ProjectGenre masteryGenre = ProjectSetupUI.SelectedGenre;
+                    float masteryMultiplier = MasteryManager.Instance != null
+                        ? MasteryManager.Instance.GetMultiplier(masteryGenre) : 1f;
+                    if (MasteryManager.Instance != null)
+                    {
+                        // 판정점수 = 평론가 점수(랜덤 변동 -5~+5 제외) — CriticReviewUI 표시값과 같은 로그공식, 변동만 뺌.
+                        int judgmentScore = CriticReviewUI.CalcCriticScore(criticScore);
+                        MasteryManager.Instance.TryPromote(masteryGenre, judgmentScore);
+                    }
+
         // ── 1. 평론가 패널 ──
     CriticReviewUI.Instance.Show(criticScore, () =>
     {
@@ -301,10 +317,10 @@ public class DevelopmentResultUI : MonoBehaviour
                 sAdj = Mathf.Max(0f, sAdj);
 
                 // float finalScore = CalcFinalScore(sAdj); // 로그 압축 비활성화
-                float finalScore = sAdj * CalcPopularityMultiplier() * CalcFatigueMultiplier();
+                float finalScore = sAdj * CalcPopularityMultiplier() * CalcFatigueMultiplier() * masteryMultiplier;
                 float quality    = CalcQualityScore(finalScore);
 
-                Debug.Log($"원천: {rawScore:F1} / 버그감점: {DevelopmentManager.Instance.BugPenalty * 100f:F1}% / 케이스감점: {casePenalty * 100f:F1}% / S_adj: {sAdj:F1} / 인지도배율: {CalcPopularityMultiplier():F2} / 피로도배율: {CalcFatigueMultiplier():F2} / 최종: {finalScore:F1} / 품질: {quality:F1}");
+                Debug.Log($"원천: {rawScore:F1} / 버그감점: {DevelopmentManager.Instance.BugPenalty * 100f:F1}% / 케이스감점: {casePenalty * 100f:F1}% / S_adj: {sAdj:F1} / 인지도배율: {CalcPopularityMultiplier():F2} / 피로도배율: {CalcFatigueMultiplier():F2} / 숙련도배율: {masteryMultiplier:F2} / 최종: {finalScore:F1} / 품질: {quality:F1}");
 
                 ProjectSaveManager.Instance.SetQualityScore(quality, ProjectSetupUI.SelectedScale);
                 DevelopmentManager.Instance.CurrentStage = ProjectStage.Marketing;
@@ -324,10 +340,19 @@ public class DevelopmentResultUI : MonoBehaviour
                     _lastPlanning, _lastDevelop, _lastArt, _lastCreativity, _lastBug
                 );
 
-                AlertUI.Instance.Show("판매 시작!", () =>
+                // 숙련도 승급 알림(있으면) → "판매 시작!" 순서. 재접속 시엔 ProjectSaveManager.RestoreIfNeeded 가
+                // 같은 순서로 재현(masteryJson 에 대기 알림이 실려 있어 앱을 껐다 켜도 유실되지 않음).
+                System.Action showSalesStart = () =>
                 {
-                    SalesUI.Instance.Show(quality, ProjectSetupUI.SelectedScale);
-                });
+                    AlertUI.Instance.Show("판매 시작!", () =>
+                    {
+                        SalesUI.Instance.Show(quality, ProjectSetupUI.SelectedScale);
+                    });
+                };
+                if (MasteryManager.Instance != null)
+                    MasteryManager.Instance.ShowPendingPromotionThen(showSalesStart);
+                else
+                    showSalesStart();
             });
         });
     });

@@ -4980,9 +4980,9 @@ MonoBehaviour:
   totalCountDuration: 3
   holdAfter: 0.5
   blankDuration: 1.5
+  countUpDuration: 1
   holdBeforeSuck: 1
   suckDuration: 0.7
-  suckEndScale: 0.5
   suckArcHeight: 1
   nudgeDistance: 0.5
   nudgeDuration: 0.05

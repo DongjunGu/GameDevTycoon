@@ -44,6 +44,11 @@ public class SalesUI : MonoBehaviour
     private int _cachedTotalRevenue = 0;
     private int[] _cachedRevenuePerPeriod = null; // 세션 시작 시 동결, 매 SaveSales 호출에 그대로 전달
     private CompletedProjectData _currentSalesProject = null;
+    // ShowInternal 이 (복원 경로 등에서) 중복 호출되면 이전 코루틴이 살아있는 채로 chartArea 를 비워버려
+    // 그 코루틴이 들고 있던 barObj 참조가 null 이 되고, barObj==null 가드가 yield break 로 조용히 죽어버려
+    // OnSalesComplete() 가 영영 호출되지 않는(패널이 안 닫히는) 버그가 있었음 — 새로 시작하기 전 이전 코루틴을
+    // 명시적으로 정지시켜 "고아 코루틴"이 남지 않게 한다.
+    private Coroutine _barsCoroutine;
 
     public void NotifyNewProjectStarted()
     {
@@ -305,7 +310,8 @@ public class SalesUI : MonoBehaviour
         salesPanel.SetActive(true);
         _salesInProgress = true;
         UpdateOpenBtn(); // 패널 열림 → OpenBtn 비활성
-        StartCoroutine(ShowBarsSequentially(revenuePerPeriod, maxRevenue, completedWeeks));
+        if (_barsCoroutine != null) StopCoroutine(_barsCoroutine);
+        _barsCoroutine = StartCoroutine(ShowBarsSequentially(revenuePerPeriod, maxRevenue, completedWeeks));
     }
     IEnumerator ShowBarsSequentially(int[] revenuePerPeriod, int maxRevenue, int completedWeeks = 0)
     {
@@ -436,6 +442,7 @@ public class SalesUI : MonoBehaviour
 
     void OnSalesComplete(int cumulativeRevenue)
     {
+        _barsCoroutine = null;
         panelRT.DOKill();
         panelRT.localPosition = _panelOpenLocalPos;
         panelRT.localScale = _panelOpenScale;

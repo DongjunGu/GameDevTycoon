@@ -16,6 +16,28 @@ public class RandomEventChoiceOption
     public List<string> resultDescriptions = new List<string>(); // 복수일 때 랜덤 선택
     public string resultSystemMessage;
 
+    // ── 답변1/답변2 (신규) ─────────────────────────────────────
+    // 선택 후 두 말풍선 박스에 순차 출력되는 캐릭터 대사. reply1 이 있으면 resultDescription 계열 대신
+    // 이쪽을 우선 사용(box1→reply2 있으면 box2 로 화자 전환). reply1 이 비어있으면 기존 resultDescription
+    // /resultDescriptions 랜덤선택 방식으로 fallback(기존 이벤트 하위호환).
+    public string reply1;
+    public string reply2;
+
+    // ── 결과 팝업 (신규) ────────────────────────────────────────
+    // resultPopupType: 0=미지정(기존 AlertUI1 plain, resultSystemMessage 사용) / 1=AlertUI4 / 2=AlertUI5 / 3=AlertUI6
+    // resultMent1/2/3: 결과팝업멘트1/2/3 — 타입별 매핑은 RandomEventChoiceUI.ShowResultPopup 참고.
+    public int    resultPopupType = 0;
+    public string resultMent1;
+    public string resultMent2;
+    public string resultMent3;
+
+    // 2번째 결과 팝업(선택) — 확인 시 첫 팝업 닫고 바로 이어서 하나 더 띄울 때 사용
+    // (예: 승자 효과 팝업 → 확인 → 패자 효과 팝업 → 확인 → 진행 재개). resultPopupType2=0 이면 안 씀.
+    public int    resultPopupType2 = 0;
+    public string resultMent1_2;
+    public string resultMent2_2;
+    public string resultMent3_2;
+
     // 1차 결과 확인 후 이어서 표시할 2차 반응 (선택적)
     public string secondaryTitle;
     public string secondaryPortraitId;
@@ -30,7 +52,9 @@ public class RandomEventChoiceData
 {
     public RandomEventType type;
     public string title;
-    public string description;
+    public string description;  // 대사1 — box1(portrait1)에서 타이핑되는 도입 대사
+    public string dialogue2;    // 대사2 (신규) — 있으면 대사1 다음 box2(portrait2)로 화자 전환해 타이핑
+    public string question;     // 질문 (신규) — 대사1(+대사2) 완료 후 QuestionText 에 즉시 표시
     public string portraitId;
     public string portraitId2;
 

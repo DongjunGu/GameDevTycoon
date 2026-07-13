@@ -89,6 +89,7 @@ public class LoanManager : MonoBehaviour
         if (dueLoans.Count == 0) return;
 
         GameTimeManager.Instance.StopTime();
+        ModalGate.I.Register(this);
         ProcessDueLoan(dueLoans, 0);
     }
 
@@ -97,6 +98,7 @@ public class LoanManager : MonoBehaviour
         if (index >= dueLoans.Count)
         {
             GameTimeManager.Instance.StartTime();
+            ModalGate.I.Unregister(this);
             return;
         }
 

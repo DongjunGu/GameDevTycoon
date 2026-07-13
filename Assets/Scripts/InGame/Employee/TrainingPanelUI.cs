@@ -74,6 +74,7 @@ public class TrainingPanelUI : MonoBehaviour
     {
         _onClosed = null;
         GameTimeManager.Instance?.StopTime();
+        ModalGate.I.Register(this);
         Root.SetActive(true);
         HideDetail();
     }
@@ -84,6 +85,7 @@ public class TrainingPanelUI : MonoBehaviour
         if (emp == null) return;
         _onClosed = onClosed;
         GameTimeManager.Instance?.StopTime();
+        ModalGate.I.Register(this);
         Root.SetActive(true);
         OnSelectEmployee(emp);
     }
@@ -91,6 +93,7 @@ public class TrainingPanelUI : MonoBehaviour
     public void OnClickClose()
     {
         GameTimeManager.Instance?.StartTime();
+        ModalGate.I.Unregister(this);
         Root.SetActive(false);
 
         var cb = _onClosed;

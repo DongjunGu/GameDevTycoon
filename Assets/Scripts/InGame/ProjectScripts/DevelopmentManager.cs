@@ -304,6 +304,12 @@ public class DevelopmentManager : MonoBehaviour
         programmerLeader = null;
         artistLeader = null;
 
+        // 기여도는 프로젝트 단위 — ResetProject()는 "새 프로젝트가 이전 판매 도중 시작"된 경우
+        // (SalesUI._newProjectStartedDuringSales) 이전 프로젝트가 끝나도 호출되지 않으므로,
+        // 여기서 명시적으로 비워야 이전 프로젝트 기여자(퇴사자 포함)가 새 프로젝트로 새는 것을 막는다.
+        _employeeContribution.Clear();
+        _contributionInfo.Clear();
+
         DevelopmentPanelUI.Instance.ResetValues();
         // 이전 프로젝트에서 남은 개발틱 팝업 잔재 정리 — LeaderSelectUI 가 stale ActiveCount 를 기다리며
         // 딜레이/hang 되지 않도록 (개발 시작 직전엔 개발틱 팝업이 없는 게 정상).
@@ -529,6 +535,9 @@ public class DevelopmentManager : MonoBehaviour
                 _triggered25 = true;
                 _isRunning = false;
 
+                // 시간이 아직 흐르는 상태에서 대기해야 상시개발값 팝업(카운트업+흡입+패널반영)이 자연 완료된다.
+                yield return WaitForStatPopups();
+
                 if (RandomEventManager.Instance.HasPendingEvent)
                 {
                     // pending 중: 시간·캐릭터 이동은 유지, 진행도만 중단
@@ -546,6 +555,9 @@ public class DevelopmentManager : MonoBehaviour
             {
                 _triggered75 = true;
                 _isRunning = false;
+
+                // 시간이 아직 흐르는 상태에서 대기해야 상시개발값 팝업(카운트업+흡입+패널반영)이 자연 완료된다.
+                yield return WaitForStatPopups();
 
                 if (RandomEventManager.Instance.HasPendingEvent)
                 {
@@ -572,6 +584,38 @@ public class DevelopmentManager : MonoBehaviour
         }
 
         OnDevelopmentComplete();
+    }
+
+    // 25%/75%/100% 마일스톤 전환 시 상시개발값 팝업(카운트업+흡입+DevelopmentPanel 반영)이 끝날 때까지 대기.
+    // GameTimeManager 를 멈추기 전에 호출해야 팝업이 자연스럽게 완료된다(멈추면 팝업도 같이 멈춤).
+    IEnumerator WaitForStatPopups()
+    {
+        float waited = 0f;
+        while (StatTickPopup.ActiveCount > 0 && waited < 10f)
+        {
+            waited += Time.unscaledDeltaTime;
+            yield return null;
+        }
+        if (StatTickPopup.ActiveCount > 0)
+        {
+            Debug.LogWarning($"[DevelopmentManager] 개발틱 팝업 대기 타임아웃(ActiveCount={StatTickPopup.ActiveCount}) — 강제 진행");
+            StatTickPopup.ActiveCount = 0;
+        }
+    }
+
+    // pending 이벤트 종료 후(ResumeFromEvent) 팀장 선택 UI를 열기 전 호출.
+    // PauseForEvent()가 이미 시간을 멈춘 상태라 팝업이 자연 완료될 수 없으므로, 잠깐 풀어서
+    // 완료시킨 뒤(WaitForStatPopups) 다시 멈춘다 — ForceStartTime 직후 StopTime 1회는 기존
+    // OnDevelopmentComplete 경로(_pendingDevelopmentComplete)와 동일한 패턴.
+    IEnumerator OpenLeaderSelectAfterPopups(LeaderType type)
+    {
+        if (StatTickPopup.ActiveCount > 0)
+        {
+            GameTimeManager.Instance.ForceStartTime();
+            yield return WaitForStatPopups();
+            GameTimeManager.Instance.StopTime();
+        }
+        DispatchPanelUI.Instance.OpenForLeaderSelect(type, null);
     }
 
     void FireRemainingTicks()
@@ -606,6 +650,14 @@ public class DevelopmentManager : MonoBehaviour
         _progressOffsetExtension = 0f;
         OfficeManager.Instance?.SetCharacterSpeedMultiplier(1f);
         OfficeManager.Instance?.StopDevelopmentPatrol();
+        StartCoroutine(FinishDevelopmentCompleteAfterPopups());
+    }
+
+    // FireRemainingTicks 로 한꺼번에 쏟아진 마지막 팝업들까지 전부 흡입·패널반영 된 뒤에
+    // 시간을 멈추고 "개발 완료!" 알림을 띄운다.
+    IEnumerator FinishDevelopmentCompleteAfterPopups()
+    {
+        yield return WaitForStatPopups();
         GameTimeManager.Instance.StopTime();
         AlertUI.Instance.Show("개발 완료!", () =>
         {
@@ -1682,7 +1734,11 @@ public class DevelopmentManager : MonoBehaviour
         IsOvertimeMode            = false;
         foreach (var emp in EmployeeManager.Instance.ownedEmployees)
             emp.isOvertimeWorker = false;
-        GameTimeManager.Instance.ForceStartTime();
+        // ForceStartTime 은 stopCount 를 0으로 강제해 다른 모달(직원리스트 등)의 StopTime 등록까지
+        // 무력화해버린다 — 이 시점(판매 완료 → OnSalesComplete → ResetProject)에 다른 모달이 떠서
+        // 시간을 붙잡고 있는 중이면 손대지 않고, 그 모달이 닫힐 때 자기 StartTime()으로 자연 재개되게 둔다.
+        if (!ModalGate.I.IsBlocked)
+            GameTimeManager.Instance.ForceStartTime();
         Debug.Log("프로젝트 초기화 완료");
     }
     // extensionSeconds: 개발 기간 연장량. slowdownSeconds: 캐릭터 감속 지속 시간(미지정 시 연장량과 동일 = 네트워크 이벤트).
@@ -1762,16 +1818,14 @@ public class DevelopmentManager : MonoBehaviour
         if (_pendingLeaderScore75)
         {
             _pendingLeaderScore75 = false;
-            // PauseForEvent()가 이미 시간을 멈췄으므로 그대로 팀장 선택 UI 표시
-            DispatchPanelUI.Instance.OpenForLeaderSelect(LeaderType.Artist, null);
+            StartCoroutine(OpenLeaderSelectAfterPopups(LeaderType.Artist));
             return;
         }
 
         if (_pendingLeaderScore25)
         {
             _pendingLeaderScore25 = false;
-            // PauseForEvent()가 이미 시간을 멈췄으므로 그대로 팀장 선택 UI 표시
-            DispatchPanelUI.Instance.OpenForLeaderSelect(LeaderType.Programmer, null);
+            StartCoroutine(OpenLeaderSelectAfterPopups(LeaderType.Programmer));
             return;
         }
 

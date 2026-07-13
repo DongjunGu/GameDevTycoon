@@ -301,7 +301,8 @@ public class MerchantManager : MonoBehaviour
         }
     }
 
-    // 차단 UI 판정은 ModalGate 가 담당. 각 모달이 ModalGateRegistrant 컴포넌트로 자동 등록.
+    // 차단 UI 판정은 ModalGate 가 담당. AlertUI 는 자체 등록/해제하고, 상점 패널은
+    // MerchantShopPanelUI.Open/OnClickClose 에서 직접 Register/Unregister한다.
 
     void OnPromptClicked()
     {

@@ -56,6 +56,7 @@ public class MerchantShopPanelUI : MonoBehaviour
         _onClosed = onClosed;
         _index = 0;
         if (panel != null) panel.SetActive(true);
+        ModalGate.I.Register(this);
         Refresh();
     }
 
@@ -64,6 +65,7 @@ public class MerchantShopPanelUI : MonoBehaviour
         var cb = _onClosed;
         _onClosed = null;
         if (panel != null) panel.SetActive(false);
+        ModalGate.I.Unregister(this);
         cb?.Invoke();
     }
 

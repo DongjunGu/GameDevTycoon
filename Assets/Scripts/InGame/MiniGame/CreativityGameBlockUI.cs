@@ -12,10 +12,7 @@ public class CreativityGameBlockUI : MonoBehaviour,
     private int[][] _shape;
     private Color   _color;
     private Sprite[] _cellSprites; // 셀별 스프라이트 (index = _shape 셀 순서). null 이면 단색 사용.
-
-    // 스프라이트가 "기본으로" 향하고 있다고 가정하는 방향(도) — 오른쪽(0)이 기본 가정.
-    // 실제 아트가 다른 방향을 기본으로 그려졌다면 이 값을 90 단위로 조정.
-    const float SpriteDefaultFacingAngle = 0f;
+    private float[]  _baseCellRotations; // _cellSprites 와 같은 인덱스의 기본 회전(도, SO에서 지정한 값 그대로 사용). null 이면 전부 0.
 
     // _shape 를 "머리→꼬리" 경로 순서로 정렬했을 때, 각 인덱스에 배정될 실제 스프라이트/회전.
     // ComputeSnakePathOrder 가 경로(뱀) 형태가 아니라고 판단하면(분기/고리) null — 이 경우 원본
@@ -111,11 +108,13 @@ public class CreativityGameBlockUI : MonoBehaviour,
     public void Init(int[][] shape, Color color,
                      CreativityGameGridUI grid, CreativityGameUI miniGame,
                      float previewCellSize = 20f, float previewCellGap = 2f,
-                     Sprite[] cellSprites = null, float returnDuration = 0.5f)
+                     Sprite[] cellSprites = null, float returnDuration = 0.5f,
+                     float[] cellRotations = null)
     {
-        _shape           = shape;
-        _color           = color;
-        _cellSprites     = cellSprites;
+        _shape             = shape;
+        _color             = color;
+        _cellSprites       = cellSprites;
+        _baseCellRotations = cellRotations;
         _grid            = grid;
         _miniGame        = miniGame;
         _previewCellSize = previewCellSize;
@@ -135,10 +134,10 @@ public class CreativityGameBlockUI : MonoBehaviour,
         BuildVisual();
     }
 
-    // ── 뱀 모양 방향 계산 ────────────────────────────────────────────────────
+    // ── 뱀 모양 스프라이트 재배정 ────────────────────────────────────────────
     // _cellSprites 가 있을 때, 도형이 "한 줄로 이어진 경로"(뱀 모양)인지 판별해
-    // 머리(0번)~꼬리(마지막)/몸통(그 외) 스프라이트를 경로 순서로 재배정하고,
-    // 각 셀이 진행 방향을 바라보도록 z 회전 값을 계산한다.
+    // 머리(0번)~꼬리(마지막)/몸통(그 외) 스프라이트를 경로 순서로 재배정한다.
+    // 회전은 진행방향 자동계산 없이 SO(_baseCellRotations)에 입력된 값을 그대로 사용한다.
     void ResolveSnakeOrientation()
     {
         _resolvedCellSprite = null;
@@ -146,7 +145,7 @@ public class CreativityGameBlockUI : MonoBehaviour,
         if (_cellSprites == null || _cellSprites.Length == 0 || _shape == null) return;
 
         var pathOrder = ComputeSnakePathOrder(_shape);
-        if (pathOrder == null) return; // 분기/고리 형태 — 회전 없이 기존 방식으로 fallback
+        if (pathOrder == null) return; // 분기/고리 형태 — 재배정 없이 기존 방식으로 fallback
 
         int n = _shape.Length;
         _resolvedCellSprite = new Sprite[n];
@@ -157,30 +156,13 @@ public class CreativityGameBlockUI : MonoBehaviour,
             int idx = pathOrder[k];
 
             // 스프라이트: 경로상 위치 기준 머리(0)/꼬리(마지막)/몸통(그 외)
-            Sprite sp;
-            if (k == 0)                sp = _cellSprites[0];
-            else if (k == n - 1)       sp = _cellSprites[_cellSprites.Length - 1];
-            else                       sp = _cellSprites[1 % _cellSprites.Length];
-            _resolvedCellSprite[idx] = sp;
-
-            // 회전: 진행 방향에 맞춰 z축 회전 (코너는 나가는 방향 기준 — 전용 코너 아트가 없어 근사치)
-            int dr, dc;
-            if (k == 0) // 머리 — 다음 칸을 향함
-            {
-                dr = _shape[pathOrder[1]][0] - _shape[idx][0];
-                dc = _shape[pathOrder[1]][1] - _shape[idx][1];
-            }
-            else if (k == n - 1) // 꼬리 — 이전 칸에서 이어지는 방향 유지
-            {
-                dr = _shape[idx][0] - _shape[pathOrder[k - 1]][0];
-                dc = _shape[idx][1] - _shape[pathOrder[k - 1]][1];
-            }
-            else // 몸통 — 나가는 방향 기준(직선이면 들어오는 방향과 동일)
-            {
-                dr = _shape[pathOrder[k + 1]][0] - _shape[idx][0];
-                dc = _shape[pathOrder[k + 1]][1] - _shape[idx][1];
-            }
-            _resolvedCellRotZ[idx] = SpriteDefaultFacingAngle + DirToAngle(dr, dc);
+            int spriteIdx;
+            if (k == 0)                { spriteIdx = 0; }
+            else if (k == n - 1)       { spriteIdx = _cellSprites.Length - 1; }
+            else                       { spriteIdx = 1 % _cellSprites.Length; }
+            _resolvedCellSprite[idx] = _cellSprites[spriteIdx];
+            _resolvedCellRotZ[idx]   = (_baseCellRotations != null && spriteIdx < _baseCellRotations.Length)
+                ? _baseCellRotations[spriteIdx] : 0f;
         }
     }
 
@@ -227,16 +209,6 @@ public class CreativityGameBlockUI : MonoBehaviour,
         return order;
     }
 
-    // (dr,dc) 방향을 z회전(도)으로 변환. 스크린 좌표 기준: 열 증가=오른쪽, 행 증가=아래.
-    static float DirToAngle(int dr, int dc)
-    {
-        if (dc > 0) return 0f;
-        if (dc < 0) return 180f;
-        if (dr > 0) return -90f; // 아래
-        if (dr < 0) return 90f;  // 위
-        return 0f;
-    }
-
     // ── 비주얼 빌드 ──────────────────────────────────────────────────────────
     void BuildVisual()
     {
@@ -274,7 +246,7 @@ public class CreativityGameBlockUI : MonoBehaviour,
             else
             {
                 sp   = (_cellSprites != null && i < _cellSprites.Length) ? _cellSprites[i] : null;
-                rotZ = 0f;
+                rotZ = (_baseCellRotations != null && i < _baseCellRotations.Length) ? _baseCellRotations[i] : 0f;
             }
             MakeCell("Cell", cx, cy, _cellSize, _cellSize, _color, sp, rotZ);
         }

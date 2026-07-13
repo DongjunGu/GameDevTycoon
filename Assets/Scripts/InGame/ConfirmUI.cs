@@ -36,6 +36,7 @@ public class ConfirmUI : MonoBehaviour
                      string confirmText = "확인", string cancelText = "취소", bool confirmInteractable = true)
     {
         GameTimeManager.Instance?.StopTime();
+        ModalGate.I.Register(this);
         messageText.text       = message;
         _onConfirm             = onConfirm;
         _onCancel              = onCancel;
@@ -49,6 +50,7 @@ public class ConfirmUI : MonoBehaviour
     {
         confirmPanel.SetActive(false);
         GameTimeManager.Instance?.StartTime();
+        ModalGate.I.Unregister(this);
         _onConfirm?.Invoke();
     }
 
@@ -56,6 +58,7 @@ public class ConfirmUI : MonoBehaviour
     {
         confirmPanel.SetActive(false);
         GameTimeManager.Instance?.StartTime();
+        ModalGate.I.Unregister(this);
         _onCancel?.Invoke();
     }
 }

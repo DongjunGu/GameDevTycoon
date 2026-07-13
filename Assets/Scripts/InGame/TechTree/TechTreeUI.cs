@@ -99,6 +99,7 @@ public class TechTreeUI : MonoBehaviour
     public void Open()
     {
         GameTimeManager.Instance?.StopTime();
+        ModalGate.I.Register(this);
         techPanel.SetActive(true);
         RefreshPointsLabel();
         RefreshTabs();
@@ -109,6 +110,7 @@ public class TechTreeUI : MonoBehaviour
     {
         techPanel.SetActive(false);
         GameTimeManager.Instance?.StartTime();
+        ModalGate.I.Unregister(this);
     }
 
     void OnClickTab(int index)

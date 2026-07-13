@@ -17,6 +17,10 @@ public class RandomEventChoiceUI : MonoBehaviour
     public Image portraitImage;
     public Image portraitImage2;
 
+    [Header("질문 (신규)")]
+    [Tooltip("대사1(+대사2) 타이핑 완료 후 즉시 표시되는 질문 텍스트 — CSV '질문' 컬럼")]
+    public TextMeshProUGUI questionText;
+
     [Header("Buttons")]
     public Transform choiceButtonContainer;
     public GameObject choiceButtonPrefab;
@@ -103,6 +107,8 @@ public class RandomEventChoiceUI : MonoBehaviour
         // 초상화 2개 모두 활성(두 명)이면 말하는 주체 강조 — 처음엔 portrait1 이 화자.
         InitSpeakerEmphasis(initialSpeaker: 1);
 
+        if (questionText != null) { questionText.text = ""; questionText.gameObject.SetActive(false); }
+
         ClearChoiceButtons();
         confirmButton.gameObject.SetActive(false);
         confirmButton.interactable = false;
@@ -111,21 +117,42 @@ public class RandomEventChoiceUI : MonoBehaviour
         ModalGate.I.Register(this);
         _shownFrame = Time.frameCount;
 
-        // description 타이핑 → 완료 후 "클릭해야" 선택지 버튼 표시 (Update 의 reveal 클릭이 SpawnChoiceButtons 호출).
-        // 선택지가 없으면(정보성 이벤트 — ChoiceButtonContainer 미사용) 확인 버튼을 바로 노출해 닫을 수 있게 함.
-        StartTyping(data.description, onComplete: () =>
+        // 대사1(description) 타이핑 → (대사2 있으면 화자 전환 후 이어서 타이핑) → 질문 즉시 표시 →
+        // "클릭해야" 선택지 버튼 표시 (Update 의 reveal 클릭이 SpawnChoiceButtons 호출).
+        StartTyping(data.description, onComplete: () => TypeDialogue2ThenQuestion(data));
+    }
+
+    // 대사2(dialogue2) 가 있으면 화자를 전환해 이어서 타이핑, 없으면 바로 질문 단계로.
+    void TypeDialogue2ThenQuestion(RandomEventChoiceData data)
+    {
+        if (!string.IsNullOrEmpty(data.dialogue2) && _twoPerson)
         {
-            if (data.choices != null && data.choices.Count > 0)
-            {
-                _pendingChoices       = data.choices;
-                _awaitingChoiceReveal = true; // 클릭 대기 — Update 에서 클릭 시 SpawnChoiceButtons
-            }
-            else
-            {
-                confirmButton.gameObject.SetActive(true);
-                confirmButton.interactable = true;
-            }
-        });
+            SetSpeaker(2);
+            StartTyping(data.dialogue2, onComplete: () => ShowQuestionThenRevealChoices(data));
+        }
+        else
+        {
+            ShowQuestionThenRevealChoices(data);
+        }
+    }
+
+    // 질문(question) 텍스트를 미리 채워두되(타이핑 없음) 오브젝트는 비활성 유지 — 선택지가 실제로
+    // 뜨는 시점(SpawnChoiceButtons)에만 활성화한다. 선택지가 있으면 클릭 대기 상태로 전환하고
+    // 없으면(정보성 이벤트 — ChoiceButtonContainer 미사용) 확인 버튼을 바로 노출해 닫을 수 있게 함.
+    void ShowQuestionThenRevealChoices(RandomEventChoiceData data)
+    {
+        if (questionText != null) questionText.text = data.question ?? "";
+
+        if (data.choices != null && data.choices.Count > 0)
+        {
+            _pendingChoices       = data.choices;
+            _awaitingChoiceReveal = true; // 클릭 대기 — Update 에서 클릭 시 SpawnChoiceButtons
+        }
+        else
+        {
+            confirmButton.gameObject.SetActive(true);
+            confirmButton.interactable = true;
+        }
     }
 
     // 타이핑 중 화면 어디를 클릭하든 즉시 완성 (New Input System — Mouse/Touch).
@@ -207,6 +234,7 @@ public class RandomEventChoiceUI : MonoBehaviour
 
         // Unregister 시 대기 큐의 다음 모달이 즉시 표시되며 _currentData 가 바뀔 수 있으므로 먼저 캡처.
         var    onConf = _currentData?.onConfirm;
+        var    chosen = _chosenOption;
         string sysMsg = _chosenSystemMessage;
 
         eventPanel.SetActive(false);
@@ -219,16 +247,54 @@ public class RandomEventChoiceUI : MonoBehaviour
 
         System.Action resume = onConf ?? (() => DevelopmentManager.Instance.ResumeFromEvent());
 
-        if (!string.IsNullOrEmpty(sysMsg))
+        // 결과 팝업 종류(resultPopupType)가 지정돼 있으면 AlertUI4/5/6 신규 라우팅, 없으면 기존 방식
+        // (resultSystemMessage → 일반 AlertUI1) 로 fallback — 기존 이벤트 하위호환.
+        if (chosen != null && chosen.resultPopupType > 0)
+            ShowResultPopup(chosen, resume);
+        else if (!string.IsNullOrEmpty(sysMsg))
             AlertUI.Instance.Show(sysMsg, resume);
         else
             resume();
+    }
+
+    // 결과 팝업 종류 1=AlertUI4(Title+result1+result2) / 2=AlertUI5(TitleText만) / 3=AlertUI6(Title+Bottom).
+    // resultMent1 이 비어있으면(예: 유튜버 선공개 "애매한 반응" 분기 — 원래 팝업 없음) 그냥 넘어간다.
+    // 1차 팝업 확인 후 resultPopupType2 가 지정돼 있으면 이어서 2차 팝업(예: 패자 효과)을 띄운다.
+    static void ShowResultPopup(RandomEventChoiceOption choice, System.Action resume)
+    {
+        System.Action afterFirst = () => ShowResultPopup2(choice, resume);
+
+        if (string.IsNullOrEmpty(choice.resultMent1)) { afterFirst(); return; }
+
+        switch (choice.resultPopupType)
+        {
+            case 1: AlertUI.Instance.ShowResult4(choice.resultMent1, choice.resultMent2, choice.resultMent3, afterFirst); break;
+            case 2: AlertUI.Instance.ShowResult5(choice.resultMent1, afterFirst); break;
+            case 3: AlertUI.Instance.ShowResult6(choice.resultMent1, choice.resultMent2, afterFirst); break;
+            default: afterFirst(); break;
+        }
+    }
+
+    static void ShowResultPopup2(RandomEventChoiceOption choice, System.Action resume)
+    {
+        if (string.IsNullOrEmpty(choice.resultMent1_2)) { resume(); return; }
+
+        switch (choice.resultPopupType2)
+        {
+            case 1: AlertUI.Instance.ShowResult4(choice.resultMent1_2, choice.resultMent2_2, choice.resultMent3_2, resume); break;
+            case 2: AlertUI.Instance.ShowResult5(choice.resultMent1_2, resume); break;
+            case 3: AlertUI.Instance.ShowResult6(choice.resultMent1_2, choice.resultMent2_2, resume); break;
+            default: resume(); break;
+        }
     }
 
     // ── 선택지 ──────────────────────────────────────────────────
     void SpawnChoiceButtons(List<RandomEventChoiceOption> choices)
     {
         ClearChoiceButtons();
+
+        // 질문(QuestionText)은 선택지가 실제로 뜨는 이 시점에만 활성화.
+        if (questionText != null) questionText.gameObject.SetActive(true);
 
         // 선택지 표시 시: 화자 강조 해제 — 두 초상 모두 원상복구(scale 1 / 흰색) + 두 대사 박스 비활성화.
         if (_speakerAnimCo != null) { StopCoroutine(_speakerAnimCo); _speakerAnimCo = null; }
@@ -334,9 +400,10 @@ public class RandomEventChoiceUI : MonoBehaviour
         _chosenOption     = choice;
         _inSecondaryPhase = false;
 
-        // 선택지 버튼 모두 숨김
+        // 선택지 버튼 모두 숨김 (질문 텍스트도 함께 숨김 — 선택지 뜰 때만 활성)
         foreach (var go in _spawnedButtons)
             go.SetActive(false);
+        if (questionText != null) questionText.gameObject.SetActive(false);
 
         // 1차 결과: 두 명이면 둘 다 유지하고 말하는 주체만 전환(resultPortraitId2면 portrait2 화자).
         // 한 명이면 기존대로 해당 초상화만 표시.
@@ -362,6 +429,13 @@ public class RandomEventChoiceUI : MonoBehaviour
         // 저장할 시스템 문구
         _chosenSystemMessage = choice.resultSystemMessage;
 
+        // 답변1(reply1)이 있으면 신규 방식(답변1→답변2 순차 타이핑) 우선, 없으면 기존 랜덤배리언트 방식으로 fallback.
+        if (!string.IsNullOrEmpty(choice.reply1))
+        {
+            StartTyping(choice.reply1, onComplete: () => TypeReply2ThenEnableConfirm(choice));
+            return;
+        }
+
         // resultDescription 타이핑 → 완료 후 confirm 활성화
         string resultDesc;
         if (choice.resultDescriptions != null && choice.resultDescriptions.Count > 0)
@@ -371,11 +445,22 @@ public class RandomEventChoiceUI : MonoBehaviour
         else
             resultDesc = _currentData.description;
 
-        StartTyping(resultDesc, onComplete: () =>
-        {
-            confirmButton.gameObject.SetActive(true);
-            confirmButton.interactable = true;
-        });
+        StartTyping(resultDesc, onComplete: EnableConfirm);
+    }
+
+    // 답변2(reply2) 가 있으면 이어서 타이핑(같은 화자 박스에 이어 출력), 없으면 바로 confirm 활성화.
+    void TypeReply2ThenEnableConfirm(RandomEventChoiceOption choice)
+    {
+        if (!string.IsNullOrEmpty(choice.reply2))
+            StartTyping(choice.reply2, onComplete: EnableConfirm);
+        else
+            EnableConfirm();
+    }
+
+    void EnableConfirm()
+    {
+        confirmButton.gameObject.SetActive(true);
+        confirmButton.interactable = true;
     }
 
     void ClearChoiceButtons()

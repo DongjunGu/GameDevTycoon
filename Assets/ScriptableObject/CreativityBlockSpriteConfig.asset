@@ -1,0 +1,115 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2a923d80a905be24b9b9d05f73e9c969, type: 3}
+  m_Name: CreativityBlockSpriteConfig
+  m_EditorClassIdentifier: Assembly-CSharp::CreativityBlockSpriteConfig
+  entries:
+  - blockName: H2
+    cellSprites:
+    - {fileID: -7766637424382265647, guid: 69a964b0db48ad2499ad2487c4f50828, type: 3}
+    - {fileID: 2808559760237250731, guid: 69a964b0db48ad2499ad2487c4f50828, type: 3}
+    cellRotations:
+    - 0
+    - 0
+  - blockName: V2
+    cellSprites:
+    - {fileID: -7766637424382265647, guid: 69a964b0db48ad2499ad2487c4f50828, type: 3}
+    - {fileID: 2808559760237250731, guid: 69a964b0db48ad2499ad2487c4f50828, type: 3}
+    cellRotations:
+    - 270
+    - 270
+  - blockName: G_TR
+    cellSprites: []
+    cellRotations: []
+  - blockName: G_TL
+    cellSprites: []
+    cellRotations: []
+  - blockName: G_BR
+    cellSprites: []
+    cellRotations: []
+  - blockName: G_BL
+    cellSprites: []
+    cellRotations: []
+  - blockName: V3
+    cellSprites:
+    - {fileID: -7766637424382265647, guid: 69a964b0db48ad2499ad2487c4f50828, type: 3}
+    - {fileID: 4149926256698089342, guid: 69a964b0db48ad2499ad2487c4f50828, type: 3}
+    - {fileID: 2808559760237250731, guid: 69a964b0db48ad2499ad2487c4f50828, type: 3}
+    cellRotations:
+    - 270
+    - 270
+    - 270
+  - blockName: H3
+    cellSprites:
+    - {fileID: -7766637424382265647, guid: 69a964b0db48ad2499ad2487c4f50828, type: 3}
+    - {fileID: 4149926256698089342, guid: 69a964b0db48ad2499ad2487c4f50828, type: 3}
+    - {fileID: 2808559760237250731, guid: 69a964b0db48ad2499ad2487c4f50828, type: 3}
+    cellRotations:
+    - 0
+    - 0
+    - 0
+  - blockName: Sq
+    cellSprites: []
+    cellRotations: []
+  - blockName: L_R
+    cellSprites: []
+    cellRotations: []
+  - blockName: J_L
+    cellSprites: []
+    cellRotations: []
+  - blockName: L_U
+    cellSprites: []
+    cellRotations: []
+  - blockName: J_U
+    cellSprites: []
+    cellRotations: []
+  - blockName: T_U
+    cellSprites: []
+    cellRotations: []
+  - blockName: T_D
+    cellSprites: []
+    cellRotations: []
+  - blockName: V4
+    cellSprites: []
+    cellRotations: []
+  - blockName: H4
+    cellSprites: []
+    cellRotations: []
+  - blockName: S
+    cellSprites: []
+    cellRotations: []
+  - blockName: Z
+    cellSprites: []
+    cellRotations: []
+  - blockName: Z_V
+    cellSprites: []
+    cellRotations: []
+  - blockName: Dot
+    cellSprites:
+    - {fileID: -7766637424382265647, guid: 69a964b0db48ad2499ad2487c4f50828, type: 3}
+    cellRotations:
+    - 0
+  - blockName: L_D
+    cellSprites: []
+    cellRotations: []
+  - blockName: J_D
+    cellSprites: []
+    cellRotations: []
+  - blockName: T_R
+    cellSprites: []
+    cellRotations: []
+  - blockName: T_L
+    cellSprites: []
+    cellRotations: []
+  - blockName: S_V
+    cellSprites: []
+    cellRotations: []

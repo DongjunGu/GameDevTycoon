@@ -420,15 +420,23 @@ public class ProjectSaveManager : MonoBehaviour
                  || SalesSaveManager.Instance.SalesAlreadyComplete);
             if (_loadedStage == ProjectStage.Marketing && _loadedQualityScore > 0f && !salesAlreadyHandled)
             {
-                AlertUI.Instance.Show("판매 시작!", () =>
+                // 실시간 흐름(DevelopmentResultUI.OnClickRelease)과 같은 순서 — 숙련도 승급 알림(있으면) → "판매 시작!".
+                System.Action showSalesStart = () =>
                 {
-                    SalesUI.Instance.ShowWithProjectName(
-                        _loadedQualityScore, _loadedSalesScale, _loadedProjectName,
-                        _loadedScale, _loadedGenre, _loadedPlatform,
-                        _loadedPlanning, _loadedDevelop, _loadedArt,
-                        _loadedCreativity, _loadedBug
-                    );
-                });
+                    AlertUI.Instance.Show("판매 시작!", () =>
+                    {
+                        SalesUI.Instance.ShowWithProjectName(
+                            _loadedQualityScore, _loadedSalesScale, _loadedProjectName,
+                            _loadedScale, _loadedGenre, _loadedPlatform,
+                            _loadedPlanning, _loadedDevelop, _loadedArt,
+                            _loadedCreativity, _loadedBug
+                        );
+                    });
+                };
+                if (MasteryManager.Instance != null)
+                    MasteryManager.Instance.ShowPendingPromotionThen(showSalesStart);
+                else
+                    showSalesStart();
             }
             // Sales 단계는 SalesSaveManager.RestoreIfNeeded()에서 처리
             return;
