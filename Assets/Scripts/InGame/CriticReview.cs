@@ -114,6 +114,7 @@ public class CriticReviewUI : MonoBehaviour
             if (criticSlots[i] != null) criticSlots[i].SetActive(false);
 
         GameTimeManager.Instance?.StopTime();
+        ModalGate.I.Register(this);
         reviewPanel.SetActive(true);
 
         StartCoroutine(RevealCritics(rawScore));
@@ -183,7 +184,8 @@ public class CriticReviewUI : MonoBehaviour
         if (scoreT != null) scoreT.localScale = to;
     }
 
-int CalcCriticScore(float x)
+// public static — MasteryManager 승급 판정용 "판정점수"(랜덤 변동 -5~+5 제외) 계산에도 재사용.
+public static int CalcCriticScore(float x)
 {
     // Y = 53.46·ln(원천 + 248) − 302.9  (변동분 Random(-5~+5)은 호출부에서 가산, 클램프도 호출부에서)
     float score = 53.46f * Mathf.Log(x + 248f) - 302.9f;
@@ -204,6 +206,7 @@ int CalcCriticScore(float x)
     {
         reviewPanel.SetActive(false);
         GameTimeManager.Instance?.StartTime();
+        ModalGate.I.Unregister(this);
         _onComplete?.Invoke();
     }
 }

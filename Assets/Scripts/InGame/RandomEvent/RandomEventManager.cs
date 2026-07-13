@@ -504,6 +504,11 @@ public class RandomEventManager : MonoBehaviour
             else
             {
                 if (IsTargetDispatched(choiceData.targetEmployeeId)) return; // 파견중 직원 대상 이벤트는 발동 안 함
+                // Show() 는 patrol 대기 없이 즉시 대화창을 띄우므로, _pendingChoiceEvent 처럼 "대기 중" 표시가
+                // 안 됨 — _eventInProgress 를 직접 세워 HasPendingEvent 가 true 를 유지하게 한다. 안 그러면
+                // 대사/선택지가 떠 있는 도중에 개발 마일스톤(25/75%) 체크가 "이벤트 없음"으로 오판해
+                // 팀장 선택 패널이 끼어들어 뜬다.
+                _eventInProgress = true;
                 DevelopmentManager.Instance.PauseForEvent();
                 RandomEventChoiceUI.Instance.Show(choiceData);
             }
@@ -541,6 +546,8 @@ public class RandomEventManager : MonoBehaviour
             evt.onSetup?.Invoke();
             if (evt.cancelled) return;
             if (IsTargetDispatched(evt.targetEmployeeId)) return; // 파견중 직원 대상 이벤트는 발동 안 함
+            // 위 선택지 이벤트와 동일한 이유로 _eventInProgress 세팅 필요(즉시 표시라 pending 큐에 안 잡힘).
+            _eventInProgress = true;
             DevelopmentManager.Instance.PauseForEvent();
             RandomEventUI.Instance.Show(evt);
         }
@@ -988,8 +995,11 @@ public class RandomEventManager : MonoBehaviour
         if (IsEventBusy) return;
 
         // 만족도 90이상: 10% 확률로 자발적 야근 (개발 중에만)
+        // 야근 모드는 프로젝트 단위(ResetProject 에서 함께 리셋) — 이벤트로 켜진 IsVoluntaryOvertimeActive 뿐 아니라
+        // 개발 시작 전 OvertimeSelectUI 로 수동 선택한 전역 야근(IsOvertimeMode)도 이미 야근 중이므로 재발동 차단.
         if (DevelopmentManager.Instance?.CurrentStage == ProjectStage.Developing &&
-            !DevelopmentManager.Instance.IsVoluntaryOvertimeActive)
+            !DevelopmentManager.Instance.IsVoluntaryOvertimeActive &&
+            !DevelopmentManager.Instance.IsOvertimeMode)
         {
             var highSatCandidates = new List<EmployeeData>();
             foreach (var emp in EmployeeManager.Instance.ownedEmployees)
@@ -1288,6 +1298,7 @@ public class RandomEventManager : MonoBehaviour
             }
             else
             {
+                _eventInProgress = true;
                 DevelopmentManager.Instance.PauseForEvent();
                 RandomEventChoiceUI.Instance.Show(choiceData);
             }
@@ -1319,6 +1330,7 @@ public class RandomEventManager : MonoBehaviour
         {
             RandomEventChartLoader.Apply(evt, RandomEventChartLoader.Cache);
             evt.onSetup?.Invoke();
+            _eventInProgress = true;
             DevelopmentManager.Instance.PauseForEvent();
             RandomEventUI.Instance.Show(evt);
         }

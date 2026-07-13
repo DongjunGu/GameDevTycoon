@@ -52,6 +52,16 @@ public class ModalGate : MonoBehaviour
         TryFlush();
     }
 
+    // 씬 전환(파산→아웃게임, 재접속 등) 안전망 — DontDestroyOnLoad 싱글톤이라 Unregister 를 놓친 등록이
+    // 남으면 IsBlocked 가 그 세션 내내 영구 true 로 고착된다. GameTimeManager.ForceStartTime 과 같은 지점에서
+    // 호출해 잔여 등록을 정리한다.
+    public void ClearAll()
+    {
+        _active.Clear();
+        _pending.Clear();
+        if (_flushCo != null) { StopCoroutine(_flushCo); _flushCo = null; }
+    }
+
     // 차단 풀리면 cb 실행. 이미 풀려있으면 즉시. 큐 순서 보장.
     public void WhenFree(Action cb)
     {

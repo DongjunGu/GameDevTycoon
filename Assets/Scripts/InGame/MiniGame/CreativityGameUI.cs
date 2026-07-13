@@ -60,6 +60,8 @@ public class CreativityGameUI : MonoBehaviour
     [SerializeField] Transform _blockTray;   // VerticalLayoutGroup
     [Tooltip("블록 뒤에 깔리는 슬롯 배경 프리팹 (Image 1개, 인스펙터에서 스프라이트/색상 커스텀 가능)")]
     [SerializeField] GameObject _blockSlotPrefab;
+    [Tooltip("블록 모양별 셀 스프라이트 지정 에셋. 비어있으면 3칸 블록에 Snake 스프라이트를 쓰는 기존 방식으로 fallback.")]
+    [SerializeField] CreativityBlockSpriteConfig _blockSpriteConfig;
 
     [Header("UI")]
     [SerializeField] TextMeshProUGUI _scoreText;
@@ -200,6 +202,7 @@ public class CreativityGameUI : MonoBehaviour
         _bonusGranted = false;
         _panel.SetActive(true);
         GameTimeManager.Instance?.StopTime(); // 미니게임 동안 시간 정지 (OnClickConfirm 의 StartTime 과 1:1)
+        ModalGate.I.Register(this);
 
         var gridShape = _fixedGrid ?? CreativityGameData.Grids[Random.Range(0, CreativityGameData.Grids.Length)];
         _gridUI.BuildGrid(gridShape);
@@ -282,9 +285,19 @@ public class CreativityGameUI : MonoBehaviour
         }
     }
 
-    // 이 블록에 적용할 셀별 스프라이트 (없으면 null → 단색). 임시로 3칸 블록에만 뱀 스프라이트.
+    // 이 블록에 적용할 셀별 스프라이트 (없으면 null → 단색).
+    // _blockSpriteConfig 에 블록 이름으로 등록된 스프라이트가 있으면 우선 사용,
+    // 없으면 3칸 블록에 Snake 스프라이트를 쓰는 기존 임시 방식으로 fallback.
     Sprite[] CellSpritesFor(CreativityGameData.BlockShape def)
-        => (def.cells.Length == 3 && SnakeSprites != null && SnakeSprites.Length >= 3) ? SnakeSprites : null;
+    {
+        var configured = _blockSpriteConfig != null ? _blockSpriteConfig.GetSprites(def.name) : null;
+        if (configured != null) return configured;
+        return (def.cells.Length == 3 && SnakeSprites != null && SnakeSprites.Length >= 3) ? SnakeSprites : null;
+    }
+
+    // CellSpritesFor 로 고른 스프라이트 배열과 같은 인덱스로 대응하는 기본 회전(도). config에 없으면 null(전부 0도).
+    float[] CellRotationsFor(CreativityGameData.BlockShape def)
+        => _blockSpriteConfig != null ? _blockSpriteConfig.GetRotations(def.name) : null;
 
     // 슬롯 전체를 덮는 투명 드래그 영역을 만들어 대상 블록으로 이벤트를 위임한다.
     // → 1칸짜리처럼 작은 블록도 슬롯 아무데나 눌러 잡을 수 있다(모바일 대응).
@@ -326,7 +339,7 @@ public class CreativityGameUI : MonoBehaviour
         blockRT.anchoredPosition = Vector2.zero;
 
         var block = blockGO.AddComponent<CreativityGameBlockUI>();
-        block.Init(def.cells, def.color, _gridUI, this, previewCell, 2f, CellSpritesFor(def), _blockReturnDuration);
+        block.Init(def.cells, def.color, _gridUI, this, previewCell, 2f, CellSpritesFor(def), _blockReturnDuration, CellRotationsFor(def));
         AttachSlotDragArea(slotGO, block);
         _activeBlocks.Add(block);
     }
@@ -403,7 +416,7 @@ public class CreativityGameUI : MonoBehaviour
             blockRT.anchoredPosition = Vector2.zero;
 
             var block = blockGO.AddComponent<CreativityGameBlockUI>();
-            block.Init(def.cells, def.color, _gridUI, this, previewCell, 2f, CellSpritesFor(def), _blockReturnDuration);
+            block.Init(def.cells, def.color, _gridUI, this, previewCell, 2f, CellSpritesFor(def), _blockReturnDuration, CellRotationsFor(def));
             AttachSlotDragArea(slotGO, block);
             _activeBlocks.Add(block);
         }
@@ -445,7 +458,7 @@ public class CreativityGameUI : MonoBehaviour
             blockRT.anchoredPosition = Vector2.zero;
 
             var block = blockGO.AddComponent<CreativityGameBlockUI>();
-            block.Init(def.cells, def.color, _gridUI, this, previewCell, 2f, CellSpritesFor(def), _blockReturnDuration);
+            block.Init(def.cells, def.color, _gridUI, this, previewCell, 2f, CellSpritesFor(def), _blockReturnDuration, CellRotationsFor(def));
             AttachSlotDragArea(slotGO, block);
             _activeBlocks.Add(block);
         }
@@ -526,7 +539,7 @@ public class CreativityGameUI : MonoBehaviour
         AnimateScoreText();
     }
 
-    // 점수가 오를 때만 1초 동안 카운트업(lerp), 내려가거나 리셋될 때는 즉시 반영.
+    // 점수가 오를 때만 0.3초 동안 카운트업(lerp), 내려가거나 리셋될 때는 즉시 반영.
     void AnimateScoreText()
     {
         if (_scoreText == null) return;
@@ -545,7 +558,7 @@ public class CreativityGameUI : MonoBehaviour
 
     IEnumerator CountUpRoutine(float from, int to)
     {
-        const float dur = 1f;
+        const float dur = 0.3f;
         float t = 0f;
         while (t < dur)
         {
@@ -607,6 +620,7 @@ public class CreativityGameUI : MonoBehaviour
 
         _panel.SetActive(false);
         GameTimeManager.Instance?.StartTime(); // Open 의 StopTime 해소 (이후 콜백의 AlertUI 가 자체적으로 다시 정지)
+        ModalGate.I.Unregister(this);
         var cb = _onClose;
         _onClose = null;
         cb?.Invoke();

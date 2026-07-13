@@ -35,6 +35,7 @@ public class CompletedProjectsUI : MonoBehaviour
     public void Open()
     {
         GameTimeManager.Instance?.StopTime();
+        ModalGate.I.Register(this);
         gameObject.SetActive(true);
         detailPanel.SetActive(false);
         ShowList();
@@ -104,6 +105,7 @@ public class CompletedProjectsUI : MonoBehaviour
     public void OnClickClose()
     {
         GameTimeManager.Instance?.StartTime();
+        ModalGate.I.Unregister(this);
         listPanel.SetActive(false);
     }
 

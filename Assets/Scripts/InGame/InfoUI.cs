@@ -4,7 +4,8 @@ using UnityEngine;
 
 // 슬라이드 인 → 잠시 표시 → 슬라이드 아웃 되는 짧은 알림 UI
 // - 사용 예: InfoUI.Instance?.Show("판매 완료!");
-// - 게임 일시정지 중에도 동작 (Time.unscaledDeltaTime)
+// - GameTimeManager.IsRunning 을 봐서 진행 — 직원리스트 등 모달이 떠서 시간이 멈추면 같이 멈췄다가
+//   모달이 닫혀 시간이 재개되면 이어서 진행된다(Time.unscaledDeltaTime 로 애니메이션 자체는 프레임 단위로 부드럽게).
 public class InfoUI : MonoBehaviour
 {
     public static InfoUI Instance { get; private set; }
@@ -71,7 +72,12 @@ public class InfoUI : MonoBehaviour
 
         float t = 0f;
         float hold = Mathf.Max(0f, holdDuration);
-        while (t < hold) { t += Time.unscaledDeltaTime; yield return null; }
+        while (t < hold)
+        {
+            if (GameTimeManager.Instance == null || GameTimeManager.Instance.IsRunning)
+                t += Time.unscaledDeltaTime;
+            yield return null;
+        }
 
         yield return SlideTo(rect, shownAnchoredPos, hiddenAnchoredPos, slideOutDuration);
 
@@ -88,10 +94,13 @@ public class InfoUI : MonoBehaviour
         float t = 0f;
         while (t < dur)
         {
-            t += Time.unscaledDeltaTime;
-            float k = Mathf.Clamp01(t / dur);
-            k = 1f - (1f - k) * (1f - k); // ease-out
-            rect.anchoredPosition = Vector2.Lerp(start, end, k);
+            if (GameTimeManager.Instance == null || GameTimeManager.Instance.IsRunning)
+            {
+                t += Time.unscaledDeltaTime;
+                float k = Mathf.Clamp01(t / dur);
+                k = 1f - (1f - k) * (1f - k); // ease-out
+                rect.anchoredPosition = Vector2.Lerp(start, end, k);
+            }
             yield return null;
         }
         rect.anchoredPosition = end;

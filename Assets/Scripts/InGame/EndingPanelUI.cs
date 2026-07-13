@@ -24,11 +24,16 @@ public class EndingPanelUI : MonoBehaviour
     {
         Panel.SetActive(true);
         GameTimeManager.Instance?.StopTime();
+        ModalGate.I.Register(this);
     }
 
     // EndingBtn OnClick — 아웃게임으로 이동.
     public void OnClickEnding()
     {
+        // 씬 전환으로 이 오브젝트가 파괴되기 전에 반드시 해제 — ModalGate 는 DontDestroyOnLoad 라
+        // 안 하면 등록이 남아 다음 세션 내내 IsBlocked 가 고착된다(OutGameNavigationController.ClearAll 이
+        // 안전망으로 한 번 더 정리하지만, 정상 경로에서는 여기서 짝을 맞추는 게 우선).
+        ModalGate.I.Unregister(this);
         SceneManager.LoadScene("OutGameScene");
     }
 }

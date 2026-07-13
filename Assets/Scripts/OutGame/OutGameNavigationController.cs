@@ -38,6 +38,7 @@ public class OutGameNavigationController : MonoBehaviour
         // 다른 경로(파산 등)로 인게임에서 넘어와도 시간이 계속 틱하지 않도록 안전망
         GameTimeManager.Instance?.ForceStartTime(); // _stopCount 잔여 초기화
         GameTimeManager.Instance?.StopTime();       // 그 위에 일관된 정지 상태
+        ModalGate.I.ClearAll();                     // 인게임 패널이 Unregister 없이 넘어왔을 잔여 등록 정리
 
         WireTabButtons();
         HideAllTabs();

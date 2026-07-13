@@ -12,7 +12,11 @@
       "WebFetch(domain:github.com)",
       "mcp__UnityMCP",
       "Bash(git checkout *)",
-      "mcp__UnityMCP__delete_script"
+      "mcp__UnityMCP__delete_script",
+      "Read(//c/Users/PC/Downloads/**)",
+      "Bash(perl -0777 -ne 'if\\(/<script>\\(.*\\)<\\\\/script>/s\\){print $1}' crash-game-multiplayer.html)",
+      "Bash(node --check _extract.js)",
+      "Bash(perl -0777 -ne 'if\\(/<script>\\(.*\\)<\\\\/script>/s\\){print $1}' index.html)"
     ],
     "ask": [
       "Bash(rm:*)",

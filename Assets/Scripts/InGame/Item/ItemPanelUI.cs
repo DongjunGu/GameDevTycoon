@@ -38,6 +38,7 @@ public class ItemPanelUI : MonoBehaviour
     public void Open()
     {
         GameTimeManager.Instance?.StopTime();
+        ModalGate.I.Register(this);
         ItemDetailUI.Instance?.HideDetail();
         itemListPanel.SetActive(true);
         Refresh();
@@ -141,6 +142,7 @@ public class ItemPanelUI : MonoBehaviour
     {
         itemListPanel.SetActive(false);
         GameTimeManager.Instance?.StartTime();
+        ModalGate.I.Unregister(this);
 
         // 카드 컨텍스트 정리 + 콜백 호출 (있으면)
         TargetEmployeeId = null;

@@ -133,6 +133,7 @@ public class EmployeeListUI : MonoBehaviour
     public void OpenList()
     {
         GameTimeManager.Instance?.StopTime();
+        ModalGate.I.Register(this);
         _selectedId = ""; // 진입 시 맨 위(첫) 직원 자동 선택
         Root.SetActive(true);
         ResetSlide();      // 항상 InfoPanel 부터 시작
@@ -144,6 +145,7 @@ public class EmployeeListUI : MonoBehaviour
     {
         if (_useItemMode) { ExitUseItemMode(); return; }
         GameTimeManager.Instance?.StartTime();
+        ModalGate.I.Unregister(this);
         Root.SetActive(false);
     }
 
@@ -514,6 +516,7 @@ public class EmployeeListUI : MonoBehaviour
         // 시작해버려서, 뒤이은 SetSlideInstant(true)로 순간이동해도 그 코루틴이 다시 InfoPanel로 되돌려놓는다.
         // OpenForEnhance와 동일하게 슬라이드를 먼저 확정한 뒤 PlayOpenIntro()를 호출해야 한다.
         GameTimeManager.Instance?.StopTime();
+        ModalGate.I.Register(this);
         _selectedId = ""; // 진입 시 맨 위(첫) 직원 자동 선택
         Root.SetActive(true);
         SetSlideInstant(true);  // InfoPanel 대신 TrainingPanel 부터 (애니 없이)
@@ -530,6 +533,7 @@ public class EmployeeListUI : MonoBehaviour
     {
         if (emp == null) return;
         GameTimeManager.Instance?.StopTime();
+        ModalGate.I.Register(this);
         _selectedId = emp.id;     // 이 직원 선택 (BuildList→snap 이 IndexOfSelected 로 선택)
         Root.SetActive(true);
         SetSlideInstant(true);    // InfoPanel 대신 TrainingPanel 부터

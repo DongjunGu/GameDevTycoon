@@ -156,6 +156,9 @@ public class GameTimeManager : MonoBehaviour
                         SafeString(row, "hiringListA", ""),
                         SafeString(row, "hiringListB", "")
                     );
+                    MasteryManager.Instance?.LoadSaveString(
+                        SafeString(row, "masteryJson", "")
+                    );
 
                     Debug.Log($"로드 완료: {Year}년 {Month}월 {Week}주 / rowInDate: {_rowInDate}");
                     SaveGameTime(); // 신규 컬럼 자동 추가
@@ -286,6 +289,7 @@ public class GameTimeManager : MonoBehaviour
         param.Add("dispatchDeskId",               DispatchManager.Instance?.DispatchDeskId                          ?? "");
         param.Add("dispatchWeeksLeft",            DispatchManager.Instance?.DispatchWeeksLeft                       ?? 0);
         param.Add("dispatchOutcome",              DispatchManager.Instance?.GetOutcomeJson()                        ?? "");
+        param.Add("masteryJson",                  MasteryManager.Instance?.GetSaveString()                          ?? "");
 
         if (!string.IsNullOrEmpty(_rowInDate))
         {
@@ -347,7 +351,7 @@ public class GameTimeManager : MonoBehaviour
         // 잔액 충분 여부 무관하게 새해 알림(지불하기) 먼저. 확인 후 자금 부족 분기.
         AlertUI.Instance.ShowMoney(
             "새해가 밝았습니다!\n직원들에게 임금을 지급합니다.",
-            totalSalary,
+            -totalSalary,
             () => TryPaySalary(totalSalary)
         );
     }
@@ -446,7 +450,7 @@ public class GameTimeManager : MonoBehaviour
 
         AlertUI.Instance.ShowMoney(
             "연세가 차감됩니다.",
-            yearFee,
+            -yearFee,
             () =>
             {
                 int goldAfter = MoneyManager.Instance.Gold - yearFee;

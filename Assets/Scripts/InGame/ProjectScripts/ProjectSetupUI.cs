@@ -139,6 +139,7 @@ public class ProjectSetupUI : MonoBehaviour
             return;
         }
         GameTimeManager.Instance.StopTime();
+        ModalGate.I.Register(this);
 
         // 새 설정 초기화 — 마지막 선택(로컬 저장)이 있으면 규모/플랫폼/장르 복원, 없으면 소규모+미선택.
         _projectData = new ProjectData { scale = ProjectScale.Small };
@@ -341,6 +342,10 @@ public class ProjectSetupUI : MonoBehaviour
         DevelopmentManager.Instance.StartDevelopment();
         InfoUI.Instance?.Show("개발 시작!");
         if (mainPanel != null) mainPanel.SetActive(false);
+        // GameTimeManager.StartTime() 은 여기서 호출 안 함(StartDevelopment 내부가 자체 StopTime 을 또 쌓고,
+        // 팀장 선택/투자 이벤트 체인 끝의 ForceStartTime 이 한 번에 정리하는 기존 설계) — 그러나 이 패널
+        // 자체는 시각적으로 닫히므로 ModalGate 등록은 여기서 바로 풀어야 다른 모달이 안 막힌다.
+        ModalGate.I.Unregister(this);
     }
 
     // ── 닫기 ──────────────────────────────────
@@ -352,6 +357,7 @@ public class ProjectSetupUI : MonoBehaviour
 
         ShowOnly(null);
         GameTimeManager.Instance.StartTime();
+        ModalGate.I.Unregister(this);
     }
 
     // ── 마지막 선택 기억 (한 회차 한정 — PlayerPrefs 로 영속화해 재접속에도 유지, 새 런 시작 시 ResetForNewRun 으로 클리어) ──
@@ -428,6 +434,9 @@ public class ProjectSetupUI : MonoBehaviour
     public Button genreButtonSports;
     public Button genreButtonPuzzle;
 
+    [Header("Genre Buttons - Mastery (MasteryPanel/MasteryImage 공용 SO)")]
+    public MasterySpriteSet masterySpriteSet;
+
     void UpdateGenreButtonLabels()
     {
         // Sales 진행 중인 경우 해당 장르를 포함해 피로도 재계산
@@ -471,6 +480,21 @@ public class ProjectSetupUI : MonoBehaviour
                 if (defaultImage.childCount == 0) continue;
                 defaultImage.GetChild(0).gameObject.SetActive(popular >= i + 1);
             }
+
+        // MasteryPanel/MasteryImage(+자식 Text) — 숙련도 등급에 따라 이미지 스왑 + 텍스트 갱신.
+        var masteryPanel = genreButton.transform.Find("MasteryPanel");
+        if (masteryPanel != null)
+        {
+            var masteryImageT = masteryPanel.Find("MasteryImage");
+            if (masteryImageT != null)
+            {
+                var tier = MasteryManager.Instance != null ? MasteryManager.Instance.GetTier(genre) : MasteryTier.Novice;
+                MasterySpriteSet.Apply(masteryImageT.GetComponent<Image>(), masterySpriteSet, tier);
+
+                var masteryText = masteryImageT.GetComponentInChildren<TextMeshProUGUI>();
+                if (masteryText != null) masteryText.text = MasteryManager.TierToString(tier);
+            }
+        }
 
         bool selected = _genreChosen && _projectData.genre == genre;
         var btnImg = genreButton.GetComponent<Image>();

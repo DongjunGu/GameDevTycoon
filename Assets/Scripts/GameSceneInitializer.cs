@@ -19,6 +19,9 @@ public class GameSceneInitializer : MonoBehaviour
 
         // StartTime을 먼저 호출해야 RestoreState 내부에서 StopTime()으로 상쇄 가능
         GameTimeManager.Instance.StartTime();
+        // 이전 세션(아웃게임 등)에서 Unregister 없이 넘어온 잔여 ModalGate 등록 정리 — 안 하면
+        // 이 세션 내내 IsBlocked 가 고착돼 상인/예약 이벤트가 영영 안 뜨는 문제로 이어질 수 있음.
+        ModalGate.I.ClearAll();
 
         SalesSaveManager.Instance.RestoreIfNeeded();
         ProjectSaveManager.Instance.RestoreIfNeeded();

@@ -79,6 +79,7 @@ public static class NewRunInitializer
         StageManager.Instance?.ResetForNewRun();
         GenreFatigueManager.Instance?.ResetForNewRun();
         GenrePopularityManager.Instance?.ResetForNewRun();
+        MasteryManager.Instance?.ResetForNewRun();
         SalaryNegotiationManager.Instance?.ResetForNewRun();
         RandomEventManager.Instance?.ResetForNewRun();
         TraitEffectApplier.ResetForNewRun();  // _firstSaleConsumed / _brokeRescueFired 등 1회성 플래그 리셋

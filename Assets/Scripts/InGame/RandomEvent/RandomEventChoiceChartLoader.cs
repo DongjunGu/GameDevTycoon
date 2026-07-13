@@ -3,22 +3,35 @@ using LitJson;
 using UnityEngine;
 
 // 뒤끝 콘솔에 등록할 차트 이름: "RandomEventChoice"
-// 컬럼 목록:
+// 컬럼 목록 (기존):
 //   eventType              (string)
 //   title                  (string)
-//   description            (string)
+//   description            (string)  — 대사1, box1에서 타이핑
+//   description2           (string)  — 대사1의 role-alt(예: 아트직군 전용)
 //   portraitId             (string)
 //   choice1_label          (string)
 //   choice1_resultTitle    (string)  — 비어있으면 원래 title 유지
 //   choice1_resultDescription (string)
 //   choice1_systemMessage  (string)
 //   choice2_label ~ choice3_label (동일 구조 반복)
+//
+// 컬럼 목록 (신규 — 답변/질문/결과팝업 시스템):
+//   dialogue2              (string)  — 대사2, 있으면 대사1 다음 box2로 화자 전환 후 타이핑
+//   question               (string)  — 질문, 대사1(+대사2) 완료 후 QuestionText에 즉시 표시
+//   choice1_reply1         (string)  — 선택 후 나오는 대사(1차)
+//   choice1_reply2         (string)  — 선택 후 나오는 대사(2차, 있으면 이어서)
+//   choice1_popupType      (int)     — 0=미지정(기존 resultSystemMessage→AlertUI1) / 1=AlertUI4 / 2=AlertUI5 / 3=AlertUI6
+//   choice1_ment1~3        (string)  — 결과팝업멘트1~3 (타입별 매핑은 RandomEventChoiceUI.ShowResultPopup 참고)
+//   choice1_popupType2/choice1_ment1_2~3_2 (선택) — 첫 팝업 확인 후 이어서 하나 더 띄울 2번째 팝업 (예: 승자효과→패자효과)
+//   choice2_*/choice3_* 동일 구조 반복
 
 public class RandomEventChoiceChartRow
 {
     public string title;
     public string description;
-    public string description2; // 역할/상태 분기용 2번째 설명 (e.g. Artist 전용)
+    public string description2; // 역할/상태 분기용 2번째 설명 (e.g. Artist 전용) — 대사1의 role-alt, dialogue2와 별개
+    public string dialogue2;    // 대사2 (신규) — 두 번째 화자의 도입 대사
+    public string question;     // 질문 (신규) — QuestionText 출력용
     public string portraitId;
     public string portraitId2;
     public float  weight;
@@ -39,6 +52,20 @@ public class RandomEventChoiceOptionRow
     public string resultSystemMessage;
     public string resultSystemMessage2;
     public string resultSystemMessage3;
+
+    // ── 신규 (답변1/답변2 + 결과 팝업) ──────────────────────────
+    public string reply1;
+    public string reply2;
+    public int    popupType; // 0=미지정(기존 방식) / 1=AlertUI4 / 2=AlertUI5 / 3=AlertUI6
+    public string ment1;
+    public string ment2;
+    public string ment3;
+
+    // 2번째 결과 팝업(선택) — 첫 팝업 확인 후 바로 이어서 하나 더
+    public int    popupType2;
+    public string ment1_2;
+    public string ment2_2;
+    public string ment3_2;
 }
 
 public static class RandomEventChoiceChartLoader
@@ -64,6 +91,8 @@ public static class RandomEventChoiceChartLoader
 
         if (!string.IsNullOrEmpty(row.title))       data.title       = row.title;
         if (!string.IsNullOrEmpty(row.description)) data.description = row.description;
+        if (!string.IsNullOrEmpty(row.dialogue2))   data.dialogue2   = row.dialogue2;
+        if (!string.IsNullOrEmpty(row.question))    data.question    = row.question;
         if (!string.IsNullOrEmpty(row.portraitId))  data.portraitId  = row.portraitId;
         if (!string.IsNullOrEmpty(row.portraitId2)) data.portraitId2 = row.portraitId2;
         if (row.weight > 0)                         data.weight      = row.weight;
@@ -89,6 +118,19 @@ public static class RandomEventChoiceChartLoader
             if (!string.IsNullOrEmpty(src.resultDescription3)) dst.resultDescriptions.Add(src.resultDescription3);
             // 단일 항목이면 resultDescription도 유지 (기존 코드 호환)
             if (dst.resultDescriptions.Count == 1) dst.resultDescription = dst.resultDescriptions[0];
+
+            // ── 신규 (답변1/답변2 + 결과 팝업) ──────────────────
+            if (!string.IsNullOrEmpty(src.reply1)) dst.reply1 = src.reply1;
+            if (!string.IsNullOrEmpty(src.reply2)) dst.reply2 = src.reply2;
+            if (src.popupType > 0)                 dst.resultPopupType = src.popupType;
+            if (!string.IsNullOrEmpty(src.ment1))  dst.resultMent1 = src.ment1;
+            if (!string.IsNullOrEmpty(src.ment2))  dst.resultMent2 = src.ment2;
+            if (!string.IsNullOrEmpty(src.ment3))  dst.resultMent3 = src.ment3;
+
+            if (src.popupType2 > 0)                 dst.resultPopupType2 = src.popupType2;
+            if (!string.IsNullOrEmpty(src.ment1_2))  dst.resultMent1_2 = src.ment1_2;
+            if (!string.IsNullOrEmpty(src.ment2_2))  dst.resultMent2_2 = src.ment2_2;
+            if (!string.IsNullOrEmpty(src.ment3_2))  dst.resultMent3_2 = src.ment3_2;
         }
     }
 
@@ -143,6 +185,8 @@ public static class RandomEventChoiceChartLoader
                 title                 = S(row, "title"),
                 description           = S(row, "description"),
                 description2          = S(row, "description2"),
+                dialogue2             = S(row, "dialogue2"),
+                question              = S(row, "question"),
                 portraitId            = S(row, "portraitId"),
                 portraitId2           = S(row, "portraitId2"),
                 weight                = F(row, "weight"),
@@ -167,6 +211,16 @@ public static class RandomEventChoiceChartLoader
                     resultSystemMessage  = S(row, $"choice{c}_systemMessage"),
                     resultSystemMessage2 = S(row, $"choice{c}_systemMessage2"),
                     resultSystemMessage3 = S(row, $"choice{c}_systemMessage3"),
+                    reply1               = S(row, $"choice{c}_reply1"),
+                    reply2               = S(row, $"choice{c}_reply2"),
+                    popupType            = N(row, $"choice{c}_popupType"),
+                    ment1                = S(row, $"choice{c}_ment1"),
+                    ment2                = S(row, $"choice{c}_ment2"),
+                    ment3                = S(row, $"choice{c}_ment3"),
+                    popupType2           = N(row, $"choice{c}_popupType2"),
+                    ment1_2              = S(row, $"choice{c}_ment1_2"),
+                    ment2_2              = S(row, $"choice{c}_ment2_2"),
+                    ment3_2              = S(row, $"choice{c}_ment3_2"),
                 });
             }
 

@@ -47,6 +47,7 @@ public class LeaderScoreUI : MonoBehaviour
     public float popFloorY = -140f;   // 떨어져서 착지하는 바닥 Y 좌표(로컬)
     public float popArcHeight = 220f; // 포물선 정점 높이감
     public float suckDuration = 0.15f; // categoryIcon으로 빨려들어가는 시간(= 총점/회차점수 상승 시간) — 짧을수록 빠르게 날아감
+    public float burstSpitDuration = 0.4f; // 스트레스 100 오버플로 시 총점 위치에서 아이콘을 역방향으로 뱉어내는 시간
 
     [Header("팀장 캐릭터 프리뷰 (working 애니메이션)")]
     public Image characterImage;              // Resources/Characters/{portraitId} 프리팹의 working 스프라이트를 그대로 미러링
@@ -153,7 +154,12 @@ public class LeaderScoreUI : MonoBehaviour
 
             if (isOverflow)
             {
-                // 누적 ds 100 초과: 팝콘 연출 없이 바로 전 회차 점수 일괄 차감 연출 후 종료
+                // 누적 ds 100 초과(burst): 총점 위치(categoryIcon)에서 빨아들였던 것과 반대로 아이콘을
+                // 뱉어내는 연출을 동시에 재생하면서, 전 회차 점수 일괄 차감 연출 후 종료.
+                float lost = 0f;
+                for (int k = 0; k < r; k++) lost += fullRoundScores[k] - roundScores[k];
+                StartCoroutine(SpitBurstCoroutine(Mathf.Max(0, Mathf.RoundToInt(lost))));
+
                 yield return StartCoroutine(ApplyCutCoroutine(fullRoundScores, roundScores, r));
                 break;
             }
@@ -322,6 +328,58 @@ public class LeaderScoreUI : MonoBehaviour
         }
     }
 
+    // 스트레스 100 오버플로(burst) 시: PopAndFlyCoroutine의 "빨려들어가기(총점 위치로 ease-in)"를 정반대로
+    // 재생한다 — count개의 아이콘이 총점 위치(categoryIcon)에서 시작해 팝콘 착지 구역 쪽으로 ease-out
+    // 흩어지며 날아가다 축소되어 사라짐. 잃는 점수만큼(count) 뱉어내는 것으로 보이게 하는 연출.
+    IEnumerator SpitBurstCoroutine(int count)
+    {
+        if (count <= 0 || iconPrefab == null || categoryIcon == null) yield break;
+
+        Vector3 originPos = categoryIcon.transform.position;
+        Vector3 basePos = popcornPoint != null ? popcornPoint.position : originPos;
+
+        var icons   = new System.Collections.Generic.List<RectTransform>(count);
+        var targets = new System.Collections.Generic.List<Vector3>(count);
+
+        for (int i = 0; i < count; i++)
+        {
+            var go = Instantiate(iconPrefab, popcornPoint != null ? popcornPoint : transform);
+            var rt = go.GetComponent<RectTransform>();
+            if (rt == null) { Destroy(go); continue; }
+            rt.position = originPos;
+            rt.localScale = Vector3.one;
+
+            var iconImage = go.transform.Find("iconImage");
+            var iconImg = iconImage != null ? iconImage.GetComponent<Image>() : null;
+            if (iconImg != null) iconImg.sprite = categoryIcon.sprite;
+
+            icons.Add(rt);
+            float ox = Random.Range(-popScatterRangeX, popScatterRangeX);
+            float oy = Random.Range(0f, popArcHeight);
+            targets.Add(basePos + new Vector3(ox, oy, 0f));
+        }
+
+        float dur = Mathf.Max(0.01f, burstSpitDuration);
+        float elapsed = 0f;
+        while (elapsed < dur)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / dur);
+            float eased = 1f - Mathf.Pow(1f - t, 4f); // 강한 ease-out — 빨려들어가기(ease-in)의 반대: 터지듯 빠르게 뱉어나갔다 서서히 멈춤
+
+            for (int i = 0; i < icons.Count; i++)
+            {
+                if (icons[i] == null) continue;
+                icons[i].position    = Vector3.Lerp(originPos, targets[i], eased);
+                icons[i].localScale  = Vector3.one * (1f - eased); // 날아가며 축소, 도착 시점 소멸
+            }
+            yield return null;
+        }
+
+        foreach (var rt in icons)
+            if (rt != null) Destroy(rt.gameObject);
+    }
+
     void LateUpdate()
     {
         // 실제 캐릭터 프리팹(SpriteRenderer)이 Animator로 바꾸는 스프라이트를 그대로 UI Image에 미러링.
@@ -437,14 +495,18 @@ public class LeaderScoreUI : MonoBehaviour
         _previewSpriteRenderer = _previewInstance.GetComponentInChildren<SpriteRenderer>();
         characterImage.enabled = true;
 
-        if (fireAnimator != null) fireAnimator.speed = 1f; // 새 팀장 프리뷰 시작 시 fire도 다시 재생
+        if (fireAnimator != null)
+        {
+            fireAnimator.gameObject.SetActive(true); // 새 팀장 프리뷰 시작 시 fire도 다시 활성화+재생
+            fireAnimator.speed = 1f;
+        }
     }
 
-    // 회차 점수가 다 오르고 나면(연출 완료) 캐릭터 working 애니와 FireAnimation 둘 다 정지(마지막 프레임에 고정).
+    // 회차 점수가 다 오르고 나면(연출 완료) 캐릭터 working 애니 정지 + FireAnim 오브젝트 비활성화.
     void StopWorkingAnimations()
     {
         if (_previewAnimator != null) _previewAnimator.speed = 0f;
-        if (fireAnimator != null)     fireAnimator.speed = 0f;
+        if (fireAnimator != null)     fireAnimator.gameObject.SetActive(false);
     }
 
     void ClearCharacterPreview()

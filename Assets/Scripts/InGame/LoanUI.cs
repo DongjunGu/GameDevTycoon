@@ -35,6 +35,7 @@ public class LoanUI : MonoBehaviour
     public void OpenWithCloseCallback(System.Action<bool> onClose)
     {
         GameTimeManager.Instance?.StopTime();
+        ModalGate.I.Register(this);
         _onClose = onClose;
         _didTakeLoan = false;
         RefreshUI();
@@ -95,6 +96,7 @@ public class LoanUI : MonoBehaviour
     public void OnClickClose()
     {
         GameTimeManager.Instance?.StartTime();
+        ModalGate.I.Unregister(this);
         loanPanel.SetActive(false);
 
         // 콜백 1회 보장 — Fire 전 캡처하여 null 처리하고 호출

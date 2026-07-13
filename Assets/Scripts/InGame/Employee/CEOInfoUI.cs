@@ -75,7 +75,11 @@ public class CEOInfoUI : MonoBehaviour
     {
         if (panelRoot != null && panelRoot.activeSelf) return; // 이미 열림
         Subscribe();                                           // 매니저가 늦게 준비된 경우 대비
-        if (stopTimeWhileOpen) GameTimeManager.Instance?.StopTime();
+        if (stopTimeWhileOpen)
+        {
+            GameTimeManager.Instance?.StopTime();
+            ModalGate.I.Register(this);
+        }
         if (closeButton != null) closeButton.gameObject.SetActive(true);
         if (panelRoot != null) panelRoot.SetActive(true);
         CloseTraitPopUp(); // 팝업은 닫힌 상태로 시작
@@ -89,7 +93,11 @@ public class CEOInfoUI : MonoBehaviour
         if (panelRoot != null) panelRoot.SetActive(false);
         if (closeButton != null) closeButton.gameObject.SetActive(false);
         CloseTraitPopUp();
-        if (stopTimeWhileOpen) GameTimeManager.Instance?.StartTime();
+        if (stopTimeWhileOpen)
+        {
+            GameTimeManager.Instance?.StartTime();
+            ModalGate.I.Unregister(this);
+        }
     }
 
     void Subscribe()

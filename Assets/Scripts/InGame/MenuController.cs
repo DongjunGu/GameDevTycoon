@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
@@ -43,6 +44,12 @@ public class MenuController : MonoBehaviour
 
         [Tooltip("하위 버튼 컨테이너. 지정되면 클릭 시 슬라이드로 펼쳐짐")]
         public RectTransform subMenu;
+
+        // ── 런타임 캐시 (인스펙터 미노출) ──
+        [System.NonSerialized] public TextMeshProUGUI text;
+        [System.NonSerialized] public TMP_FontAsset originalFont;
+        [System.NonSerialized] public Color originalColor;
+        [System.NonSerialized] public bool isPressed;
     }
 
     [Header("Refs")]
@@ -51,6 +58,12 @@ public class MenuController : MonoBehaviour
 
     [Header("Top Menus (4개)")]
     public TopMenu[] topMenus;
+
+    [Header("Top 버튼 텍스트 — Pressed/Selected 스타일")]
+    [Tooltip("눌려있거나(pressed) 해당 서브메뉴가 열려있는(selected) 동안 버튼 텍스트에 적용할 폰트")]
+    public TMP_FontAsset activeFontAsset;
+    [Tooltip("Pressed/Selected 상태의 텍스트 색상")]
+    public Color activeTextColor = Color.white;
 
     [Header("Slide")]
     [Tooltip("Top 메뉴의 닫힘 오프셋 (열림 위치 + offset = 닫힘 위치). 위→아래 슬라이드면 (0, +N)")]
@@ -78,8 +91,20 @@ public class MenuController : MonoBehaviour
         {
             foreach (var tm in topMenus)
             {
-                if (tm?.subMenu != null)
+                if (tm == null) continue;
+                if (tm.subMenu != null)
                     _subOpenPos[tm] = tm.subMenu.anchoredPosition;
+
+                // 버튼 자식 텍스트 + 원래 폰트/색 캐시 (Pressed/Selected 스타일 복원용)
+                if (tm.button != null)
+                {
+                    tm.text = tm.button.GetComponentInChildren<TextMeshProUGUI>(true);
+                    if (tm.text != null)
+                    {
+                        tm.originalFont  = tm.text.font;
+                        tm.originalColor = tm.text.color;
+                    }
+                }
             }
         }
     }
@@ -104,6 +129,7 @@ public class MenuController : MonoBehaviour
                 {
                     var captured = tm;
                     tm.button.onClick.AddListener(() => OnTopClick(captured));
+                    SetupPressWatcher(captured);
                 }
             }
         }
@@ -164,6 +190,7 @@ public class MenuController : MonoBehaviour
         {
             HideSub(_activeSub);
             _activeSub = null;
+            RefreshAllTopMenuTextStyles();
         }
 
         if (_topAnim != null) { StopCoroutine(_topAnim); _topAnim = null; }
@@ -194,6 +221,60 @@ public class MenuController : MonoBehaviour
         if (_activeSub != null) HideSub(_activeSub);
         ShowSub(tm);
         _activeSub = tm;
+        RefreshAllTopMenuTextStyles();
+    }
+
+    // ── Top 버튼 텍스트 Pressed/Selected 스타일 ─────────────────────────────
+    void SetupPressWatcher(TopMenu tm)
+    {
+        if (tm.button == null) return;
+        var trigger = tm.button.gameObject.GetComponent<EventTrigger>();
+        if (trigger == null) trigger = tm.button.gameObject.AddComponent<EventTrigger>();
+
+        var down = new EventTrigger.Entry { eventID = EventTriggerType.PointerDown };
+        down.callback.AddListener(_ => { tm.isPressed = true; RefreshTopMenuTextStyle(tm); });
+        trigger.triggers.Add(down);
+
+        var up = new EventTrigger.Entry { eventID = EventTriggerType.PointerUp };
+        up.callback.AddListener(_ => { tm.isPressed = false; RefreshTopMenuTextStyle(tm); });
+        trigger.triggers.Add(up);
+    }
+
+    // pressed(누르는 중) 또는 selected(해당 서브메뉴가 열려있음) 이면 activeFontAsset+activeTextColor
+    // + 버튼 이미지를 Pressed 스프라이트로 고정, 아니면 캐시해둔 원래 폰트/색 + 이미지 오버라이드 해제(Selectable이 알아서 처리).
+    void RefreshTopMenuTextStyle(TopMenu tm)
+    {
+        if (tm == null) return;
+        bool active = tm.isPressed || _activeSub == tm;
+
+        if (tm.text != null)
+        {
+            tm.text.font  = active ? activeFontAsset : tm.originalFont;
+            tm.text.color = active ? activeTextColor : tm.originalColor;
+        }
+
+        if (tm.button != null && tm.button.image != null)
+            tm.button.image.overrideSprite = active ? tm.button.spriteState.pressedSprite : null;
+    }
+
+    void RefreshAllTopMenuTextStyles()
+    {
+        if (topMenus == null) return;
+        foreach (var tm in topMenus) RefreshTopMenuTextStyle(tm);
+    }
+
+    // selected(서브메뉴 열림) 동안엔 hover/포인터 이벤트로 Selectable이 매 프레임 스프라이트를 바꾸려
+    // 드는 것(하이라이트 등)을 이겨야 하므로, 열려있는 동안 계속 Pressed 스프라이트로 재고정.
+    void LateUpdate()
+    {
+        if (topMenus == null) return;
+        foreach (var tm in topMenus)
+        {
+            if (tm?.button == null || tm.button.image == null) continue;
+            if (!(tm.isPressed || _activeSub == tm)) continue;
+            var pressedSprite = tm.button.spriteState.pressedSprite;
+            if (pressedSprite != null) tm.button.image.overrideSprite = pressedSprite;
+        }
     }
 
     void ShowSub(TopMenu tm)
@@ -260,6 +341,7 @@ public class MenuController : MonoBehaviour
         {
             HideSub(_activeSub);
             _activeSub = null;
+            RefreshAllTopMenuTextStyles();
         }
         else
         {
