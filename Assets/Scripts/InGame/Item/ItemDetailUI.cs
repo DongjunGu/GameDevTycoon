@@ -50,7 +50,7 @@ public class ItemDetailUI : MonoBehaviour
         descriptionText.text = row.description;
 
         int count = ItemManager.Instance.GetCount(row.itemId);
-        useButton.interactable = count > 0 && ItemManager.IsUsableNow(row) && !IsGameUpgradeAlreadyUsed(row) && !IsRelaxButNoDebuffedEmployee(row) && !IsEventReadyCategory(row);
+        useButton.interactable = count > 0 && ItemManager.IsUsableNow(row) && !IsGameUpgradeAlreadyUsed(row) && !IsRelaxButNoDebuffedEmployee(row) && !IsEventReadyCategory(row) && !IsUpgradeButNoRoleEmployee(row) && !IsCreativityBlockCategory(row);
 
         var sprite = Resources.Load<Sprite>($"Items/{row.imageId}");
         if (sprite != null && itemImage != null)
@@ -66,7 +66,7 @@ public class ItemDetailUI : MonoBehaviour
     {
         if (_currentRow == null) return;
         int count = ItemManager.Instance.GetCount(_currentRow.itemId);
-        useButton.interactable = count > 0 && ItemManager.IsUsableNow(_currentRow) && !IsGameUpgradeAlreadyUsed(_currentRow) && !IsRelaxButNoDebuffedEmployee(_currentRow);
+        useButton.interactable = count > 0 && ItemManager.IsUsableNow(_currentRow) && !IsGameUpgradeAlreadyUsed(_currentRow) && !IsRelaxButNoDebuffedEmployee(_currentRow) && !IsUpgradeButNoRoleEmployee(_currentRow) && !IsCreativityBlockCategory(_currentRow);
     }
 
     public void OnClickUse()
@@ -127,6 +127,10 @@ public class ItemDetailUI : MonoBehaviour
     static bool IsEventReadyCategory(ItemChartRow row)
         => row != null && row.category == "이벤트 대비";
 
+    // 창의성 블록 카테고리(랜덤/전설의 블록): 아이템창에서는 항상 비활성. 실제 사용은 창의성 미니게임의 BlockItemPanel에서만.
+    static bool IsCreativityBlockCategory(ItemChartRow row)
+        => row != null && row.category == "창의성 블록";
+
     // 라꾸라꾸: 회사 직원 중 디버프 걸린 사람이 한 명도 없으면 사용 버튼 비활성
     static bool IsRelaxButNoDebuffedEmployee(ItemChartRow row)
     {
@@ -135,6 +139,26 @@ public class ItemDetailUI : MonoBehaviour
         if (employees == null || employees.Count == 0) return true;
         foreach (var emp in employees)
             if (emp.HasAnyStatDebuff()) return false;
+        return true;
+    }
+
+    // 직군 업그레이드권: 회사에 해당 직군(role) 직원이 한 명도 없으면 사용 버튼 비활성
+    static bool IsUpgradeButNoRoleEmployee(ItemChartRow row)
+    {
+        if (row == null) return false;
+        EmployeeRole? role = row.itemId switch
+        {
+            "upgradeDevelop" => EmployeeRole.Programmer,
+            "upgradeArt"     => EmployeeRole.Artist,
+            "upgradePlan"    => EmployeeRole.Planner,
+            _ => (EmployeeRole?)null
+        };
+        if (!role.HasValue) return false;
+
+        var employees = EmployeeManager.Instance?.ownedEmployees;
+        if (employees == null || employees.Count == 0) return true;
+        foreach (var emp in employees)
+            if (emp.role == role.Value) return false;
         return true;
     }
 

@@ -40831,7 +40831,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &461020287
 RectTransform:
   m_ObjectHideFlags: 0
@@ -96476,7 +96476,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0.27, y: 0.79, z: 0}
-  m_LocalScale: {x: 2, y: 2, z: 2}
+  m_LocalScale: {x: 3, y: 3, z: 3}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 2027768580}
@@ -96530,7 +96530,7 @@ SpriteRenderer:
   m_SortingLayer: -5
   m_SortingOrder: 1
   m_MaskInteraction: 0
-  m_Sprite: {fileID: 3169087894118501631, guid: cdac0e19f553e6d4eb89204a3dda69c7, type: 3}
+  m_Sprite: {fileID: -4990020742767090660, guid: 407601a7c17003c4eb51d795ee60820c, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
@@ -113461,7 +113461,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CameraZoomController
   minSize: 2
-  maxSize: 4
+  maxSize: 5.8
   pinchSensitivity: 0.01
   wheelSensitivity: 0.4
   smoothing: 0.12
@@ -113471,8 +113471,8 @@ MonoBehaviour:
   enablePan: 1
   panMoveThreshold: 4
   enableClamp: 1
-  worldMin: {x: -7, y: -4}
-  worldMax: {x: 7.8, y: 6}
+  worldMin: {x: -10.12, y: -6.96}
+  worldMax: {x: 10.4, y: 8.15}
   drawGizmoAlways: 1
   gizmoColor: {r: 0, g: 1, b: 1, a: 0.8}
 --- !u!1 &1246618967
@@ -154503,7 +154503,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0, y: 0.00004196167}
+  m_AnchoredPosition: {x: 0, y: 0.000034332275}
   m_SizeDelta: {x: 0, y: 50}
   m_Pivot: {x: 0.5, y: 1}
 --- !u!1 &1656620705
@@ -179955,6 +179955,7 @@ MonoBehaviour:
   _blockSlotPrefab: {fileID: 1210402401484558234, guid: 3f8a4f56f7e1ec34093024d5f515627b, type: 3}
   _blockSpriteConfig: {fileID: 11400000, guid: e613cb7cfd818f34898c0f95ae4276e6, type: 2}
   _scoreText: {fileID: 1778527295}
+  _scorePanel: {fileID: 1754546957}
   _confirmBtn: {fileID: 1523429696}
   _gridBagLevelText: {fileID: 289821132}
   _gridBlockLevelText: {fileID: 347152410}
@@ -192415,7 +192416,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: -12.60643, y: -18}
+  m_AnchoredPosition: {x: -12.606434, y: -18}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &2057764734

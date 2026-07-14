@@ -65,6 +65,8 @@ public class CreativityGameUI : MonoBehaviour
 
     [Header("UI")]
     [SerializeField] TextMeshProUGUI _scoreText;
+    [Tooltip("점수 카운트업 중 펀치스케일(1.1배) 대상. 비우면 ScoreText의 부모(ScorePanel) 자동 탐색")]
+    [SerializeField] RectTransform   _scorePanel;
     [SerializeField] Button          _confirmBtn;
 
     [Header("테크트리 단계 표시")]
@@ -179,6 +181,7 @@ public class CreativityGameUI : MonoBehaviour
         if (_debugFillBtn != null) _debugFillBtn.onClick.AddListener(OnClickDebugFill);
         if (_blockRandomUseBtn != null) _blockRandomUseBtn.onClick.AddListener(() => OnClickUseItem("blockRandom"));
         if (_blockLegendaryUseBtn != null) _blockLegendaryUseBtn.onClick.AddListener(() => OnClickUseItem("blockLegendary"));
+        if (_scorePanel == null && _scoreText != null) _scorePanel = _scoreText.transform.parent as RectTransform;
 
         // Spawn* 가 매번 덮어쓰기 전, 인스펙터에 미리 세팅해둔 GridLayoutGroup.cellSize/constraintCount를 캡처.
         var glg = _blockTray != null ? _blockTray.GetComponent<GridLayoutGroup>() : null;
@@ -548,6 +551,14 @@ public class CreativityGameUI : MonoBehaviour
         {
             if (_scoreAnimCo != null) StopCoroutine(_scoreAnimCo);
             _scoreAnimCo = StartCoroutine(CountUpRoutine(_displayScore, _score));
+
+            if (_scorePanel != null)
+            {
+                _scorePanel.DOKill();
+                _scorePanel.localScale = Vector3.one;
+                _scorePanel.DOScale(1.1f, 0.3f * 0.4f).SetEase(Ease.OutQuad).SetUpdate(true)
+                            .OnComplete(() => _scorePanel.DOScale(1f, 0.3f * 0.6f).SetEase(Ease.OutBack).SetUpdate(true));
+            }
         }
         else
         {
@@ -556,6 +567,7 @@ public class CreativityGameUI : MonoBehaviour
         }
     }
 
+    // 가속도가 붙는 카운트업 — ease-in(제곱)으로 처음엔 천천히, 끝날수록 빠르게 올라간다.
     IEnumerator CountUpRoutine(float from, int to)
     {
         const float dur = 0.3f;
@@ -563,7 +575,9 @@ public class CreativityGameUI : MonoBehaviour
         while (t < dur)
         {
             t += Time.unscaledDeltaTime;
-            SetScoreDisplay(Mathf.RoundToInt(Mathf.Lerp(from, to, Mathf.Clamp01(t / dur))));
+            float k = Mathf.Clamp01(t / dur);
+            k *= k; // ease-in
+            SetScoreDisplay(Mathf.RoundToInt(Mathf.Lerp(from, to, k)));
             yield return null;
         }
         SetScoreDisplay(to);

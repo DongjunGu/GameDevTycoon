@@ -107,11 +107,17 @@ public class ItemPanelUI : MonoBehaviour
         if (IsGameUpgradeAlreadyUsed(row)) return false;
         if (emp != null && IsWrongRoleUpgrade(row, emp)) return false;
         if (IsRelaxButNoDebuffedEmployee(row)) return false;
+        if (IsUpgradeButNoRoleEmployee(row)) return false;
+        if (IsCreativityBlockCategory(row)) return false;
         return true;
     }
 
     static bool IsEventReadyCategory(ItemChartRow row)
         => row != null && row.category == "이벤트 대비";
+
+    // 창의성 블록 카테고리(랜덤/전설의 블록): 아이템창에서는 항상 비활성. 실제 사용은 창의성 미니게임의 BlockItemPanel에서만.
+    static bool IsCreativityBlockCategory(ItemChartRow row)
+        => row != null && row.category == "창의성 블록";
 
     static bool IsGameUpgradeAlreadyUsed(ItemChartRow row)
     {
@@ -137,6 +143,26 @@ public class ItemPanelUI : MonoBehaviour
             "upgradePlan"    => emp.role != EmployeeRole.Planner,
             _ => false
         };
+
+    // 직군 업그레이드권: 회사에 해당 직군 직원이 한 명도 없으면 (카드 컨텍스트가 아니어도) 애초에 사용 불가
+    static bool IsUpgradeButNoRoleEmployee(ItemChartRow row)
+    {
+        if (row == null) return false;
+        EmployeeRole? role = row.itemId switch
+        {
+            "upgradeDevelop" => EmployeeRole.Programmer,
+            "upgradeArt"     => EmployeeRole.Artist,
+            "upgradePlan"    => EmployeeRole.Planner,
+            _ => (EmployeeRole?)null
+        };
+        if (!role.HasValue) return false;
+
+        var employees = EmployeeManager.Instance?.ownedEmployees;
+        if (employees == null || employees.Count == 0) return true;
+        foreach (var emp in employees)
+            if (emp.role == role.Value) return false;
+        return true;
+    }
 
     public void OnClickClose()
     {

@@ -481,6 +481,7 @@ public class DevelopmentManager : MonoBehaviour
         CurrentStage = ProjectStage.Developing;
         _isRunning = true;
         OfficeManager.Instance?.SetAllWorking();
+        OfficeManager.Instance?.StopDevelopmentPatrol(); // patrol 중이던 직원 즉시 데스크 복귀
         if (!_patrolStarted)
         {
             _patrolStarted = true;
