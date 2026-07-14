@@ -19,6 +19,15 @@ public class GridManager : MonoBehaviour
         Instance = this;
     }
 
+    // 스테이지 전환(새 사무실 등) 시 참조 타일맵 교체 — groundTilemap 등은 고정 참조라
+    // 새로 깔린 타일맵(예: "ground (1)")은 자동으로 인식되지 않는다. null 허용(예: 새 구역에 계단 없음).
+    public void SetTilemaps(Tilemap ground, Tilemap obstacle, Tilemap stair)
+    {
+        groundTilemap   = ground;
+        obstacleTilemap = obstacle;
+        stairTilemap    = stair;
+    }
+
     // 월드 좌표 → 셀 좌표
     public Vector3Int WorldToCell(Vector3 worldPos)
     {

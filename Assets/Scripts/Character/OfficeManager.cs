@@ -387,6 +387,15 @@ public class OfficeManager : MonoBehaviour
         EnsurePatrolScheduler();
     }
 
+    // 사무실 레이아웃 전환(Level1→Level4 등) 등으로 patrol point가 새로 활성화/비활성화됐을 때 재스캔.
+    // _patrolPoints는 씬 시작 시(RestoreEmployees→EnsurePatrolScheduler) 한 번 캐싱된 뒤 ??=라서
+    // 이후 새로 활성화된 PatrolPoint(예: Level4의 p3/p4)는 자동으로 안 잡힌다 — 명시적 재스캔 필요.
+    public void RefreshPatrolPoints()
+    {
+        _patrolPoints = FindObjectsByType<PatrolPoint>(FindObjectsSortMode.None);
+        _dialogPatrolPoints = FindObjectsByType<DialogPatrolPoint>(FindObjectsSortMode.None);
+    }
+
     // 스케줄러가 꺼져있을 때만 시작
     void EnsurePatrolScheduler()
     {
@@ -409,10 +418,53 @@ public class OfficeManager : MonoBehaviour
             oc.CancelPatrol();
     }
 
+    // [테스트] 지정된 (기존데스크→새데스크) 매핑대로 자리 잡고 있는 직원을 걷지 않고 순간이동.
+    // 새 사무실 타일 확장 테스트용 — assignedDesk/DeskManager 배정만 갱신, 백엔드 저장은 안 함(테스트 전용이라).
+    // 반환값: 실제로 이동된 employeeId 목록(빈 자리였던 매핑은 스킵됨).
+    public List<string> WarpDesksInstant(params (string fromDeskId, string toDeskId)[] mappings)
+    {
+        var movedEmployeeIds = new List<string>();
+        foreach (var (fromDeskId, toDeskId) in mappings)
+        {
+            OfficeCharacter target = null;
+            foreach (var oc in _characters.Values)
+            {
+                if (oc.assignedDesk != null && oc.assignedDesk.deskId == fromDeskId) { target = oc; break; }
+            }
+            if (target == null)
+            {
+                Debug.LogWarning($"[Test] {fromDeskId} 자리에 직원 없음 — 스킵");
+                continue;
+            }
+
+            var newDesk = DeskManager.Instance.GetDeskById(toDeskId);
+            if (newDesk == null)
+            {
+                Debug.LogWarning($"[Test] {toDeskId} 데스크를 찾을 수 없음 — 스킵");
+                continue;
+            }
+
+            DeskManager.Instance.UnassignDesk(fromDeskId);
+            DeskManager.Instance.AssignDesk(toDeskId, target.employeeId);
+
+            target.assignedDesk = newDesk;
+            target.transform.position = newDesk.GetWorkWorldPos();
+            target.ApplyDeskAnimation();
+
+            var emp = EmployeeManager.Instance?.GetEmployee(target.employeeId);
+            if (emp != null) emp.assignedDeskId = toDeskId;
+
+            movedEmployeeIds.Add(target.employeeId);
+            Debug.Log($"[Test] {target.employeeId}: {fromDeskId} → {toDeskId} 순간이동");
+        }
+        return movedEmployeeIds;
+    }
+
     // 특정 직원을 pointId 위치로 즉시 강제 이동 (이벤트 트리거용)
     public void ForceCharacterToPatrolPoint(string employeeId, string pointId, float stayDuration = 5f)
     {
         if (!_characters.TryGetValue(employeeId, out var oc)) return;
+        _patrolPoints ??= FindObjectsByType<PatrolPoint>(FindObjectsSortMode.None);
         var point = System.Array.Find(_patrolPoints, p => p.pointId == pointId);
         if (point == null)
         {
