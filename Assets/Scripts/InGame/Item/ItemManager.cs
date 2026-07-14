@@ -245,7 +245,9 @@ public class ItemManager : MonoBehaviour
                 // 오래된 연구노트 — 테크트리 포인트 1 획득 (인게임 TechPoint = UserMoney.point)
                 if (TechTreeManager.Instance == null) return false;
                 TechTreeManager.Instance.AddPoints(1);
-                AlertUI.Instance?.Show("오래된 연구노트를 해독했습니다.\n테크트리 포인트 +1");
+                // ItemPanelUI가 열려있는 동안 ModalGate를 쥐고 있어 Show()의 기본 WhenFree 대기가 패널을 닫을
+                // 때까지 표시를 미룬다. bypassGate:true로 게이트 대기 없이 즉시 표시.
+                AlertUI.Instance?.Show("오래된 연구노트를 해독했습니다.\n테크트리 포인트 +1", null, bypassGate: true);
                 return true;
             }
         }

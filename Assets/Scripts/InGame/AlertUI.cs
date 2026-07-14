@@ -70,6 +70,8 @@ public class AlertUI : MonoBehaviour
         public string        title;
         public string        resultText1;
         public string        resultText2;
+        // true면 ModalGate.WhenFree 대기 없이 즉시 표시 (다른 패널이 이미 게이트를 쥔 채로 열려있는 상황용)
+        public bool          bypassGate;
     }
 
     private Queue<Entry> _queue      = new();
@@ -98,9 +100,10 @@ public class AlertUI : MonoBehaviour
 
     // ── 공개 API ────────────────────────────────────────────────
 
-    public void Show(string message, System.Action onConfirm = null)
+    // bypassGate: true면 다른 패널(ItemPanel 등)이 이미 열려 게이트를 쥐고 있어도 대기 없이 바로 표시.
+    public void Show(string message, System.Action onConfirm = null, bool bypassGate = false)
     {
-        _queue.Enqueue(new Entry { message = message, onConfirm = onConfirm, type = AlertType.Default });
+        _queue.Enqueue(new Entry { message = message, onConfirm = onConfirm, type = AlertType.Default, bypassGate = bypassGate });
         if (!_isShowing) ShowNext();
     }
 
@@ -151,7 +154,7 @@ public class AlertUI : MonoBehaviour
         // 다른 UI 가 점유 중인 ModalGate 를 기다리지 않고 바로 표시한다(자기 자신도 아래서 ModalGate.Register 됨).
         // 안 그러면 예: HiringUI 가 ConfirmHirePanel 이 떠 있는 동안 게이트를 쥐고 있어서, 그 안에서 특성/이벤트
         // 버튼을 눌러도 안 뜨고 ConfirmHirePanel 이 닫혀 게이트가 풀리는 순간에야 뒤늦게 뜨는 문제가 있었음.
-        if (_queue.Peek().type == AlertType.Portrait) { DisplayDequeued(); return; }
+        if (_queue.Peek().type == AlertType.Portrait || _queue.Peek().bypassGate) { DisplayDequeued(); return; }
 
         ModalGate.I.WhenFree(DisplayDequeued);
     }

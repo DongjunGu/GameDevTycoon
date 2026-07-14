@@ -64,6 +64,8 @@ public static class RandomEvents_Choice
                     int cost = Mathf.Max(1, (int)(EmployeeManager.Instance.GetTotalSalary() * 0.03f));
                     // 괄호까지 색상 태그 안에 포함 — "(-3000G)" 형태로 괄호도 같이 보이면서 색이 입혀지게.
                     string costTag = $"<color=#F3C01D>(-{cost}G)</color>";
+                    // 결과 팝업 전용 — 코인 아이콘 인라인은 버튼 라벨에는 안 붙임.
+                    string costTagResult = $"<sprite=\"CoinSpriteAsset\" name=\"coin\"> {costTag}";
                     birthdayEvt.choices[1].buttonLabel =
                         birthdayEvt.choices[1].buttonLabel?.Replace("(-{N}G)", costTag);
 
@@ -76,7 +78,7 @@ public static class RandomEvents_Choice
                     c1.reply1     = c1.reply1?.Replace("{해당직원이름}", birthdayEmp.employeeName);
                     c1.resultMent1 = c1.resultMent1?.Replace("{해당직원이름}", birthdayEmp.employeeName);
                     c1.resultMent2 = c1.resultMent2?.Replace("{해당직원이름}", birthdayEmp.employeeName);
-                    c1.resultMent3 = c1.resultMent3?.Replace("-{비용}G", costTag);
+                    c1.resultMent3 = c1.resultMent3?.Replace("-{비용}G", costTagResult);
                 }
             };
             Apply(birthdayEvt, chart);
@@ -176,6 +178,8 @@ public static class RandomEvents_Choice
                 equipCostSnapshot = Mathf.Max(1, (int)(EmployeeManager.Instance.GetTotalSalary() * 0.03f));
                 // 괄호까지 색상 태그 안에 포함 — "(-3000G)" 형태로 괄호도 같이 노란색(#F3C01D)으로.
                 string costTag = $"<color=#F3C01D>(-{equipCostSnapshot}G)</color>";
+                // 결과 팝업 전용 — 코인 아이콘 인라인은 버튼 라벨에는 안 붙임.
+                string costTagResult = $"<sprite=\"CoinSpriteAsset\" name=\"coin\"> {costTag}";
 
                 equipEvt.choices[0].buttonLabel =
                     equipLabel0Template.Replace("(-{N}G)", costTag);
@@ -186,7 +190,7 @@ public static class RandomEvents_Choice
                 equipEvt.choices[0].resultMent2 = equipMent2Template
                     .Replace("{해당직원이름}", equipEmp.employeeName);
                 equipEvt.choices[0].resultMent3 = equipMent3Template
-                    .Replace("-{비용}G", costTag);
+                    .Replace("-{비용}G", costTagResult);
             };
             pool.Add(equipEvt);
         }
@@ -240,8 +244,8 @@ public static class RandomEvents_Choice
                                 EmployeeManager.Instance.ChangeAllSatisfaction(5);
 
                             var c1 = dinnerEvt.choices[1];
-                            // 괄호까지 색상 태그 안에 포함 — "(-3000G)" 형태로 괄호도 같이 노란색(#F3C01D)으로.
-                            string costTag = $"<color=#F3C01D>(-{dinnerCost5}G)</color>";
+                            // 괄호까지 색상 태그 안에 포함 — "(-3000G)" 형태로 괄호도 같이 노란색(#F3C01D)으로. 앞에 코인 아이콘 인라인.
+                            string costTag = $"<sprite=\"CoinSpriteAsset\" name=\"coin\"> <color=#F3C01D>(-{dinnerCost5}G)</color>";
                             c1.reply1         = happy ? dinnerDesc2Happy : dinnerDesc2Meh;
                             c1.resultPopupType = happy ? 1 : 3;
                             // happy 결과팝업멘트1="전 직원 만족도 +5"(choice2_ment1 원본) / meh 멘트1은
@@ -297,8 +301,8 @@ public static class RandomEvents_Choice
                 if (!string.IsNullOrEmpty(dinnerDesc2Meh))   dinnerEvt.choices[1].resultDescriptions.Add(dinnerDesc2Meh);
                 dinnerEvt.choices[2].resultSystemMessage = dinnerSystem2Template.Replace("-{비용}G", $"<color=#F3C01D>(-{dinnerCost10}G)</color>");
 
-                // 괄호까지 색상 태그 안에 포함 — "(-3000G)" 형태로 괄호도 같이 노란색(#F3C01D)으로.
-                string cost10Tag = $"<color=#F3C01D>(-{dinnerCost10}G)</color>";
+                // 괄호까지 색상 태그 안에 포함 — "(-3000G)" 형태로 괄호도 같이 노란색(#F3C01D)으로. 앞에 코인 아이콘 인라인.
+                string cost10Tag = $"<sprite=\"CoinSpriteAsset\" name=\"coin\"> <color=#F3C01D>(-{dinnerCost10}G)</color>";
                 dinnerEvt.choices[2].resultMent1 = dinnerMent1_3Template;
                 dinnerEvt.choices[2].resultMent2 = dinnerMent2_3Template.Replace("-{비용}G", cost10Tag);
             };
