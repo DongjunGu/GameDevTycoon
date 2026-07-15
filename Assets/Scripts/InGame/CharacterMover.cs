@@ -7,6 +7,10 @@ public class CharacterMover : MonoBehaviour
     [Header("Settings")]
     public float moveSpeed = 3f;
 
+    [Header("Elevator")]
+    [Tooltip("엘리베이터 링크(비인접 셀 워프)를 탈 때 대기하는 시간(초) 후 순간이동")]
+    public float elevatorRideDuration = 0.6f;
+
     private Coroutine _moveCoroutine;
 
     public event System.Action OnMoveComplete;
@@ -64,6 +68,32 @@ public class CharacterMover : MonoBehaviour
                 ? GridManager.Instance.WorldToCell(transform.position)
                 : path[i - 1];
             Vector3 fromBase = GridManager.Instance.CellToWorld(fromCell);
+
+            // 인접하지 않은 셀로의 이동 = 엘리베이터 링크(워프). 걸어서 슬라이드하지 않고 잠깐 대기 후 순간이동.
+            bool isElevatorJump = Mathf.Abs(path[i].x - fromCell.x) + Mathf.Abs(path[i].y - fromCell.y) > 1;
+
+            if (isElevatorJump)
+            {
+                _anim?.SetMoving(false);
+
+                float remaining = elevatorRideDuration;
+                while (remaining > 0f)
+                {
+                    if (GameTimeManager.Instance != null && !GameTimeManager.Instance.IsRunning)
+                    {
+                        yield return null;
+                        continue;
+                    }
+                    remaining -= Time.deltaTime;
+                    yield return null;
+                }
+
+                transform.position = targetPos;
+                _anim?.SetMoving(true);
+                OnCellChanged?.Invoke(path[i]);
+                continue;
+            }
+
             _anim?.UpdateDirection(fromBase, baseWorld);
 
             while (Vector3.Distance(transform.position, targetPos) > 0.01f)

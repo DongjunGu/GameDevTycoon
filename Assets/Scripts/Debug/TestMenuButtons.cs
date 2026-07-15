@@ -26,6 +26,8 @@ public class TestMenuButtons : MonoBehaviour
     public Tilemap newObstacleTilemap;
     [Tooltip("새 구역에 계단 없으면 비워둠")]
     public Tilemap newStairTilemap;
+    [Tooltip("새 구역에 엘리베이터 없으면 비워둠")]
+    public Tilemap newElevatorTilemap;
 
     // NextLevelBtn — CameraZoomController 활성화 + 지정된 패널 전환.
     // 시간은 멈추지 않음 — CharacterMover.MoveAlongPath가 GameTimeManager.IsRunning일 때만 위치를
@@ -52,7 +54,7 @@ public class TestMenuButtons : MonoBehaviour
         // 새 사무실 타일맵으로 GridManager 참조 교체 — 안 하면 IsWalkable/WorldToCell이 계속 옛 타일맵을 봐서
         // 새 구역은 전부 walkable=false로 나와 경로탐색이 실패한다.
         if (GridManager.Instance != null && newGroundTilemap != null)
-            GridManager.Instance.SetTilemaps(newGroundTilemap, newObstacleTilemap, newStairTilemap);
+            GridManager.Instance.SetTilemaps(newGroundTilemap, newObstacleTilemap, newStairTilemap, newElevatorTilemap);
 
         // [테스트] 새 사무실 자리로 순간이동(걷지 않고 위치만 교체) — 타일/데스크 재배치 테스트용.
         // desk_01~04 → desk_05~08. 이동된 인원 중 랜덤 1명을 p3/p4 중 한 곳으로 patrol.

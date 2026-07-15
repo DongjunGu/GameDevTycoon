@@ -29,7 +29,11 @@ public class AStarPathfinder : MonoBehaviour
             if (current == goal)
                 return ReconstructPath(cameFrom, current);
 
-            foreach (var neighbor in GridManager.Instance.GetNeighbors(current))
+            var neighbors = new List<Vector3Int>(GridManager.Instance.GetNeighbors(current));
+            var elevatorTarget = GridManager.Instance.GetElevatorLink(current);
+            if (elevatorTarget.HasValue) neighbors.Add(elevatorTarget.Value);
+
+            foreach (var neighbor in neighbors)
             {
                 if (!GridManager.Instance.IsWalkable(neighbor)) continue;
 
