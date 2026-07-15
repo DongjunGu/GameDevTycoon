@@ -125,6 +125,19 @@ public class CharacterEventTester : MonoBehaviour
         if (GUILayout.Button("직원 1명 → 셀 (11,2,0) 로 이동 (엘리베이터 경유)")) SendToElevatorEntry();
 
         GUILayout.Space(8);
+        GUILayout.Label("<b>━━ 팀장점수 테스트 (프로젝트 진행에 전혀 영향 없음, 확정해도 그냥 닫힘) ━━</b>", Rich());
+        foreach (var e in em.ownedEmployees)
+        {
+            GUILayout.BeginHorizontal();
+            GUILayout.Label(e.employeeName, GUILayout.Width(110));
+            if (GUILayout.Button("기획")) DevelopmentManager.Instance?.TestLeaderScore(e, LeaderType.Planner);
+            if (GUILayout.Button("개발")) DevelopmentManager.Instance?.TestLeaderScore(e, LeaderType.Programmer);
+            if (GUILayout.Button("아트")) DevelopmentManager.Instance?.TestLeaderScore(e, LeaderType.Artist);
+            if (GUILayout.Button("스탯로그", GUILayout.Width(70))) LogStatBreakdown(e);
+            GUILayout.EndHorizontal();
+        }
+
+        GUILayout.Space(8);
         GUILayout.Label("<b>━━ 모달 차단 테스트 ━━</b>", Rich());
         if (GUILayout.Button("AlertUI 띄우기 (뒤 클릭 차단 확인)")) AlertUI.Instance?.Show("테스트 알림 — 이 뒤의 버튼/메뉴가 안 눌려야 정상");
         if (GUILayout.Button("ConfirmUI 띄우기")) ConfirmUI.Instance?.Show("테스트 확인", () => Set("확인됨"), () => Set("취소됨"));
@@ -184,6 +197,28 @@ public class CharacterEventTester : MonoBehaviour
         emp.lastUniqueEventYear = -1;        // 연 1회 가드 우회(반복 테스트)
         CharacterUniqueEvents.Trigger(emp);
         Set($"{eventType} 발동: {emp.employeeName}");
+    }
+
+    // 4개 스탯(기획/개발/아트/창의성) 버프/디버프 반영 과정을 항목별로 콘솔에 찍는다 — "왜 한 스탯만 색이 안 바뀌지" 디버깅용.
+    void LogStatBreakdown(EmployeeData e)
+    {
+        float satMult   = e.GetSatisfactionMultiplier();
+        int debuffAmt   = e.GetStatDebuffAmount();
+        int buffAmt     = e.GetStatBuffAmount();
+        int romanceAmt  = e.GetRomanceBuffAmount();
+        int godAmt      = e.GetGodBlessingBuffAmount();
+        int otakuAmt    = e.GetOtakuBuffAmount();
+        float cosmicMul = e.GetCosmicMultiplier();
+
+        // 콘솔 리더가 멀티라인 로그를 첫 줄만 보여주는 경우가 있어 한 줄씩 따로 찍는다.
+        Debug.Log($"[StatBreakdown] {e.employeeName} (role={e.role}, satisfaction={e.satisfaction})");
+        Debug.Log($"[StatBreakdown] satMult={satMult:0.00}  debuff=-{debuffAmt}  buff=+{buffAmt}  romance=+{romanceAmt}  godBlessing=+{godAmt}  otaku=+{otakuAmt}  cosmicMult={cosmicMul:0.00}");
+        Debug.Log($"[StatBreakdown] 기획: raw={e.planningSkill} -> effective={e.EffectivePlanningSkill} (diff={e.EffectivePlanningSkill - e.planningSkill})");
+        Debug.Log($"[StatBreakdown] 개발: raw={e.developSkill} -> effective={e.EffectiveDevelopSkill} (diff={e.EffectiveDevelopSkill - e.developSkill})");
+        Debug.Log($"[StatBreakdown] 아트: raw={e.artSkill} -> effective={e.EffectiveArtSkill} (diff={e.EffectiveArtSkill - e.artSkill})");
+        Debug.Log($"[StatBreakdown] 창의: raw={e.creativitySkill} -> effective={e.EffectiveCreativitySkill} (diff={e.EffectiveCreativitySkill - e.creativitySkill})");
+        Debug.Log($"[StatBreakdown] statBuffStacks={e.statBuffStacks.Count} statDebuffStacks={e.statDebuffStacks.Count} romanceWeeksLeft={e.romanceBuffWeeksLeft} godBlessingPercent={e.godBlessingStatPercent} otakuFixedGenre={e.otakuFixedGenre} selectedGenre={ProjectSetupUI.SelectedGenre}");
+        Set($"{e.employeeName} 스탯 breakdown 콘솔에 출력함");
     }
 
     void ForceKim()

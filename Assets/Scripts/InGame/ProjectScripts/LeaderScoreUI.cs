@@ -23,6 +23,17 @@ public class LeaderScoreUI : MonoBehaviour
     public TextMeshProUGUI totalText;         // 팀장 점수 총합
     public Button confirmButton;
 
+    [Header("스트레스 슬라이더 눈금 (90/95/99% 보너스 임계선 — 위치는 직접 배치, 평소엔 비활성 상태로 둘 것)")]
+    public RectTransform tick90Mark;
+    public RectTransform tick95Mark;
+    public RectTransform tick99Mark;
+    [Tooltip("각 nImage 자식의 보너스 점수 텍스트 (비워두면 자동으로 자식 TextMeshProUGUI를 찾아서 씀)")]
+    public TextMeshProUGUI tick90BonusText;
+    public TextMeshProUGUI tick95BonusText;
+    public TextMeshProUGUI tick99BonusText;
+    [Tooltip("\"스트레스 폭발까지 n\" — 3회차 끝난 시점 누적ds 기준으로 갱신")]
+    public TextMeshProUGUI burstText;
+
     [Header("스트레스 경고 (LeaderScoreEntirePanel)")]
     public Image stressWarningImage;          // LeaderScoreEntirePanel의 Image — 기본 alpha 0
     public float stressBlinkInterval = 0.3f;  // sin파 반 주기(초) — 값↔값 왕복 한 방향 시간
@@ -63,20 +74,134 @@ public class LeaderScoreUI : MonoBehaviour
     // confirm 시 DevelopmentPanelUI 에 한 번에 적용할 팀장점수 (애니 종료 시 산출)
     private float _applyPlanning, _applyDevelop, _applyArt;
 
+    // 1~3회차 재생 후 4회차 대기 상태를 이어가기 위한 값 (ShowPendingRound4 ~ PlayRound4AndFinish 사이 보관)
+    private float _pendingDisplayedTotal;
+    private float _pendingPrevCumDs;
+    private LeaderType _pendingUiType;
+
+    // 1~3회차 "연출"까지 다 재생되고 4회차 조준 선택을 기다리는 중인지 — 계산 완료(DevelopmentManager.IsPendingRound4Aim)와
+    // 달리 코루틴 애니메이션이 실제로 끝난 시점에만 true. 버튼 UI는 이 값을 폴링해야 함.
+    public bool IsWaitingForRound4Aim { get; private set; }
+
+    // 테스트 진입(DevelopmentManager.TestLeaderScore)이면 true — 확정해도 DevelopmentPanelUI에 스탯 반영 안 함.
+    private bool _testMode;
+
     void Awake()
     {
         if (Instance != null) { Destroy(gameObject); return; }
         Instance = this;
     }
 
+    // 90/95/99 눈금(및 보너스 텍스트)을 켠다 — 3회차 연출이 끝나 4회차 대기가 시작될 때 1회 호출.
+    // 이 시점엔 아직 4회차가 안 굴려졌으므로, 실제 획득액이 아니라 "이 임계선까지 도달하면 받을 수
+    // 있는" 잠재 범위(중첩 누적)를 미리보기로 보여준다.
+    void ShowThresholdTicks()
+    {
+        if (tick90Mark != null) tick90Mark.gameObject.SetActive(true);
+        if (tick95Mark != null) tick95Mark.gameObject.SetActive(true);
+        if (tick99Mark != null) tick99Mark.gameObject.SetActive(true);
+        if (burstText != null) burstText.gameObject.SetActive(true);
+        RefreshBonusPotentialTexts();
+        UpdateBurstText();
+    }
+
+    // "스트레스 폭발까지 n" — 3회차 끝난 시점 누적ds(_pendingPrevCumDs) 기준으로 100까지 남은 값.
+    void UpdateBurstText()
+    {
+        if (burstText == null) return;
+        int remain = Mathf.RoundToInt(100f - _pendingPrevCumDs);
+        burstText.text = $"스트레스 폭발까지 {remain}";
+    }
+
+    void HideThresholdTicks()
+    {
+        if (tick90Mark != null) tick90Mark.gameObject.SetActive(false);
+        if (tick95Mark != null) tick95Mark.gameObject.SetActive(false);
+        if (tick99Mark != null) tick99Mark.gameObject.SetActive(false);
+        if (burstText != null) burstText.gameObject.SetActive(false);
+    }
+
+    // 3회차 끝난 시점 미리보기 — "+min~max" (중첩 포함, DevelopmentManager.GetLeaderBonusPotentialRange)
+    void RefreshBonusPotentialTexts()
+    {
+        SetBonusPotentialText(tick90Mark, ref tick90BonusText, 0);
+        SetBonusPotentialText(tick95Mark, ref tick95BonusText, 1);
+        SetBonusPotentialText(tick99Mark, ref tick99BonusText, 2);
+    }
+
+    void SetBonusPotentialText(RectTransform tick, ref TextMeshProUGUI text, int thresholdIndex)
+    {
+        if (text == null && tick != null) text = tick.GetComponentInChildren<TextMeshProUGUI>();
+        if (text == null || DevelopmentManager.Instance == null) return;
+
+        var (min, max) = DevelopmentManager.Instance.GetLeaderBonusPotentialRange(thresholdIndex);
+        float sample = Random.Range(min, max); // 범위 텍스트 대신 그 범위 안에서 임의로 하나 찍어 정수로 표시
+        text.text = $"+{Mathf.RoundToInt(sample)}";
+    }
+
+    // 4회차까지 끝난 뒤(정산 시점) — 실제로 획득한 보너스 금액으로 교체. DevelopmentManager.GetLeaderBonusAmount가 단일 소스.
+    void RefreshBonusActualTexts()
+    {
+        SetBonusActualText(tick90Mark, ref tick90BonusText, 0);
+        SetBonusActualText(tick95Mark, ref tick95BonusText, 1);
+        SetBonusActualText(tick99Mark, ref tick99BonusText, 2);
+    }
+
+    void SetBonusActualText(RectTransform tick, ref TextMeshProUGUI text, int thresholdIndex)
+    {
+        if (text == null && tick != null) text = tick.GetComponentInChildren<TextMeshProUGUI>();
+        if (text == null || DevelopmentManager.Instance == null) return;
+
+        float amount = DevelopmentManager.Instance.GetLeaderBonusAmount(thresholdIndex);
+        text.text = $"+{Mathf.RoundToInt(amount)}";
+    }
+
     // fullRoundScores: 차감 전 회차 점수 / roundScores: 차감 반영 최종 회차 점수
     // cumDsAfter: 회차 종료 시점 누적 ds / overflowRound: 누적 ds 100 초과 회차(없으면 -1)
+    // 4회차까지 이미 다 정해진 데이터를 처음부터 끝까지 재생 (저장값 재생 / 1~3회차 중 오버플로로 이미 끝난 경우).
     public void Show(EmployeeData employee, LeaderType type,
                      float[] fullRoundScores, float[] roundScores, float[] cumDsAfter,
+                     float total, int overflowRound, float cutFactor,
+                     int hunsuBonus, LeaderType hunsuBonusTarget, System.Action onComplete,
+                     bool testMode = false)
+    {
+        InitPanel(employee, type, testMode);
+        _onComplete = onComplete;
+
+        StartCoroutine(PlayRoundsCoroutine(type, fullRoundScores, roundScores, cumDsAfter,
+                                     total, overflowRound, cutFactor, hunsuBonus, hunsuBonusTarget, 0, 4));
+    }
+
+    // 1~3회차만 재생하고 4회차 조준 선택을 기다린다 (정산/커튼오프/확정버튼 활성화 없음).
+    // 4회차 값은 아직 안 정해졌으므로 total/overflow/hunsu 등은 넘기지 않는다.
+    public void ShowPendingRound4(EmployeeData employee, LeaderType type,
+                     float[] fullRoundScores, float[] roundScores, float[] cumDsAfter,
+                     bool testMode = false)
+    {
+        InitPanel(employee, type, testMode);
+
+        StartCoroutine(PlayRoundsCoroutine(type, fullRoundScores, roundScores, cumDsAfter,
+                                     0f, -1, 0f, 0, LeaderType.Planner, 0, 3));
+    }
+
+    // 유저가 조준(약/중/강)을 선택해 4회차가 계산된 뒤 호출 — 4회차만 재생하고 최종 정산까지 이어간다.
+    public void PlayRound4AndFinish(float[] fullRoundScores, float[] roundScores, float[] cumDsAfter,
                      float total, int overflowRound, float cutFactor,
                      int hunsuBonus, LeaderType hunsuBonusTarget, System.Action onComplete)
     {
         _onComplete = onComplete;
+        IsWaitingForRound4Aim = false;
+
+        StartCoroutine(PlayRoundsCoroutine(_pendingUiType, fullRoundScores, roundScores, cumDsAfter,
+                                     total, overflowRound, cutFactor, hunsuBonus, hunsuBonusTarget, 3, 4));
+    }
+
+    // 패널/커튼/캐릭터 프리뷰 등 연출 시작 시 1회 초기화 — Show/ShowPendingRound4 공용.
+    void InitPanel(EmployeeData employee, LeaderType type, bool testMode = false)
+    {
+        _pendingUiType = type;
+        _testMode = testMode;
+        IsWaitingForRound4Aim = false;
 
         if (leaderNameText)      leaderNameText.text      = employee.employeeName;
         if (leaderRoleText)      leaderRoleText.text      = employee.RoleToString();
@@ -97,6 +222,9 @@ public class LeaderScoreUI : MonoBehaviour
         if (dsSlider) { dsSlider.minValue = 0f; dsSlider.maxValue = 100f; dsSlider.value = 0f; }
         if (totalText) totalText.text = "0";
         _currentDs = 0f;
+        _pendingDisplayedTotal = 0f;
+        _pendingPrevCumDs = 0f;
+        HideThresholdTicks(); // 90/95/99 눈금은 3회차 끝날 때 다시 켬 (ShowThresholdTicks)
         if (stressWarningImage != null)
         {
             var swc = stressWarningImage.color;
@@ -110,23 +238,24 @@ public class LeaderScoreUI : MonoBehaviour
         ModalGate.I.Register(this); // 점수 표시 중 다른 모달(상인 Alert 등) 차단
         SpawnCharacterPreview(employee);
         _curtainActive = true;
-
-        StartCoroutine(PlayCoroutine(type, fullRoundScores, roundScores, cumDsAfter,
-                                     total, overflowRound, cutFactor, hunsuBonus, hunsuBonusTarget));
     }
 
-    IEnumerator PlayCoroutine(LeaderType type,
+    // fromRound~toRoundExclusive 구간만 재생. toRoundExclusive<4 면 4회차 대기 상태로 남고
+    // (정산/커튼오프 없이 종료), toRoundExclusive>=4 면(또는 도중 오버플로 발생 시) 최종 정산까지 진행한다.
+    IEnumerator PlayRoundsCoroutine(LeaderType type,
                               float[] fullRoundScores, float[] roundScores, float[] cumDsAfter,
                               float total, int overflowRound, float cutFactor,
-                              int hunsuBonus, LeaderType hunsuBonusTarget)
+                              int hunsuBonus, LeaderType hunsuBonusTarget,
+                              int fromRound, int toRoundExclusive)
     {
-        yield return new WaitForSeconds(0.5f);
+        if (fromRound == 0) yield return new WaitForSeconds(0.5f);
 
         float dur = Mathf.Max(0.01f, rollDuration);
-        float displayedTotal = 0f;
-        float prevCumDs = 0f;
+        float displayedTotal = _pendingDisplayedTotal;
+        float prevCumDs = _pendingPrevCumDs;
+        bool reachedEnd = toRoundExclusive >= 4;
 
-        for (int r = 0; r < 4; r++)
+        for (int r = fromRound; r < toRoundExclusive; r++)
         {
             bool isOverflow = (overflowRound == r);
             float targetDs    = cumDsAfter[r];
@@ -152,6 +281,10 @@ public class LeaderScoreUI : MonoBehaviour
             _currentDs = targetDs;
             prevCumDs = targetDs;
 
+            // 4회차 결과가 확정되는 시점(성공/오버플로 무관) — 3회차 끝나고 떠있던 미리보기(눈금/BurstText)는
+            // 이제 실제 결과가 나오는 참이니 걷어낸다.
+            if (r == 3) HideThresholdTicks();
+
             if (isOverflow)
             {
                 // 누적 ds 100 초과(burst): 총점 위치(categoryIcon)에서 빨아들였던 것과 반대로 아이콘을
@@ -161,17 +294,35 @@ public class LeaderScoreUI : MonoBehaviour
                 StartCoroutine(SpitBurstCoroutine(Mathf.Max(0, Mathf.RoundToInt(lost))));
 
                 yield return StartCoroutine(ApplyCutCoroutine(fullRoundScores, roundScores, r));
+                reachedEnd = true; // 오버플로는 회차와 무관하게 항상 그 자리에서 종료
                 break;
             }
 
-            // Phase B+C — 회차 점수만큼 아이콘이 팝콘처럼 펑 터진 뒤 categoryIcon으로 빨려들어가는 동안
-            // 총점 + 회차 점수가 동시에 상승.
-            yield return StartCoroutine(PopAndFlyCoroutine(Mathf.Max(0, Mathf.RoundToInt(targetRound)), r, startTotal, targetRound));
-            displayedTotal = startTotal + targetRound;
+            // 4회차는 보너스 점수(90/95/99 임계선 누적)도 같이 팝콘으로 뿌려서 총점에 흡수시킨다.
+            float bonusExtra = (r == 3 && DevelopmentManager.Instance != null) ? DevelopmentManager.Instance.GetLeaderBonusTotal() : 0f;
 
-            if (r < 3)
+            // Phase B+C — 회차 점수(+4회차면 보너스까지)만큼 아이콘이 팝콘처럼 펑 터진 뒤 categoryIcon으로
+            // 빨려들어가는 동안 총점 + 회차 점수가 동시에 상승.
+            yield return StartCoroutine(PopAndFlyCoroutine(Mathf.Max(0, Mathf.RoundToInt(targetRound + bonusExtra)), r, startTotal, targetRound, bonusExtra));
+            displayedTotal = startTotal + targetRound + bonusExtra;
+
+            if (r < toRoundExclusive - 1)
                 yield return new WaitForSeconds(roundGap);
         }
+
+        _pendingDisplayedTotal = displayedTotal;
+        _pendingPrevCumDs = prevCumDs;
+
+        if (!reachedEnd)
+        {
+            // 1~3회차 연출까지 다 끝남 — 이제부터 4회차 조준 선택 대기 (커튼/스트레스 경고는 계속 돌아감).
+            IsWaitingForRound4Aim = true;
+            ShowThresholdTicks();
+            yield break;
+        }
+
+        // 4회차까지 끝났으면 미리보기(범위) 대신 실제 획득액으로 교체
+        RefreshBonusActualTexts();
 
         // 총합 최종 확정 + 역할 누적스탯 반영 (+ 훈수쟁이 보너스는 기획/아트로)
         if (totalText) totalText.text = Mathf.RoundToInt(total).ToString();
@@ -231,13 +382,15 @@ public class LeaderScoreUI : MonoBehaviour
 
     // count개의 iconPrefab을 popcornPoint에서 팝콘처럼 펑 터뜨린 뒤, categoryIcon 위치로 빨려들어가게 하면서
     // 그와 동시에 총점(startTotal→startTotal+targetRound)과 해당 회차 점수(0→targetRound)를 함께 올린다.
-    IEnumerator PopAndFlyCoroutine(int count, int roundIndex, float startTotal, float targetRound)
+    // bonusExtra: 4회차에서 90/95/99 임계선 보너스가 있으면 회차점수와 함께 팝콘으로 뿌려서 총점에 얹는다.
+    // 회차 점수 텍스트(roundScoreTexts)는 targetRound까지만 오르고, 총점만 그만큼 더 올라간다.
+    IEnumerator PopAndFlyCoroutine(int count, int roundIndex, float startTotal, float targetRound, float bonusExtra = 0f)
     {
         if (count <= 0 || iconPrefab == null || popcornPoint == null)
         {
             // 연출 리소스가 없으면 텍스트만 즉시 반영
             SetRoundText(roundIndex, targetRound);
-            if (totalText) totalText.text = Mathf.RoundToInt(startTotal + targetRound).ToString();
+            if (totalText) totalText.text = Mathf.RoundToInt(startTotal + targetRound + bonusExtra).ToString();
             yield break;
         }
 
@@ -284,13 +437,14 @@ public class LeaderScoreUI : MonoBehaviour
 
             float rs = Mathf.Lerp(0f, targetRound, t);
             SetRoundText(roundIndex, rs);
-            if (totalText) totalText.text = Mathf.RoundToInt(startTotal + rs).ToString();
+            float totalRise = Mathf.Lerp(0f, targetRound + bonusExtra, t);
+            if (totalText) totalText.text = Mathf.RoundToInt(startTotal + totalRise).ToString();
 
             yield return null;
         }
 
         SetRoundText(roundIndex, targetRound);
-        if (totalText) totalText.text = Mathf.RoundToInt(startTotal + targetRound).ToString();
+        if (totalText) totalText.text = Mathf.RoundToInt(startTotal + targetRound + bonusExtra).ToString();
 
         foreach (var rt in icons)
             if (rt != null) Destroy(rt.gameObject);
@@ -521,7 +675,9 @@ public class LeaderScoreUI : MonoBehaviour
     {
         // 팀장점수를 DevelopmentPanelUI 에 한 번에 반영 (실제값+표시값 즉시 동기화 → 점프 업).
         // _onComplete(→StartDeveloping) 의 SaveProject 전에 적용돼야 accum 에 저장됨.
-        DevelopmentPanelUI.Instance.AddValuesInstant(_applyPlanning, _applyDevelop, _applyArt, 0f, 0f);
+        // 테스트 모드(DevelopmentManager.TestLeaderScore)는 프로젝트 상태에 영향을 주면 안 되므로 스킵.
+        if (!_testMode)
+            DevelopmentPanelUI.Instance.AddValuesInstant(_applyPlanning, _applyDevelop, _applyArt, 0f, 0f);
         _applyPlanning = _applyDevelop = _applyArt = 0f;
 
         ClearCharacterPreview();

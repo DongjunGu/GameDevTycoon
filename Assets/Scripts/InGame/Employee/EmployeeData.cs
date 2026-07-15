@@ -330,10 +330,12 @@ public class EmployeeData
 
     // 버프/디버프(statDebuff·statBuff·romance·godBlessing·otaku)는 예전엔 역할별 주스탯에만 적용됐지만,
     // 이제 네 스탯(기획/개발/아트/창의성) 전부에 동일하게 적용한다. 증감폭 자체는 여전히 GetMainStat() 기준.
-    public int EffectivePlanningSkill   => Mathf.RoundToInt(((int)(planningSkill   * GetSatisfactionMultiplier()) - GetStatDebuffAmount() + GetStatBuffAmount() + GetRomanceBuffAmount() + GetGodBlessingBuffAmount() + GetOtakuBuffAmount()) * GetCosmicMultiplier());
-    public int EffectiveDevelopSkill    => Mathf.RoundToInt(((int)(developSkill    * GetSatisfactionMultiplier()) - GetStatDebuffAmount() + GetStatBuffAmount() + GetRomanceBuffAmount() + GetGodBlessingBuffAmount() + GetOtakuBuffAmount()) * GetCosmicMultiplier());
-    public int EffectiveArtSkill        => Mathf.RoundToInt(((int)(artSkill        * GetSatisfactionMultiplier()) - GetStatDebuffAmount() + GetStatBuffAmount() + GetRomanceBuffAmount() + GetGodBlessingBuffAmount() + GetOtakuBuffAmount()) * GetCosmicMultiplier());
-    public int EffectiveCreativitySkill => Mathf.RoundToInt(((int)(creativitySkill * GetSatisfactionMultiplier()) - GetStatDebuffAmount() + GetStatBuffAmount() + GetRomanceBuffAmount() + GetGodBlessingBuffAmount() + GetOtakuBuffAmount()) * GetCosmicMultiplier());
+    // 만족도 배율 적용 항은 반올림(RoundToInt) — (int) 버림 캐스팅이면 원본 스탯이 작을 때(예: 8×1.1=8.8)
+    // 소수점이 통째로 버려져서 실제로는 배율이 적용됐는데도 값이 그대로라 버프색이 안 보이는 문제가 있었음.
+    public int EffectivePlanningSkill   => Mathf.RoundToInt((Mathf.RoundToInt(planningSkill   * GetSatisfactionMultiplier()) - GetStatDebuffAmount() + GetStatBuffAmount() + GetRomanceBuffAmount() + GetGodBlessingBuffAmount() + GetOtakuBuffAmount()) * GetCosmicMultiplier());
+    public int EffectiveDevelopSkill    => Mathf.RoundToInt((Mathf.RoundToInt(developSkill    * GetSatisfactionMultiplier()) - GetStatDebuffAmount() + GetStatBuffAmount() + GetRomanceBuffAmount() + GetGodBlessingBuffAmount() + GetOtakuBuffAmount()) * GetCosmicMultiplier());
+    public int EffectiveArtSkill        => Mathf.RoundToInt((Mathf.RoundToInt(artSkill        * GetSatisfactionMultiplier()) - GetStatDebuffAmount() + GetStatBuffAmount() + GetRomanceBuffAmount() + GetGodBlessingBuffAmount() + GetOtakuBuffAmount()) * GetCosmicMultiplier());
+    public int EffectiveCreativitySkill => Mathf.RoundToInt((Mathf.RoundToInt(creativitySkill * GetSatisfactionMultiplier()) - GetStatDebuffAmount() + GetStatBuffAmount() + GetRomanceBuffAmount() + GetGodBlessingBuffAmount() + GetOtakuBuffAmount()) * GetCosmicMultiplier());
 
     public string DevelopText()    => $"개발: {EffectiveDevelopSkill}";
     public string PlanningText()   => $"기획: {EffectivePlanningSkill}";
