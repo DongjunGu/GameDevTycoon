@@ -4,6 +4,7 @@ using System.Linq;
 using UnityEngine;
 
 public enum LeaderType { Planner, Programmer, Artist }
+public enum LeaderScoreAim { Low, Mid, High } // 4회차 조준 선택 (약/중/강)
 
 // 기여도 순위 한 항목 — 퇴사자도 캐시된 이름/초상화로 표시.
 public struct ContributionEntry
@@ -905,6 +906,240 @@ public class DevelopmentManager : MonoBehaviour
         BuildAndShowLeaderScore(type, employee, jealousyTarget, leaderCount, null, true);
     }
 
+    // ── 팀장점수 공식 상수 (고스탑 개편) ──
+    static readonly float[] LeaderStageM          = { 1.35f, 1.5f, 1.65f, 1.8f }; // 단계(1~4) → 추천가중치 M
+    static readonly int[]   LeaderDsMaxRoll       = { 12, 14, 14, 16 };           // 회차(1~4) → ds 랜덤 상한
+    static readonly float[] LeaderRoundMultiplier = { 0.6f, 0.9f, 1f, 1.5f };     // 회차(1~4) → 회차 배율
+    const float LeaderScoreC0 = 0.176f;
+    // 성수(강화수치 0~25) → S(성수), U자형 곡선
+    static readonly float[] LeaderGrowthS =
+    {
+        1f, 0.9077f, 0.856f, 0.8017f, 0.7708f, 0.7375f, 0.721f, 0.7013f, 0.6933f, 0.6807f,
+        0.6765f, 0.6638f, 0.659f, 0.6598f, 0.6691f, 0.684f, 0.6889f, 0.6991f, 0.7111f, 0.7264f,
+        0.7268f, 0.7659f, 0.8134f, 0.8737f, 0.9228f, 0.9601f
+    };
+    static float GetLeaderGrowthS(int enhanceLevel) => LeaderGrowthS[Mathf.Clamp(enhanceLevel, 0, LeaderGrowthS.Length - 1)];
+
+    // 회차 점수 = 회차배율 × c0 × K(능력치) × S(성수) × ds^0.95 × Random(0.97~1.03)
+    // 랜덤 진폭(0.97~1.03) 적용 전 기본값 — 실제 굴림과 범위 표시(min/max) 양쪽에서 재사용.
+    static float CalcLeaderRoundScoreBase(int roundIndex, float K, float S, float ds)
+        => LeaderRoundMultiplier[roundIndex] * LeaderScoreC0 * K * S * Mathf.Pow(ds, 0.95f);
+
+    static float CalcLeaderRoundScore(int roundIndex, float K, float S, float ds)
+        => Mathf.Round(CalcLeaderRoundScoreBase(roundIndex, K, S, ds) * UnityEngine.Random.Range(0.97f, 1.03f));
+
+    // 4회차 조준(아직 U를 굴리기 전)의 예상 점수 범위 — 참고용 (현재 버튼 라벨은 GetAimDsRange 사용). 대기 중이 아니면 (0,0).
+    public (int min, int max) GetAimScoreRange(LeaderScoreAim aim)
+    {
+        var ctx = _pendingRound4;
+        if (ctx == null) return (0, 0);
+
+        var (uMin, uMax) = GetAimURange(aim);
+        float dsMin = 11f + uMin * ctx.M;
+        float dsMax = 11f + uMax * ctx.M;
+        float scoreMin = CalcLeaderRoundScoreBase(3, ctx.K, ctx.S, dsMin) * 0.97f;
+        float scoreMax = CalcLeaderRoundScoreBase(3, ctx.K, ctx.S, dsMax) * 1.03f;
+        return (Mathf.RoundToInt(scoreMin), Mathf.RoundToInt(scoreMax));
+    }
+
+    // 4회차 조준이 실제로 스트레스(ds)를 얼마나 올릴지의 범위 — 버튼 라벨 표시용. 대기 중이 아니면 (0,0).
+    public (int min, int max) GetAimDsRange(LeaderScoreAim aim)
+    {
+        var ctx = _pendingRound4;
+        if (ctx == null) return (0, 0);
+
+        var (uMin, uMax) = GetAimURange(aim);
+        float dsMin = 11f + uMin * ctx.M;
+        float dsMax = 11f + uMax * ctx.M;
+        return (Mathf.RoundToInt(dsMin), Mathf.RoundToInt(dsMax));
+    }
+
+    // ── 팀장점수 보너스 시스템 ──
+    // 누적ds(스트레스)가 90/95/99를 최초 돌파하면 즉시 1회 지급, 중첩 가능(90+95+99 다 받을 수 있음).
+    // 오버플로(>100) 회차는 보너스 지급 안 함 — 오버플로 확인 후에만 보너스를 붙이므로 자연히 걸러짐.
+    // f 범위: [성수구간(0=0~10/1=11~20/2=21~25)][임계선(0=90/1=95/2=99)]
+    static readonly (float min, float max)[,] LeaderBonusF = new (float, float)[3, 3]
+    {
+        { (1.99f, 2.985f),  (5.469f, 8.204f),   (22.143f, 33.215f) },
+        { (1.634f, 2.452f), (4.43f, 6.645f),    (16.954f, 25.431f) },
+        { (1.173f, 1.759f), (3.111f, 4.666f),   (10.86f, 16.291f) },
+    };
+    static readonly float[] LeaderBonusThresholds = { 90f, 95f, 99f };
+
+    static int LeaderBonusGrowthBucket(int enhanceLevel)
+    {
+        if (enhanceLevel <= 10) return 0;
+        if (enhanceLevel <= 20) return 1;
+        return 2;
+    }
+
+    // 세션 진행 중 이미 지급된 임계선(90/95/99) — 중복 지급 방지. 새 팀장점수 시작 시 리셋.
+    private bool[] _leaderBonusGranted = new bool[3];
+    private float[] _leaderBonusAmounts = new float[3]; // 임계선별 실제 지급액 (UI "+n" 표시용)
+    private float _leaderBonusTotal;
+
+    // UI에서 임계선별(0=90/1=95/2=99) 지급 보너스 금액 조회 — 아직 안 넘었으면 0.
+    public float GetLeaderBonusAmount(int thresholdIndex)
+        => (thresholdIndex >= 0 && thresholdIndex < 3) ? _leaderBonusAmounts[thresholdIndex] : 0f;
+
+    // 이번 세션에서 지급된 보너스 총합 (90+95+99 중첩 합산) — 4회차 팝콘 연출에 같이 얹을 때 사용.
+    public float GetLeaderBonusTotal() => _leaderBonusTotal;
+
+    // 3회차 끝난 시점(4회차 선택 대기 중)에 보여줄 "이 임계선까지 도달하면 받을 수 있는 총액" 미리보기.
+    // 하위 임계선까지 중첩된 f를 누적으로 더한 범위 × K × S. 대기 중이 아니면 (0,0).
+    public (float min, float max) GetLeaderBonusPotentialRange(int thresholdIndex)
+    {
+        var ctx = _pendingRound4;
+        if (ctx == null || thresholdIndex < 0 || thresholdIndex > 2) return (0f, 0f);
+
+        int bucket = LeaderBonusGrowthBucket(ctx.employee.enhancementLevel);
+        float fMinSum = 0f, fMaxSum = 0f;
+        for (int i = 0; i <= thresholdIndex; i++)
+        {
+            var (fMin, fMax) = LeaderBonusF[bucket, i];
+            fMinSum += fMin;
+            fMaxSum += fMax;
+        }
+        return (ctx.K * ctx.S * fMinSum, ctx.K * ctx.S * fMaxSum);
+    }
+
+    // cumDs가 새로 90/95/99를 넘겼으면 해당 임계선 보너스를 지급(누적). 오버플로 회차에서는 호출하지 않는다.
+    void CheckLeaderBonusThresholds(float cumDs, int enhanceLevel, float K, float S)
+    {
+        int bucket = LeaderBonusGrowthBucket(enhanceLevel);
+        for (int i = 0; i < 3; i++)
+        {
+            if (_leaderBonusGranted[i]) continue;
+            if (cumDs <= LeaderBonusThresholds[i]) continue;
+            _leaderBonusGranted[i] = true;
+
+            var (fMin, fMax) = LeaderBonusF[bucket, i];
+            float f = Mathf.Round(UnityEngine.Random.Range(fMin, fMax) * 100f) / 100f;
+            float bonus = K * S * f;
+            _leaderBonusAmounts[i] = bonus;
+            _leaderBonusTotal += bonus;
+        }
+    }
+
+    // 4회차 조준 선택 대기 컨텍스트 — 1~3회차가 오버플로 없이 끝나면 여기 저장하고
+    // SelectRound4Aim() 호출(유저 UI)을 기다린다.
+    private class PendingRound4Context
+    {
+        public LeaderType type;
+        public EmployeeData employee;
+        public EmployeeData jealousyTarget;
+        public int leaderCount;
+        public float K, S, M;
+        public bool lazyGenius;
+        public float cumDs3;
+        public float[] fullRoundScores;
+        public float[] roundScores;
+        public float[] cumDsAfter;
+        public bool testMode; // true면 저장/기여도/스탯반영 전부 스킵 (TestLeaderScore 전용)
+    }
+    private PendingRound4Context _pendingRound4;
+    public bool IsPendingRound4Aim => _pendingRound4 != null;
+
+    // ── 테스트 전용 진입점 ──────────────────────────────────────
+    // 프로젝트 진행 상태(개발 단계/기여도/저장)에 전혀 영향 없이 팀장점수 연출만 실행해본다.
+    // 4회차까지 끝나도 저장이나 DevelopmentPanelUI 반영이 일절 일어나지 않고 그냥 패널만 닫힌다.
+    public void TestLeaderScore(EmployeeData employee, LeaderType type)
+    {
+        if (employee == null || LeaderScoreUI.Instance == null) return;
+
+        // 정상 흐름(LeaderSelectUI.OnSelectLeader)을 거치지 않고 바로 점수 연출로 들어가므로,
+        // 컨테이너 패널을 직접 켜줘야 함 — 안 하면 LeaderScoreUI 내부 패널만 active여도 부모가
+        // 꺼져있어 화면에 아무것도 안 보임 (ResumeLeaderScore와 동일 패턴).
+        if (LeaderSelectUI.Instance != null)
+        {
+            LeaderSelectUI.Instance.entireLeaderPanel.gameObject.SetActive(true);
+            if (LeaderSelectUI.Instance.leaderPanel != null)
+                LeaderSelectUI.Instance.leaderPanel.gameObject.SetActive(false);
+        }
+
+        int skill = type switch
+        {
+            LeaderType.Planner    => employee.EffectivePlanningSkill,
+            LeaderType.Programmer => employee.EffectiveDevelopSkill,
+            LeaderType.Artist     => employee.EffectiveArtSkill,
+            _ => 0
+        };
+
+        int stage = RollLeaderStage(employee.enhancementLevel);
+        float M = LeaderStageM[stage - 1];
+        float K = 0.8738f + 0.026409f * Mathf.Pow(skill, 0.9081f);
+        bool lazyGenius = type == LeaderType.Programmer && CharacterTraitApplier.HasLazyGeniusOwned();
+        if (lazyGenius) K *= CharacterTraitApplier.LAZY_GENIUS_LEADER_BONUS;
+        float S = GetLeaderGrowthS(employee.enhancementLevel);
+
+        _leaderBonusGranted  = new bool[3];
+        _leaderBonusAmounts  = new float[3];
+        _leaderBonusTotal    = 0f;
+
+        var fullRoundScores = new float[4];
+        var roundScores     = new float[4];
+        var cumDsAfter      = new float[4];
+        float cumDs = 0f;
+        int overflowRound = -1;
+        float cutFactor = 0f;
+        bool overflowedEarly = false;
+
+        for (int r = 0; r < 3; r++)
+        {
+            int roll = UnityEngine.Random.Range(1, LeaderDsMaxRoll[r] + 1);
+            float ds = 11f + roll * M;
+            cumDs += ds;
+            cumDsAfter[r] = cumDs;
+
+            if (cumDs > 100f)
+            {
+                overflowRound = r;
+                cutFactor = UnityEngine.Random.Range(0.10f, 0.20f);
+                fullRoundScores[r] = 0f;
+                roundScores[r] = 0f;
+                for (int k = 0; k < r; k++)
+                    roundScores[k] = Mathf.Round(fullRoundScores[k] * (1f - cutFactor));
+                overflowedEarly = true;
+                break;
+            }
+
+            fullRoundScores[r] = CalcLeaderRoundScore(r, K, S, ds);
+            roundScores[r] = fullRoundScores[r];
+            CheckLeaderBonusThresholds(cumDs, employee.enhancementLevel, K, S);
+        }
+
+        if (!overflowedEarly)
+        {
+            _pendingRound4 = new PendingRound4Context
+            {
+                type = type, employee = employee, jealousyTarget = null, leaderCount = 1,
+                K = K, S = S, M = M, lazyGenius = lazyGenius, cumDs3 = cumDs,
+                fullRoundScores = fullRoundScores, roundScores = roundScores, cumDsAfter = cumDsAfter,
+                testMode = true
+            };
+            LeaderScoreUI.Instance.ShowPendingRound4(employee, type, fullRoundScores, roundScores, cumDsAfter, testMode: true);
+            return;
+        }
+
+        float total = 0f;
+        for (int r = 0; r < 4; r++) total += roundScores[r];
+        total += _leaderBonusTotal;
+
+        int hunsuBonus = 0;
+        LeaderType hunsuBonusTarget = LeaderType.Planner;
+        if (type == LeaderType.Programmer && CharacterTraitApplier.IsHunsu(employee))
+        {
+            float baseTotal = lazyGenius ? total / CharacterTraitApplier.LAZY_GENIUS_LEADER_BONUS : total;
+            hunsuBonus = Mathf.RoundToInt(baseTotal * CharacterTraitApplier.HUNSU_BONUS_RATIO);
+            hunsuBonusTarget = UnityEngine.Random.value < 0.5f ? LeaderType.Planner : LeaderType.Artist;
+        }
+
+        LeaderScoreUI.Instance.Show(employee, type, fullRoundScores, roundScores, cumDsAfter,
+                                    total, overflowRound, cutFactor, hunsuBonus, hunsuBonusTarget,
+                                    () => { /* 테스트 확정 — 아무 것도 반영 안 함 */ },
+                                    testMode: true);
+    }
+
     // 팀장 점수 산출(신규 추첨) 또는 저장값 재생 → LeaderScoreUI 표시.
     // doSave=true 면 선택 시점 저장(돈/직원 항상, overflow 면 값까지 잠금). 복원 재생/재추첨은 doSave=false.
     void BuildAndShowLeaderScore(LeaderType type, EmployeeData employee,
@@ -945,14 +1180,7 @@ public class DevelopmentManager : MonoBehaviour
 
             // 강화도(성수) 기반 단계 추첨 → 추천가중치 M
             int stage = RollLeaderStage(employee.enhancementLevel);
-            float M = stage switch
-            {
-                1 => 1.35f,
-                2 => 1.53f,
-                3 => 1.6f,
-                4 => 1.73f,
-                _ => 1.35f
-            };
+            float M = LeaderStageM[stage - 1];
 
             // K(능력치) = 0.8738 + 0.026409 × 주스탯^0.9081
             float K = 0.8738f + 0.026409f * Mathf.Pow(skill, 0.9081f);
@@ -960,17 +1188,27 @@ public class DevelopmentManager : MonoBehaviour
             if (lazyGenius)
                 K *= CharacterTraitApplier.LAZY_GENIUS_LEADER_BONUS;
 
-            // 4회차 ds / 회차 점수 시뮬레이션 (누적 ds 100 초과 시 0점 + 전 회차 차감 후 종료)
-            int[] dsMaxRoll = { 12, 14, 16, 14 };
+            float S = GetLeaderGrowthS(employee.enhancementLevel);
+
+            // 보너스 임계선(90/95/99) 지급 상태 리셋 — 새 팀장점수 세션 시작
+            _leaderBonusGranted = new bool[3];
+            _leaderBonusAmounts = new float[3];
+            _leaderBonusTotal = 0f;
+
+            // 1~3회차 ds / 회차 점수 자동 진행 (누적 ds 100 초과 시 0점 + 전 회차 차감 후 종료).
+            // 4회차는 여기서 굴리지 않는다 — 3회차까지 오버플로 없이 끝나야만 유저가 조준(약/중/강)을
+            // 선택한 뒤 SelectRound4Aim()에서 계산한다.
             fullRoundScores = new float[4];
             roundScores     = new float[4];
             cumDsAfter      = new float[4];
             float cumDs = 0f;
             overflowRound = -1;
             cutFactor = 0f;
-            for (int r = 0; r < 4; r++)
+            bool overflowedEarly = false;
+
+            for (int r = 0; r < 3; r++)
             {
-                int roll = UnityEngine.Random.Range(1, dsMaxRoll[r] + 1); // 1~상한 정수
+                int roll = UnityEngine.Random.Range(1, LeaderDsMaxRoll[r] + 1); // 1~상한 정수
                 float ds = 11f + roll * M;
                 cumDs += ds;
                 cumDsAfter[r] = cumDs;
@@ -983,16 +1221,50 @@ public class DevelopmentManager : MonoBehaviour
                     roundScores[r] = 0f;
                     for (int k = 0; k < r; k++)
                         roundScores[k] = Mathf.Round(fullRoundScores[k] * (1f - cutFactor));
+                    overflowedEarly = true;
                     break;
                 }
 
-                float score = Mathf.Round(K * Mathf.Pow(ds, 0.4f) * UnityEngine.Random.Range(0.97f, 1.03f));
-                fullRoundScores[r] = score;
-                roundScores[r] = score;
+                fullRoundScores[r] = CalcLeaderRoundScore(r, K, S, ds);
+                roundScores[r] = fullRoundScores[r];
+
+                // 오버플로가 아닌 회차에서만 보너스 임계선 체크 (오버플로면 위 if에서 이미 break)
+                CheckLeaderBonusThresholds(cumDs, employee.enhancementLevel, K, S);
+            }
+
+            if (!overflowedEarly)
+            {
+                // 3회차까지 무사히 끝남 — 4회차는 유저 선택 대기. SelectRound4Aim()이 이어받는다.
+                _pendingRound4 = new PendingRound4Context
+                {
+                    type = type, employee = employee, jealousyTarget = jealousyTarget, leaderCount = leaderCount,
+                    K = K, S = S, M = M, lazyGenius = lazyGenius, cumDs3 = cumDs,
+                    fullRoundScores = fullRoundScores, roundScores = roundScores, cumDsAfter = cumDsAfter
+                };
+
+                _leaderScoreResume = new LeaderScoreResume
+                {
+                    active = true, hasValues = false, leaderType = (int)type, employeeId = employee.id,
+                    jealousyTargetId = jealousyTarget != null ? jealousyTarget.id : "", leaderCount = leaderCount
+                };
+
+                GameTimeManager.Instance.StopTime();
+                if (doSave)
+                {
+                    if (CurrentStage == ProjectStage.None) CurrentStage = ProjectStage.Developing;
+                    MoneyManager.Instance.SaveMoney();
+                    ProjectSaveManager.Instance.SaveProject();
+                    GameTimeManager.Instance.SaveGameTime();
+                    EmployeeManager.Instance.SaveAllEmployees();
+                }
+
+                LeaderScoreUI.Instance.ShowPendingRound4(employee, type, fullRoundScores, roundScores, cumDsAfter);
+                return;
             }
 
             total = 0f;
             for (int r = 0; r < 4; r++) total += roundScores[r];
+            total += _leaderBonusTotal; // 90/95/99 임계선 보너스 (오버플로 회차는 지급 안 됐으므로 차감 대상 아님)
 
             // 훈수쟁이(개발팀장): 개발 점수의 10% 를 기획/아트 중 랜덤 1곳에 추가 (게으른 천재 ×1.3 이전 base 기준)
             hunsuBonus = 0;
@@ -1045,6 +1317,104 @@ public class DevelopmentManager : MonoBehaviour
         LeaderScoreUI.Instance.Show(employee, type, fullRoundScores, roundScores, cumDsAfter,
                                     total, overflowRound, cutFactor, hunsuBonus, hunsuBonusTarget,
                                     () => ContinueAfterLeaderScore(type, employee, jealousyTarget, leaderCount, total));
+    }
+
+    // 조준별 U 범위: 약 1~6 / 중 5~12 / 강 11~16 (기본 U 1~16을 3등분+1칸 겹침) — 버튼 라벨 표시 등에도 재사용.
+    public static (int min, int max) GetAimURange(LeaderScoreAim aim) => aim switch
+    {
+        LeaderScoreAim.Low  => (1, 6),
+        LeaderScoreAim.Mid  => (5, 12),
+        LeaderScoreAim.High => (11, 16),
+        _ => (1, 6)
+    };
+
+    // 4회차 조준 선택(유저 UI에서 호출) — U 범위 결정 → ds/회차점수 계산 → 정산/저장 → 4회차 연출 재생까지 이어감.
+    public void SelectRound4Aim(LeaderScoreAim aim)
+    {
+        var ctx = _pendingRound4;
+        if (ctx == null) return;
+        _pendingRound4 = null;
+
+        (int uMin, int uMax) = GetAimURange(aim);
+        int U = UnityEngine.Random.Range(uMin, uMax + 1);
+        float ds4 = 11f + U * ctx.M;
+        float cumDs = ctx.cumDs3 + ds4;
+
+        var fullRoundScores = ctx.fullRoundScores;
+        var roundScores     = ctx.roundScores;
+        var cumDsAfter      = ctx.cumDsAfter;
+        cumDsAfter[3] = cumDs;
+
+        int overflowRound = -1;
+        float cutFactor = 0f;
+
+        if (cumDs > 100f)
+        {
+            overflowRound = 3;
+            cutFactor = UnityEngine.Random.Range(0.10f, 0.20f);
+            fullRoundScores[3] = 0f;
+            roundScores[3] = 0f;
+            for (int k = 0; k < 3; k++)
+                roundScores[k] = Mathf.Round(fullRoundScores[k] * (1f - cutFactor));
+        }
+        else
+        {
+            fullRoundScores[3] = CalcLeaderRoundScore(3, ctx.K, ctx.S, ds4);
+            roundScores[3] = fullRoundScores[3];
+
+            // 오버플로가 아닐 때만 보너스 임계선 체크 (1~3회차에서 이미 지급된 건 _leaderBonusGranted로 중복 방지됨)
+            CheckLeaderBonusThresholds(cumDs, ctx.employee.enhancementLevel, ctx.K, ctx.S);
+        }
+
+        float total = 0f;
+        for (int r = 0; r < 4; r++) total += roundScores[r];
+        total += _leaderBonusTotal; // 90/95/99 임계선 보너스 (1~3회차분 포함 누적치)
+
+        if (ctx.type == LeaderType.Programmer) _leaderDevelopBonusTotal  = total;
+        if (ctx.type == LeaderType.Planner)    _leaderPlanningBonusTotal = total;
+        if (ctx.type == LeaderType.Artist)     _leaderArtBonusTotal      = total;
+
+        int hunsuBonus = 0;
+        LeaderType hunsuBonusTarget = LeaderType.Planner;
+        if (ctx.type == LeaderType.Programmer && CharacterTraitApplier.IsHunsu(ctx.employee))
+        {
+            float baseTotal = ctx.lazyGenius ? total / CharacterTraitApplier.LAZY_GENIUS_LEADER_BONUS : total;
+            hunsuBonus = Mathf.RoundToInt(baseTotal * CharacterTraitApplier.HUNSU_BONUS_RATIO);
+            hunsuBonusTarget = UnityEngine.Random.value < 0.5f ? LeaderType.Planner : LeaderType.Artist;
+        }
+
+        // 오버플로 확정 시에만 값 잠금 저장 (기존 설계와 동일 — non-overflow 는 재접속 시 재추첨 허용)
+        // 테스트 모드는 저장 자체를 스킵(프로젝트 상태에 영향 없어야 함)
+        if (overflowRound != -1 && !ctx.testMode)
+        {
+            _leaderScoreResume.hasValues        = true;
+            _leaderScoreResume.fullRoundScores  = (float[])fullRoundScores.Clone();
+            _leaderScoreResume.roundScores      = (float[])roundScores.Clone();
+            _leaderScoreResume.cumDsAfter       = (float[])cumDsAfter.Clone();
+            _leaderScoreResume.total            = total;
+            _leaderScoreResume.overflowRound    = overflowRound;
+            _leaderScoreResume.cutFactor        = cutFactor;
+            _leaderScoreResume.hunsuBonus       = hunsuBonus;
+            _leaderScoreResume.hunsuBonusTarget = (int)hunsuBonusTarget;
+
+            MoneyManager.Instance.SaveMoney();
+            ProjectSaveManager.Instance.SaveProject();
+            GameTimeManager.Instance.SaveGameTime();
+            EmployeeManager.Instance.SaveAllEmployees();
+        }
+
+        var type = ctx.type;
+        var employee = ctx.employee;
+        var jealousyTarget = ctx.jealousyTarget;
+        var leaderCount = ctx.leaderCount;
+        bool testMode = ctx.testMode;
+
+        System.Action onComplete = testMode
+            ? () => { /* 테스트 — 확정해도 프로젝트에 아무 영향 없음 */ }
+            : () => ContinueAfterLeaderScore(type, employee, jealousyTarget, leaderCount, total);
+
+        LeaderScoreUI.Instance.PlayRound4AndFinish(fullRoundScores, roundScores, cumDsAfter,
+                                    total, overflowRound, cutFactor, hunsuBonus, hunsuBonusTarget, onComplete);
     }
 
     // 팀장점수 확정(또는 재접속 재개 후 확정) → 개발 진행으로 이어가는 공통 로직.
