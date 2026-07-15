@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Tilemaps;
 
@@ -9,9 +10,21 @@ public class GridManager : MonoBehaviour
     public Tilemap groundTilemap;    // 바닥 타일맵
     public Tilemap obstacleTilemap;  // 장애물 타일맵
     public Tilemap stairTilemap;     // 계단 타일맵
+    public Tilemap elevatorTilemap;  // 엘리베이터 시각 요소(샤프트 등)가 칠해진 타일맵. 링크 양쪽 셀에 타일이 있어야 워프가 작동.
 
     [Header("Stairs")]
     public float stairYOffset = 0.3f; // 계단 셀의 Y 오프셋
+
+    [System.Serializable]
+    public struct ElevatorLink
+    {
+        public Vector3Int cellA; // 아래층 진입 셀
+        public Vector3Int cellB; // 위층 도착 셀
+    }
+
+    [Header("Elevator Links")]
+    [Tooltip("비인접 셀을 잇는 워프 연결. 양방향. 양쪽 셀 모두 elevatorTilemap에 타일이 있어야 실제로 발동함.")]
+    public List<ElevatorLink> elevatorLinks = new();
 
     void Awake()
     {
@@ -19,13 +32,41 @@ public class GridManager : MonoBehaviour
         Instance = this;
     }
 
+    void Start()
+    {
+        // elevatorLinks에 등록된 좌표가 실제로 elevatorTilemap에 칠해져 있는지 진입 시점에 검증.
+        foreach (var link in elevatorLinks)
+        {
+            bool aOk = elevatorTilemap != null && elevatorTilemap.HasTile(link.cellA);
+            bool bOk = elevatorTilemap != null && elevatorTilemap.HasTile(link.cellB);
+            if (!aOk || !bOk)
+                Debug.LogWarning($"[GridManager] ElevatorLink {link.cellA} <-> {link.cellB} 비활성 상태: elevatorTilemap에 타일 없음 (cellA={aOk}, cellB={bOk})");
+        }
+    }
+
     // 스테이지 전환(새 사무실 등) 시 참조 타일맵 교체 — groundTilemap 등은 고정 참조라
-    // 새로 깔린 타일맵(예: "ground (1)")은 자동으로 인식되지 않는다. null 허용(예: 새 구역에 계단 없음).
-    public void SetTilemaps(Tilemap ground, Tilemap obstacle, Tilemap stair)
+    // 새로 깔린 타일맵(예: "ground (1)")은 자동으로 인식되지 않는다. null 허용(예: 새 구역에 계단/엘리베이터 없음).
+    public void SetTilemaps(Tilemap ground, Tilemap obstacle, Tilemap stair, Tilemap elevator = null)
     {
         groundTilemap   = ground;
         obstacleTilemap = obstacle;
         stairTilemap    = stair;
+        elevatorTilemap = elevator;
+    }
+
+    // cell이 엘리베이터 링크의 한쪽 끝이면 반대쪽 셀을 반환 (없으면 null)
+    // elevatorTilemap에 시각 요소가 여러 칸 칠해져 있어도, 실제 워프는 elevatorLinks에 등록된
+    // 두 셀 사이에서만 일어난다 — 단, 그 두 셀 모두 elevatorTilemap에 타일이 있어야 발동.
+    public Vector3Int? GetElevatorLink(Vector3Int cell)
+    {
+        if (elevatorTilemap == null || !elevatorTilemap.HasTile(cell)) return null;
+
+        foreach (var link in elevatorLinks)
+        {
+            if (link.cellA == cell && elevatorTilemap.HasTile(link.cellB)) return link.cellB;
+            if (link.cellB == cell && elevatorTilemap.HasTile(link.cellA)) return link.cellA;
+        }
+        return null;
     }
 
     // 월드 좌표 → 셀 좌표
@@ -44,7 +85,8 @@ public class GridManager : MonoBehaviour
     public bool IsWalkable(Vector3Int cellPos)
     {
         bool hasGround = groundTilemap.HasTile(cellPos)
-                      || (stairTilemap != null && stairTilemap.HasTile(cellPos));
+                      || (stairTilemap != null && stairTilemap.HasTile(cellPos))
+                      || (elevatorTilemap != null && elevatorTilemap.HasTile(cellPos));
 
         // 오브젝트가 비활성화면 장애물 무시
         bool hasObstacle = obstacleTilemap != null

@@ -121,6 +121,10 @@ public class CharacterEventTester : MonoBehaviour
         GUILayout.Label($"우기 보유: {(CharacterUniqueEvents.HasUniqueUgi() ? "O" : "X")}");
 
         GUILayout.Space(8);
+        GUILayout.Label("<b>━━ 엘리베이터 테스트 ━━</b>", Rich());
+        if (GUILayout.Button("직원 1명 → 셀 (11,2,0) 로 이동 (엘리베이터 경유)")) SendToElevatorEntry();
+
+        GUILayout.Space(8);
         GUILayout.Label("<b>━━ 모달 차단 테스트 ━━</b>", Rich());
         if (GUILayout.Button("AlertUI 띄우기 (뒤 클릭 차단 확인)")) AlertUI.Instance?.Show("테스트 알림 — 이 뒤의 버튼/메뉴가 안 눌려야 정상");
         if (GUILayout.Button("ConfirmUI 띄우기")) ConfirmUI.Instance?.Show("테스트 확인", () => Set("확인됨"), () => Set("취소됨"));
@@ -215,6 +219,40 @@ public class CharacterEventTester : MonoBehaviour
         if (emp == null) { Set("우기 없음"); return; }
         EmployeeManager.Instance.FireEmployee(emp, countAsExit: false);
         Set($"우기 해고: {emp.employeeName} → 신의축복 지속효과 정리됨 (HasUniqueUgi={CharacterUniqueEvents.HasUniqueUgi()})");
+    }
+
+    // ── 엘리베이터 테스트 (반대편 셀로 patrol 이동 — (3,-6,0)을 "지나가야" 워프가 발동함) ──
+    GameObject _elevatorTestPoint;
+
+    void SendToElevatorEntry()
+    {
+        if (GridManager.Instance == null) { Set("GridManager 없음 (인게임에서 실행하세요)"); return; }
+
+        // 목적지를 링크 건너편(11,2,0)으로 잡아야 경로가 (3,-6,0)을 "통과"하면서 워프가 발동한다.
+        // 목적지를 (3,-6,0) 자체로 잡으면 거기 도착하는 순간 경로가 끝나 워프가 시도조차 안 됨.
+        Vector3Int cell = new Vector3Int(11, 2, 0);
+        Vector3 world = GridManager.Instance.CellToWorld(cell);
+
+        if (_elevatorTestPoint == null)
+        {
+            _elevatorTestPoint = new GameObject("[Test]ElevatorExitPoint");
+            _elevatorTestPoint.AddComponent<PatrolPoint>().pointId = "elevator_test_exit";
+        }
+        _elevatorTestPoint.transform.position = world;
+        OfficeManager.Instance?.RefreshPatrolPoints(); // 새로 만든 포인트를 캐시에 반영
+
+        var em = EmployeeManager.Instance;
+        EmployeeData target = null;
+        foreach (var e in em.ownedEmployees)
+        {
+            if (e.isCEO) continue;
+            target = e;
+            break;
+        }
+        if (target == null) { Set("보낼 수 있는 직원 없음"); return; }
+
+        OfficeManager.Instance?.ForceCharacterToPatrolPoint(target.id, "elevator_test_exit", 9999f);
+        Set($"{target.employeeName} → 셀 (11,2,0) [world {world}] 이동 시작 (중간에 (3,-6,0) 경유 워프 예상)");
     }
 
     // ── 강화 (테스트: 확률 무시하고 강제 성공으로 목표 레벨까지) ──
