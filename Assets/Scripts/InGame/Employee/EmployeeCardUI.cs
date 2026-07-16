@@ -60,6 +60,11 @@ public class EmployeeCardUI : MonoBehaviour
     [Tooltip("만족도 슬라이더가 1초당 변하는 단위 수 (값이 클수록 빠름)")]
     public float satisfactionAnimSpeed = 30f;
 
+    [Header("선택 캐릭터 머리 위 화살표 (월드스페이스, 카드와 동시에 표시)")]
+    [Tooltip("SpriteRenderer가 붙은 월드스페이스 오브젝트. 카드가 열릴 때 선택된 캐릭터 머리 위(12px)로 이동해 표시")]
+    public Transform selectedArrow;
+    const float SelectedArrowHeadOffsetUnits = 12f / 32f; // 12px, spritePixelsToUnits=32 기준
+
     private string _currentEmployeeId;
 
     void Awake()
@@ -111,6 +116,27 @@ public class EmployeeCardUI : MonoBehaviour
         RefreshDynamic(emp);
 
         if (cardPanel != null) cardPanel.SetActive(true);
+        PositionSelectedArrow(emp.id);
+    }
+
+    // 카드와 함께 뜨는 선택 화살표 — 캐릭터 머리 위(statPopupAnchor 없으면 0.6유닛 위) 기준 12px 추가로 위에 표시.
+    void PositionSelectedArrow(string employeeId)
+    {
+        if (selectedArrow == null) return;
+        var oc = OfficeManager.Instance?.GetCharacter(employeeId);
+        if (oc == null) { selectedArrow.gameObject.SetActive(false); return; }
+
+        Vector3 headPos = oc.statPopupAnchor != null
+            ? oc.statPopupAnchor.position
+            : oc.transform.position + Vector3.up * 1f;
+        Vector3 pos = headPos + Vector3.up * SelectedArrowHeadOffsetUnits;
+
+        // 둥실 애니메이션(FloatBob)이 있으면 기준점까지 같이 갱신 — 없으면 단순 위치만 세팅
+        var bob = selectedArrow.GetComponent<FloatBob>();
+        if (bob != null) bob.SetBasePosition(pos);
+        else selectedArrow.position = pos;
+
+        selectedArrow.gameObject.SetActive(true);
     }
 
     // 만족도/능력치는 시간 흐름에 따라 변하므로 카드가 열려있는 동안 매 프레임 갱신
@@ -178,6 +204,7 @@ public class EmployeeCardUI : MonoBehaviour
     {
         _currentEmployeeId = null;
         if (cardPanel != null) cardPanel.SetActive(false);
+        if (selectedArrow != null) selectedArrow.gameObject.SetActive(false);
     }
 
     // 특성 — 등급 무관 이름 표시. 등급 충족이면 클릭 시 설명, 미충족이면 lockedPanel 활성화(터치 차단).
@@ -289,6 +316,7 @@ public class EmployeeCardUI : MonoBehaviour
 
         // 카드 일시 숨김 (close-outside 충돌 방지) — ItemPanel 닫힐 때 콜백으로 다시 표시
         if (cardPanel != null) cardPanel.SetActive(false);
+        if (selectedArrow != null) selectedArrow.gameObject.SetActive(false);
 
         ItemPanelUI.Instance.OpenForEmployee(savedEmpId, () => Show(savedEmpId));
     }
@@ -309,6 +337,7 @@ public class EmployeeCardUI : MonoBehaviour
         if (emp == null) return;
 
         if (cardPanel != null) cardPanel.SetActive(false);
+        if (selectedArrow != null) selectedArrow.gameObject.SetActive(false);
 
         EmployeeListUI.Instance.OpenForEnhance(emp);
     }

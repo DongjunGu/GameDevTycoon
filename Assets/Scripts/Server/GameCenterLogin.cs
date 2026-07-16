@@ -30,14 +30,23 @@ public class GameCenterLogin : MonoBehaviour
     public void OnTokenReceived(string identityToken)
     {
         Debug.Log("[AppleLogin] identityToken 수신");
+        FindAnyObjectByType<Progress>()?.SetStep("Apple 토큰 수신 → 뒤끝 인증 시도");
 
         var bro = Backend.BMember.AuthorizeFederation(identityToken, FederationType.Apple);
 
         if (bro.IsSuccess())
         {
             Debug.Log("[AppleLogin] 뒤끝 로그인 성공: " + bro.GetInDate());
+            FindAnyObjectByType<Progress>()?.SetStep("뒤끝 인증 성공 → 데이터 로드 시작");
             FindAnyObjectByType<Progress>()?.SetLoginComplete();
-            FindAnyObjectByType<BackendManager>().OnLoginSuccess();
+            var bm = FindAnyObjectByType<BackendManager>();
+            if (bm == null)
+            {
+                Debug.LogError("[AppleLogin] BackendManager 를 찾을 수 없음 — 데이터 로드를 시작할 수 없음");
+                FindAnyObjectByType<Progress>()?.SetStep("오류: BackendManager 없음");
+                return;
+            }
+            bm.OnLoginSuccess();
         }
         else
         {
@@ -45,11 +54,13 @@ public class GameCenterLogin : MonoBehaviour
             Debug.LogError("StatusCode: " + bro.GetStatusCode());
             Debug.LogError("ErrorCode: " + bro.GetErrorCode());
             Debug.LogError("Message: " + bro.GetMessage());
+            FindAnyObjectByType<Progress>()?.SetStep($"오류: 뒤끝 인증 실패 ({bro.GetStatusCode()}/{bro.GetErrorCode()})");
         }
     }
 
     public void OnTokenFailed(string error)
     {
         Debug.LogError("[AppleLogin] 로그인 실패: " + error);
+        FindAnyObjectByType<Progress>()?.SetStep($"오류: Apple 로그인 실패 ({error})");
     }
 }

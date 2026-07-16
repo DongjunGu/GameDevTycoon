@@ -12,9 +12,19 @@ public class Progress : MonoBehaviour
 
     private bool _loginComplete = false;
     private bool _allDataLoaded = false;
+    private string _stepLabel = "";
 
     public void SetLoginComplete() => _loginComplete = true;
     public void SetAllDataLoaded() => _allDataLoaded = true;
+
+    // 90% 대기 구간에서 정확히 어느 로그인/로드 단계에 멈췄는지 화면에서 바로 보이도록.
+    // (기기에서 콘솔을 볼 수 없는 상황에서 "몇 %에서 멈춤"보다 훨씬 구체적으로 원인 추적 가능)
+    public void SetStep(string label)
+    {
+        _stepLabel = label;
+        if (textProgressData != null)
+            textProgressData.text = $"Now Loading...{sliderProgress.value * 100:F0}% ({_stepLabel})";
+    }
 
     public void Play(UnityAction action = null)
     {
@@ -60,6 +70,7 @@ public class Progress : MonoBehaviour
     void SetSlider(float value)
     {
         sliderProgress.value = value;
-        textProgressData.text = $"Now Loading...{value * 100:F0}%";
+        string suffix = string.IsNullOrEmpty(_stepLabel) ? "" : $" ({_stepLabel})";
+        textProgressData.text = $"Now Loading...{value * 100:F0}%{suffix}";
     }
 }

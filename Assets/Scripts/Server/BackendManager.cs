@@ -47,8 +47,16 @@ public class BackendManager : MonoBehaviour
         }
     }
 
+    // 90% 대기 중 정확히 어느 단계에서 멈췄는지 화면에 표시(콘솔을 볼 수 없는 기기 테스트용).
+    void Step(string label)
+    {
+        Debug.Log($"[LoadAllAndEnterGame] {label}");
+        FindAnyObjectByType<Progress>()?.SetStep(label);
+    }
+
     void LoadAllAndEnterGame()
     {
+        Step("차트 로드");
         // 차트 데이터는 동기 로드 — 로그인 직후 한 번만 실행, 이후 캐시 반환
         RandomEventChartLoader.Load();
         RandomEventChoiceChartLoader.Load();
@@ -60,40 +68,58 @@ public class BackendManager : MonoBehaviour
         CharacterUniqueEventChartLoader.Load();
         RandomEventManager.Instance.InitConditionEvents();
 
+        Step("EmployeeManager");
         EmployeeManager.Instance.LoadAllData(() =>
         {
+            Step("OutGameCurrencyManager");
             OutGameCurrencyManager.Instance?.LoadCurrency(() =>
             {
+            Step("OutGameEmployeeManager");
             OutGameEmployeeManager.Instance?.LoadAsync(() =>
             {
+            Step("OwnedCardManager");
             OwnedCardManager.Instance?.LoadAsync(() =>
             {
+            Step("OwnedTraitManager");
             OwnedTraitManager.Instance?.LoadAsync(() =>
             {
+            Step("CEOManager");
             CEOManager.Instance?.LoadAsync(() =>
             {
+            Step("StoneManager");
             StoneManager.Instance?.LoadAsync(() =>
             {
+            Step("RunStateManager");
             RunStateManager.Instance?.LoadAsync(() =>
             {
+            Step("MoneyManager");
             MoneyManager.Instance.LoadMoney(() =>
             {
+                Step("GameTimeManager");
                 GameTimeManager.Instance.LoadGameTime(() =>
                 {
+                    Step("QuestManager");
                     QuestManager.Instance.LoadQuests(() =>
                     {
+                        Step("ProjectSaveManager");
                         ProjectSaveManager.Instance.LoadProject(() =>
                         {
+                            Step("CompletedProjectManager");
                             CompletedProjectManager.Instance.LoadCompletedProjects(() =>
                             {
+                                Step("LoanManager");
                                 LoanManager.Instance.LoadLoans(() =>
                                 {
+                                    Step("TechTreeManager");
                                     TechTreeManager.Instance.LoadTechTree(() =>
                                     {
+                                        Step("SalesSaveManager");
                                         SalesSaveManager.Instance.LoadSales(() =>
                                         {
+                                            Step("ItemManager");
                                             ItemManager.Instance.Load(() =>
                                             {
+                                                Step("완료");
                                                 DialogManager.Instance.Initialize();
                                                 HasInitializedThisSession = true;
                                                 FindAnyObjectByType<Progress>()?.SetAllDataLoaded();

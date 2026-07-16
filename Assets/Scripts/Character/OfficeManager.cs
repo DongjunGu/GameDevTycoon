@@ -342,6 +342,12 @@ public class OfficeManager : MonoBehaviour
         Debug.Log($"[Secretary] {desk.deskId} 스폰");
     }
 
+    // employeeId → 스폰된 OfficeCharacter (없으면 null). 외부(카드 UI 등)에서 캐릭터 월드 위치가 필요할 때 사용.
+    public OfficeCharacter GetCharacter(string employeeId)
+    {
+        return _characters.TryGetValue(employeeId, out var oc) ? oc : null;
+    }
+
     // 특정 직원의 patrol 여부 확인 (DevelopmentManager 틱 체크용)
     public bool IsPatrolling(string employeeId)
     {
