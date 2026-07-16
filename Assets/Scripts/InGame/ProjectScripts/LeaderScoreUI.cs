@@ -162,18 +162,18 @@ public class LeaderScoreUI : MonoBehaviour
     public void Show(EmployeeData employee, LeaderType type,
                      float[] fullRoundScores, float[] roundScores, float[] cumDsAfter,
                      float total, int overflowRound, float cutFactor,
-                     int hunsuBonus, LeaderType hunsuBonusTarget, System.Action onComplete,
+                     System.Action onComplete,
                      bool testMode = false)
     {
         InitPanel(employee, type, testMode);
         _onComplete = onComplete;
 
         StartCoroutine(PlayRoundsCoroutine(type, fullRoundScores, roundScores, cumDsAfter,
-                                     total, overflowRound, cutFactor, hunsuBonus, hunsuBonusTarget, 0, 4));
+                                     total, overflowRound, cutFactor, 0, 4));
     }
 
     // 1~3회차만 재생하고 4회차 조준 선택을 기다린다 (정산/커튼오프/확정버튼 활성화 없음).
-    // 4회차 값은 아직 안 정해졌으므로 total/overflow/hunsu 등은 넘기지 않는다.
+    // 4회차 값은 아직 안 정해졌으므로 total/overflow 등은 넘기지 않는다.
     public void ShowPendingRound4(EmployeeData employee, LeaderType type,
                      float[] fullRoundScores, float[] roundScores, float[] cumDsAfter,
                      bool testMode = false)
@@ -181,19 +181,19 @@ public class LeaderScoreUI : MonoBehaviour
         InitPanel(employee, type, testMode);
 
         StartCoroutine(PlayRoundsCoroutine(type, fullRoundScores, roundScores, cumDsAfter,
-                                     0f, -1, 0f, 0, LeaderType.Planner, 0, 3));
+                                     0f, -1, 0f, 0, 3));
     }
 
     // 유저가 조준(약/중/강)을 선택해 4회차가 계산된 뒤 호출 — 4회차만 재생하고 최종 정산까지 이어간다.
     public void PlayRound4AndFinish(float[] fullRoundScores, float[] roundScores, float[] cumDsAfter,
                      float total, int overflowRound, float cutFactor,
-                     int hunsuBonus, LeaderType hunsuBonusTarget, System.Action onComplete)
+                     System.Action onComplete)
     {
         _onComplete = onComplete;
         IsWaitingForRound4Aim = false;
 
         StartCoroutine(PlayRoundsCoroutine(_pendingUiType, fullRoundScores, roundScores, cumDsAfter,
-                                     total, overflowRound, cutFactor, hunsuBonus, hunsuBonusTarget, 3, 4));
+                                     total, overflowRound, cutFactor, 3, 4));
     }
 
     // 패널/커튼/캐릭터 프리뷰 등 연출 시작 시 1회 초기화 — Show/ShowPendingRound4 공용.
@@ -245,7 +245,6 @@ public class LeaderScoreUI : MonoBehaviour
     IEnumerator PlayRoundsCoroutine(LeaderType type,
                               float[] fullRoundScores, float[] roundScores, float[] cumDsAfter,
                               float total, int overflowRound, float cutFactor,
-                              int hunsuBonus, LeaderType hunsuBonusTarget,
                               int fromRound, int toRoundExclusive)
     {
         if (fromRound == 0) yield return new WaitForSeconds(0.5f);
@@ -324,17 +323,14 @@ public class LeaderScoreUI : MonoBehaviour
         // 4회차까지 끝났으면 미리보기(범위) 대신 실제 획득액으로 교체
         RefreshBonusActualTexts();
 
-        // 총합 최종 확정 + 역할 누적스탯 반영 (+ 훈수쟁이 보너스는 기획/아트로)
+        // 총합 최종 확정 + 역할 누적스탯 반영
+        // (훈수쟁이 보너스는 여기서 처리하지 않음 — 팀장점수 연출/확정과 분리해 ContinueAfterLeaderScore 에서
+        //  AlertUI3 로 별도 안내 후 적용된다.)
         if (totalText) totalText.text = Mathf.RoundToInt(total).ToString();
 
         float pl = type == LeaderType.Planner   ? total : 0f;
         float dv = type == LeaderType.Programmer ? total : 0f;
         float ar = type == LeaderType.Artist     ? total : 0f;
-        if (hunsuBonus > 0)
-        {
-            if (hunsuBonusTarget == LeaderType.Planner) pl += hunsuBonus;
-            else                                        ar += hunsuBonus;
-        }
         // 패널 반영은 confirm 시점에 한 번에 (OnClickConfirm 에서 AddValuesInstant)
         _applyPlanning = pl;
         _applyDevelop  = dv;

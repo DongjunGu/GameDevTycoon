@@ -1,0 +1,13 @@
+<linker>
+  <!--
+    GameCenterLogin.OnTokenReceived / OnTokenFailed 는 C# 코드에서 직접 호출되는 곳이 없고
+    네이티브(GameCenterPlugin.mm)의 UnitySendMessage로만 호출된다. IL2CPP 링커는 정적 분석으로
+    도달 가능성을 판단하므로, 이렇게 리플렉션/네이티브 콜백으로만 불리는 메서드는 스트리핑 설정에
+    따라 릴리즈(TestFlight/App Store) 빌드에서 제거될 수 있다 — 에디터/Mono에서는 재현되지 않는다.
+    Apple 로그인이 기기에서 "로그인 성공까지는 뜨는데 이후로 전혀 진행이 안 되는" 증상과 정확히
+    일치하는 실패 패턴이라 방어적으로 보존한다.
+  -->
+  <assembly fullname="Assembly-CSharp">
+    <type fullname="GameCenterLogin" preserve="all" />
+  </assembly>
+</linker>

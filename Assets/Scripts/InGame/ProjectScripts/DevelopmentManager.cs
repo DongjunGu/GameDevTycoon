@@ -1125,17 +1125,8 @@ public class DevelopmentManager : MonoBehaviour
         for (int r = 0; r < 4; r++) total += roundScores[r];
         total += _leaderBonusTotal;
 
-        int hunsuBonus = 0;
-        LeaderType hunsuBonusTarget = LeaderType.Planner;
-        if (type == LeaderType.Programmer && CharacterTraitApplier.IsHunsu(employee))
-        {
-            float baseTotal = lazyGenius ? total / CharacterTraitApplier.LAZY_GENIUS_LEADER_BONUS : total;
-            hunsuBonus = Mathf.RoundToInt(baseTotal * CharacterTraitApplier.HUNSU_BONUS_RATIO);
-            hunsuBonusTarget = UnityEngine.Random.value < 0.5f ? LeaderType.Planner : LeaderType.Artist;
-        }
-
         LeaderScoreUI.Instance.Show(employee, type, fullRoundScores, roundScores, cumDsAfter,
-                                    total, overflowRound, cutFactor, hunsuBonus, hunsuBonusTarget,
+                                    total, overflowRound, cutFactor,
                                     () => { /* 테스트 확정 — 아무 것도 반영 안 함 */ },
                                     testMode: true);
     }
@@ -1315,8 +1306,8 @@ public class DevelopmentManager : MonoBehaviour
         }
 
         LeaderScoreUI.Instance.Show(employee, type, fullRoundScores, roundScores, cumDsAfter,
-                                    total, overflowRound, cutFactor, hunsuBonus, hunsuBonusTarget,
-                                    () => ContinueAfterLeaderScore(type, employee, jealousyTarget, leaderCount, total));
+                                    total, overflowRound, cutFactor,
+                                    () => ContinueAfterLeaderScore(type, employee, jealousyTarget, leaderCount, total, hunsuBonus, hunsuBonusTarget));
     }
 
     // 조준별 U 범위: 약 1~6 / 중 5~12 / 강 11~16 (기본 U 1~16을 3등분+1칸 겹침) — 버튼 라벨 표시 등에도 재사용.
@@ -1411,18 +1402,32 @@ public class DevelopmentManager : MonoBehaviour
 
         System.Action onComplete = testMode
             ? () => { /* 테스트 — 확정해도 프로젝트에 아무 영향 없음 */ }
-            : () => ContinueAfterLeaderScore(type, employee, jealousyTarget, leaderCount, total);
+            : () => ContinueAfterLeaderScore(type, employee, jealousyTarget, leaderCount, total, hunsuBonus, hunsuBonusTarget);
 
         LeaderScoreUI.Instance.PlayRound4AndFinish(fullRoundScores, roundScores, cumDsAfter,
-                                    total, overflowRound, cutFactor, hunsuBonus, hunsuBonusTarget, onComplete);
+                                    total, overflowRound, cutFactor, onComplete);
     }
 
     // 팀장점수 확정(또는 재접속 재개 후 확정) → 개발 진행으로 이어가는 공통 로직.
-    void ContinueAfterLeaderScore(LeaderType type, EmployeeData employee, EmployeeData jealousyTarget, int leaderCount, float total)
+    // hunsuBonus>0 이면 팀장점수 연출/패널과 분리해 여기서 AlertUI3 로 안내 후 기획/아트에 반영한다.
+    void ContinueAfterLeaderScore(LeaderType type, EmployeeData employee, EmployeeData jealousyTarget, int leaderCount, float total,
+                                   int hunsuBonus = 0, LeaderType hunsuBonusTarget = LeaderType.Planner)
     {
         ClearLeaderScoreResume();
         // 기여도 가산은 확정 시점 1회만 (재추첨/재접속 시 이중 가산 방지)
         AddEmployeeContribution(employee.id, total);
+
+        if (hunsuBonus > 0)
+        {
+            float pl = hunsuBonusTarget == LeaderType.Planner ? hunsuBonus : 0f;
+            float ar = hunsuBonusTarget == LeaderType.Artist  ? hunsuBonus : 0f;
+            DevelopmentPanelUI.Instance?.AddValuesInstant(pl, 0f, ar, 0f, 0f);
+
+            string targetName = hunsuBonusTarget == LeaderType.Planner ? "기획" : "아트";
+            AlertUI.Instance?.ShowPortrait(
+                $"훈수쟁이 특성 발동!\n{targetName} 점수 +{hunsuBonus}",
+                employee.portraitId, "훈수쟁이");
+        }
 
         void StartDeveloping()
         {
