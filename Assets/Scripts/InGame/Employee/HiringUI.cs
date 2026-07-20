@@ -96,8 +96,13 @@ public class HiringUI : MonoBehaviour
     private readonly List<int> _hireCosts = new();  // 후보별 채용 비용 캐시 — 화살표로 넘길 때 재추첨 방지
 
     private int  _currentTierIndex = -1;        // hire_refresh 재로드용 — 마지막 OnClickTier 의 티어
-    private int  _selectedTierIndex = -1;       // 선택 표시(알파 + Selected 스프라이트)용 — RefreshTierButtonVisibility 에서 초기화
-    private readonly Dictionary<int, bool>   _tierUnlocked     = new(); // SetTierButtonState 에서 기록, SetTierSelected 가 알파 계산에 참조
+    private int  _selectedTierIndex = -1;       // 선택 표시용 — RefreshTierButtonVisibility 에서 초기화
+    private readonly Dictionary<int, bool>   _tierUnlocked     = new(); // SetTierButtonState 에서 기록
+    // tierButtons[i]의 부모(tierNOutlinePanel) — Start()에서 1회만 캐싱. 실시간으로 transform.parent를
+    // 다시 찾으면 안 되는 이유: GlobalButtonClickBounce가 "첫 클릭" 시 버튼과 원래 부모 사이에
+    // __ClickBounceWrapper를 끼워넣어 버튼을 그 안으로 재배치하기 때문에, 클릭이 한 번이라도 일어난
+    // 뒤에는 tierButtons[i].transform.parent가 tierNOutlinePanel이 아니라 그 래퍼가 되어버린다.
+    private Transform[] _tierOutlinePanels;
     private bool _refreshUsed      = false;     // 같은 세션 1회 가드
     private bool _candidateFlowActive = false;  // 채용 공개~리스트 종료 동안 시간 정지 유지 + ModalGate 점유
 
@@ -127,43 +132,61 @@ public class HiringUI : MonoBehaviour
             nextCandidateButton.onClick.AddListener(OnClickNextCandidate);
         if (tierConfirmButton != null)
             tierConfirmButton.onClick.AddListener(OnClickTierConfirm);
+
+        // GlobalButtonClickBounce가 클릭 시 부모를 바꿔치기하기 전, 아직 안전한 시점에 미리 캐싱.
+        if (tierButtons != null)
+        {
+            _tierOutlinePanels = new Transform[tierButtons.Length];
+            for (int i = 0; i < tierButtons.Length; i++)
+                _tierOutlinePanels[i] = tierButtons[i] != null ? tierButtons[i].transform.parent : null;
+        }
     }
 
     // 선택("Selected") 스프라이트는 Button.transition = SpriteSwap(Inspector 설정)이 EventSystem 선택 여부에
     // 따라 자동으로 처리한다 — 코드에서 img.sprite 를 수동으로 건드리지 않는다.
-    // 여기서 관리하는 건 알파뿐: 잠긴 티어(미해금)는 선택 여부와 무관하게 항상 255(잠금 표시로 항상 보여야 함)
-    // + 터치 불가(SetTierButtonState 가 interactable=false 처리, SpriteSwap 이 disabledSprite 자동 적용).
-    // 해금된 티어(tier1 포함)는 선택됐을 때만 255, 아니면 0.
+    // 선택 표시는 부모 "tierNOutlinePanel"의 Image + Outline 컴포넌트 enabled 토글로만, 그리고 오직
+    // 여기서만 건드린다 — 선택된 티어만 켜지고 나머지(및 pressed/highlighted 등 다른 Button 상태)는
+    // 항상 꺼진 채로 유지된다. Image 를 같이 꺼주는 이유: Outline(BaseMeshEffect)은 같은 Graphic이
+    // 생성한 메시를 복제해서 그리는 방식이라, Image 가 꺼져 메시 자체가 안 만들어지면 Outline 도
+    // 그릴 게 없어 아무 효과가 없다 — 둘은 사실상 같이 켜져야 하는 한 쌍.
+    // tierNOutlinePanel(무채색 Rectangle137 스프라이트 + LayoutElement — 실제 레이아웃 슬롯을 이
+    // 부모가 담당하고 tier 버튼은 그 안에 풀스트레치로 들어감)에 두는 이유: tier2/3 처럼 배경이
+    // 그라데이션(노랑/파랑)인 버튼에 직접 Outline을 붙이면 원본 텍스처를 그대로 복제해 색이
+    // 섞여버리는 문제(테두리색이 effectColor 그대로 안 나옴)가 있어서, 무채색 부모 쪽에 Image+Outline을
+    // 두고 tier 버튼(실제 배경/텍스트/아이콘)은 그 앞(자식)에 그려지게 분리했다.
+    // ⚠ go.transform.parent 를 실시간으로 다시 찾으면 안 됨 — Start()에서 캐싱한 _tierOutlinePanels 사용
+    // (GlobalButtonClickBounce 가 첫 클릭 시 부모를 __ClickBounceWrapper 로 바꿔치기하는 문제, 위 필드 주석 참고).
     void SetTierSelected(int selectedIndex)
     {
         _selectedTierIndex = selectedIndex;
-        if (tierButtons == null) return;
+        if (tierButtons == null || _tierOutlinePanels == null) return;
         for (int i = 0; i < tierButtons.Length; i++)
-        {
-            var go = tierButtons[i];
-            if (go == null) continue;
-
-            // GlobalButtonClickBounce 가 첫 클릭 시 버튼 내부에 __ClickBounceWrapper/VisualCopy 를
-            // 만들고 Button.targetGraphic 을 그 사본으로 재지정한 뒤, 원본 Image 는 alpha 0으로
-            // 영구 고정해버린다. 그 상태에서 go.GetComponent<Image>()(원본, 항상 투명)를 계속
-            // 건드리면 화면엔 아무 변화가 없다 — 실제로 보이는 건 targetGraphic 쪽이므로 항상
-            // 그걸 통해 찾아야 클릭 전/후 모두(원본 or 사본) 올바르게 반영된다.
-            var btn = go.GetComponent<Button>();
-            var img = (btn != null && btn.targetGraphic is Image tg) ? tg : go.GetComponent<Image>();
-            if (img == null) continue;
-
-            bool selected = i == selectedIndex;
-            bool unlocked = !_tierUnlocked.TryGetValue(i, out var u) || u; // 정보 없으면 기본 해금 취급(tier1)
-
-            var c = img.color;
-            c.a = (!unlocked || selected) ? 1f : 0f;
-            img.color = c;
-        }
+            SetOutlinePanelVisible(i, i == selectedIndex);
 
         // EventSystem 선택을 옮겨야 Button 의 SpriteSwap 이 selectedSprite 로 자동 전환된다.
         if (selectedIndex >= 0 && selectedIndex < tierButtons.Length
             && tierButtons[selectedIndex] != null && EventSystem.current != null)
             EventSystem.current.SetSelectedGameObject(tierButtons[selectedIndex]);
+    }
+
+    // TierPressRelay(각 tier 버튼에 부착)가 포인터 down/up 시 호출 — 눌려있는 동안은 선택 여부와
+    // 무관하게 강제로 꺼지고, 떼면 현재 선택 상태(_selectedTierIndex)로 되돌아간다.
+    public void SetTierPressed(int index, bool pressed)
+    {
+        bool visible = pressed ? false : (index == _selectedTierIndex);
+        SetOutlinePanelVisible(index, visible);
+    }
+
+    void SetOutlinePanelVisible(int index, bool visible)
+    {
+        if (_tierOutlinePanels == null || index < 0 || index >= _tierOutlinePanels.Length) return;
+        var outlinePanel = _tierOutlinePanels[index];
+        if (outlinePanel == null) return;
+
+        var image = outlinePanel.GetComponent<Image>();
+        if (image != null) image.enabled = visible;
+        var outline = outlinePanel.GetComponent<Outline>();
+        if (outline != null) outline.enabled = visible;
     }
 
     // ── 티어 선택 패널 열기 ───────────────────
@@ -215,7 +238,8 @@ public class HiringUI : MonoBehaviour
     }
 
     // 티어 버튼: interactable 토글(잠기면 false → 버튼 Disabled 스프라이트로 자동 전환)
-    // + 자식 "lockImage" 활성화/비활성화 (1단계는 항상 해금이라 lockImage 없음 — null 무시).
+    // + 자식 "lockIcon"/"lockImage" 활성화/비활성화 (해금 안 됐을 때 활성, 해금되면 비활성 — 둘 다 동일
+    // 조건. 1단계는 항상 해금이라 이 둘이 아예 없음 — null 무시).
     void SetTierButtonState(int index, bool unlocked)
     {
         _tierUnlocked[index] = unlocked;
@@ -226,8 +250,11 @@ public class HiringUI : MonoBehaviour
         var btn = go.GetComponent<Button>();
         if (btn != null) btn.interactable = unlocked;
 
-        var lockTf = go.transform.Find("lockImage");
+        var lockTf = go.transform.Find("lockIcon");
         if (lockTf != null) lockTf.gameObject.SetActive(!unlocked);
+
+        var lockImageTf = go.transform.Find("lockImage");
+        if (lockImageTf != null) lockImageTf.gameObject.SetActive(!unlocked);
     }
 
     // 티어 버튼 클릭 (0~2) — 이제 선택 표시만 하고 채용 진행은 안 함(확정은 confirmBtn/OnClickTierConfirm).
