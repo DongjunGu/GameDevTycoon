@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: 4c3f91bb41f86404c85f3f14c749c824
+guid: 0ddefe397b7e35d44b3dfbc4e4048951
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: -2712572560376785014
-    second: screenshot-20260714-225714_0
+      213: -2618077844382191362
+    second: Common_Frame_SpeechBubble 6_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -46,7 +46,7 @@ TextureImporter:
   nPOTScale: 0
   lightmap: 0
   compressionQuality: 50
-  spriteMode: 2
+  spriteMode: 1
   spriteExtrude: 1
   spriteMeshType: 1
   alignment: 0
@@ -139,13 +139,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: screenshot-20260714-225714_0
+      name: Common_Frame_SpeechBubble 6_0
       rect:
         serializedVersion: 2
         x: 0
         y: 0
-        width: 1920
-        height: 1080
+        width: 1005
+        height: 183
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -154,8 +154,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: a87154fc0a10b5ad0800000000000000
-      internalID: -2712572560376785014
+      spriteID: ef0774b5218baabd0800000000000000
+      internalID: -2618077844382191362
       vertices: []
       indices: 
       edges: []
@@ -164,7 +164,7 @@ TextureImporter:
     customData: 
     physicsShape: []
     bones: []
-    spriteID: 
+    spriteID: 5e97eb03825dee720800000000000000
     internalID: 0
     vertices: []
     indices: 
@@ -174,7 +174,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      screenshot-20260714-225714_0: -2712572560376785014
+      Common_Frame_SpeechBubble 6_0: -2618077844382191362
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

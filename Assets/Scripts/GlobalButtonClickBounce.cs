@@ -61,6 +61,11 @@ public class GlobalButtonClickBounce : MonoBehaviour
 
             for (int i = 0; i < results.Count; i++)
             {
+                // 맨 위(가장 먼저 맞은) 결과가 팝업(PopupClickAway) 안이면 뒤로 더 넘어가지 않고 즉시 중단.
+                // 안 그러면 팝업 자신은 Button 조상이 없어 이 루프가 팝업 뒤에 가려진 버튼까지 뚫고
+                // 들어가 그 버튼이 눌린 것처럼 튕겨버린다 — 팝업을 눌렀는데 뒤의 버튼이 반응하는 버그.
+                if (results[i].gameObject.GetComponentInParent<PopupClickAway>() != null) return;
+
                 var btn = results[i].gameObject.GetComponentInParent<Button>();
                 if (btn != null && btn.interactable)
                 {
