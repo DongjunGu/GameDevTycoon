@@ -117,10 +117,8 @@ public class AlertUI : MonoBehaviour
     // label: 특성명 / 이벤트명이면 그 이름, 아이템 발동이면 직원 이름
     public void ShowPortrait(string message, string portraitId, string label, System.Action onConfirm = null)
     {
-        Debug.Log($"[AlertUI][DIAG] ShowPortrait 호출됨: label={label}, _isShowing={_isShowing}, queueCount={_queue.Count}");
         _queue.Enqueue(new Entry { message = message, onConfirm = onConfirm, type = AlertType.Portrait, portraitId = portraitId, label = label });
         if (!_isShowing) ShowNext();
-        else Debug.LogWarning($"[AlertUI][DIAG] _isShowing 이 이미 true 라 큐에만 쌓이고 표시 안 됨! (currentType={_currentType})");
     }
 
     // 결과 팝업 종류 1 — title(결과팝업멘트1)/result1(멘트2)/result2(멘트3). 각 텍스트는 +/- 등 내용에 따라
@@ -165,7 +163,6 @@ public class AlertUI : MonoBehaviour
     {
         if (_queue.Count == 0) { _isShowing = false; return; }
         var entry = _queue.Dequeue();
-        Debug.Log($"[AlertUI][DIAG] DisplayDequeued 실행: type={entry.type}, portraitPanel null={portraitPanel == null}");
         GameTimeManager.Instance?.StopTime();
         _onConfirm   = entry.onConfirm;
         _currentType = entry.type;
@@ -200,10 +197,6 @@ public class AlertUI : MonoBehaviour
                 }
                 EnsureTopMost(portraitPanel);
                 portraitPanel.SetActive(true);
-                {
-                    var pc = portraitPanel.GetComponent<Canvas>();
-                    Debug.Log($"[AlertUI][DIAG] portraitPanel activeSelf={portraitPanel.activeSelf}, activeInHierarchy={portraitPanel.activeInHierarchy}, canvas.sortingOrder={pc?.sortingOrder}, canvas.overrideSorting={pc?.overrideSorting}, canvas.enabled={pc?.enabled}");
-                }
                 break;
 
             case AlertType.Result4:

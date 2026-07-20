@@ -35,6 +35,12 @@ public class CriticReviewUI : MonoBehaviour
 
     private System.Action _onComplete;
 
+    // 순차 등장 도중 클릭 시 스킵용 — 다이얼로그(DialogUI)와 동일 패턴: 등장 중 클릭 → 즉시 전부 표시,
+    // 다 나온 뒤 클릭 → 다음(OnClickConfirm)으로 진행.
+    private bool _revealDone;
+    private int _pendingScore;
+    private string _pendingGameName;
+
     private static readonly string[] CriticNames =
     {
         "망겜감별사",
@@ -100,6 +106,7 @@ public class CriticReviewUI : MonoBehaviour
     public void Show(float rawScore, System.Action onComplete)
     {
         _onComplete = onComplete;
+        _revealDone = false;
 
         // 점수 패널은 계속 활성 — 텍스트만 라벨 상태로 비워둔다
         if (totalScoreObject != null) totalScoreObject.SetActive(true);
@@ -113,46 +120,77 @@ public class CriticReviewUI : MonoBehaviour
         for (int i = 0; i < criticSlots.Length; i++)
             if (criticSlots[i] != null) criticSlots[i].SetActive(false);
 
+        int variation = UnityEngine.Random.Range(-5, 6); // Random(-5 ~ +5)
+        int score = Mathf.Clamp(CalcCriticScore(rawScore) + variation, 0, 100);
+        LastCriticTotal = score;
+        _pendingScore = score;
+        _pendingGameName = DevelopmentResultUI.Instance != null
+            ? DevelopmentResultUI.Instance.LastProjectName : "";
+
         GameTimeManager.Instance?.StopTime();
         ModalGate.I.Register(this);
         reviewPanel.SetActive(true);
 
-        StartCoroutine(RevealCritics(rawScore));
+        StartCoroutine(RevealCritics());
     }
 
-    IEnumerator RevealCritics(float rawScore)
+    IEnumerator RevealCritics()
     {
-        int variation = UnityEngine.Random.Range(-5, 6); // Random(-5 ~ +5)
-        int score = Mathf.Clamp(CalcCriticScore(rawScore) + variation, 0, 100);
-        LastCriticTotal = score;
-
-        string gameName = DevelopmentResultUI.Instance != null
-            ? DevelopmentResultUI.Instance.LastProjectName : "";
-
         yield return new WaitForSeconds(criticRevealDelay);
 
         // 게임명 출력
-        if (nameText != null) nameText.text = $"게임명: {gameName}";
+        if (nameText != null) nameText.text = $"게임명: {_pendingGameName}";
         yield return new WaitForSeconds(0.5f);
 
         // 슬롯 순서대로 활성화 (이름/코멘트만 — 개별 점수는 표시 안 함, 총점만 마지막에 한 번)
         for (int i = 0; i < criticSlots.Length; i++)
         {
-            if (i < criticNameTexts.Length && criticNameTexts[i] != null)
-                criticNameTexts[i].text = CriticNames[i % CriticNames.Length];
-            if (i < criticScoreTexts.Length && criticScoreTexts[i] != null)
-                criticScoreTexts[i].text = "";
-            if (i < criticCommentTexts.Length && criticCommentTexts[i] != null)
-                criticCommentTexts[i].text = GetComment(score, i);
-
+            SetSlotText(i, _pendingScore);
             if (criticSlots[i] != null) criticSlots[i].SetActive(true);
             yield return new WaitForSeconds(0.5f);
         }
 
         // 슬롯이 모두 등장한 뒤 — 총점 + 도장이 동시에 "꽝"
         yield return new WaitForSeconds(stampDelay);
-        if (totalScoreText != null) totalScoreText.text = $"{score}";
+        if (totalScoreText != null) totalScoreText.text = $"{_pendingScore}";
         yield return StartCoroutine(ScoreAndStampPunch());
+
+        _revealDone = true;
+    }
+
+    void SetSlotText(int i, int score)
+    {
+        if (i < criticNameTexts.Length && criticNameTexts[i] != null)
+            criticNameTexts[i].text = CriticNames[i % CriticNames.Length];
+        if (i < criticScoreTexts.Length && criticScoreTexts[i] != null)
+            criticScoreTexts[i].text = "";
+        if (i < criticCommentTexts.Length && criticCommentTexts[i] != null)
+            criticCommentTexts[i].text = GetComment(score, i);
+    }
+
+    // 순차 등장 도중 클릭 시 — 코루틴(등장 대기 + 도장 펀치 애니메이션 전부) 중단하고 최종 상태로 즉시 스냅.
+    void SkipReveal()
+    {
+        StopAllCoroutines();
+
+        if (nameText != null) nameText.text = $"게임명: {_pendingGameName}";
+        for (int i = 0; i < criticSlots.Length; i++)
+        {
+            SetSlotText(i, _pendingScore);
+            if (criticSlots[i] != null) criticSlots[i].SetActive(true);
+        }
+        if (totalScoreText != null)
+        {
+            totalScoreText.text = $"{_pendingScore}";
+            totalScoreText.transform.localScale = Vector3.one;
+        }
+        if (stampImage != null)
+        {
+            stampImage.SetActive(true);
+            stampImage.transform.localScale = Vector3.one;
+        }
+
+        _revealDone = true;
     }
 
     // 총점 텍스트 + 도장 이미지가 동시에 확대 상태에서 축소되며 "쾅" 박히는 연출.
@@ -204,6 +242,8 @@ public static int CalcCriticScore(float x)
 
     public void OnClickConfirm()
     {
+        if (!_revealDone) { SkipReveal(); return; }
+
         reviewPanel.SetActive(false);
         GameTimeManager.Instance?.StartTime();
         ModalGate.I.Unregister(this);
