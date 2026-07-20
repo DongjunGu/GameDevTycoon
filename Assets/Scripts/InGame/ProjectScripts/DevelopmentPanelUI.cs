@@ -28,6 +28,17 @@ public class DevelopmentPanelUI : MonoBehaviour
     [Tooltip("값이 목표까지 차오르는 데 걸리는 시간 (초). 델타 크기와 무관하게 항상 이 시간에 완료. 0 이하면 즉시 반영")]
     public float fillDuration = 1f;
 
+    [Header("카운트업 강조 스케일 (부모 패널)")]
+    public RectTransform planningPanel;
+    public RectTransform devPanel;
+    public RectTransform artPanel;
+    public RectTransform bugPanel;
+    public RectTransform creativityPanel;
+    [Tooltip("표시값이 오르는 동안(=MoveDisplay가 매 프레임 changed) 부모 패널이 커지는 배율")]
+    public float statPulseScale = 1.2f;
+    [Tooltip("현재 스케일이 목표(1배 또는 statPulseScale)로 근접하는 속도 (초당 배율)")]
+    public float statPulseLerpSpeed = 8f;
+
     public float GetPlanning() => _planning;
     public float GetDevelop() => _develop;
     public float GetArt() => _art;
@@ -82,14 +93,29 @@ public class DevelopmentPanelUI : MonoBehaviour
         }
 
         float dt = Time.deltaTime;
-        bool changed = false;
-        changed |= MoveDisplay(ref _planningDisplay,   _planningReveal,   ref _planningSpeed,   dt);
-        changed |= MoveDisplay(ref _developDisplay,    _developReveal,    ref _developSpeed,    dt);
-        changed |= MoveDisplay(ref _artDisplay,        _artReveal,        ref _artSpeed,        dt);
-        changed |= MoveDisplay(ref _bugDisplay,        _bugReveal,        ref _bugSpeed,        dt);
-        changed |= MoveDisplay(ref _creativityDisplay, _creativityReveal, ref _creativitySpeed, dt);
+        bool planningChanged   = MoveDisplay(ref _planningDisplay,   _planningReveal,   ref _planningSpeed,   dt);
+        bool developChanged    = MoveDisplay(ref _developDisplay,    _developReveal,    ref _developSpeed,    dt);
+        bool artChanged        = MoveDisplay(ref _artDisplay,        _artReveal,        ref _artSpeed,        dt);
+        bool bugChanged        = MoveDisplay(ref _bugDisplay,        _bugReveal,        ref _bugSpeed,        dt);
+        bool creativityChanged = MoveDisplay(ref _creativityDisplay, _creativityReveal, ref _creativitySpeed, dt);
 
-        if (changed) UpdateUI();
+        UpdateStatPulse(planningPanel,   planningChanged,   dt);
+        UpdateStatPulse(devPanel,        developChanged,    dt);
+        UpdateStatPulse(artPanel,        artChanged,        dt);
+        UpdateStatPulse(bugPanel,        bugChanged,        dt);
+        UpdateStatPulse(creativityPanel, creativityChanged, dt);
+
+        if (planningChanged || developChanged || artChanged || bugChanged || creativityChanged) UpdateUI();
+    }
+
+    // 표시값이 오르는 동안(animating) 패널을 statPulseScale 배로, 멈추면 1배로 서서히 되돌림.
+    void UpdateStatPulse(RectTransform panel, bool animating, float dt)
+    {
+        if (panel == null) return;
+        float target = animating ? statPulseScale : 1f;
+        float current = panel.localScale.x;
+        float next = Mathf.MoveTowards(current, target, statPulseLerpSpeed * dt);
+        panel.localScale = Vector3.one * next;
     }
 
     // 남은 거리와 무관하게 fillDuration 안에 목표 도달 (등속). 목표 변경 시 RevealValues 가 speed 를 재설정.
@@ -199,17 +225,19 @@ public class DevelopmentPanelUI : MonoBehaviour
 
     public void UpdateUI()
     {
-        planningText.text   = $"기획: {Mathf.RoundToInt(_planningDisplay)}";
-        developText.text    = $"개발: {Mathf.RoundToInt(_developDisplay)}";
-        artText.text        = $"아트: {Mathf.RoundToInt(_artDisplay)}";
-        bugText.text        = $"버그: {Mathf.RoundToInt(_bugDisplay)}";
-        creativityText.text = $"창의성: {Mathf.RoundToInt(_creativityDisplay)}";
+        planningText.text   = Mathf.RoundToInt(_planningDisplay).ToString();
+        developText.text    = Mathf.RoundToInt(_developDisplay).ToString();
+        artText.text        = Mathf.RoundToInt(_artDisplay).ToString();
+        bugText.text        = Mathf.RoundToInt(_bugDisplay).ToString();
+        creativityText.text = Mathf.RoundToInt(_creativityDisplay).ToString();
     }
 
     // 실제 개발 단계(Developing/BugFixing)에서만 defaultText 비활성.
     // 마케팅·판매·완료·대기 단계에서는 표시한다.
-    // defaultText 표시 중에는 스탯/타이머 텍스트를 모두 숨긴다(반대로 동기화).
-    void UpdateDefaultText()
+    // defaultText 표시 중에는 MainScorePanel의 나머지 자식(스탯/타이머 패널)을 통째로 비활성화한다(반대로 동기화).
+    // public: 재접속 복원처럼 ModalBlocker 블러 캡처(동기, 다음 Update 이전)보다 먼저 상태를 맞춰야 하는
+    // 호출자가 명시적으로 선호출할 수 있게 (DevelopmentManager.ResumeLeaderScore 참고).
+    public void UpdateDefaultText()
     {
         if (defaultText == null) return;
         var dm = DevelopmentManager.Instance;
@@ -218,7 +246,21 @@ public class DevelopmentPanelUI : MonoBehaviour
                 || dm.CurrentStage == ProjectStage.BugFixing
                 || dm.IsPendingLeaderSelect); // 팀장 선택~점수 표시 구간에도 스탯(0부터) 노출
         if (defaultText.activeSelf == developing) defaultText.SetActive(!developing);
-        SetStatTextsVisible(developing); // 매 프레임 동기화 (초기 상태 어긋남 방지, enabled set 은 무비용)
+        SetSiblingPanelsActive(developing); // 매 프레임 동기화 (초기 상태 어긋남 방지, SetActive 는 이미 같은 값이면 무비용)
+    }
+
+    // MainScorePanel(defaultText의 부모) 안에서 defaultText를 제외한 나머지 자식(기획/개발/아트/버그/창의성/진행도
+    // 패널)을 developing 여부에 맞춰 통째로 켜고 끈다. 개발 중이 아니면 defaultText만 남고 전부 비활성화.
+    void SetSiblingPanelsActive(bool developing)
+    {
+        var parent = defaultText.transform.parent;
+        if (parent == null) return;
+        for (int i = 0; i < parent.childCount; i++)
+        {
+            var child = parent.GetChild(i).gameObject;
+            if (child == defaultText) continue;
+            if (child.activeSelf != developing) child.SetActive(developing);
+        }
     }
 
     // statKey(개발틱 종류) → 해당 스탯 텍스트 RectTransform. StatTickPopup 흡입 타겟용.
@@ -232,17 +274,6 @@ public class DevelopmentPanelUI : MonoBehaviour
         "creativity" => creativityText != null ? creativityText.rectTransform : null,
         _ => null
     };
-
-    // 개발 중에만 스탯/타이머 텍스트 표시. enabled 토글로 layout 자리 유지.
-    void SetStatTextsVisible(bool visible)
-    {
-        if (planningText   != null) planningText.enabled   = visible;
-        if (developText    != null) developText.enabled    = visible;
-        if (artText        != null) artText.enabled        = visible;
-        if (creativityText != null) creativityText.enabled = visible;
-        if (bugText        != null) bugText.enabled        = visible;
-        DevelopmentTimerUI.Instance?.SetTextVisible(visible);
-    }
 
     public void SetBug(float value)
     {

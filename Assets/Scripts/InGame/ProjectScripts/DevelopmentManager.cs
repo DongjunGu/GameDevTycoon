@@ -1417,18 +1417,6 @@ public class DevelopmentManager : MonoBehaviour
         // 기여도 가산은 확정 시점 1회만 (재추첨/재접속 시 이중 가산 방지)
         AddEmployeeContribution(employee.id, total);
 
-        if (hunsuBonus > 0)
-        {
-            float pl = hunsuBonusTarget == LeaderType.Planner ? hunsuBonus : 0f;
-            float ar = hunsuBonusTarget == LeaderType.Artist  ? hunsuBonus : 0f;
-            DevelopmentPanelUI.Instance?.AddValuesInstant(pl, 0f, ar, 0f, 0f);
-
-            string targetName = hunsuBonusTarget == LeaderType.Planner ? "기획" : "아트";
-            AlertUI.Instance?.ShowPortrait(
-                $"훈수쟁이 특성 발동!\n{targetName} 점수 +{hunsuBonus}",
-                employee.portraitId, "훈수쟁이");
-        }
-
         void StartDeveloping()
         {
             IsPendingLeaderSelect = false; // 저장 직전에 펜딩 해제 (재시작 시 재선택 방지)
@@ -1468,11 +1456,33 @@ public class DevelopmentManager : MonoBehaviour
                 StartDeveloping();
         }
 
-        // CEO 는 랜덤이벤트 자체 제외 — burnout 트리거 명시적 가드
-        if (!employee.isCEO && leaderCount >= 3 && UnityEngine.Random.value < 0.5f)
-            RandomEvents_Condition.TriggerLeaderBurnoutEvent(employee, leaderCount, AfterBurnout);
+        void ProceedAfterHunsu()
+        {
+            // CEO 는 랜덤이벤트 자체 제외 — burnout 트리거 명시적 가드
+            if (!employee.isCEO && leaderCount >= 3 && UnityEngine.Random.value < 0.5f)
+                RandomEvents_Condition.TriggerLeaderBurnoutEvent(employee, leaderCount, AfterBurnout);
+            else
+                AfterBurnout();
+        }
+
+        // 훈수쟁이 보너스가 있으면 AlertUI3로 안내하고, 유저가 확인을 눌러야(onConfirm) 이후 개발 재개
+        // (ForceStartTime 포함) 로직으로 넘어간다. 안 그러면 OnClickConfirm 에서 이미 풀어둔 시간 위로
+        // StartDeveloping 의 ForceStartTime 이 곧바로 다시 겹쳐 걸려, 팝업이 떠있는 동안에도 시간이 흐름.
+        if (hunsuBonus > 0)
+        {
+            float pl = hunsuBonusTarget == LeaderType.Planner ? hunsuBonus : 0f;
+            float ar = hunsuBonusTarget == LeaderType.Artist  ? hunsuBonus : 0f;
+            DevelopmentPanelUI.Instance?.AddValuesInstant(pl, 0f, ar, 0f, 0f);
+
+            string targetName = hunsuBonusTarget == LeaderType.Planner ? "기획" : "아트";
+            AlertUI.Instance?.ShowPortrait(
+                $"훈수쟁이 특성 발동!\n{targetName} 점수 +{hunsuBonus}",
+                employee.portraitId, "훈수쟁이", ProceedAfterHunsu);
+        }
         else
-            AfterBurnout();
+        {
+            ProceedAfterHunsu();
+        }
     }
 
     // ── 팀장점수 진행 저장/복원 ─────────────────
@@ -1576,6 +1586,15 @@ public class DevelopmentManager : MonoBehaviour
         LeaderType type = (LeaderType)d.leaderType;
         EmployeeData emp = FindEmployeeById(d.employeeId);
         if (emp == null) { ClearLeaderScoreResume(); return; }
+
+        // entireLeaderPanel(ModalLayer.UseBlur=true)을 켜는 순간 ModalBlocker가 그 자리에서 동기적으로
+        // 화면을 캡처해 블러 RT를 1회 굽는다(다음 프레임의 DevelopmentPanelUI.Update()를 기다려주지 않음).
+        // 정상 플레이 흐름(OnSelectLeader)은 IsPendingLeaderSelect가 true 된 지 한참(여러 프레임) 지난
+        // 뒤라 DevelopmentPanelUI가 이미 자체 교정된 상태지만, 씬 로드 직후 복원은 RestoreState에서
+        // CurrentStage/스탯 값을 막 세팅한 직후라 DevelopmentPanelUI가 아직 한 번도 갱신되지 않았을 수
+        // 있음 — 그 상태로 캡처되면 defaultText가 활성화된 채 스탯 텍스트가 비어있는 화면이 블러에
+        // 고정되어 버림(RenderBlur는 켜지는 순간 1회만 찍음). 캡처 전에 강제로 한 번 동기화한다.
+        DevelopmentPanelUI.Instance?.UpdateDefaultText();
 
         // 점수창 컨테이너만 켜고 팀장 선택 슬롯 리스트는 숨김 (정상 흐름의 OnSelectLeader 대체)
         LeaderSelectUI.Instance.entireLeaderPanel.gameObject.SetActive(true);

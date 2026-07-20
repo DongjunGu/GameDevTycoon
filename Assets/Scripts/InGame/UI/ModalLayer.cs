@@ -13,6 +13,14 @@ public class ModalLayer : MonoBehaviour
     [SerializeField] bool _useBlur = false;
     public bool UseBlur => _useBlur;
 
+    // 켜면 이 모달은 "공유 딤(ModalBlocker 전역 어둡게+차단)"을 자기 밑으로 끌어올리지 않는다.
+    // AlertUI(1~6) 처럼 자체 반투명 배경 + EnsureTopMost(항상 최상단)를 이미 갖춘 "패널 위에 얹히는 정보 팝업"용.
+    // 끄지 않으면(false) 이 모달이 스택 최상단이 될 때마다 공유 딤이 바로 밑 패널까지 밀어올려 그 패널이
+    // (특히 어두운 배경색 UI일 때) 거의 안 보이게 덮여버린다 — DispatchPanel 위에 AlertUI3 뜰 때 재현된 버그.
+    [Tooltip("켜면 이 모달이 최상단이어도 공유 딤을 자기 밑으로 끌어올리지 않음 (자체 반투명 배경이 있는 정보 팝업용, 예: AlertUI)")]
+    [SerializeField] bool _excludeFromSharedDim = false;
+    public bool ExcludeFromSharedDim => _excludeFromSharedDim;
+
     public int AssignedOrder { get; private set; }
 
     Canvas _canvas;

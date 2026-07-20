@@ -118,7 +118,22 @@ public class ModalBlocker : MonoBehaviour
         for (int i = 0; i < _stack.Count; i++)
             _stack[i].ApplyOrder(BASE_ORDER + (i + 1) * STEP);
 
-        _canvas.sortingOrder = _stack[_stack.Count - 1].AssignedOrder - 1;
+        // 공유 딤은 ExcludeFromSharedDim 인 모달(예: AlertUI — 자체 반투명 배경 있음)을 건너뛰고,
+        // 그 아래에서 가장 위에 있는 "일반" 모달 바로 밑에 놓는다. 전부 제외 대상이면 딤 자체를 끈다
+        // (그 모달들이 각자 자기 배경으로 이미 가리고 있으므로 공유 딤이 필요 없음).
+        int dimBelowOrder = -1;
+        for (int i = _stack.Count - 1; i >= 0; i--)
+        {
+            if (_stack[i] != null && !_stack[i].ExcludeFromSharedDim) { dimBelowOrder = _stack[i].AssignedOrder; break; }
+        }
+        if (dimBelowOrder < 0)
+        {
+            _canvas.enabled = false;
+            if (_blurImage != null) _blurImage.enabled = false;
+            return;
+        }
+
+        _canvas.sortingOrder = dimBelowOrder - 1;
         _canvas.enabled = true;
 
         // 블러를 요청한 모달(UseBlur)이 하나라도 떠 있을 때만 블러 적용.

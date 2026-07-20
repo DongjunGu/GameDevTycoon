@@ -57,7 +57,11 @@ public class LeaderScoreUI : MonoBehaviour
     public float popScatterRangeX = 400f; // 터질 때 X축으로 최대 ± 얼마나 흩어질지
     public float popFloorY = -140f;   // 떨어져서 착지하는 바닥 Y 좌표(로컬)
     public float popArcHeight = 220f; // 포물선 정점 높이감
-    public float suckDuration = 0.15f; // categoryIcon으로 빨려들어가는 시간(= 총점/회차점수 상승 시간) — 짧을수록 빠르게 날아감
+    public float suckDuration = 0.15f; // 아이콘 1개가 categoryIcon으로 빨려들어가는 데 걸리는 시간(개별 기준)
+    public float suckStagger = 0.03f;  // 아이콘들이 순차적으로 빨려들어가기 시작하는 간격 — 0이면 기존처럼 일괄 동시 시작
+    public RectTransform topIcon;      // TopIcon(프레임) — 빨려들어가는 동안 총점 텍스트와 함께 살짝 커졌다 원상복구
+    public float suckPulseScale = 1.2f; // topIcon/totalText 가 흡입 도중 커지는 배율
+    public float suckPulseDelay = 0.08f; // 흡입 시작(t=0) 직후엔 ease-in 특성상 실제로는 거의 안 움직이는 "텀"이 있음 — 그 텀만큼 지난 뒤에야 펄스 스케일을 시작
     public float burstSpitDuration = 0.4f; // 스트레스 100 오버플로 시 총점 위치에서 아이콘을 역방향으로 뱉어내는 시간
 
     [Header("팀장 캐릭터 프리뷰 (working 애니메이션)")]
@@ -416,31 +420,54 @@ public class LeaderScoreUI : MonoBehaviour
 
         Vector3 targetPos = categoryIcon != null ? categoryIcon.transform.position : popcornPoint.position;
 
-        float dur = Mathf.Max(0.01f, suckDuration);
+        // 아이콘 1개당 흡입 시간(perIconDur)은 그대로 두고, 각 아이콘의 시작 시점을 suckStagger 만큼 순차적으로
+        // 늦춰서 "한 번에 훅" 대신 "톡톡톡" 순차적으로 빨려들어가게 한다. 전체 재생 시간은 그만큼 늘어남.
+        float perIconDur = Mathf.Max(0.01f, suckDuration);
+        float stagger = Mathf.Max(0f, suckStagger);
+        float totalDur = perIconDur + stagger * Mathf.Max(0, icons.Count - 1);
+
+        Vector3 topIconBaseScale = topIcon != null ? topIcon.localScale : Vector3.one;
+        Vector3 totalTextBaseScale = totalText != null ? totalText.transform.localScale : Vector3.one;
+
         float elapsed = 0f;
-        while (elapsed < dur)
+        while (elapsed < totalDur)
         {
             elapsed += Time.deltaTime;
-            float t = Mathf.Clamp01(elapsed / dur);
-            float eased = t * t * t * t; // 강한 ease-in — 초반엔 거의 안 움직이다 순식간에 확 빨려들어감
 
             for (int i = 0; i < icons.Count; i++)
             {
                 if (icons[i] == null) continue;
+                float localElapsed = Mathf.Clamp(elapsed - i * stagger, 0f, perIconDur);
+                float it = localElapsed / perIconDur;
+                float eased = it * it * it * it; // 강한 ease-in — 초반엔 거의 안 움직이다 순식간에 확 빨려들어감
                 icons[i].position = Vector3.Lerp(startPositions[i], targetPos, eased);
                 icons[i].localScale = Vector3.one * (1f - eased * 0.7f);
             }
 
+            float t = Mathf.Clamp01(elapsed / totalDur);
             float rs = Mathf.Lerp(0f, targetRound, t);
             SetRoundText(roundIndex, rs);
             float totalRise = Mathf.Lerp(0f, targetRound + bonusExtra, t);
             if (totalText) totalText.text = Mathf.RoundToInt(startTotal + totalRise).ToString();
+
+            // topIcon/총점 텍스트를 흡입 도중 살짝 부풀렸다가 끝나면 원래 크기로. 단, 흡입 시작 직후(ease-in 특성상
+            // 실제로 거의 안 움직이는 "텀")엔 아직 스케일업하지 않고, suckPulseDelay 만큼 지난 뒤부터 남은 시간에
+            // sin 곡선(양 끝 0=원래 크기, 중앙에서 suckPulseScale 배 피크)을 압축해 재생한다.
+            float pulseElapsed = Mathf.Max(0f, elapsed - suckPulseDelay);
+            float pulseDur = Mathf.Max(0.01f, totalDur - suckPulseDelay);
+            float pulseT = Mathf.Clamp01(pulseElapsed / pulseDur);
+            float pulse = Mathf.Sin(pulseT * Mathf.PI);
+            float scaleMul = Mathf.Lerp(1f, suckPulseScale, pulse);
+            if (topIcon != null) topIcon.localScale = topIconBaseScale * scaleMul;
+            if (totalText != null) totalText.transform.localScale = totalTextBaseScale * scaleMul;
 
             yield return null;
         }
 
         SetRoundText(roundIndex, targetRound);
         if (totalText) totalText.text = Mathf.RoundToInt(startTotal + targetRound + bonusExtra).ToString();
+        if (topIcon != null) topIcon.localScale = topIconBaseScale;
+        if (totalText != null) totalText.transform.localScale = totalTextBaseScale;
 
         foreach (var rt in icons)
             if (rt != null) Destroy(rt.gameObject);
