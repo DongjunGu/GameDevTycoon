@@ -4,6 +4,7 @@ using TMPro;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
 using System;
+using DG.Tweening;
 
 public class HiringUI : MonoBehaviour
 {
@@ -49,6 +50,10 @@ public class HiringUI : MonoBehaviour
     public TextMeshProUGUI confirmSalaryText;
     public TextMeshProUGUI confirmSatisfactionText;
     public TextMeshProUGUI confirmHireCostText;
+    [Header("Exist Employee")]
+    [Tooltip("ConfirmHirePanel/ExistEmployeePanel — 이력서 후보와 동일한 직원을 이미 보유 중일 때 표시(초상화+능력치)")]
+    public ExistEmployeePanelUI existEmployeePanel;
+
     [Header("Comparison")]
     public GameObject comparisonSection;        // 보유 직원 비교 섹션 (없으면 숨김)
     public TextMeshProUGUI ownedNameText;
@@ -64,6 +69,8 @@ public class HiringUI : MonoBehaviour
     public TextMeshProUGUI ownedEnhancementText;
     public Button confirmButton;                // 채용하기 버튼
     public Button keepButton;                   // 유지하기 버튼
+    [Tooltip("EmployeeResumePanel/ERSalaryPanel/StampImage — 채용하기 클릭 시 scale 0→1 + 알파 0→255 로 0.5초간 등장하는 도장 연출")]
+    public Image hireStampImage;
 
     [Header("Resume Browse (NewEmployeeSlot)")]
     [Tooltip("이력서(NewEmployeeSlot)에 부착된 페이지 넘김 컴포넌트")]
@@ -84,8 +91,9 @@ public class HiringUI : MonoBehaviour
     [Header("Settings")]
     public int candidateCount = 4;
     const int INTERVIEW_WEEKS = 3; // 채용 클릭 → 후보 리스트 공개까지 대기 주차
-    // [임시테스트] 빌드에서도 적용되도록 기본값 true로 강제 — CharacterEventTester(에디터 전용) 없이도 동작.
-    // 실제 배포 전 반드시 false로 되돌릴 것.
+    // [임시테스트] true면 "면접 확정" 멘트는 그대로 뜨되, 확인 후 실제 대기(주 단위) 없이 짧은 테스트
+    // 딜레이(TEST_INTERVIEW_DELAY_SECONDS)만 지나면 바로 후보 공개. 온보딩 첫 채용 1주 단축(FirstHireDone)은
+    // 이 플래그와 무관하게 항상 살아있는 별도 로직이라 false로 되돌려도 정상 동작한다.
     public static bool InstantInterview = true;
 
     private EmployeeData _selectedEmployee;
@@ -103,6 +111,7 @@ public class HiringUI : MonoBehaviour
     // __ClickBounceWrapper를 끼워넣어 버튼을 그 안으로 재배치하기 때문에, 클릭이 한 번이라도 일어난
     // 뒤에는 tierButtons[i].transform.parent가 tierNOutlinePanel이 아니라 그 래퍼가 되어버린다.
     private Transform[] _tierOutlinePanels;
+    private ButtonGlossSweep _tierConfirmGlossSweep; // tierConfirmButton과 같은 GameObject — Start()에서 캐싱
     private bool _refreshUsed      = false;     // 같은 세션 1회 가드
     private bool _candidateFlowActive = false;  // 채용 공개~리스트 종료 동안 시간 정지 유지 + ModalGate 점유
 
@@ -131,7 +140,11 @@ public class HiringUI : MonoBehaviour
         if (nextCandidateButton != null)
             nextCandidateButton.onClick.AddListener(OnClickNextCandidate);
         if (tierConfirmButton != null)
+        {
             tierConfirmButton.onClick.AddListener(OnClickTierConfirm);
+            _tierConfirmGlossSweep = tierConfirmButton.GetComponent<ButtonGlossSweep>();
+            if (_tierConfirmGlossSweep != null) _tierConfirmGlossSweep.enabled = false;
+        }
 
         // GlobalButtonClickBounce가 클릭 시 부모를 바꿔치기하기 전, 아직 안전한 시점에 미리 캐싱.
         if (tierButtons != null)
@@ -140,6 +153,17 @@ public class HiringUI : MonoBehaviour
             for (int i = 0; i < tierButtons.Length; i++)
                 _tierOutlinePanels[i] = tierButtons[i] != null ? tierButtons[i].transform.parent : null;
         }
+    }
+
+    // PopulateConfirm 시점의 1회성 동기화만으로는 부족했다 — ConfirmHirePanel 이 처음 열릴 때 ModalLayer 가
+    // 카드(EmployeeResumePanel)의 sortingOrder 를 아직 할당하기 전이라, 그 순간 읽은 값+1로 고정해버리면
+    // 이후 ResumeFlipper.LateUpdate(RestoreSorting) 가 카드 order 를 최종값으로 올려도 ExistEmployeePanel 은
+    // 낡은 값에 머물러 뒤로 깔린다(화살표로 한 번 넘겨 PopulateConfirm 이 재호출돼야만 정상화되던 원인).
+    // ResumeFlipper 와 동일하게 매 프레임 재적용해 항상 카드보다 한 단계 위를 유지한다.
+    void LateUpdate()
+    {
+        if (existEmployeePanel != null && existEmployeePanel.gameObject.activeInHierarchy)
+            SyncExistEmployeePanelSorting();
     }
 
     // 선택("Selected") 스프라이트는 Button.transition = SpriteSwap(Inspector 설정)이 EventSystem 선택 여부에
@@ -167,6 +191,13 @@ public class HiringUI : MonoBehaviour
         if (selectedIndex >= 0 && selectedIndex < tierButtons.Length
             && tierButtons[selectedIndex] != null && EventSystem.current != null)
             EventSystem.current.SetSelectedGameObject(tierButtons[selectedIndex]);
+
+        // confirmBtn은 Transition=SpriteSwap(disabledSprite=기본 회색 이미지 기 지정) — interactable만
+        // 토글하면 티어 미선택(-1)일 때 자동으로 disabledSprite, 선택 시 원래(활성) 이미지로 전환된다.
+        if (tierConfirmButton != null)
+            tierConfirmButton.interactable = selectedIndex >= 0;
+        if (_tierConfirmGlossSweep != null)
+            _tierConfirmGlossSweep.enabled = selectedIndex >= 0;
     }
 
     // TierPressRelay(각 tier 버튼에 부착)가 포인터 down/up 시 호출 — 눌려있는 동안은 선택 여부와
@@ -289,11 +320,8 @@ public class HiringUI : MonoBehaviour
             return;
         }
 
-        if (EmployeeManager.Instance.ownedEmployees.Count >= StageManager.Instance.MaxEmployeeCount)
-        {
-            AlertUI.Instance.Show("최대 직원수 입니다.");
-            return;
-        }
+        // 정원 초과라도 모집공고/채용 자체는 진행 가능 — 실제 최대인원 체크는 최종 확정(OnClickConfirmHire)에서
+        // "교체가 아닌 신규 채용인지"까지 따져서 처리한다 (교체면 인원수 그대로라 예외).
 
         // 이미 진행 중인 모집공고가 있으면 차단
         if (EmployeeManager.Instance.HiringPendingTier >= 0)
@@ -328,18 +356,16 @@ public class HiringUI : MonoBehaviour
         // 채용 UI 닫고 "면접 확정" 비서 안내 → 확인 시 시간 재개(OpenHiring 의 StopTime 해소). 이후 게임 진행하며 INTERVIEW_WEEKS 주 경과.
         tierPanel.SetActive(false);
 
-        // [테스트] 즉시 공개 모드면 대기 없이 바로 후보 리스트.
-        // OpenHiring 에서 건 StopTime 을 먼저 해소(원래 ShowSecretaryEvent 콜백이 하던 일) 후 RevealHiring 호출.
-        // RevealHiring 의 BeginCandidateFlow 가 자체 StopTime 을 다시 관리한다.
+        // [테스트] InstantInterview 여도 "면접 확정" 멘트는 그대로 보여주고, 확인 시점에 대기 없이(짧은 테스트
+        // 딜레이만) 바로 후보 공개로 이어간다. 아니면(실서비스) 그냥 시간만 재개 — 실제 INTERVIEW_WEEKS 주 경과 후
+        // OnWeekPassed 가 RevealHiring 을 호출한다.
         // (이 StartTime 을 빼면 OpenHiring 의 StopTime 이 안 풀려 채용 후 시간이 영영 멈춤)
-        if (InstantInterview)
+        ShowSecretaryEvent("면접 확정 후 알려드리겠습니다.", () =>
         {
             GameTimeManager.Instance?.StartTime();
-            StartCoroutine(RevealHiringAfterDelay(tierIndex, TEST_INTERVIEW_DELAY_SECONDS));
-            return;
-        }
-
-        ShowSecretaryEvent("면접 확정 후 알려드리겠습니다.", () => GameTimeManager.Instance?.StartTime());
+            if (InstantInterview)
+                StartCoroutine(RevealHiringAfterDelay(tierIndex, TEST_INTERVIEW_DELAY_SECONDS));
+        });
     }
 
     // [임시테스트] InstantInterview 켰을 때 즉시(0초) 대신 짧게 대기 후 공개 — 실제 대기 흐름 테스트용.
@@ -634,6 +660,16 @@ public class HiringUI : MonoBehaviour
         // if (comparisonSection != null) comparisonSection.SetActive(hasConflict);
         if (keepButton != null) keepButton.gameObject.SetActive(hasConflict);
 
+        if (existEmployeePanel != null)
+        {
+            existEmployeePanel.gameObject.SetActive(hasConflict);
+            if (hasConflict)
+            {
+                SyncExistEmployeePanelSorting(); // 가운데 이력서 카드(EmployeeResumePanel)와 같은 Canvas sortingOrder로
+                existEmployeePanel.Setup(_conflictingOwned);
+            }
+        }
+
         if (hasConflict)
         {
             var owned = _conflictingOwned;
@@ -652,6 +688,53 @@ public class HiringUI : MonoBehaviour
         }
     }
 
+    // ExistEmployeePanel 은 이력서 카드의 "형제"라 자체 Canvas(overrideSorting)로 따로 그려진다 — 가운데
+    // 이력서 카드(EmployeeResumePanel, ResumeFlipper.RestoreSorting 이 매 프레임 갱신)의 sortingOrder를 기준으로
+    // +1 을 줘서 항상 카드보다 위에 그려지게 한다.
+    void SyncExistEmployeePanelSorting()
+    {
+        if (existEmployeePanel == null || resumeCenterPanel == null) return;
+        var centerCanvas = resumeCenterPanel.GetComponent<Canvas>();
+        var existCanvas  = existEmployeePanel.GetComponent<Canvas>();
+        if (centerCanvas != null && existCanvas != null)
+        {
+            existCanvas.overrideSorting = true;
+            existCanvas.sortingOrder    = centerCanvas.sortingOrder + 1;
+        }
+    }
+
+    // 도장(StampImage) "쾅!" 연출 — 확대된 상태(3.8배, 기울어짐)에서 순간적으로 내려찍히듯 축소+정렬되며
+    // 알파도 그 찰나에 확 켜지고(페이드 아님), 이후 튕겨나오듯 최종 스케일(1)에 안착. 총 1초.
+    void PlayHireStamp()
+    {
+        if (hireStampImage == null) return;
+        hireStampImage.gameObject.SetActive(true);
+
+        var rt = hireStampImage.rectTransform;
+        rt.DOKill();
+        hireStampImage.DOKill();
+
+        const float startScale  = 3.8f;   // 원래 세팅값 — 여기서 시작해 내려찍힌다
+        const float impactScale = 0.55f;  // 찍히는 순간 살짝 눌리는 임팩트 스케일
+        const float finalScale  = 1f;
+        const float impactDuration = 0.12f;  // "쾅" — 아주 짧고 빠르게
+        const float settleDuration = 0.35f;  // 튕겨나오며 최종 크기로 안착
+        const float totalDuration  = 1.2f;
+
+        rt.localScale = Vector3.one * startScale;
+        //rt.localRotation = Quaternion.Euler(0f, 0f, -12f);
+        var c = hireStampImage.color; c.a = 0f; hireStampImage.color = c;
+
+        var seq = DOTween.Sequence().SetUpdate(true).SetTarget(hireStampImage);
+        seq.Append(hireStampImage.DOFade(1f, impactDuration));               // 찍히는 순간 알파 확 등장
+        seq.Join(rt.DOScale(impactScale, impactDuration).SetEase(Ease.InQuad));
+        seq.Join(rt.DOLocalRotate(Vector3.zero, impactDuration).SetEase(Ease.InQuad));
+        seq.Append(rt.DOScale(finalScale, settleDuration).SetEase(Ease.OutElastic, 1.1f, 0.6f)); // 임팩트 후 튕겨나오며 안착
+        seq.AppendInterval(totalDuration - impactDuration - settleDuration); // 총 1초를 채움
+        // 비활성화는 여기서 타이머로 하지 않는다 — ConfirmHirePanel 이 실제로 꺼지는 DoHire() 시점에 함께 꺼야
+        // "패널이 닫히기 전에 도장이 먼저 사라지는" 부자연스러움이 없다.
+    }
+
     // 채용 버튼 — 즉시 채용하지 않고 확인 다이얼로그(ConfirmUI)를 띄운다.
     public void OnClickConfirmHire()
     {
@@ -665,13 +748,42 @@ public class HiringUI : MonoBehaviour
             return;
         }
 
+        // 동일 직원 교체(_conflictingOwned)면 인원수가 그대로 유지되므로 정원 체크 예외.
+        // 신규 채용인데 이미 정원이 꽉 찼으면 — 알림 후 직원목록(해고 전용 모드)으로 유도, 해고 성공 시 이 지점부터 이어서 채용 완료.
+        bool isReplacement = _conflictingOwned != null;
+        if (!isReplacement && EmployeeManager.Instance.ownedEmployees.Count >= StageManager.Instance.MaxEmployeeCount)
+        {
+            int max = StageManager.Instance.MaxEmployeeCount;
+            confirmPanel.SetActive(false); // 알림이 뜨는 순간부터 뒤에 안 보이게
+            // HiringUI 가 이미 ModalGate 를 쥔 채로 열려있는 상황 — bypassGate 없으면 게이트가 안 풀려 영원히 안 뜬다.
+            AlertUI.Instance.Show($"최대 인원은 {max}명입니다.\n한명을 해고하세요.",
+                onConfirm: () =>
+                {
+                    EmployeeListUI.Instance?.OpenForForceFire(fired =>
+                    {
+                        confirmPanel.SetActive(true); // 취소든 해고든 EmployeeListUI 가 닫히면 항상 복귀
+                        // 복귀 직후 곧바로 스탬프가 찍히면 너무 빨라 안 보임 — 1초 대기 후 재생.
+                        if (fired) DOVirtual.DelayedCall(1f, OnConfirmHireYes).SetUpdate(true);
+                    });
+                },
+                bypassGate: true);
+            return;
+        }
+
         ConfirmUI.Instance.Show(
             $"{_selectedEmployee.employeeName}을(를) 채용하시겠습니까?",
-            onConfirm: DoHire,
+            onConfirm: OnConfirmHireYes,
             onCancel: () => { },          // 아니오 — ConfirmUI 만 닫고 이력서 화면 유지
             confirmText: "네",
             cancelText: "아니오"
         );
+    }
+
+    // ConfirmUI "네" 선택 — 도장 연출(1초) 재생 후, 1초 더 대기했다가 실제 채용 처리 + 패널 닫기.
+    void OnConfirmHireYes()
+    {
+        PlayHireStamp();
+        DOVirtual.DelayedCall(2f, DoHire).SetUpdate(true);
     }
 
     // 실제 채용 처리 (ConfirmUI 에서 '네' 선택 시)
@@ -709,6 +821,7 @@ public class HiringUI : MonoBehaviour
         GameTimeManager.Instance?.SaveGameTime();
         hiringPanel.SetActive(false);
         confirmPanel.SetActive(false);     // ConfirmHirePanel 비활성화
+        if (hireStampImage != null) hireStampImage.gameObject.SetActive(false); // 패널과 같은 시점에 도장도 정리
 
         // 온보딩: 직원 획득 후 채용창 닫히면 바로 프로젝트 튜토리얼 (1회만).
         // pending=0(실행대기)로 무장 후 즉시 트리거 — ModalGate.WhenFree 가 채용창/다이얼로그 닫힘을 기다렸다 실행.

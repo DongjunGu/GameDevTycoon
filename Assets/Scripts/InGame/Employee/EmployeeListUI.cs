@@ -74,6 +74,8 @@ public class EmployeeListUI : MonoBehaviour
     public Button closeButton;
     [Tooltip("아이템 사용 모드 전용 버튼 — 평소 비활성, OpenForUseItem 시에만 표시")]
     public Button useItemButton;
+    [Tooltip("정원 초과 강제 해고 모드 전용 버튼 — 평소 비활성, OpenForForceFire 시에만 표시. 나머지 버튼은 전부 숨김.")]
+    public Button fireEmployeeButton;
 
     [Header("Detail Slide (InfoPanel ↔ TrainingPanel)")]
     [Tooltip("DetailPanel 안의 InfoPanel (강화 시 오른쪽으로 슬라이드 퇴장)")]
@@ -111,6 +113,11 @@ public class EmployeeListUI : MonoBehaviour
     private ItemChartRow _useItemRow;
     private EmployeeRole? _useItemRoleFilter;
 
+    // 정원 초과 강제 해고 모드 — HiringUI 가 정원이 꽉 찬 상태에서 신규 채용을 시도할 때 유도.
+    // FireEmployeeBtn 만 노출하고, 해고 성공 시 이 콜백으로 채용 흐름에 복귀시킨다.
+    private bool _forceFireMode;
+    private System.Action<bool> _onForceFireDone; // bool: 실제로 해고했는지(true) / 취소·닫기(false)
+
     GameObject Root => panelRoot != null ? panelRoot : gameObject;
 
     void Awake()
@@ -124,9 +131,11 @@ public class EmployeeListUI : MonoBehaviour
         if (closeButton    != null) { closeButton.onClick.RemoveListener(OnClickClose);         closeButton.onClick.AddListener(OnClickClose); }
         if (backButton     != null) { backButton.onClick.RemoveListener(OnClickBack);           backButton.onClick.AddListener(OnClickBack); }
         if (useItemButton  != null) { useItemButton.onClick.RemoveListener(OnClickUseItem);     useItemButton.onClick.AddListener(OnClickUseItem); }
+        if (fireEmployeeButton != null) { fireEmployeeButton.onClick.RemoveListener(OnClickFireEmployee); fireEmployeeButton.onClick.AddListener(OnClickFireEmployee); }
         if (trainingMenuButton != null) { trainingMenuButton.onClick.RemoveListener(OpenListForEnhance); trainingMenuButton.onClick.AddListener(OpenListForEnhance); }
 
-        if (useItemButton != null) useItemButton.gameObject.SetActive(false);
+        SetButtonSlotActive(useItemButton, false);
+        SetButtonSlotActive(fireEmployeeButton, false);
     }
 
     // 메뉴 직원관리 버튼 OnClick 에 연결
@@ -144,6 +153,7 @@ public class EmployeeListUI : MonoBehaviour
     public void OnClickClose()
     {
         if (_useItemMode) { ExitUseItemMode(); return; }
+        if (_forceFireMode) { CloseForceFireMode(fired: false); return; }
         GameTimeManager.Instance?.StartTime();
         ModalGate.I.Unregister(this);
         Root.SetActive(false);
@@ -289,6 +299,12 @@ public class EmployeeListUI : MonoBehaviour
                 useItemButton.interactable = emp != null && !IsDispatched(emp.id) && IsRoleMatchForItem(emp);
             return;
         }
+        if (_forceFireMode)
+        {
+            if (fireEmployeeButton != null)
+                fireEmployeeButton.interactable = emp != null && !IsDispatched(emp.id);
+            return;
+        }
         bool ok = emp != null && !IsDispatched(emp.id);
         if (enhanceButton != null) enhanceButton.interactable = ok;
         if (fireButton    != null) fireButton.interactable    = ok;
@@ -317,10 +333,24 @@ public class EmployeeListUI : MonoBehaviour
 
     void ApplyUseItemModeVisual(bool on)
     {
-        if (enhanceButton != null) enhanceButton.gameObject.SetActive(!on);
-        if (fireButton    != null) fireButton.gameObject.SetActive(!on);
-        if (itemButton    != null) itemButton.gameObject.SetActive(!on);
-        if (useItemButton != null) useItemButton.gameObject.SetActive(on);
+        SetButtonSlotActive(enhanceButton, !on);
+        SetButtonSlotActive(fireButton,    !on);
+        SetButtonSlotActive(itemButton,    !on);
+        SetButtonSlotActive(useItemButton, on);
+    }
+
+    // GlobalButtonClickBounce 가 버튼이 처음 눌리는 순간 그 버튼의 부모를 "__ClickBounceWrapper"로
+    // 바꿔치기한다(버튼은 래퍼의 풀스트레치 자식이 됨) — ERBottomPanel 의 HorizontalLayoutGroup 입장에서는
+    // 이제 래퍼가 실제 자식이라, 버튼 자신만 SetActive(false) 해도 래퍼는 활성 상태로 남아 빈 레이아웃
+    // 슬롯을 계속 차지해버린다(다른 버튼들이 밀리는 원인). 래핑된 버튼이면 래퍼까지 같이 토글한다.
+    static void SetButtonSlotActive(Button btn, bool active)
+    {
+        if (btn == null) return;
+        var parent = btn.transform.parent;
+        if (parent != null && parent.name == "__ClickBounceWrapper")
+            parent.gameObject.SetActive(active);
+        else
+            btn.gameObject.SetActive(active);
     }
 
     public void OnClickUseItem()
@@ -344,6 +374,63 @@ public class EmployeeListUI : MonoBehaviour
         _useItemRoleFilter = null;
         ApplyUseItemModeVisual(false);
         Root.SetActive(false); // StartTime 없이 닫기 (ItemPanel 이 뒤에서 시간정지 유지)
+    }
+
+    // 정원 초과 강제 해고 모드 진입 — HiringUI 가 신규 채용인데 정원이 꽉 찼을 때 호출.
+    // FireEmployeeBtn 만 노출. 패널이 닫힐 때(해고 성공/취소 무관) onClosed(fired) 를 항상 호출 —
+    // 호출자는 이걸로 ConfirmHirePanel 재활성 등 뒷정리를 하고, fired 가 true 일 때만 채용을 이어간다.
+    public void OpenForForceFire(System.Action<bool> onClosed)
+    {
+        _forceFireMode   = true;
+        _onForceFireDone = onClosed;
+        ApplyForceFireModeVisual(true);
+
+        GameTimeManager.Instance?.StopTime();
+        ModalGate.I.Register(this);
+        _selectedId = ""; // 진입 시 맨 위(첫) 직원 자동 선택
+        Root.SetActive(true);
+        ResetSlide();
+        BuildList();
+        PlayOpenIntro();
+    }
+
+    void ApplyForceFireModeVisual(bool on)
+    {
+        SetButtonSlotActive(enhanceButton,      !on);
+        SetButtonSlotActive(fireButton,         !on);
+        SetButtonSlotActive(itemButton,         !on);
+        SetButtonSlotActive(fireEmployeeButton, on);
+    }
+
+    // FireEmployeeBtn — 확인 다이얼로그 후 해고, 성공하면 강제 해고 모드 종료 + 채용 흐름 복귀 콜백 실행.
+    public void OnClickFireEmployee()
+    {
+        var emp = Selected();
+        if (emp == null) return;
+        if (IsDispatched(emp.id)) { AlertUI.Instance?.Show("파견중인 직원은 해고할 수 없습니다."); return; }
+
+        string id = emp.id;
+        ConfirmUI.Instance.Show(
+            $"{emp.employeeName}을(를) 해고하시겠습니까?",
+            onConfirm: () => { DoFire(id); CloseForceFireMode(fired: true); },
+            onCancel:  () => { },
+            confirmText: "네",
+            cancelText:  "아니오"
+        );
+    }
+
+    // fired=false — 해고 없이 취소/닫기. 어느 경우든 onClosed(fired) 는 항상 호출(호출자가 뒷정리하도록).
+    void CloseForceFireMode(bool fired)
+    {
+        _forceFireMode = false;
+        ApplyForceFireModeVisual(false);
+        GameTimeManager.Instance?.StartTime();
+        ModalGate.I.Unregister(this);
+        Root.SetActive(false);
+
+        var cb = _onForceFireDone;
+        _onForceFireDone = null;
+        cb?.Invoke(fired);
     }
 
     // 선택 직원이 아직 보유 중이면 상세 재표시, 아니면(해고 등) EmptyPanel 로.

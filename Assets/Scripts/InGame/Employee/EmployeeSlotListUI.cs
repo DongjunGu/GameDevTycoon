@@ -51,6 +51,8 @@ public class EmployeeSlotListUI : MonoBehaviour
     private Color _levelTextColor = Color.white;
     private bool _levelColorCached;
     private GameObject _shimmer;
+    private ButtonGlossSweep _glossSweep;
+    private bool _glossSweepResolved;
 
     public void Setup(EmployeeData data, System.Action<EmployeeData> onSelect)
     {
@@ -139,6 +141,11 @@ public class EmployeeSlotListUI : MonoBehaviour
         // 2) 뒤 반짝임
         EnsureShimmer();
         if (_shimmer != null) _shimmer.SetActive(selected);
+
+        // 2.5) 글로스 스윕 — 선택된 슬롯에서만 재생 (Frame 자식에 부착 — RectMask2D가 shimmer 오버플로를
+        // 잘라먹지 않도록 루트가 아닌 Frame에 둠)
+        if (!_glossSweepResolved) { _glossSweep = GetComponentInChildren<ButtonGlossSweep>(true); _glossSweepResolved = true; }
+        if (_glossSweep != null) _glossSweep.enabled = selected;
 
         // 3) 스케일 — 선택=기본(160x192), 비선택=축소
         Vector3 target = selected ? selectedScale : unselectedScale;
