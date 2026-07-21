@@ -80,6 +80,39 @@ public class CompletedProjectManager : MonoBehaviour
         });
     }
 
+    // 뒤끝 GetMyData 는 firstKey 없이 호출하면 기본 limit(10) 행만 반환한다 — LastEvaluatedKeyString 이
+    // 비어있지 않은 동안 이어서 요청해 테이블의 모든 row 를 모은다.
+    // ⚠ 이 캡 때문에 완료작이 10개를 넘어가면 항상 딱 10개까지만 불러와졌었다 — DevelopmentResultUI 의
+    // 기본 프로젝트명("프로젝트명{완료작수+1}")이 계속 "프로젝트명11"에 고정되던 원인. ResetForNewRun 의
+    // 정리 삭제도 같은 한도로 10개까지만 지워 서버에 잔재 row 가 계속 누적됐다(다음 런의 로드도 그 잔재
+    // 를 포함해 여전히 10개에서 잘림 → 실제 진행과 무관하게 영구 고착).
+    const int PageLimit = 100; // GetMyData 1회 호출 최대치
+
+    static void FetchAllRows(string tableName, System.Action<List<JsonData>> onComplete)
+        => FetchPage(tableName, "", new List<JsonData>(), onComplete);
+
+    static void FetchPage(string tableName, string firstKey, List<JsonData> acc, System.Action<List<JsonData>> onComplete)
+    {
+        Backend.GameData.GetMyData(tableName, new Where(), PageLimit, firstKey, bro =>
+        {
+            if (!bro.IsSuccess())
+            {
+                onComplete?.Invoke(acc);
+                return;
+            }
+
+            var rows = bro.FlattenRows();
+            if (rows != null)
+                foreach (var row in rows) acc.Add((JsonData)row);
+
+            string next = bro.LastEvaluatedKeyString();
+            if (!string.IsNullOrEmpty(next))
+                FetchPage(tableName, next, acc, onComplete); // 더 남았으면 이어서 요청
+            else
+                onComplete?.Invoke(acc);
+        });
+    }
+
     // 새 런 시작 — 메모리 클리어 + 서버 직접 fetch 로 모든 row 일괄 삭제
     // 메모리 List 가 아니라 서버 GetMyData 기준으로 삭제 — Sales 직후 Insert 콜백 미도착 race 로 메모리 add 가 안 된
     // 잔재 row 까지 잡아 제거. (메모리만 의존하면 inFlight Insert 가 reset 이후 늦게 도착해 서버에 외로운 row 만듦.)
@@ -88,17 +121,8 @@ public class CompletedProjectManager : MonoBehaviour
         _runEpoch++;
         completedProjects.Clear();
 
-        Backend.GameData.GetMyData("CompletedProjects", new Where(), bro =>
+        FetchAllRows("CompletedProjects", rows =>
         {
-            if (!bro.IsSuccess())
-            {
-                // 데이터가 없는 정상 케이스도 IsSuccess false 로 떨어지는 SDK 동작이라 LogWarning 정도만
-                Debug.Log($"[Reset] CompletedProjects fetch 실패/빈 상태 — 삭제 스킵: {bro}");
-                onComplete?.Invoke();
-                return;
-            }
-
-            var rows = bro.FlattenRows();
             if (rows == null || rows.Count == 0)
             {
                 onComplete?.Invoke();
@@ -108,7 +132,7 @@ public class CompletedProjectManager : MonoBehaviour
             var ids = new List<string>();
             foreach (var row in rows)
             {
-                string inDate = TryGetInDate((JsonData)row);
+                string inDate = TryGetInDate(row);
                 if (!string.IsNullOrEmpty(inDate)) ids.Add(inDate);
             }
 
@@ -133,38 +157,30 @@ public class CompletedProjectManager : MonoBehaviour
     }
 
     // ── 로드 ──────────────────────────────────
-public void LoadCompletedProjects(System.Action onComplete = null)
-{
-    Backend.GameData.GetMyData("CompletedProjects", new Where(), bro =>
+    public void LoadCompletedProjects(System.Action onComplete = null)
     {
-        if (!bro.IsSuccess())
+        FetchAllRows("CompletedProjects", rows =>
         {
-            Debug.Log($"완료 프로젝트 없음 (정상): {bro}");
+            if (rows == null || rows.Count == 0)
+            {
+                Debug.Log("완료 프로젝트 0개");
+                onComplete?.Invoke();
+                return;
+            }
+
+            completedProjects.Clear();
+            foreach (var row in rows)
+                completedProjects.Add(CompletedProjectData.FromServerRow(row));
+
+            completedProjects.Sort((a, b) =>
+            {
+                if (a.year != b.year) return a.year.CompareTo(b.year);
+                if (a.month != b.month) return a.month.CompareTo(b.month);
+                return a.week.CompareTo(b.week);
+            });
+
+            GenreFatigueManager.Instance?.RebuildFromHistory(completedProjects);
             onComplete?.Invoke();
-            return;
-        }
-
-        var rows = bro.FlattenRows();
-        if (rows == null || rows.Count == 0)
-        {
-            Debug.Log("완료 프로젝트 0개");
-            onComplete?.Invoke();
-            return;
-        }
-
-        completedProjects.Clear();
-        foreach (var row in rows)
-            completedProjects.Add(CompletedProjectData.FromServerRow((LitJson.JsonData)row));
-
-        completedProjects.Sort((a, b) =>
-        {
-            if (a.year != b.year) return a.year.CompareTo(b.year);
-            if (a.month != b.month) return a.month.CompareTo(b.month);
-            return a.week.CompareTo(b.week);
         });
-
-        GenreFatigueManager.Instance?.RebuildFromHistory(completedProjects);
-        onComplete?.Invoke();
-    });
-}
+    }
 }
