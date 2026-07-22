@@ -22,6 +22,8 @@ public class OfficeManager : MonoBehaviour
     public string secretaryDeskId = "desk_03";
     [Tooltip("비서 인스턴스의 합성 ID — _characters dict 키로만 사용. EmployeeData 없음.")]
     public string secretaryId = "secretary_001";
+    [Tooltip("튜토리얼 런(RunState.tutorial)일 때 desk_03 대신 이 PatrolPoint(pointId)에서 바로 시작 — 걸어오는 연출 생략")]
+    public string secretaryTutorialStandPointId = "master_desk";
 
     [Header("Block Popup Sorting")]
     [SerializeField] private string blockPopupSortingLayer = "Default";
@@ -41,6 +43,10 @@ public class OfficeManager : MonoBehaviour
     private PatrolPoint[] _patrolPoints;
     private DialogPatrolPoint[] _dialogPatrolPoints;
     private Coroutine _patrolScheduler;
+
+    // 튜토리얼 런에서 비서를 point1에 세운 경우의 PatrolPoint — RefreshAnimationsNextFrame이
+    // SetIdle/SetWorking으로 방향을 정면 기본값으로 되돌려버리는 걸 그 직후 다시 덮어쓰기 위해 기억해둔다.
+    private PatrolPoint _secretaryTutorialStandPoint;
 
     void Awake()
     {
@@ -128,6 +134,12 @@ public class OfficeManager : MonoBehaviour
         bool isDeveloping = stage == ProjectStage.Developing || stage == ProjectStage.BugFixing;
         if (isDeveloping) SetAllWorking();
         else RefreshAllDeskAnimations();
+
+        // 위 SetAllWorking/RefreshAllDeskAnimations는 SetIdle/SetWorking을 거쳐 모든 캐릭터 방향을
+        // 정면·미러링 없음으로 강제 리셋한다. 비서가 튜토리얼 런에서 point1에 서 있는 상태라면
+        // 그 방향을 여기서 다시 덮어써야 함(안 그러면 스폰 직후 한 프레임만 맞는 방향이었다가 리셋됨).
+        if (_secretaryTutorialStandPoint != null && _secretaryTutorialStandPoint.overrideFacing)
+            GetCharacter(secretaryId)?.ApplyFacing(_secretaryTutorialStandPoint.facingFront, _secretaryTutorialStandPoint.facingFlipX);
     }
 
     IEnumerator WalkOutAndDestroy(OfficeCharacter oc)
@@ -327,7 +339,24 @@ public class OfficeManager : MonoBehaviour
 
         DeskManager.Instance.AssignDesk(desk.deskId, secretaryId);
 
-        var obj = Instantiate(secretaryPrefab, desk.GetWorkWorldPos(), Quaternion.identity);
+        // 튜토리얼 런이면 desk_03이 아니라 secretaryTutorialStandPointId(기본 master_desk)에서 바로 시작 —
+        // 걸어오는 연출 없이 처음부터 그 자리에 서 있게 함. assignedDesk는 그대로 desk_03이라
+        // 시간이 다시 흐르면(TutorialController.EndDimTimeStop → GoToDesk) 자기 자리로 복귀.
+        // ⚠️ OnboardingState.TutorialDone(온보딩 UI 1회 완료 여부)도 같이 체크 — RunState.tutorial은
+        // 그 런이 끝날 때까지(파산 등) 계속 true라서, 온보딩이 이미 끝난 뒤 앱을 재시작/씬을 재진입하면
+        // TutorialController는 즉시 자폭(OnboardingState.TutorialDone)해 GoToDesk를 다시는 안 부르는데,
+        // 이 체크가 없으면 SpawnSecretary가 매번 master_desk로 다시 세워놔서 영영 desk_03로 안 돌아왔다.
+        Vector3 spawnPos = desk.GetWorkWorldPos();
+        PatrolPoint standPoint = null;
+        if (RunStateManager.Instance != null && RunStateManager.Instance.IsTutorial && !OnboardingState.TutorialDone
+            && !string.IsNullOrEmpty(secretaryTutorialStandPointId))
+        {
+            _patrolPoints ??= FindObjectsByType<PatrolPoint>(FindObjectsSortMode.None);
+            standPoint = System.Array.Find(_patrolPoints, p => p.pointId == secretaryTutorialStandPointId);
+            if (standPoint != null) spawnPos = standPoint.transform.position;
+        }
+
+        var obj = Instantiate(secretaryPrefab, spawnPos, Quaternion.identity);
         var oc  = obj.GetComponent<OfficeCharacter>();
         if (oc == null)
         {
@@ -338,8 +367,12 @@ public class OfficeManager : MonoBehaviour
         oc.Init(secretaryId, desk);
 
         _characters[secretaryId] = oc;
+        _secretaryTutorialStandPoint = standPoint; // RestoreEmployees의 RefreshAnimationsNextFrame이 방향을 되돌리면 재적용용
 
-        Debug.Log($"[Secretary] {desk.deskId} 스폰");
+        if (standPoint != null && standPoint.overrideFacing)
+            oc.ApplyFacing(standPoint.facingFront, standPoint.facingFlipX);
+
+        Debug.Log($"[Secretary] {desk.deskId} 스폰" + (standPoint != null ? $" (튜토리얼: {secretaryTutorialStandPointId}에서 시작)" : ""));
     }
 
     // employeeId → 스폰된 OfficeCharacter (없으면 null). 외부(카드 UI 등)에서 캐릭터 월드 위치가 필요할 때 사용.
@@ -467,7 +500,8 @@ public class OfficeManager : MonoBehaviour
     }
 
     // 특정 직원을 pointId 위치로 즉시 강제 이동 (이벤트 트리거용)
-    public void ForceCharacterToPatrolPoint(string employeeId, string pointId, float stayDuration = 5f)
+    // onArrived: 도착(방향 강제 적용 직후) 1회 콜백 — 외부에서 도착 대기용
+    public void ForceCharacterToPatrolPoint(string employeeId, string pointId, float stayDuration = 5f, System.Action onArrived = null)
     {
         if (!_characters.TryGetValue(employeeId, out var oc)) return;
         _patrolPoints ??= FindObjectsByType<PatrolPoint>(FindObjectsSortMode.None);
@@ -477,7 +511,7 @@ public class OfficeManager : MonoBehaviour
             Debug.LogWarning($"[ForcePatrol] pointId '{pointId}' 를 찾을 수 없음");
             return;
         }
-        oc.ForcePatrolTo(point.transform, stayDuration);
+        oc.ForcePatrolTo(point.transform, stayDuration, onArrived);
     }
 
     // 개발 완료 시 호출 — CEO/비서를 제외한 일반 직원 중 랜덤으로 patrol 보냄.

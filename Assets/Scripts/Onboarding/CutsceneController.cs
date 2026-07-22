@@ -13,6 +13,7 @@ using TMPro;
 //   - clearBefore : true 면 기존 이미지를 크로스페이드로 교체. false 면 기존 위에 누적(좌→우 등).
 //   - autoPan     : true 면 표시 후 이미지를 좌상단→우하단으로 panDuration 초 동안 자동 이동(큰 이미지용).
 // 전환은 크로스페이드(fadeDuration). 마지막 step 표시 후 한 번 더 클릭하면 onComplete (게임씬 이동).
+// skipButton 을 누르면 진행 중인 단계 무관하게 즉시 마지막까지 본 것처럼 종료(Skip()).
 //
 // ⚠️ 큰 이미지(autoPan)는 RectTransform 이 화면(부모)보다 커야 하고, 앵커/피벗 중앙 + 고정 크기여야 한다.
 //    팬은 anchoredPosition 을 좌상↔우하 코너로 이동시켜 구현(부모보다 넘치는 만큼).
@@ -94,6 +95,10 @@ public class CutsceneController : MonoBehaviour
     [Tooltip("글자당 간격(초). 작을수록 빠름.")]
     public float charInterval = 0.04f;
 
+    [Header("스킵")]
+    [Tooltip("누르면 컷씬을 마지막 단계까지 본 것처럼 즉시 종료(onComplete 호출). 비워두면 코드에서 Skip()을 직접 호출해야 함.")]
+    public Button skipButton;
+
     Action _onComplete;
     int    _index;
     bool   _playing;
@@ -115,6 +120,20 @@ public class CutsceneController : MonoBehaviour
         root.SetActive(false);
         HideAllImagesImmediate();
         if (dialogueBox != null) dialogueBox.SetActive(false);
+        if (skipButton != null)
+        {
+            skipButton.onClick.AddListener(Skip);
+            skipButton.gameObject.SetActive(false); // 컷씬 재생 중에만 노출(Play/Finish 에서 토글)
+        }
+    }
+
+    // 스킵 버튼 OnClick — 진행 중인 단계와 무관하게 "마지막 단계까지 다 본 것"처럼 즉시 종료.
+    // 진행 중인 코루틴(페이드/팬/줌/타이핑/자동넘김)을 전부 끊고 Finish()와 동일한 정리+onComplete 호출.
+    public void Skip()
+    {
+        if (!_playing) return;
+        StopAllCoroutines();
+        Finish();
     }
 
     // 컷씬 재생. 마지막 단계 후 클릭하면(또는 steps 가 없으면 즉시) onComplete 호출.
@@ -130,6 +149,7 @@ public class CutsceneController : MonoBehaviour
         }
 
         root.SetActive(true);
+        if (skipButton != null) skipButton.gameObject.SetActive(true);
         HideAllImagesImmediate();
         _playing = true;
         _index = -1;
@@ -440,6 +460,7 @@ public class CutsceneController : MonoBehaviour
         _playing = false;
         _busy = false;
         HideAllImagesImmediate();
+        if (skipButton != null) skipButton.gameObject.SetActive(false);
         //if (root != null) root.SetActive(false);
         var cb = _onComplete;
         _onComplete = null;

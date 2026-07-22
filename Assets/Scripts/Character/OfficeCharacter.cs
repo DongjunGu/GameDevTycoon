@@ -114,6 +114,9 @@ public class OfficeCharacter : MonoBehaviour, IPointerClickHandler
         assignedDesk = desk;
     }
 
+    // 이동 없이 즉시 방향만 강제 적용 (스폰 직후 등 patrol 코루틴 없이 바로 세팅할 때 — 튜토리얼 비서 스폰 등)
+    public void ApplyFacing(bool front, bool flipX) => _animator?.SetFacing(front, flipX);
+
     // 지정된 Desk로 이동
     public void GoToDesk()
     {
@@ -141,10 +144,11 @@ public class OfficeCharacter : MonoBehaviour, IPointerClickHandler
     }
 
     // 현재 patrol 중단 후 즉시 지정 위치로 강제 이동 (이벤트 트리거용)
-    public void ForcePatrolTo(Transform target, float stayDuration)
+    // onArrived: 방향 강제 적용까지 끝난 직후(도착 시점) 1회 호출 — 외부에서 도착 대기용
+    public void ForcePatrolTo(Transform target, float stayDuration, System.Action onArrived = null)
     {
         if (_patrolCoroutine != null) StopCoroutine(_patrolCoroutine);
-        _patrolCoroutine = StartCoroutine(PatrolRoutine(target, stayDuration));
+        _patrolCoroutine = StartCoroutine(PatrolRoutine(target, stayDuration, onArrived));
     }
 
     // 개발 완료 등 외부 이벤트로 즉시 복귀
@@ -160,7 +164,7 @@ public class OfficeCharacter : MonoBehaviour, IPointerClickHandler
         GoToDesk();
     }
 
-    IEnumerator PatrolRoutine(Transform target, float stayDuration)
+    IEnumerator PatrolRoutine(Transform target, float stayDuration, System.Action onArrived = null)
     {
         _state = CharacterState.Patrolling;
         Debug.Log($"[Patrol] {employeeId} → Patrolling 시작, target={target.name}");
@@ -180,6 +184,8 @@ public class OfficeCharacter : MonoBehaviour, IPointerClickHandler
         var pp = target.GetComponent<PatrolPoint>();
         if (pp != null && pp.overrideFacing)
             _animator?.SetFacing(pp.facingFront, pp.facingFlipX);
+
+        onArrived?.Invoke();
 
         // 패트롤 도착 → 이벤트 발동 체크 (개발 외 타이밍도 포함: 사내연애 등)
         RandomEventManager.Instance?.OnPatrolArrived(pp != null ? pp.pointId : "", employeeId);

@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: 96ad9826c508c634b9f87531b20ba6a7
+guid: c32ded9a3f484e04a8dcd96d2693edce
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: 141893073332109768
-    second: 06_0
+      213: -7921558156742784307
+    second: Tutorial_Icon_hand 2_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -46,7 +46,7 @@ TextureImporter:
   nPOTScale: 0
   lightmap: 0
   compressionQuality: 50
-  spriteMode: 2
+  spriteMode: 1
   spriteExtrude: 1
   spriteMeshType: 1
   alignment: 0
@@ -139,13 +139,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: 06_0
+      name: Tutorial_Icon_hand 2_0
       rect:
         serializedVersion: 2
         x: 0
         y: 0
-        width: 318
-        height: 142
+        width: 81
+        height: 81
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -154,8 +154,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 8c18c089ffa18f100800000000000000
-      internalID: 141893073332109768
+      spriteID: dca8fbf93d8f01290800000000000000
+      internalID: -7921558156742784307
       vertices: []
       indices: 
       edges: []
@@ -164,7 +164,7 @@ TextureImporter:
     customData: 
     physicsShape: []
     bones: []
-    spriteID: 
+    spriteID: 5e97eb03825dee720800000000000000
     internalID: 0
     vertices: []
     indices: 
@@ -174,7 +174,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      06_0: 141893073332109768
+      Tutorial_Icon_hand 2_0: -7921558156742784307
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

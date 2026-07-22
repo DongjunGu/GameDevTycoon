@@ -190,6 +190,7 @@ public class MenuController : MonoBehaviour
         {
             HideSub(_activeSub);
             _activeSub = null;
+            EventSystem.current?.SetSelectedGameObject(null); // Selected 상태 해제(selectedSprite 원복)
             RefreshAllTopMenuTextStyles();
         }
 
@@ -221,6 +222,9 @@ public class MenuController : MonoBehaviour
         if (_activeSub != null) HideSub(_activeSub);
         ShowSub(tm);
         _activeSub = tm;
+        // Unity Selectable의 Selected 상태로 전환 — Button Transition=SpriteSwap이면 selectedSprite가
+        // 자동으로 표시되고, 마우스가 버튼을 벗어나도(포인터 뗀 뒤) 서브메뉴가 열려있는 동안 계속 유지됨.
+        EventSystem.current?.SetSelectedGameObject(tm.button != null ? tm.button.gameObject : null);
         RefreshAllTopMenuTextStyles();
     }
 
@@ -240,8 +244,10 @@ public class MenuController : MonoBehaviour
         trigger.triggers.Add(up);
     }
 
-    // pressed(누르는 중) 또는 selected(해당 서브메뉴가 열려있음) 이면 activeFontAsset+activeTextColor
-    // + 버튼 이미지를 Pressed 스프라이트로 고정, 아니면 캐시해둔 원래 폰트/색 + 이미지 오버라이드 해제(Selectable이 알아서 처리).
+    // pressed(누르는 중) 또는 selected(해당 서브메뉴가 열려있음) 이면 activeFontAsset+activeTextColor,
+    // 아니면 캐시해둔 원래 폰트/색으로 복원. 버튼 이미지 자체는 더 이상 여기서 건드리지 않음 —
+    // Button의 Transition=SpriteSwap이 Pressed/Selected 상태에 맞는 스프라이트를 알아서 보여준다
+    // (서브메뉴 열림 유지는 OnTopClick/CloseTopMenu 등에서 EventSystem.SetSelectedGameObject로 처리).
     void RefreshTopMenuTextStyle(TopMenu tm)
     {
         if (tm == null) return;
@@ -252,29 +258,12 @@ public class MenuController : MonoBehaviour
             tm.text.font  = active ? activeFontAsset : tm.originalFont;
             tm.text.color = active ? activeTextColor : tm.originalColor;
         }
-
-        if (tm.button != null && tm.button.image != null)
-            tm.button.image.overrideSprite = active ? tm.button.spriteState.pressedSprite : null;
     }
 
     void RefreshAllTopMenuTextStyles()
     {
         if (topMenus == null) return;
         foreach (var tm in topMenus) RefreshTopMenuTextStyle(tm);
-    }
-
-    // selected(서브메뉴 열림) 동안엔 hover/포인터 이벤트로 Selectable이 매 프레임 스프라이트를 바꾸려
-    // 드는 것(하이라이트 등)을 이겨야 하므로, 열려있는 동안 계속 Pressed 스프라이트로 재고정.
-    void LateUpdate()
-    {
-        if (topMenus == null) return;
-        foreach (var tm in topMenus)
-        {
-            if (tm?.button == null || tm.button.image == null) continue;
-            if (!(tm.isPressed || _activeSub == tm)) continue;
-            var pressedSprite = tm.button.spriteState.pressedSprite;
-            if (pressedSprite != null) tm.button.image.overrideSprite = pressedSprite;
-        }
     }
 
     void ShowSub(TopMenu tm)
@@ -341,6 +330,7 @@ public class MenuController : MonoBehaviour
         {
             HideSub(_activeSub);
             _activeSub = null;
+            EventSystem.current?.SetSelectedGameObject(null); // Selected 상태 해제(selectedSprite 원복)
             RefreshAllTopMenuTextStyles();
         }
         else

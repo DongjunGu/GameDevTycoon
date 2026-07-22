@@ -169,15 +169,18 @@ public class EmployeeCardUI : MonoBehaviour
         SetStatArrow(creativityArrow, emp.creativitySkill, emp.EffectiveCreativitySkill);
     }
 
+    // 무변화(노말) 상태 outline 색 — #663D45. EmployeeListUI/DispatchPanelUI도 이 메서드를 그대로 호출해 공유.
+    static readonly Color StatNormalColor = new Color(0.400f, 0.239f, 0.271f); // #663D45
+
     // 능력치 텍스트에 버프/디버프 적용 실제값 + 색상을 한 번에 세팅 (EmployeeResumePanel 해고 모드와 공유).
     public static void SetStatColored(TextMeshProUGUI label, int baseSkill, int effectiveSkill)
     {
         if (label == null) return;
         label.text  = $"{effectiveSkill}";
-        // 면색은 흰색으로 통일, 버프/디버프 구분은 outline 색으로 (버프 #E63356 / 디버프 #517FFF / 무변화 검정)
+        // 면색은 흰색으로 통일, 버프/디버프 구분은 outline 색으로 (버프 #E63356 / 디버프 #517FFF / 무변화 #663D45)
         label.color = Color.white;
         Color outline = effectiveSkill == baseSkill
-            ? Color.black
+            ? StatNormalColor
             : EmployeeData.GetStatColor(baseSkill, effectiveSkill);
         label.fontMaterial.SetColor(ShaderUtilities.ID_OutlineColor, outline);
     }
@@ -353,6 +356,10 @@ public class EmployeeCardUI : MonoBehaviour
         {
             var emp = EmployeeManager.Instance?.GetEmployee(_currentEmployeeId);
             if (emp != null) RefreshDynamic(emp);
+
+            // 카드가 열려있는 동안 캐릭터가 이동(패트롤/파견 등)할 수 있어 화살표 위치도 매 프레임 재동기화.
+            // Show() 시점에만 한 번 세팅하면 캐릭터가 움직인 뒤 화살표만 원래 자리에 남아 분리돼 보임.
+            PositionSelectedArrow(_currentEmployeeId);
         }
 
         // ② 닫기 판정 — Mouse / Touchscreen 명시적 체크

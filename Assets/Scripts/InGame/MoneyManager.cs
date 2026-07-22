@@ -152,10 +152,10 @@ public class MoneyManager : MonoBehaviour
         }
     }
 
-    // 새 런 시작 — 100,000G로 리셋 후 서버 저장
-    public void ResetForNewRun(System.Action onComplete = null)
+    // 새 런 시작 — startGold(기본 15,000G, 튜토리얼 런은 3,000G)로 리셋 후 서버 저장
+    public void ResetForNewRun(System.Action onComplete = null, int startGold = 15000)
     {
-        _gold  = 15000;
+        _gold  = startGold;
         _point = 0;
         OnPointChanged?.Invoke();
         SaveMoney(onComplete);

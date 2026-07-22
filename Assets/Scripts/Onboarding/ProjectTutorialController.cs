@@ -19,13 +19,25 @@ public class ProjectTutorialController : MonoBehaviour
     public Button projectStartButton;  // 3) projectStartBtn
 
     [Header("연출")]
-    [Range(0f, 1f)] public float dimAlpha = 0.5f;
+    [Range(0f, 1f)] public float dimAlpha = 0.8f;
+    [Tooltip("dim이 0→dimAlpha로 빠르게 훅 들어오는 시간(초) — 짧을수록 순간 집중 유도")]
+    public float dimFadeInDuration = 0.12f;
     [Tooltip("메뉴/패널 펼침 대기(초)")]
-    public float settleDelay = 0.4f;
+    public float settleDelay = 0.1f;
+    [Tooltip("하이라이트 시 대상 버튼 둘레에서 dim을 걷어낼 기본 여백(px)")]
+    public float highlightHolePadding = 14f;
+    [Tooltip("여백이 pulse로 커졌다 작아지는 폭(px). highlightHolePadding보다 작아야 구멍이 항상 버튼보다 커서 버튼을 안 가림")]
+    public float highlightPulseAmplitude = 6f;
+    [Tooltip("하이라이트가 이전 대상 위치에서 다음 대상 위치로 슬라이드 이동하는 시간(초)")]
+    public float holeMoveDuration = 0.3f;
 
     Canvas _dimCanvas;
+    RectTransform _dimRoot;
+    Image _dimTop, _dimBottom, _dimLeft, _dimRight;
     Coroutine _pulse;
     bool _running;
+    Rect _currentHoleRect;
+    bool _holeInitialized;
 
     void Start()
     {
@@ -94,7 +106,9 @@ public class ProjectTutorialController : MonoBehaviour
 
         EnsureDim();
         _dimCanvas.enabled = true;
+        CollapseHole(); // 구멍 없이 전체 덮은 상태로 시작
         BeginDimTimeStop(); // 패널 켜는 것과 동일하게 dim 동안 시간 정지
+        yield return FadeDimIn(); // 0 → dimAlpha 빠르게 훅 들어와 집중 유도
 
         yield return Highlight(menuButton);
         yield return new WaitForSecondsRealtime(settleDelay);
@@ -108,24 +122,26 @@ public class ProjectTutorialController : MonoBehaviour
         Destroy(gameObject);
     }
 
-    // 대상 버튼을 dim 위로 올려 강조 + 펄스 + 클릭 대기. (TutorialController 와 동일 패턴)
+    // 대상 버튼 자리의 dim에 구멍을 뚫어 강조 + 구멍 크기 펄스 + 클릭 대기. (TutorialController 와 동일 패턴)
+    // ⚠️ 대상 버튼 자신은 절대 건드리지 않는다 — dim 쪽 구멍만 그 버튼 자리에 맞춰 움직인다.
     IEnumerator Highlight(Button target)
     {
         if (target == null || !target.gameObject.activeInHierarchy) yield break;
 
-        var canvas = target.GetComponent<Canvas>();
-        bool addedCanvas = canvas == null;
-        if (addedCanvas) canvas = target.gameObject.AddComponent<Canvas>();
-        bool prevOverride = canvas.overrideSorting;
-        int  prevOrder    = canvas.sortingOrder;
-        canvas.overrideSorting = true;
-        canvas.sortingOrder = 201;
+        var targetRect = target.transform as RectTransform;
 
-        var gr = target.GetComponent<GraphicRaycaster>();
-        bool addedRaycaster = gr == null;
-        if (addedRaycaster) gr = target.gameObject.AddComponent<GraphicRaycaster>();
+        // 이전 강조 위치에서 이번 대상 위치로 슬라이드 이동 — 곧장 나타나지 않고 이동하는 느낌을 줌.
+        Rect destRect = ComputeHoleRect(targetRect, highlightHolePadding);
+        if (_holeInitialized)
+            yield return MoveHole(_currentHoleRect, destRect);
+        else
+        {
+            ApplyHole(destRect);
+            _currentHoleRect = destRect;
+            _holeInitialized = true;
+        }
 
-        _pulse = StartCoroutine(Pulse(target.transform));
+        _pulse = StartCoroutine(PulseHole(targetRect));
 
         bool clicked = false;
         UnityEngine.Events.UnityAction cb = () => clicked = true;
@@ -133,30 +149,88 @@ public class ProjectTutorialController : MonoBehaviour
         while (!clicked) yield return null;
         target.onClick.RemoveListener(cb);
 
-        // 정리 — 추가한 컴포넌트는 Destroy 로 원상복구(disable 로 남기면 버튼 영구 먹통 버그), 원래 있던 Canvas 는 값만 복원.
         if (_pulse != null) { StopCoroutine(_pulse); _pulse = null; }
-        target.transform.localScale = Vector3.one;
-        if (addedRaycaster && gr != null) Destroy(gr);   // Canvas 보다 먼저 (RequireComponent 의존)
-        if (addedCanvas)
-        {
-            if (canvas != null) Destroy(canvas);
-        }
-        else
-        {
-            canvas.overrideSorting = prevOverride;
-            canvas.sortingOrder    = prevOrder;
-        }
+        // CollapseHole() 미호출 — 위치를 유지해 다음 Highlight()가 여기서부터 이동해가게 함
     }
 
-    IEnumerator Pulse(Transform tr)
+    IEnumerator PulseHole(RectTransform target)
     {
         float t = 0f;
         while (true)
         {
             t += Time.unscaledDeltaTime * 4f;
-            tr.localScale = Vector3.one * (1f + 0.08f * Mathf.Sin(t));
+            float pad = highlightHolePadding + highlightPulseAmplitude * Mathf.Sin(t);
+            _currentHoleRect = ComputeHoleRect(target, pad);
+            ApplyHole(_currentHoleRect);
             yield return null;
         }
+    }
+
+    IEnumerator MoveHole(Rect from, Rect to)
+    {
+        float dur = Mathf.Max(0.0001f, holeMoveDuration);
+        float t = 0f;
+        while (t < dur)
+        {
+            t += Time.unscaledDeltaTime;
+            float k = Mathf.Clamp01(t / dur);
+            float eased = 1f - (1f - k) * (1f - k);
+            _currentHoleRect = LerpRect(from, to, eased);
+            ApplyHole(_currentHoleRect);
+            yield return null;
+        }
+        _currentHoleRect = to;
+        ApplyHole(to);
+    }
+
+    static Rect LerpRect(Rect a, Rect b, float t) => new Rect(
+        Mathf.Lerp(a.x, b.x, t), Mathf.Lerp(a.y, b.y, t),
+        Mathf.Lerp(a.width, b.width, t), Mathf.Lerp(a.height, b.height, t));
+
+    Rect ComputeHoleRect(RectTransform target, float padding)
+    {
+        var cam = _dimCanvas.worldCamera;
+        var corners = new Vector3[4];
+        target.GetWorldCorners(corners);
+
+        Vector2 min = new Vector2(float.PositiveInfinity, float.PositiveInfinity);
+        Vector2 max = new Vector2(float.NegativeInfinity, float.NegativeInfinity);
+        for (int i = 0; i < 4; i++)
+        {
+            Vector2 screenPoint = RectTransformUtility.WorldToScreenPoint(cam, corners[i]);
+            RectTransformUtility.ScreenPointToLocalPointInRectangle(_dimRoot, screenPoint, cam, out var localPoint);
+            min = Vector2.Min(min, localPoint);
+            max = Vector2.Max(max, localPoint);
+        }
+
+        min -= new Vector2(padding, padding);
+        max += new Vector2(padding, padding);
+        return new Rect(min.x, min.y, max.x - min.x, max.y - min.y);
+    }
+
+    void ApplyHole(Rect hole)
+    {
+        Rect p = _dimRoot.rect;
+
+        _dimTop.rectTransform.offsetMin    = new Vector2(0f, hole.yMax - p.yMin);
+        _dimTop.rectTransform.offsetMax    = new Vector2(0f, 0f);
+
+        _dimBottom.rectTransform.offsetMin = new Vector2(0f, 0f);
+        _dimBottom.rectTransform.offsetMax = new Vector2(0f, hole.yMin - p.yMax);
+
+        _dimLeft.rectTransform.offsetMin   = new Vector2(0f, hole.yMin - p.yMin);
+        _dimLeft.rectTransform.offsetMax   = new Vector2(hole.xMin - p.xMax, hole.yMax - p.yMax);
+
+        _dimRight.rectTransform.offsetMin  = new Vector2(hole.xMax - p.xMin, hole.yMin - p.yMin);
+        _dimRight.rectTransform.offsetMax  = new Vector2(0f, hole.yMax - p.yMax);
+    }
+
+    void CollapseHole()
+    {
+        Rect p = _dimRoot.rect;
+        var hole = new Rect(p.xMin, p.yMin, 0f, 0f);
+        ApplyHole(hole);
+        _currentHoleRect = hole;
     }
 
     void EnsureDim()
@@ -174,13 +248,59 @@ public class ProjectTutorialController : MonoBehaviour
         _dimCanvas.sortingOrder = 200;
         go.AddComponent<GraphicRaycaster>();
 
-        var img = go.AddComponent<Image>();
-        img.color = new Color(0f, 0f, 0f, dimAlpha);
-        img.raycastTarget = true;
-        var rt = (RectTransform)go.transform;
-        rt.anchorMin = Vector2.zero; rt.anchorMax = Vector2.one;
-        rt.offsetMin = Vector2.zero; rt.offsetMax = Vector2.zero;
+        _dimRoot = (RectTransform)go.transform;
+        _dimRoot.anchorMin = Vector2.zero; _dimRoot.anchorMax = Vector2.one;
+        _dimRoot.offsetMin = Vector2.zero; _dimRoot.offsetMax = Vector2.zero;
+
+        _dimTop    = CreateDimStrip("DimTop");
+        _dimBottom = CreateDimStrip("DimBottom");
+        _dimLeft   = CreateDimStrip("DimLeft");
+        _dimRight  = CreateDimStrip("DimRight");
 
         _dimCanvas.enabled = false;
+    }
+
+    Image CreateDimStrip(string name)
+    {
+        var go = new GameObject(name, typeof(RectTransform), typeof(Image));
+        go.transform.SetParent(_dimRoot, false);
+
+        var rt = (RectTransform)go.transform;
+        rt.anchorMin = Vector2.zero; rt.anchorMax = Vector2.one;
+
+        var img = go.GetComponent<Image>();
+        img.color = new Color(0f, 0f, 0f, dimAlpha);
+        img.raycastTarget = true;
+
+        return img;
+    }
+
+    IEnumerator FadeDimIn()
+    {
+        SetDimAlpha(0f);
+        float dur = Mathf.Max(0.0001f, dimFadeInDuration);
+        float t = 0f;
+        while (t < dur)
+        {
+            t += Time.unscaledDeltaTime;
+            SetDimAlpha(Mathf.Lerp(0f, dimAlpha, Mathf.Clamp01(t / dur)));
+            yield return null;
+        }
+        SetDimAlpha(dimAlpha);
+    }
+
+    void SetDimAlpha(float a)
+    {
+        SetImgAlpha(_dimTop, a);
+        SetImgAlpha(_dimBottom, a);
+        SetImgAlpha(_dimLeft, a);
+        SetImgAlpha(_dimRight, a);
+    }
+
+    void SetImgAlpha(Image img, float a)
+    {
+        var c = img.color;
+        c.a = a;
+        img.color = c;
     }
 }
