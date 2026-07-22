@@ -12,9 +12,11 @@ using UnityEngine.SceneManagement;
 // 보존(메타): OutGameCurrency / OwnedCard / OwnedTrait / OutGameEmployee
 public static class NewRunInitializer
 {
-    public static void StartNewRun(Action onComplete = null)
+    // tutorial=true 는 LogoScenario 의 최초 온보딩 진입에서만 넘어옴 — 이번 런을 RunState.tutorial=true 로 시작해
+    // GameScene 의 TutorialController 가 스크립트된 튜토리얼을 실행하도록 만든다.
+    public static void StartNewRun(Action onComplete = null, bool tutorial = false)
     {
-        Debug.Log("[NewRun] 시작");
+        Debug.Log($"[NewRun] 시작 (tutorial={tutorial})");
 
         if (RunStateManager.Instance != null)
         {
@@ -22,16 +24,16 @@ public static class NewRunInitializer
             {
                 if (!success)
                     Debug.LogError("[NewRun] resetInProgress 저장 실패 - 진행은 강행 (다음 로딩 시 자동복구 미보장)");
-                RunResets(onComplete);
+                RunResets(onComplete, tutorial);
             });
         }
         else
         {
-            RunResets(onComplete);
+            RunResets(onComplete, tutorial);
         }
     }
 
-    static void RunResets(Action onComplete)
+    static void RunResets(Action onComplete, bool tutorial)
     {
         // 아웃게임에서 만진 장착 슬롯 변경 등 pending 저장 즉시 flush
         OwnedTraitManager.Instance?.FlushPendingSave();
@@ -47,7 +49,7 @@ public static class NewRunInitializer
         {
             pending--;
             Debug.Log($"[NewRun] reset 진행 중: 남음 {pending}");
-            if (issuedAll && pending == 0) FinalizeRun(onComplete);
+            if (issuedAll && pending == 0) FinalizeRun(onComplete, tutorial);
         };
 
         void Issue(Action<Action> resetCall)
@@ -71,7 +73,7 @@ public static class NewRunInitializer
         if (QuestManager.Instance != null)            Issue(QuestManager.Instance.ResetForNewRun);
 
         issuedAll = true;
-        if (pending == 0) FinalizeRun(onComplete);
+        if (pending == 0) FinalizeRun(onComplete, tutorial);
     }
 
     static void ResetMemoryOnly()
@@ -88,9 +90,9 @@ public static class NewRunInitializer
         ProjectSetupUI.ResetForNewRun();  // 마지막 프로젝트 선택(규모/장르/플랫폼) 기억 초기화
     }
 
-    static void FinalizeRun(Action onComplete)
+    static void FinalizeRun(Action onComplete, bool tutorial)
     {
-        Debug.Log("[NewRun] 데이터 리셋 완료 → 특성 효과 적용 → RunState.StartRun");
+        Debug.Log($"[NewRun] 데이터 리셋 완료 → 특성 효과 적용 → RunState.StartRun (tutorial={tutorial})");
 
         // 장착 특성 run-start 효과 (예: 금수저/은수저 startGold)
         // ResetForNewRun 으로 매니저 초기값 세팅 후, RunState 저장 전에 적용
@@ -115,6 +117,6 @@ public static class NewRunInitializer
             }
             SceneManager.LoadScene("GameScene");
             onComplete?.Invoke();
-        });
+        }, tutorial);
     }
 }

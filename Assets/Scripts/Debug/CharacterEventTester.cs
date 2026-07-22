@@ -145,9 +145,17 @@ public class CharacterEventTester : MonoBehaviour
 
         GUILayout.Space(8);
         GUILayout.Label("<b>━━ 온보딩 ━━</b>", Rich());
-        GUILayout.Label($"IntroDone: {OnboardingState.IntroDone} / TutorialDone: {OnboardingState.TutorialDone}");
+        GUILayout.Label($"IntroDone: {OnboardingState.IntroDone} / TutorialDone: {OnboardingState.TutorialDone} / RunState.tutorial: {RunStateManager.Instance?.IsTutorial}");
 #if UNITY_EDITOR
         if (GUILayout.Button("온보딩 리셋 (컷씬/튜토리얼 재노출)")) { OnboardingState.ResetAll(); Set("온보딩 리셋 — LoadingScene부터 다시 실행"); }
+        if (GUILayout.Button("현재 씬에서 튜토리얼만 강제 재실행 (RunState.tutorial=true)"))
+        {
+            OnboardingState.ResetAll();
+            if (RunStateManager.Instance != null)
+                RunStateManager.Instance.SetTutorial(true, success => Set(success ? "RunState.tutorial=true 저장 완료 — GameScene 재시작(또는 F5)하면 튜토리얼 실행" : "RunState.tutorial 저장 실패"));
+            else
+                Set("RunStateManager 인스턴스 없음");
+        }
 #endif
 
         GUILayout.Space(6);
