@@ -30,6 +30,19 @@ public class BackendManager : MonoBehaviour
             Debug.Log("초기화 성공 : " + bro);
             //FindAnyObjectByType<Progress>().Play();
 
+            // 기기에 로컬 저장된 뒤끝 access/refresh 토큰으로 우선 자동 로그인 시도 — 이전에 어떤 방식으로
+            // 로그인했든(Apple/GPGS/게스트 등) 성공하면 플랫폼별 최초 로그인(Apple 인증창, GPGS 계정선택 등)
+            // 없이 바로 이어서 진행. 최초 실행이거나 토큰이 만료/무효(1년 경과, 다른 기기 로그인 등)일 때만 실패.
+            var tokenBro = Backend.BMember.LoginWithTheBackendToken();
+            if (tokenBro.IsSuccess())
+            {
+                Debug.Log("[BackendManager] 토큰 자동 로그인 성공: " + tokenBro);
+                FindAnyObjectByType<Progress>()?.SetLoginComplete();
+                LoadAllAndEnterGame();
+                return;
+            }
+            Debug.Log($"[BackendManager] 토큰 로그인 실패(최초 실행/토큰 만료 등) - 플랫폼별 로그인 진행: {tokenBro}");
+
 #if UNITY_EDITOR
             TestLogin();
 #elif UNITY_ANDROID
