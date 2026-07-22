@@ -35,7 +35,19 @@ public class BackendManager : MonoBehaviour
 #elif UNITY_ANDROID
             FindAnyObjectByType<GPGSLogin>().StartLogin();
 #elif UNITY_IOS
-            // iOS는 LoginButtonPanel의 버튼으로 시작
+            // Android(GPGS)와 동일하게 진입 즉시 자동 시도. iOS는 이미 로그인/기기 신뢰가 있으면
+            // 시스템이 UI 없이(또는 Face ID 확인만으로) 조용히 완료시켜 자동 로그인처럼 동작한다.
+            // 실패 시에만 LoginButtonPanel 버튼이 활성화되어 수동 재시도(=최초 유저 온보딩) 경로가 된다.
+            var appleLogin = FindAnyObjectByType<GameCenterLogin>();
+            if (appleLogin != null)
+            {
+                appleLogin.StartLogin();
+            }
+            else
+            {
+                Debug.LogError("[BackendManager] AppleLogin 오브젝트를 찾을 수 없음 — 자동 로그인 시도 불가");
+                FindAnyObjectByType<LoginButtonPanel>()?.EnableRetry();
+            }
 #else
             // 스탠드얼론(Windows 등) — GPGS/Apple 불가 → 기기별 게스트 로그인 (테스터 PC 마다 별도 유저)
             GuestLoginAndEnter();
