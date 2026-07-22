@@ -19,7 +19,9 @@
       "Bash(perl -0777 -ne 'if\\(/<script>\\(.*\\)<\\\\/script>/s\\){print $1}' index.html)",
       "WebSearch",
       "WebFetch(domain:docs.thebackend.io)",
-      "WebFetch(domain:docs.backnd.com)"
+      "WebFetch(domain:docs.backnd.com)",
+      "WebFetch(domain:community.thebackend.io)",
+      "WebFetch(domain:developer.thebackend.io)"
     ],
     "ask": [
       "Bash(rm:*)",
