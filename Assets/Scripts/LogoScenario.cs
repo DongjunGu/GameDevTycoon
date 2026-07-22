@@ -49,12 +49,13 @@ public class LogoScenario : MonoBehaviour
 		// 컷씬이 끝난 뒤에 MarkIntroDone (중간 종료 시 다음 진입에 재노출).
 		if (!OnboardingState.IntroDone)
 		{
+			// 최초 온보딩 런만 tutorial=true 로 시작 — GameScene 의 TutorialController 가 이 값으로 실행 여부를 게이트
 			if (cutscene != null)
-				cutscene.Play(() => { OnboardingState.MarkIntroDone(); NewRunInitializer.StartNewRun(); });
+				cutscene.Play(() => { OnboardingState.MarkIntroDone(); NewRunInitializer.StartNewRun(tutorial: true); });
 			else
 			{
 				OnboardingState.MarkIntroDone();
-				NewRunInitializer.StartNewRun();
+				NewRunInitializer.StartNewRun(tutorial: true);
 			}
 			return;
 		}

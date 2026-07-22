@@ -9,7 +9,8 @@ using UnityEngine.UI;
 // 강조 방식: 반투명 dim 풀스크린(클릭 차단) 위로 "대상 버튼만" 정렬을 올려(overrideSorting) 밝게+클릭 가능하게 하고 펄스.
 // → 다른 모든 UI 는 dim 에 막혀 대상만 누를 수 있음. 대사 내용은 DialogManager 그룹(데이터)에서.
 //
-// OnboardingState.TutorialDone 으로 1회만. 버튼 참조는 MenuController 의 것을 인스펙터로 연결.
+// OnboardingState.TutorialDone 으로 1회만 + RunStateManager.IsTutorial(=스크립트된 튜토리얼 런) 일 때만 실행.
+// 버튼 참조는 MenuController 의 것을 인스펙터로 연결.
 [DisallowMultipleComponent]
 public class TutorialController : MonoBehaviour
 {
@@ -37,6 +38,7 @@ public class TutorialController : MonoBehaviour
     void Start()
     {
         if (OnboardingState.TutorialDone) { Destroy(gameObject); return; }
+        if (RunStateManager.Instance == null || !RunStateManager.Instance.IsTutorial) { Destroy(gameObject); return; }
         StartCoroutine(Run());
     }
 

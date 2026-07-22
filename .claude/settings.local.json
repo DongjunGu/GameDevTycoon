@@ -16,7 +16,10 @@
       "Read(//c/Users/PC/Downloads/**)",
       "Bash(perl -0777 -ne 'if\\(/<script>\\(.*\\)<\\\\/script>/s\\){print $1}' crash-game-multiplayer.html)",
       "Bash(node --check _extract.js)",
-      "Bash(perl -0777 -ne 'if\\(/<script>\\(.*\\)<\\\\/script>/s\\){print $1}' index.html)"
+      "Bash(perl -0777 -ne 'if\\(/<script>\\(.*\\)<\\\\/script>/s\\){print $1}' index.html)",
+      "WebSearch",
+      "WebFetch(domain:docs.thebackend.io)",
+      "WebFetch(domain:docs.backnd.com)"
     ],
     "ask": [
       "Bash(rm:*)",
