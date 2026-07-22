@@ -980,10 +980,15 @@ public class RandomEventManager : MonoBehaviour
         }
         else
         {
+            int goldAfter = MoneyManager.Instance.Gold - penalty;
             MoneyManager.Instance.ForceSpendGold(penalty);
             AlertUI.Instance.Show(
                 $"투자 이벤트 실패\n위약금 {penalty:N0}G를 잃었습니다",
-                () => onComplete?.Invoke());
+                () =>
+                {
+                    if (goldAfter < 0) GameTimeManager.Instance?.TriggerBankruptcy();
+                    else onComplete?.Invoke();
+                });
         }
     }
 

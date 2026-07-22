@@ -395,6 +395,7 @@ public class LeaderScoreUI : MonoBehaviour
         }
 
         var icons = new System.Collections.Generic.List<RectTransform>(count);
+        var scatterOffsets = BuildStratifiedScatterOffsets(count, popScatterRangeX);
 
         for (int i = 0; i < count; i++)
         {
@@ -410,7 +411,7 @@ public class LeaderScoreUI : MonoBehaviour
             if (iconImg != null && categoryIcon != null) iconImg.sprite = categoryIcon.sprite;
 
             icons.Add(rt);
-            StartCoroutine(PopPunch(rt, rt.localPosition));
+            StartCoroutine(PopPunch(rt, rt.localPosition, scatterOffsets[i]));
         }
 
         yield return new WaitForSeconds(popDuration + 0.05f); // 다 터질 때까지 대기
@@ -473,12 +474,38 @@ public class LeaderScoreUI : MonoBehaviour
             if (rt != null) Destroy(rt.gameObject);
     }
 
-    // 아이콘 하나가 popFlightDuration 동안 포물선을 그리며 (X는 랜덤 착지 지점으로, Y는 위로 튀었다가 내려오는 곡선으로)
-    // 빠르게 터져나가 popFloorY 바닥에 착지한 뒤, 남은 시간(popDuration - popFlightDuration)은 그 자리에 가만히 있는다.
-    // 스케일은 0 → overshoot → 1.
-    IEnumerator PopPunch(RectTransform rt, Vector3 startLocalPos)
+    // count개를 popScatterRangeX 범위 안에서 "골고루" 흩어지도록 미리 배정하는 오프셋 목록.
+    // 완전 랜덤(Random.Range)이면 운 나쁘면 10개가 전부 한쪽으로 쏠릴 수 있어서, 전체 범위를
+    // count개 구간으로 균등 분할(예: 10개면 절반은 왼쪽 절반은 오른쪽)해 구간마다 하나씩 배정하고,
+    // 구간 내부에서만 랜덤(자연스러운 흔들림)+구간↔아이콘 매칭은 셔플(항상 왼쪽부터 순서대로 터지는
+    // 부자연스러움 방지)한다.
+    static System.Collections.Generic.List<float> BuildStratifiedScatterOffsets(int count, float range)
     {
-        float targetX = startLocalPos.x + Random.Range(-popScatterRangeX, popScatterRangeX);
+        var offsets = new System.Collections.Generic.List<float>(count);
+        if (count <= 0) return offsets;
+
+        float binWidth = (range * 2f) / count;
+        for (int i = 0; i < count; i++)
+        {
+            float binStart = -range + i * binWidth;
+            offsets.Add(binStart + Random.Range(0f, binWidth));
+        }
+
+        // Fisher-Yates 셔플 — 구간 순서와 생성 순서(아이콘 index)를 무작위로 매칭
+        for (int i = offsets.Count - 1; i > 0; i--)
+        {
+            int j = Random.Range(0, i + 1);
+            (offsets[i], offsets[j]) = (offsets[j], offsets[i]);
+        }
+        return offsets;
+    }
+
+    // 아이콘 하나가 popFlightDuration 동안 포물선을 그리며 (X는 scatterOffset 만큼 이동한 착지 지점으로,
+    // Y는 위로 튀었다가 내려오는 곡선으로) 빠르게 터져나가 popFloorY 바닥에 착지한 뒤,
+    // 남은 시간(popDuration - popFlightDuration)은 그 자리에 가만히 있는다. 스케일은 0 → overshoot → 1.
+    IEnumerator PopPunch(RectTransform rt, Vector3 startLocalPos, float scatterOffset)
+    {
+        float targetX = startLocalPos.x + scatterOffset;
         Vector3 targetLocalPos = new Vector3(targetX, popFloorY, startLocalPos.z);
 
         float flightDur = Mathf.Clamp(popFlightDuration, 0.01f, Mathf.Max(0.01f, popDuration));
@@ -517,6 +544,7 @@ public class LeaderScoreUI : MonoBehaviour
 
         var icons   = new System.Collections.Generic.List<RectTransform>(count);
         var targets = new System.Collections.Generic.List<Vector3>(count);
+        var scatterOffsets = BuildStratifiedScatterOffsets(count, popScatterRangeX);
 
         for (int i = 0; i < count; i++)
         {
@@ -531,9 +559,8 @@ public class LeaderScoreUI : MonoBehaviour
             if (iconImg != null) iconImg.sprite = categoryIcon.sprite;
 
             icons.Add(rt);
-            float ox = Random.Range(-popScatterRangeX, popScatterRangeX);
             float oy = Random.Range(0f, popArcHeight);
-            targets.Add(basePos + new Vector3(ox, oy, 0f));
+            targets.Add(basePos + new Vector3(scatterOffsets[i], oy, 0f));
         }
 
         float dur = Mathf.Max(0.01f, burstSpitDuration);

@@ -19,7 +19,8 @@ public class GameTimeManager : MonoBehaviour
     private bool _isRunning = false;
     private bool _isLoaded = false;
 
-    // 새해 결제 진행 단계 (영속): 0=없음 / 1=임금 알림 대기 / 2=연세 알림 대기.
+    // 연간 결제 진행 단계 (영속): 0=없음 / 1=임금 알림 대기(새해, 1월 1주차) / 2=연세 알림 대기(7월 1주차).
+    // 임금과 연세는 더 이상 연쇄(같은 시점)가 아니라 서로 다른 시점에 독립적으로 트리거된다.
     // 알림 도중 종료해도 재접속 시 이어서 처리하기 위해 저장한다.
     private int _pendingNewYearStage = 0;
     public int PendingNewYearStage => _pendingNewYearStage;
@@ -198,6 +199,10 @@ public class GameTimeManager : MonoBehaviour
             }
         }
 
+        // 연세는 새해가 아니라 7월 1주차에 별도로 차감
+        if (Month == 7 && Week == 1)
+            StartYearFeeDeduction();
+
         OnTimeChanged?.Invoke();
         HUDUI.Instance?.RefreshTime();
         LoanManager.Instance.CheckDueLoans();
@@ -356,7 +361,7 @@ public class GameTimeManager : MonoBehaviour
         );
     }
 
-    // 재접속 복원 — 새해 결제 알림 도중 종료했던 경우 단계에 맞춰 재발동.
+    // 재접속 복원 — 임금(1월 1주차)/연세(7월 1주차) 알림 도중 종료했던 경우 단계에 맞춰 재발동.
     public void ResumeNewYearPaymentOnReconnect()
     {
         if (_pendingNewYearStage == 1)      PayAnnualSalary();
@@ -402,7 +407,8 @@ public class GameTimeManager : MonoBehaviour
         */
     }
 
-    void TriggerBankruptcy()
+    // 다른 파산 소스(랜덤이벤트 선택지 등)도 재사용 — 잔액이 마이너스가 되면 이 메서드로 통일해서 호출한다.
+    public void TriggerBankruptcy()
     {
         AlertUI.Instance.Show("임금을 지급할 자본이 없습니다.\n파산합니다.", () =>
         {
@@ -422,7 +428,7 @@ public class GameTimeManager : MonoBehaviour
         int goldAfter = MoneyManager.Instance.Gold - totalSalary;
 
         MoneyManager.Instance.ForceSpendGold(totalSalary);
-        _pendingNewYearStage = 2; // 임금 완료 → 연세 단계 (이중 차감 방지 위해 저장 전에 전환)
+        _pendingNewYearStage = 0; // 임금 완료 — 연세는 새해가 아니라 7월 1주차에 별도 처리하므로 여기서 종료
         SaveGameTime();
         ProjectSaveManager.Instance?.SaveProject();
 
@@ -433,17 +439,21 @@ public class GameTimeManager : MonoBehaviour
                 SaveGameTime();
                 MoneyManager.Instance?.SaveMoney();
                 ProjectSaveManager.Instance?.SaveProject();
-                Debug.Log("파산 처리 예정");
+                TriggerBankruptcy();
             });
         }
-        else
-        {
-            // 임금 지급 완료 → 연세(회사 운영비) 차감
-            ProcessYearFeeDeduction();
-        }
+        // else: 임금 지급 완료. 연세는 7월 1주차에 AdvanceWeek 이 별도로 트리거.
     }
 
-    // 임금 차감 후 연세(운영비) 차감 — AlertUI 확인 시 차감 + 4-set 저장. 부족하면 파산.
+    // 7월 1주차에 진입하면 호출 — 연세(운영비) 차감 단계 시작.
+    void StartYearFeeDeduction()
+    {
+        _pendingNewYearStage = 2; // 연세 알림 대기 (알림 도중 종료 시 재접속 복원용)
+        SaveGameTime();
+        ProcessYearFeeDeduction();
+    }
+
+    // 연세(운영비) 차감 — AlertUI 확인 시 차감 + 4-set 저장. 부족하면 파산.
     void ProcessYearFeeDeduction()
     {
         int yearFee = HUDUI.Instance != null ? HUDUI.Instance.CurrentYearFee : 0;

@@ -47,9 +47,11 @@ public static class RandomEvents_Choice
                             if (emp == null) return;
 
                             int cost = Mathf.Max(1, (int)(emp.salary * 0.03f));
+                            int goldAfter = MoneyManager.Instance.Gold - cost;
                             MoneyManager.Instance.ForceSpendGold(cost, saveImmediately: false);
                             emp.ChangeSatisfaction(10);
                             OfficeManager.Instance?.ShowStatPopup(emp.id, "만족도 +10", new Color(1f, 0.4f, 0.4f));
+                            if (goldAfter < 0) GameTimeManager.Instance?.TriggerBankruptcy();
                         }
                     }
                 },
@@ -117,6 +119,7 @@ public static class RandomEvents_Choice
                             var emp = EmployeeManager.Instance.GetEmployee(equipEvt.targetEmployeeId);
                             if (emp == null) return;
 
+                            int goldAfter = MoneyManager.Instance.Gold - equipCostSnapshot;
                             MoneyManager.Instance.ForceSpendGold(equipCostSnapshot, saveImmediately: false);
 
                             int buffWeeks = RandomStatBuffWeeksByStage();
@@ -125,6 +128,7 @@ public static class RandomEvents_Choice
                             string weeks = buffWeeks.ToString();
                             var c0 = equipEvt.choices[0];
                             c0.resultMent2 = c0.resultMent2?.Replace("{주수}", weeks);
+                            if (goldAfter < 0) GameTimeManager.Instance?.TriggerBankruptcy();
                         }
                     },
                     // ── 선택지 2: 거절 ───────────────────────────
@@ -237,6 +241,7 @@ public static class RandomEvents_Choice
                     {
                         onChoose = () =>
                         {
+                            int goldAfter = MoneyManager.Instance.Gold - dinnerCost5;
                             MoneyManager.Instance.ForceSpendGold(dinnerCost5, saveImmediately: false);
 
                             bool happy = UnityEngine.Random.value < 0.5f;
@@ -252,6 +257,7 @@ public static class RandomEvents_Choice
                             // choice2_resultTitle 컬럼을 재사용해 저장(dinnerMeh1Template).
                             c1.resultMent1 = (happy ? dinnerHappyMent1Template : dinnerMehMent1Template);
                             c1.resultMent2 = dinnerMent2Template.Replace("-{비용}G", costTag);
+                            if (goldAfter < 0) GameTimeManager.Instance?.TriggerBankruptcy();
                         }
                     },
                     // ── 선택지 3: 소고기 ─────────────────────────
@@ -259,8 +265,10 @@ public static class RandomEvents_Choice
                     {
                         onChoose = () =>
                         {
+                            int goldAfter = MoneyManager.Instance.Gold - dinnerCost10;
                             MoneyManager.Instance.ForceSpendGold(dinnerCost10, saveImmediately: false);
                             EmployeeManager.Instance.ChangeAllSatisfaction(10);
+                            if (goldAfter < 0) GameTimeManager.Instance?.TriggerBankruptcy();
                         }
                     }
                 }

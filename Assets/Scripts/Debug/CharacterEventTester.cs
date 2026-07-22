@@ -210,17 +210,19 @@ public class CharacterEventTester : MonoBehaviour
     // 4개 스탯(기획/개발/아트/창의성) 버프/디버프 반영 과정을 항목별로 콘솔에 찍는다 — "왜 한 스탯만 색이 안 바뀌지" 디버깅용.
     void LogStatBreakdown(EmployeeData e)
     {
-        float satMult   = e.GetSatisfactionMultiplier();
-        int debuffAmt   = e.GetStatDebuffAmount();
-        int buffAmt     = e.GetStatBuffAmount();
-        int romanceAmt  = e.GetRomanceBuffAmount();
-        int godAmt      = e.GetGodBlessingBuffAmount();
-        int otakuAmt    = e.GetOtakuBuffAmount();
-        float cosmicMul = e.GetCosmicMultiplier();
+        float satMult    = e.GetSatisfactionMultiplier();
+        float debuffPct  = e.GetStatDebuffPercent();
+        float buffPct    = e.GetStatBuffPercent();
+        float romancePct = e.GetRomanceBuffPercent();
+        float godPct     = e.GetGodBlessingBuffPercent();
+        float otakuPct   = e.GetOtakuBuffPercent();
+        float buffDebuffPct = e.GetTotalStatBuffDebuffPercent();
+        float cosmicMul     = e.GetCosmicMultiplier();
+        float grandTotalPct = e.GetTotalStatPercent();
 
         // 콘솔 리더가 멀티라인 로그를 첫 줄만 보여주는 경우가 있어 한 줄씩 따로 찍는다.
         Debug.Log($"[StatBreakdown] {e.employeeName} (role={e.role}, satisfaction={e.satisfaction})");
-        Debug.Log($"[StatBreakdown] satMult={satMult:0.00}  debuff=-{debuffAmt}  buff=+{buffAmt}  romance=+{romanceAmt}  godBlessing=+{godAmt}  otaku=+{otakuAmt}  cosmicMult={cosmicMul:0.00}");
+        Debug.Log($"[StatBreakdown] satMult={satMult:0.00}  debuff={debuffPct}%  buff=+{buffPct}%  romance=+{romancePct}%  godBlessing=+{godPct}%  otaku=+{otakuPct}%  buffDebuffSubtotal={buffDebuffPct}%  cosmicMult={cosmicMul:0.00}  grandTotal={grandTotalPct}%");
         Debug.Log($"[StatBreakdown] 기획: raw={e.planningSkill} -> effective={e.EffectivePlanningSkill} (diff={e.EffectivePlanningSkill - e.planningSkill})");
         Debug.Log($"[StatBreakdown] 개발: raw={e.developSkill} -> effective={e.EffectiveDevelopSkill} (diff={e.EffectiveDevelopSkill - e.developSkill})");
         Debug.Log($"[StatBreakdown] 아트: raw={e.artSkill} -> effective={e.EffectiveArtSkill} (diff={e.EffectiveArtSkill - e.artSkill})");

@@ -301,41 +301,64 @@ public class EmployeeData
     public void ClearAllStatDebuffs() => statDebuffStacks.Clear();
     public bool HasAnyStatDebuff() => statDebuffStacks.Count > 0;
 
-    // 주 스탯 기준 합연산 디버프/버프량 — 디버프는 활성 스택 개수만큼 누적 감산, 버프는 스택 percent 합
-    public int GetStatDebuffAmount()    => statDebuffStacks.Count > 0 ? (int)(GetMainStat() * 0.2f) * statDebuffStacks.Count : 0;
-    public int GetStatBuffAmount()
+    // 디버프/버프/사내연애/신의축복/오타쿠 — 전부 "그 스탯 자기 자신" 기준 % 로 계산해서 합연산(덧셈)으로 합친다.
+    // 예전엔 GetMainStat()(주스탯 하나) 기준으로 계산한 고정 숫자를 네 스탯 전부에 똑같이 적용해서,
+    // 스탯마다 base 값이 달라 어떤 스탯은 버프/어떤 스탯은 디버프로 갈리는 문제가 있었음.
+    // 합연산이라 -20%(디버프) + +20%(버프)가 동시에 걸리면 정확히 0%(변화 없음)로 상쇄됨
+    // (곱연산이었다면 0.8×1.2=0.96 즉 -4%로 어긋났을 것).
+    public float GetStatDebuffPercent() => statDebuffStacks.Count > 0 ? -20f * statDebuffStacks.Count : 0f;
+    public float GetStatBuffPercent()
     {
-        if (statBuffStacks.Count == 0) return 0;
+        if (statBuffStacks.Count == 0) return 0f;
         int totalPercent = 0;
         for (int i = 0; i < statBuffStacks.Count; i++) totalPercent += statBuffStacks[i].percent;
-        return (int)(GetMainStat() * totalPercent / 100f);
+        return totalPercent;
     }
-    public int GetRomanceBuffAmount()   => romanceBuffWeeksLeft  > 0 ? (int)(GetMainStat() * 0.1f) : 0;
+    public float GetRomanceBuffPercent() => romanceBuffWeeksLeft > 0 ? 10f : 0f;
     // 신의 축복 주사위 3 — 주스탯 % 버프(다음 축복까지). 주차 감소 없는 영속 버프라 statBuff 와 별도.
     // grade>=Unique 우기가 있어야만 유효 — 우기 부재(해고/도주/미보유) 시 즉시 0 (HasUniqueUgi 게이팅).
-    public int GetGodBlessingBuffAmount()
-        => (godBlessingStatPercent > 0 && CharacterUniqueEvents.HasUniqueUgi())
-           ? (int)(GetMainStat() * godBlessingStatPercent / 100f) : 0;
+    public float GetGodBlessingBuffPercent()
+        => (godBlessingStatPercent > 0 && CharacterUniqueEvents.HasUniqueUgi()) ? godBlessingStatPercent : 0f;
 
     // 오타쿠 특성 — 고정 장르가 현재 프로젝트 장르와 일치하면 상시 버프(조건 유지되는 한 주차 감소 없음).
     // 예전엔 DevelopmentManager 가 Effective 값 바깥에서 별도로 ×1.2 곱해서 카드/슬롯 표시엔 안 보였는데,
     // 이제 다른 버프들과 동일하게 여기 포함시켜서 실제 산출값과 표시값이 항상 일치하게 한다.
-    public int GetOtakuBuffAmount()
+    public float GetOtakuBuffPercent()
         => CharacterTraitApplier.IsOtakuGenreMatch(this, ProjectSetupUI.SelectedGenre)
-           ? (int)(GetMainStat() * (CharacterTraitApplier.OTAKU_STAT_MULT - 1f)) : 0;
+           ? (CharacterTraitApplier.OTAKU_STAT_MULT - 1f) * 100f : 0f;
+
+    // 위 다섯 항목의 합연산 총 %.
+    public float GetTotalStatBuffDebuffPercent()
+        => GetStatDebuffPercent() + GetStatBuffPercent() + GetRomanceBuffPercent() + GetGodBlessingBuffPercent() + GetOtakuBuffPercent();
 
     // 우기 우주의 기운: 이번 주 능력치 배율 (비-우기/비활성은 100 → ×1.0, 영향 없음).
-    // Effective*Skill 의 외곽 곱으로 적용 → (raw → 만족도 → ±버프/디버프) × 우주배율 순서.
     public float GetCosmicMultiplier() => cosmicEnergyPercent / 100f;
 
-    // 버프/디버프(statDebuff·statBuff·romance·godBlessing·otaku)는 예전엔 역할별 주스탯에만 적용됐지만,
-    // 이제 네 스탯(기획/개발/아트/창의성) 전부에 동일하게 적용한다. 증감폭 자체는 여전히 GetMainStat() 기준.
-    // 만족도 배율 적용 항은 반올림(RoundToInt) — (int) 버림 캐스팅이면 원본 스탯이 작을 때(예: 8×1.1=8.8)
-    // 소수점이 통째로 버려져서 실제로는 배율이 적용됐는데도 값이 그대로라 버프색이 안 보이는 문제가 있었음.
-    public int EffectivePlanningSkill   => Mathf.RoundToInt((Mathf.RoundToInt(planningSkill   * GetSatisfactionMultiplier()) - GetStatDebuffAmount() + GetStatBuffAmount() + GetRomanceBuffAmount() + GetGodBlessingBuffAmount() + GetOtakuBuffAmount()) * GetCosmicMultiplier());
-    public int EffectiveDevelopSkill    => Mathf.RoundToInt((Mathf.RoundToInt(developSkill    * GetSatisfactionMultiplier()) - GetStatDebuffAmount() + GetStatBuffAmount() + GetRomanceBuffAmount() + GetGodBlessingBuffAmount() + GetOtakuBuffAmount()) * GetCosmicMultiplier());
-    public int EffectiveArtSkill        => Mathf.RoundToInt((Mathf.RoundToInt(artSkill        * GetSatisfactionMultiplier()) - GetStatDebuffAmount() + GetStatBuffAmount() + GetRomanceBuffAmount() + GetGodBlessingBuffAmount() + GetOtakuBuffAmount()) * GetCosmicMultiplier());
-    public int EffectiveCreativitySkill => Mathf.RoundToInt((Mathf.RoundToInt(creativitySkill * GetSatisfactionMultiplier()) - GetStatDebuffAmount() + GetStatBuffAmount() + GetRomanceBuffAmount() + GetGodBlessingBuffAmount() + GetOtakuBuffAmount()) * GetCosmicMultiplier());
+    // 만족도/디버프/버프/연애/신의축복/오타쿠/우주기운 — 전부 하나의 % 로 환산해 합연산(덧셈)으로 합친 뒤
+    // 스탯에 "한 번만" 곱한다. 예전엔 만족도 배율을 곱해 반올림 → 그 결과에 버프/디버프%를 다시 곱해 반올림,
+    // 이렇게 두 단계로 나눠서 처리했는데, 이러면 예를 들어 만족도 +10%와 디버프 -20%가 동시에 걸렸을 때
+    // 중간 반올림 오차가 스탯 base 크기에 따라 다르게 남아 "어떤 스탯은 디버프로 보이고 어떤 스탯은
+    // 노멀로 보이는" 불일치가 생겼음. 지금은 +10%와 -20%를 먼저 대수적으로 더해 -10% 딱 하나의 순배율만
+    // 구한 뒤 스탯 자기 값에 그 배율을 한 번만 곱해서, 네 스탯이 항상 같은 방향/같은 비율로 움직인다.
+    public float GetTotalStatPercent()
+        => (GetSatisfactionMultiplier() - 1f) * 100f + GetTotalStatBuffDebuffPercent() + (GetCosmicMultiplier() - 1f) * 100f;
+
+    // 배율 적용은 방향성 있는 반올림 사용 — RoundToInt(반올림)이면 원본 스탯이 작을 때
+    // (예: 8×1.02=8.16 → 반올림해도 8) 배율이 분명히 걸렸는데 소수점이 0.5 문턱을 못 넘어 값이 그대로라
+    // 버프/디버프 색은 뜨는데 숫자는 안 바뀌는 착시가 있었음. 배율>1(버프)은 항상 올림, <1(디버프)은 항상
+    // 내림으로 강제해 배율이 걸리면 반드시 값도 최소 ±1 바뀌도록 보장.
+    static int ApplyDirectionalMultiplier(float value, float multiplier)
+    {
+        if (multiplier > 1f) return Mathf.CeilToInt(value * multiplier);
+        if (multiplier < 1f) return Mathf.FloorToInt(value * multiplier);
+        return Mathf.RoundToInt(value);
+    }
+
+    // 각 스탯 = raw × (전체 합연산 배율), 단 한 번만 곱하고 반올림 — 네 스탯이 항상 같은 방향으로 움직인다.
+    public int EffectivePlanningSkill   => ApplyDirectionalMultiplier(planningSkill,   1f + GetTotalStatPercent() / 100f);
+    public int EffectiveDevelopSkill    => ApplyDirectionalMultiplier(developSkill,    1f + GetTotalStatPercent() / 100f);
+    public int EffectiveArtSkill        => ApplyDirectionalMultiplier(artSkill,        1f + GetTotalStatPercent() / 100f);
+    public int EffectiveCreativitySkill => ApplyDirectionalMultiplier(creativitySkill, 1f + GetTotalStatPercent() / 100f);
 
     public string DevelopText()    => $"개발: {EffectiveDevelopSkill}";
     public string PlanningText()   => $"기획: {EffectivePlanningSkill}";

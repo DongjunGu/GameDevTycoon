@@ -22,6 +22,8 @@ public class BackendManager : MonoBehaviour
 
         if (BackendRetry.Instance == null)
             gameObject.AddComponent<BackendRetry>();
+        if (ErrorReporter.Instance == null)
+            gameObject.AddComponent<ErrorReporter>();
 
         var bro = Backend.Initialize();
 
@@ -81,6 +83,8 @@ public class BackendManager : MonoBehaviour
 
     void LoadAllAndEnterGame()
     {
+        ErrorReporter.ReadyToSend = true; // 로그인 완료 시점부터 에러 자동 전송 시작
+
         Step("차트 로드");
         // 차트 데이터는 동기 로드 — 로그인 직후 한 번만 실행, 이후 캐시 반환
         RandomEventChartLoader.Load();
@@ -91,6 +95,7 @@ public class BackendManager : MonoBehaviour
         TraitChartLoader.Load();
         CharacterTraitChartLoader.Load();
         CharacterUniqueEventChartLoader.Load();
+        TutorialDialogChartLoader.Load();
         RandomEventManager.Instance.InitConditionEvents();
 
         Step("EmployeeManager");

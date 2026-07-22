@@ -779,16 +779,54 @@ public class HiringUI : MonoBehaviour
         );
     }
 
-    // ConfirmUI "네" 선택 — 도장 연출(1초) 재생 후, 1초 더 대기했다가 실제 채용 처리 + 패널 닫기.
+    // ConfirmUI "네" 선택 — 도장 연출(1.2초) 재생 후, 0.2초 더 대기했다가 실제 채용 처리 + 패널 닫기.
     void OnConfirmHireYes()
     {
+        BeginStampInputBlock();
         PlayHireStamp();
-        DOVirtual.DelayedCall(2f, DoHire).SetUpdate(true);
+        DOVirtual.DelayedCall(1.4f, DoHire).SetUpdate(true);
+    }
+
+    // 도장 연출 중 어떤 버튼도 눌리지 않도록 화면 전체를 막는 투명 레이캐스트 블로커.
+    // Button.interactable=false 는 disabledColor/SpriteState 로 이미지가 바뀔 수 있어 사용하지 않음 —
+    // 대신 완전 투명(alpha 0) + raycastTarget 만 켠 풀스크린 오버레이로 클릭만 가로챈다(비주얼 변화 없음).
+    Canvas _hireStampInputBlocker;
+
+    void BeginStampInputBlock()
+    {
+        if (_hireStampInputBlocker != null) return;
+
+        var go = new GameObject("HireStampInputBlocker", typeof(RectTransform));
+        go.transform.SetParent(transform, false);
+
+        _hireStampInputBlocker = go.AddComponent<Canvas>();
+        _hireStampInputBlocker.renderMode = RenderMode.ScreenSpaceCamera;
+        _hireStampInputBlocker.worldCamera = Camera.main;
+        _hireStampInputBlocker.planeDistance = 1f;      // 최대한 카메라 앞 = 다른 모든 UI보다 위
+        _hireStampInputBlocker.overrideSorting = true;
+        _hireStampInputBlocker.sortingOrder = 999;
+        go.AddComponent<GraphicRaycaster>();
+
+        var img = go.AddComponent<Image>();
+        img.color = new Color(0f, 0f, 0f, 0f);          // 완전 투명 — 시각적 변화 없이 클릭만 차단
+        img.raycastTarget = true;
+
+        var rt = (RectTransform)go.transform;
+        rt.anchorMin = Vector2.zero; rt.anchorMax = Vector2.one;
+        rt.offsetMin = Vector2.zero; rt.offsetMax = Vector2.zero;
+    }
+
+    void EndStampInputBlock()
+    {
+        if (_hireStampInputBlocker == null) return;
+        Destroy(_hireStampInputBlocker.gameObject);
+        _hireStampInputBlocker = null;
     }
 
     // 실제 채용 처리 (ConfirmUI 에서 '네' 선택 시)
     void DoHire()
     {
+        EndStampInputBlock(); // 어느 분기로 빠지든(조기 return 포함) 입력 차단은 여기서 항상 해제
         if (_selectedEmployee == null) return;
         // 방어 — 파견중 동명 직원은 해고 불가라 중복 보유가 되어버림. 채용 중단.
         if (_conflictingOwned != null && DispatchManager.Instance != null
