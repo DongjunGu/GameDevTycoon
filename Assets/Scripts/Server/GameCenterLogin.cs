@@ -44,6 +44,7 @@ public class GameCenterLogin : MonoBehaviour
             {
                 Debug.LogError("[AppleLogin] BackendManager 를 찾을 수 없음 — 데이터 로드를 시작할 수 없음");
                 FindAnyObjectByType<Progress>()?.SetStep("오류: BackendManager 없음");
+                FindAnyObjectByType<LoginButtonPanel>()?.EnableRetry();
                 return;
             }
             bm.OnLoginSuccess();
@@ -55,6 +56,7 @@ public class GameCenterLogin : MonoBehaviour
             Debug.LogError("ErrorCode: " + bro.GetErrorCode());
             Debug.LogError("Message: " + bro.GetMessage());
             FindAnyObjectByType<Progress>()?.SetStep($"오류: 뒤끝 인증 실패 ({bro.GetStatusCode()}/{bro.GetErrorCode()})");
+            FindAnyObjectByType<LoginButtonPanel>()?.EnableRetry();
         }
     }
 
@@ -62,5 +64,6 @@ public class GameCenterLogin : MonoBehaviour
     {
         Debug.LogError("[AppleLogin] 로그인 실패: " + error);
         FindAnyObjectByType<Progress>()?.SetStep($"오류: Apple 로그인 실패 ({error})");
+        FindAnyObjectByType<LoginButtonPanel>()?.EnableRetry();
     }
 }
