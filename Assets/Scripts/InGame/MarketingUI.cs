@@ -14,6 +14,9 @@ public class MarketingUI : MonoBehaviour
     public TextMeshProUGUI[] slotPlatformTexts; // 16개
     public TextMeshProUGUI[] slotCostTexts;     // 16개
 
+    [Header("Confirm")]
+    public Button confirmBtn; // 기본 interactable=false, 슬롯 하나라도 선택되면 true
+
     private readonly (string name, int cost, string desc)[] _marketingData =
     {
         ("전단지 돌리기",        500,    "광고할 돈이 없으면 전단지라도 돌리자"),
@@ -55,14 +58,31 @@ public class MarketingUI : MonoBehaviour
 
     public void Show(System.Action onComplete)
     {
+        // 마케팅의 신 trait — 모든 슬롯 비용 0G + 차감 스킵 (이 세션 동안 캡처)
+        bool marketingFree = TraitEffectApplier.HasMarketingFree();
+
+        // 가장 저렴한 슬롯(전단지 돌리기, 500G)조차 못 낼 정도로 자금이 없으면 패널을 열 필요 없이 스킵.
+        // marketingFree면 비용 자체가 0이라 이 체크는 무의미 — 통과.
+        if (!marketingFree)
+        {
+            int minCost = _marketingData[0].cost;
+            for (int i = 1; i < _marketingData.Length; i++)
+                if (_marketingData[i].cost < minCost) minCost = _marketingData[i].cost;
+
+            if (MoneyManager.Instance.Gold < minCost)
+            {
+                AlertUI.Instance.Show("마케팅할 자금이 부족합니다.", () => onComplete?.Invoke());
+                return;
+            }
+        }
+
         GameTimeManager.Instance?.StopTime();
         ModalGate.I.Register(this);
         _onComplete = onComplete;
         _totalCost = 0;
         _selectedIndex = -1;
+        if (confirmBtn != null) confirmBtn.interactable = false;
 
-        // 마케팅의 신 trait — 모든 슬롯 비용 0G + 차감 스킵 (이 세션 동안 캡처)
-        bool marketingFree = TraitEffectApplier.HasMarketingFree();
         _slotCosts = new int[_marketingData.Length];
 
         // 전체 슬롯 텍스트 초기화 (비활성화 없이 공백)
@@ -101,6 +121,7 @@ public class MarketingUI : MonoBehaviour
         _selectedIndex = (_selectedIndex == index) ? -1 : index;
         for (int i = 0; i < _marketingData.Length; i++)
             SetSlotSelected(i, i == _selectedIndex);
+        if (confirmBtn != null) confirmBtn.interactable = _selectedIndex >= 0;
     }
 
     // 기본 alpha 0(안 보임) / 선택 시 255 — HiringUI.SetTierSelected, ProjectSetupUI 선택 표시와 동일 패턴.
@@ -116,12 +137,15 @@ public class MarketingUI : MonoBehaviour
 
     public void OnClickComplete()
     {
-        // 선택 없이도 완료 가능 — 미선택이면 마케팅 비용 0으로 그냥 진행.
+        // confirmBtn이 미선택 상태(_selectedIndex<0)에선 interactable=false라 정상 흐름에선 여기 못 옴 —
+        // 그래도 방어적으로 미선택이면 비용 0 처리.
         int cost = _selectedIndex >= 0 ? _slotCosts[_selectedIndex] : 0;
 
         if (cost > 0 && !MoneyManager.Instance.CanAfford(cost))
         {
-            GameUIHelper.ShowLoanPrompt();
+            // MarketingUI 자신이 Show()에서 ModalGate.Register(this)로 게이트를 쥔 채 열려있는 상태라
+            // bypassGate 없이 부르면 패널이 열려있는 동안 안 뜨고 대기만 함(ProjectSetupUI와 동일 버그). 즉시 표시.
+            GameUIHelper.ShowLoanPrompt(bypassGate: true);
             return;
         }
 

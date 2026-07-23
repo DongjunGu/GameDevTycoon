@@ -449,6 +449,11 @@ public class HiringUI : MonoBehaviour
         PopulateConfirm();
         UpdateArrowButtons();
         UpdateRefreshButton();
+
+        // 튜토리얼 3-1/3-2 — ConfirmHirePanel 첫 노출 시 1회. 실제 로직/설정(대사 stepGroup, 위치,
+        // roleBadgePanel 강조)은 전부 TutorialController 가 관리 — 여기서는 트리거만.
+        if (!OnboardingState.Tutorial3Done && TutorialController.Instance != null)
+            StartCoroutine(TutorialController.Instance.PlayTutorial3());
     }
 
     // 비서 초상화 RandomEventUI 안내(EventPanel). 확인 시 onConfirm. type=Recruit 라 시간 강제재개(ResumeFromEvent) 안 함.
@@ -478,7 +483,7 @@ public class HiringUI : MonoBehaviour
         int effectiveCount = Mathf.Max(1, candidateCount + recruitBonus + hireMoreBonus - hiringPenalty);
 
         List<EmployeeData> result = null;
-        EmployeeManager.Instance.LoadRandomCandidates(effectiveCount, tierIndex, candidates =>
+        System.Action<List<EmployeeData>> onCandidates = candidates =>
         {
             foreach (var employee in candidates)
             {
@@ -488,7 +493,14 @@ public class HiringUI : MonoBehaviour
                 employee.hireCost = Mathf.RoundToInt(b * UnityEngine.Random.Range(0.8f, 1.2f));
             }
             result = candidates;
-        });
+        };
+
+        // 튜토리얼 1단계 첫 채용(Tutorial3Done 이전)은 후보 3명을 금수저/훈수쟁이/천재로 고정.
+        if (!OnboardingState.Tutorial3Done)
+            EmployeeManager.Instance.LoadTutorialFixedCandidates(onCandidates);
+        else
+            EmployeeManager.Instance.LoadRandomCandidates(effectiveCount, tierIndex, onCandidates);
+
         return result ?? new List<EmployeeData>();
     }
 
