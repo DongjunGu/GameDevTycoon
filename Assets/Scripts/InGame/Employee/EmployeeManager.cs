@@ -318,6 +318,68 @@ public class EmployeeManager : MonoBehaviour
         onComplete?.Invoke(candidates);
     }
 
+    // 튜토리얼 전용(1단계 첫 채용, OnboardingState.Tutorial3Done 이 false 인 동안) — 후보 3명을 무조건
+    // 금수저(Rare/A) → 훈수쟁이(Normal/B) → 천재(Normal/C) 순서로 고정. RollGrade/RollPotential 미사용,
+    // 능력치도 랜덤이 아니라 마스터 인터벌의 최대치로 고정 표시.
+    class TutorialCandidateSpec
+    {
+        public string id;
+        public EmployeeGrade grade;
+        public EmployeePotential potential;
+        public TutorialCandidateSpec(string id, EmployeeGrade grade, EmployeePotential potential)
+        {
+            this.id = id; this.grade = grade; this.potential = potential;
+        }
+    }
+
+    static readonly List<TutorialCandidateSpec> TutorialFixedCandidateSpecs = new()
+    {
+        new TutorialCandidateSpec("goldspoon_01", EmployeeGrade.Rare,   EmployeePotential.A),
+        new TutorialCandidateSpec("hunsu_01",     EmployeeGrade.Normal, EmployeePotential.B),
+        new TutorialCandidateSpec("genius_01",    EmployeeGrade.Normal, EmployeePotential.C),
+    };
+
+    public void LoadTutorialFixedCandidates(System.Action<List<EmployeeData>> onComplete)
+    {
+        var candidates = new List<EmployeeData>();
+        foreach (var spec in TutorialFixedCandidateSpecs)
+        {
+            var master = poolEmployees.Find(e => e.id == spec.id);
+            if (master == null)
+            {
+                Debug.LogError($"[EmployeeManager] 튜토리얼 고정 채용 후보 마스터 데이터 없음: {spec.id}");
+                continue;
+            }
+
+            var employee = master.Clone();
+            employee.grade = spec.grade;
+            employee.potential = spec.potential;
+
+            employee.developSkill    = employee.developMax;
+            employee.planningSkill   = employee.planningMax;
+            employee.artSkill        = employee.artMax;
+            employee.creativitySkill = employee.creativityMax;
+            employee.salary = CharacterTraitApplier.ApplyGoldspoonSalary(employee, employee.salaryMax);
+
+            candidates.Add(employee);
+        }
+
+        // 일반 롤과 동일하게 Rare 이상은 주스탯에 등급 인터벌 보너스 반영
+        foreach (var employee in candidates)
+        {
+            if (employee.grade < EmployeeGrade.Rare) continue;
+            int bonus = employee.GradeIntervalBonus;
+            switch (employee.role)
+            {
+                case EmployeeRole.Programmer: employee.developSkill  += bonus; break;
+                case EmployeeRole.Planner:    employee.planningSkill += bonus; break;
+                case EmployeeRole.Artist:     employee.artSkill      += bonus; break;
+            }
+        }
+
+        onComplete?.Invoke(candidates);
+    }
+
     List<EmployeeData> ShuffleList(List<EmployeeData> list)
     {
         var result = new List<EmployeeData>(list);

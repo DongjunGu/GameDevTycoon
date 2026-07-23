@@ -34,10 +34,17 @@ public class DevelopmentPanelUI : MonoBehaviour
     public RectTransform artPanel;
     public RectTransform bugPanel;
     public RectTransform creativityPanel;
-    [Tooltip("표시값이 오르는 동안(=MoveDisplay가 매 프레임 changed) 부모 패널이 커지는 배율")]
+    [Tooltip("표시값이 오르는 동안(=MoveDisplay가 매 프레임 changed) 아이콘/텍스트가 커지는 배율")]
     public float statPulseScale = 1.2f;
     [Tooltip("현재 스케일이 목표(1배 또는 statPulseScale)로 근접하는 속도 (초당 배율)")]
     public float statPulseLerpSpeed = 8f;
+    [Tooltip("아이콘이 커지기 시작한 뒤 텍스트가 커지기 시작하기까지의 지연시간(초)")]
+    public float textPulseDelay = 0.3f;
+
+    // panel의 첫 자식 "IconImage" — Start에서 1회 캐싱해 매 프레임 Find 안 하도록 함.
+    private RectTransform _planningIcon, _devIcon, _artIcon, _bugIcon, _creativityIcon;
+    // panel별로 애니메이션이 끊기지 않고 지속된 시간 — textPulseDelay 넘어야 텍스트 펄스 시작.
+    private float _planningAnimTime, _developAnimTime, _artAnimTime, _bugAnimTime, _creativityAnimTime;
 
     public float GetPlanning() => _planning;
     public float GetDevelop() => _develop;
@@ -80,7 +87,22 @@ public class DevelopmentPanelUI : MonoBehaviour
         _instance = this;
     }
 
-    void Start() => UpdateDefaultText();
+    void Start()
+    {
+        UpdateDefaultText();
+        _planningIcon   = FindIcon(planningPanel);
+        _devIcon        = FindIcon(devPanel);
+        _artIcon        = FindIcon(artPanel);
+        _bugIcon        = FindIcon(bugPanel);
+        _creativityIcon = FindIcon(creativityPanel);
+    }
+
+    static RectTransform FindIcon(RectTransform panel)
+    {
+        if (panel == null) return null;
+        var found = panel.Find("IconImage");
+        return found != null ? found as RectTransform : null;
+    }
 
     void Update()
     {
@@ -99,23 +121,35 @@ public class DevelopmentPanelUI : MonoBehaviour
         bool bugChanged        = MoveDisplay(ref _bugDisplay,        _bugReveal,        ref _bugSpeed,        dt);
         bool creativityChanged = MoveDisplay(ref _creativityDisplay, _creativityReveal, ref _creativitySpeed, dt);
 
-        UpdateStatPulse(planningPanel,   planningChanged,   dt);
-        UpdateStatPulse(devPanel,        developChanged,    dt);
-        UpdateStatPulse(artPanel,        artChanged,        dt);
-        UpdateStatPulse(bugPanel,        bugChanged,        dt);
-        UpdateStatPulse(creativityPanel, creativityChanged, dt);
+        UpdateStatPulsePair(_planningIcon,   planningText,   planningChanged,   dt, ref _planningAnimTime);
+        UpdateStatPulsePair(_devIcon,        developText,    developChanged,    dt, ref _developAnimTime);
+        UpdateStatPulsePair(_artIcon,        artText,        artChanged,        dt, ref _artAnimTime);
+        UpdateStatPulsePair(_bugIcon,        bugText,        bugChanged,        dt, ref _bugAnimTime);
+        UpdateStatPulsePair(_creativityIcon, creativityText, creativityChanged, dt, ref _creativityAnimTime);
 
         if (planningChanged || developChanged || artChanged || bugChanged || creativityChanged) UpdateUI();
     }
 
-    // 표시값이 오르는 동안(animating) 패널을 statPulseScale 배로, 멈추면 1배로 서서히 되돌림.
-    void UpdateStatPulse(RectTransform panel, bool animating, float dt)
+    // 아이콘은 표시값이 오르는 동안(animating) 즉시 statPulseScale 배로 커지고, 텍스트는 그 상태가
+    // textPulseDelay 만큼 끊기지 않고 지속된 뒤에야 커지기 시작 — "아이콘 먼저, 텍스트는 0.3초 후".
+    // animTime 은 animating 이 끊기면(카운트업이 잠시 멈추면) 0으로 리셋돼 다음 펄스도 아이콘부터 다시 시작.
+    void UpdateStatPulsePair(RectTransform icon, TextMeshProUGUI text, bool animating, float dt, ref float animTime)
     {
-        if (panel == null) return;
+        animTime = animating ? animTime + dt : 0f;
+        bool textAnimating = animating && animTime >= textPulseDelay;
+
+        PulseTowards(icon, animating, dt);
+        PulseTowards(text != null ? text.transform : null, textAnimating, dt);
+    }
+
+    // 표시값이 오르는 동안(animating) statPulseScale 배로, 멈추면 1배로 서서히 되돌림.
+    void PulseTowards(Transform t, bool animating, float dt)
+    {
+        if (t == null) return;
         float target = animating ? statPulseScale : 1f;
-        float current = panel.localScale.x;
+        float current = t.localScale.x;
         float next = Mathf.MoveTowards(current, target, statPulseLerpSpeed * dt);
-        panel.localScale = Vector3.one * next;
+        t.localScale = Vector3.one * next;
     }
 
     // 남은 거리와 무관하게 fillDuration 안에 목표 도달 (등속). 목표 변경 시 RevealValues 가 speed 를 재설정.

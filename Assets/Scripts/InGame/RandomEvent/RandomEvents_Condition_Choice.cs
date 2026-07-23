@@ -104,7 +104,12 @@ public static class RandomEvents_Condition_Choice
             if (emps == null || emps.Count == 0) { evt.cancelled = true; return; }
             if (ItemManager.Instance.GetCount("coffee") <= 0) { evt.cancelled = true; return; }
 
-            targetEmp = emps[Random.Range(0, emps.Count)];
+            // 파견중 직원이 뽑히면 master_desk 로 강제이동이 no-op → _pendingChoiceEvent 가 영구히 안 풀려
+            // 다른 랜덤이벤트 전체가 막힘(RandomEventManager.IsTargetDispatched 가드와 동일한 이유). 후보에서 제외.
+            var candidates = emps.FindAll(e => DispatchManager.Instance == null || !DispatchManager.Instance.IsDispatched(e.id));
+            if (candidates.Count == 0) { evt.cancelled = true; return; }
+
+            targetEmp = candidates[Random.Range(0, candidates.Count)];
             evt.portraitId       = targetEmp.portraitId;
             evt.targetEmployeeId = targetEmp.id;
 
@@ -149,8 +154,15 @@ public static class RandomEvents_Condition_Choice
 
                     int buffWeeks = RandomEvents_Choice.RandomStatBuffWeeksByStage();
                     targetEmp.ApplyStatBuff(buffWeeks, 10);
+
+                    // 커피 아이템 본연의 효과(만족도, Item_Chart "coffee" effectValue) 적용 — 이전엔 이벤트 전용
+                    // 능력치 버프만 적용되고 아이템 자체의 만족도 효과가 누락돼 있었음.
+                    int coffeeSat = ItemChartLoader.Cache.TryGetValue("coffee", out var coffeeRow2) ? coffeeRow2.effectValue : 15;
+                    targetEmp.ChangeSatisfaction(coffeeSat);
+
                     EmployeeManager.Instance.UpdateEmployee(targetEmp);
                     OfficeManager.Instance?.ShowStatPopup(targetEmp.id, "능력치 +10%", new Color(1f, 0.4f, 0.4f));
+                    OfficeManager.Instance?.ShowStatPopup(targetEmp.id, $"만족도 +{coffeeSat}", new Color(1f, 0.4f, 0.4f));
                 }
                 ItemPanelUI.Instance?.Refresh();
                 GameTimeManager.Instance?.SaveGameTime();
@@ -204,8 +216,15 @@ public static class RandomEvents_Condition_Choice
                         ItemManager.Instance.UseItemDirect("energyDrink");
                         int buffWeeks = RandomEvents_Choice.RandomStatBuffWeeksByStage();
                         targetEmp.ApplyStatBuff(buffWeeks, 10);
+
+                        // 에너지드링크 아이템 본연의 효과(만족도, Item_Chart "energyDrink" effectValue) 적용
+                        // — CoffeeRequest 와 동일한 누락(능력치 버프만 적용되고 아이템 자체 효과 누락)을 여기도 수정.
+                        int drinkSat = ItemChartLoader.Cache.TryGetValue("energyDrink", out var drinkRow) ? drinkRow.effectValue : 25;
+                        targetEmp.ChangeSatisfaction(drinkSat);
+
                         EmployeeManager.Instance.UpdateEmployee(targetEmp);
                         OfficeManager.Instance?.ShowStatPopup(targetEmp.id, "능력치 +10%", new Color(1f, 0.4f, 0.4f));
+                        OfficeManager.Instance?.ShowStatPopup(targetEmp.id, $"만족도 +{drinkSat}", new Color(1f, 0.4f, 0.4f));
                         ItemPanelUI.Instance?.Refresh();
                     }
                 },
@@ -244,7 +263,12 @@ public static class RandomEvents_Condition_Choice
             if (emps == null || emps.Count == 0) { evt.cancelled = true; return; }
             if (ItemManager.Instance.GetCount("energyDrink") <= 0) { evt.cancelled = true; return; }
 
-            targetEmp = emps[Random.Range(0, emps.Count)];
+            // 파견중 직원이 뽑히면 master_desk 로 강제이동이 no-op → _pendingChoiceEvent 가 영구히 안 풀려
+            // 다른 랜덤이벤트 전체가 막힘(RandomEventManager.IsTargetDispatched 가드와 동일한 이유). 후보에서 제외.
+            var candidates = emps.FindAll(e => DispatchManager.Instance == null || !DispatchManager.Instance.IsDispatched(e.id));
+            if (candidates.Count == 0) { evt.cancelled = true; return; }
+
+            targetEmp = candidates[Random.Range(0, candidates.Count)];
             evt.portraitId       = targetEmp.portraitId;
             evt.targetEmployeeId = targetEmp.id;
 

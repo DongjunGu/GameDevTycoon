@@ -46,6 +46,28 @@ public static class TutorialDialogChartLoader
         {
             new() { dialogId = "tut_1_2_0", stepGroup = "1-2", order = 1, speakerName = "비서", portraitId = "portrait_secretary", text = "[채용]을 눌러 첫 직원을 뽑아볼까요?" },
         },
+        ["3-1"] = new List<TutorialDialogLine>
+        {
+            new() { dialogId = "tut_3_1_0", stepGroup = "3-1", order = 1, speakerName = "비서", portraitId = "portrait_secretary", text = "지원자들이 왔어요! 이렇게 반지하까지 와주다니…\n다들 사연이 있어 보이네요." },
+        },
+        ["3-2"] = new List<TutorialDialogLine>
+        {
+            new() { dialogId = "tut_3_2_0", stepGroup = "3-2", order = 1, speakerName = "비서", portraitId = "portrait_secretary", text = "지원서에서는 직업을 확인할 수 있어요." },
+            new() { dialogId = "tut_3_2_1", stepGroup = "3-2", order = 2, speakerName = "비서", portraitId = "portrait_secretary", text = "<sprite=\"PlanIconSpriteAsset\" name=\"plan\"> [[기획]], <sprite=\"DevIconSpriteAsset\" name=\"dev\"> [[개발]], <sprite=\"ArtIconSpriteAsset\" name=\"art\"> [[아트]] 이렇게 3가지 직업으로\n이루어져 있으니 골고루 뽑아보세요" },
+        },
+        ["3-3"] = new List<TutorialDialogLine>
+        {
+            new() { dialogId = "tut_3_3_0", stepGroup = "3-3", order = 1, speakerName = "비서", portraitId = "portrait_secretary", text = "여기서는 [[잠재력]]을 확인할 수 있어요" },
+            new() { dialogId = "tut_3_3_1", stepGroup = "3-3", order = 2, speakerName = "비서", portraitId = "portrait_secretary", text = "잠재력이 높을수록 나중에 [[강화했을 때]]\n크게 성장하니 꼭 참고하세요" },
+        },
+        ["3-4"] = new List<TutorialDialogLine>
+        {
+            new() { dialogId = "tut_3_4_0", stepGroup = "3-4", order = 1, speakerName = "비서", portraitId = "portrait_secretary", text = "직업과 동일한 능력치가 높은 직원을 뽑는게 중요하니까\n유심히 살펴보세요" },
+        },
+        ["3-5"] = new List<TutorialDialogLine>
+        {
+            new() { dialogId = "tut_3_5_0", stepGroup = "3-5", order = 1, speakerName = "비서", portraitId = "portrait_secretary", text = "잠깐만요, 이 지원자… 스펙이 엄청난데요?\n이런 분은 얼른 저희 회사로 데려가버리죠" },
+        },
     };
 
     static Dictionary<string, List<TutorialDialogLine>> LoadFromServer()

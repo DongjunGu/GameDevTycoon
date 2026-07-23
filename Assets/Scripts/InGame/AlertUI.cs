@@ -108,9 +108,10 @@ public class AlertUI : MonoBehaviour
     }
 
     // goldAmount: G 아이콘 옆 금액 표시. null이면 금액 영역 숨김.
-    public void ShowMoney(string message, int? goldAmount = null, System.Action onConfirm = null)
+    // bypassGate: true면 다른 패널(ProjectSetupUI 등)이 이미 열려 게이트를 쥐고 있어도 대기 없이 바로 표시.
+    public void ShowMoney(string message, int? goldAmount = null, System.Action onConfirm = null, bool bypassGate = false)
     {
-        _queue.Enqueue(new Entry { message = message, onConfirm = onConfirm, type = AlertType.Money, goldAmount = goldAmount });
+        _queue.Enqueue(new Entry { message = message, onConfirm = onConfirm, type = AlertType.Money, goldAmount = goldAmount, bypassGate = bypassGate });
         if (!_isShowing) ShowNext();
     }
 

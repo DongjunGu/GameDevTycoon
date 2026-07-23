@@ -10,6 +10,7 @@ public static class OnboardingState
     const string KEY_FIRST_HIRE = "onboarding_first_hire_done"; // 첫 채용(온보딩) 완료 — 1회만 1주 면접
     const string KEY_PROJ_TUT   = "onboarding_project_tutorial_done";    // 프로젝트 튜토리얼 완료
     const string KEY_PROJ_PEND  = "onboarding_project_tutorial_pending"; // 프로젝트 튜토리얼 카운트다운(-1 없음/0 실행대기/>0 남은주차)
+    const string KEY_TUT3       = "onboarding_tutorial3_done";  // 튜토리얼 3-1(ConfirmHirePanel 첫 노출) 완료
 
     // 튜토리얼 dim 이 떠 있는 동안 true (세션 전용, 저장 안 함).
     // 시간 정지 중에도 메뉴 버튼을 숨기지 않도록 MenuController 가 참조.
@@ -60,6 +61,14 @@ public static class OnboardingState
         SetProjectTutorialPending(weeks);
     }
 
+    // 튜토리얼 3-1 — 첫 ConfirmHirePanel 노출 시 1회. 버튼 강조 없이 TutorialPanel 대사만 재생.
+    public static bool Tutorial3Done => PlayerPrefs.GetInt(KEY_TUT3, 0) == 1;
+    public static void MarkTutorial3Done()
+    {
+        PlayerPrefs.SetInt(KEY_TUT3, 1);
+        PlayerPrefs.Save();
+    }
+
     // 테스트용 — 온보딩 재노출 (TestResetBtn 등에서 빌드에서도 호출 가능하도록 UNITY_EDITOR 가드 제거)
     public static void ResetAll()
     {
@@ -68,6 +77,7 @@ public static class OnboardingState
         PlayerPrefs.DeleteKey(KEY_FIRST_HIRE);
         PlayerPrefs.DeleteKey(KEY_PROJ_TUT);
         PlayerPrefs.DeleteKey(KEY_PROJ_PEND);
+        PlayerPrefs.DeleteKey(KEY_TUT3);
         PlayerPrefs.Save();
         Debug.Log("[Onboarding] 플래그 리셋 — 다음 진입 시 컷씬+튜토리얼 재노출");
     }

@@ -351,8 +351,8 @@ public static class RandomEvents_Choice
                         {
                             var emp = EmployeeManager.Instance.GetEmployee(gossiperEmp?.id);
                             if (emp == null) return;
-                            emp.ChangeSatisfaction(-10);
-                            OfficeManager.Instance?.ShowStatPopup(emp.id, "만족도 -10", new Color(0.4f, 0.6f, 1f));
+                            emp.ChangeSatisfaction(-5);
+                            OfficeManager.Instance?.ShowStatPopup(emp.id, "만족도 -5", new Color(0.4f, 0.6f, 1f));
 
                             int buffWeeks = RandomStatBuffWeeksByStage();
                             emp.ApplyStatBuff(buffWeeks, 10);

@@ -97,6 +97,9 @@ public class MerchantShopPanelUI : MonoBehaviour
             if (MoneyManager.Instance == null || !MoneyManager.Instance.SpendGold(price, saveImmediately: false))
             {
                 Debug.Log("[Merchant] 골드 부족 — 구입 실패");
+                // MerchantShopPanelUI 자신이 Open()에서 ModalGate.Register(this)로 게이트를 쥔 채 열려있는
+                // 상태라 bypassGate 없이 부르면 패널이 열려있는 동안 안 뜸(ProjectSetupUI/MarketingUI와 동일 원인).
+                AlertUI.Instance?.Show("자금이 부족합니다.", null, bypassGate: true);
                 return;
             }
         }

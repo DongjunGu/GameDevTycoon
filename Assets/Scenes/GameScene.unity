@@ -21315,7 +21315,7 @@ GameObject:
   - component: {fileID: 201166435}
   - component: {fileID: 201166434}
   m_Layer: 5
-  m_Name: Panel
+  m_Name: AbilityPanel
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -84600,13 +84600,29 @@ MonoBehaviour:
   step1_1Position: {x: -9, y: 51}
   step1_2: 1-2
   step1_2Position: {x: -51, y: -281}
+  step3_1: 3-1
+  step3_1Position: {x: 0, y: 57}
+  roleBadgePanel: {fileID: 991435014}
+  step3_2: 3-2
+  step3_2Position: {x: -245, y: 330}
+  potentialPanel: {fileID: 799228357}
+  step3_3: 3-3
+  step3_3Position: {x: -245, y: 330}
+  abilityPanel: {fileID: 201166433}
+  step3_4: 3-4
+  step3_4Position: {x: -39, y: 215}
+  step3_5: 3-5
+  step3_5Position: {x: 162, y: -196}
+  employeeResumePanel: {fileID: 1850246780}
+  confirmHireButton: {fileID: 666604482}
   dimAlpha: 0.8
   dimFadeInDuration: 0.12
   settleDelay: 0.2
   highlightHolePadding: 14
   highlightPulseAmplitude: 6
-  holeMoveDuration: 2
+  holeMoveDuration: 0.1
   startupTimeout: 2
+  modularSteps3x: []
 --- !u!4 &771739823
 Transform:
   m_ObjectHideFlags: 0
@@ -125922,6 +125938,7 @@ MonoBehaviour:
   - {fileID: 1396022582}
   - {fileID: 1625684635}
   - {fileID: 789723596}
+  confirmBtn: {fileID: 1280054675}
 --- !u!1 &1107759333
 GameObject:
   m_ObjectHideFlags: 0
@@ -137992,6 +138009,7 @@ MonoBehaviour:
   creativityPanel: {fileID: 555101573}
   statPulseScale: 0.7
   statPulseLerpSpeed: 8
+  textPulseDelay: 0.3
 --- !u!114 &1217725109
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -186839,6 +186857,7 @@ GameObject:
   - component: {fileID: 1642143973}
   - component: {fileID: 1642143976}
   - component: {fileID: 1642143977}
+  - component: {fileID: 1642143978}
   m_Layer: 5
   m_Name: TutorialPanel
   m_TagString: Untagged
@@ -186864,7 +186883,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -51, y: -281}
+  m_AnchoredPosition: {x: -39, y: 215}
   m_SizeDelta: {x: 1167, y: 256}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1642143973
@@ -186937,6 +186956,29 @@ MonoBehaviour:
   revealDuration: 0.15
   revealRiseDistance: 15
   highlightColorHex: '#E63356'
+--- !u!223 &1642143978
+Canvas:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1642143971}
+  m_Enabled: 1
+  serializedVersion: 3
+  m_RenderMode: 2
+  m_Camera: {fileID: 0}
+  m_PlaneDistance: 100
+  m_PixelPerfect: 0
+  m_ReceivesEvents: 1
+  m_OverrideSorting: 1
+  m_OverridePixelPerfect: 0
+  m_SortingBucketNormalizedSize: 0
+  m_VertexColorAlwaysGammaSpace: 0
+  m_AdditionalShaderChannelsFlag: 25
+  m_UpdateRectTransformForStandalone: 0
+  m_SortingLayerID: 0
+  m_SortingOrder: 9999
+  m_TargetDisplay: 0
 --- !u!1 &1644127753
 GameObject:
   m_ObjectHideFlags: 0
@@ -187889,10 +187931,11 @@ MonoBehaviour:
   popFloorY: -140
   popArcHeight: 240
   suckDuration: 0.4
-  suckStagger: 0.03
+  suckStaggerWindow: 0.4
   topIcon: {fileID: 1276808429}
   suckPulseScale: 1.2
   suckPulseDelay: 0.08
+  textPulseDelay: 0.3
   burstSpitDuration: 0.4
   characterImage: {fileID: 1534103592}
   previewLayerName: PreviewLayer

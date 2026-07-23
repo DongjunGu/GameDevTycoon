@@ -316,14 +316,16 @@ public class ProjectSetupUI : MonoBehaviour
     {
         if (!_platformChosen || !_genreChosen)
         {
-            AlertUI.Instance.Show("플랫폼과 장르를 선택해주세요.");
+            // ProjectSetupUI 자신이 패널을 여는 시점에 ModalGate.Register(this)로 게이트를 쥐고 있어서,
+            // bypassGate 없이 부르면 패널이 열려있는 동안 계속 대기(pending)만 되다 안 뜬다. 즉시 표시.
+            AlertUI.Instance.Show("플랫폼과 장르를 선택해주세요.", null, bypassGate: true);
             return;
         }
 
         int cost = CurrentDevCost;
         if (!MoneyManager.Instance.CanAfford(cost))
         {
-            AlertUI.Instance.ShowMoney($"개발금이 부족합니다.\n필요: {cost:N0}G / 보유: {MoneyManager.Instance.Gold:N0}G", null);
+            AlertUI.Instance.ShowMoney($"개발금이 부족합니다.\n필요: {cost:N0}G / 보유: {MoneyManager.Instance.Gold:N0}G", null, null, bypassGate: true);
             return;
         }
 

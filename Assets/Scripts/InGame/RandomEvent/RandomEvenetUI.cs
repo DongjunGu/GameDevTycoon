@@ -241,7 +241,9 @@ public class RandomEventUI : MonoBehaviour
     string ResolveSpeakerName(RandomEventData evt)
     {
         if (EmployeeManager.Instance == null) return "";
-        if (!string.IsNullOrEmpty(evt.targetEmployeeId))
+        // BadReview(이유 없는 별점 1점): 화자는 이 사실을 보고하는 비서지 효과 대상 직원이 아님.
+        // targetEmployeeId는 systemMessage({0} 만족도 -10) 포맷용으로만 쓰고 NameText는 항상 비서로 고정.
+        if (evt.type != RandomEventType.BadReview && !string.IsNullOrEmpty(evt.targetEmployeeId))
         {
             var e = EmployeeManager.Instance.GetEmployee(evt.targetEmployeeId);
             if (e != null) return e.employeeName;

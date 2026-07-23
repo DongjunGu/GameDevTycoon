@@ -58,10 +58,14 @@ public class LeaderScoreUI : MonoBehaviour
     public float popFloorY = -140f;   // 떨어져서 착지하는 바닥 Y 좌표(로컬)
     public float popArcHeight = 220f; // 포물선 정점 높이감
     public float suckDuration = 0.15f; // 아이콘 1개가 categoryIcon으로 빨려들어가는 데 걸리는 시간(개별 기준)
-    public float suckStagger = 0.03f;  // 아이콘들이 순차적으로 빨려들어가기 시작하는 간격 — 0이면 기존처럼 일괄 동시 시작
+    // 아이콘들이 순차적으로 빨려들어가기 "시작"하는 전체 목표 시간(초). 개수가 몇 개든 이 시간 안에 전부
+    // 시작되도록 간격을 자동 계산(간격 = 이 값 / 개수)해서, 개수가 많아져도 총 재생시간이 무한정 늘어나지 않는다.
+    // 0이면 기존처럼 일괄 동시 시작.
+    public float suckStaggerWindow = 1f;
     public RectTransform topIcon;      // TopIcon(프레임) — 빨려들어가는 동안 총점 텍스트와 함께 살짝 커졌다 원상복구
     public float suckPulseScale = 1.2f; // topIcon/totalText 가 흡입 도중 커지는 배율
     public float suckPulseDelay = 0.08f; // 흡입 시작(t=0) 직후엔 ease-in 특성상 실제로는 거의 안 움직이는 "텀"이 있음 — 그 텀만큼 지난 뒤에야 펄스 스케일을 시작
+    public float textPulseDelay = 0.3f; // topIcon 펄스가 시작(suckPulseDelay 시점)하고 나서 totalText 펄스가 시작하기까지 추가 지연시간(초)
     public float burstSpitDuration = 0.4f; // 스트레스 100 오버플로 시 총점 위치에서 아이콘을 역방향으로 뱉어내는 시간
 
     [Header("팀장 캐릭터 프리뷰 (working 애니메이션)")]
@@ -421,10 +425,13 @@ public class LeaderScoreUI : MonoBehaviour
 
         Vector3 targetPos = categoryIcon != null ? categoryIcon.transform.position : popcornPoint.position;
 
-        // 아이콘 1개당 흡입 시간(perIconDur)은 그대로 두고, 각 아이콘의 시작 시점을 suckStagger 만큼 순차적으로
-        // 늦춰서 "한 번에 훅" 대신 "톡톡톡" 순차적으로 빨려들어가게 한다. 전체 재생 시간은 그만큼 늘어남.
+        // 아이콘 1개당 흡입 시간(perIconDur)은 그대로 두고, 각 아이콘의 시작 시점을 순차적으로 늦춰서
+        // "한 번에 훅" 대신 "톡톡톡" 순차적으로 빨려들어가게 한다. 간격을 고정값이 아니라
+        // suckStaggerWindow(목표 총 시간) / 개수로 계산해서, 개수가 많아져도 전체 재생 시간이
+        // perIconDur + suckStaggerWindow 를 거의 넘지 않도록(개수→∞일수록 그 값에 근접) 제한한다.
         float perIconDur = Mathf.Max(0.01f, suckDuration);
-        float stagger = Mathf.Max(0f, suckStagger);
+        float staggerWindow = Mathf.Max(0f, suckStaggerWindow);
+        float stagger = icons.Count > 0 ? staggerWindow / icons.Count : 0f;
         float totalDur = perIconDur + stagger * Mathf.Max(0, icons.Count - 1);
 
         Vector3 topIconBaseScale = topIcon != null ? topIcon.localScale : Vector3.one;
@@ -451,16 +458,15 @@ public class LeaderScoreUI : MonoBehaviour
             float totalRise = Mathf.Lerp(0f, targetRound + bonusExtra, t);
             if (totalText) totalText.text = Mathf.RoundToInt(startTotal + totalRise).ToString();
 
-            // topIcon/총점 텍스트를 흡입 도중 살짝 부풀렸다가 끝나면 원래 크기로. 단, 흡입 시작 직후(ease-in 특성상
+            // topIcon을 흡입 도중 살짝 부풀렸다가 끝나면 원래 크기로. 단, 흡입 시작 직후(ease-in 특성상
             // 실제로 거의 안 움직이는 "텀")엔 아직 스케일업하지 않고, suckPulseDelay 만큼 지난 뒤부터 남은 시간에
             // sin 곡선(양 끝 0=원래 크기, 중앙에서 suckPulseScale 배 피크)을 압축해 재생한다.
-            float pulseElapsed = Mathf.Max(0f, elapsed - suckPulseDelay);
-            float pulseDur = Mathf.Max(0.01f, totalDur - suckPulseDelay);
-            float pulseT = Mathf.Clamp01(pulseElapsed / pulseDur);
-            float pulse = Mathf.Sin(pulseT * Mathf.PI);
-            float scaleMul = Mathf.Lerp(1f, suckPulseScale, pulse);
-            if (topIcon != null) topIcon.localScale = topIconBaseScale * scaleMul;
-            if (totalText != null) totalText.transform.localScale = totalTextBaseScale * scaleMul;
+            // totalText는 topIcon이 커지기 시작한 뒤 textPulseDelay 만큼 더 지나서야 같은 방식으로 펄스를 시작한다.
+            float iconScaleMul = ComputeSuckPulseScale(elapsed, suckPulseDelay, totalDur, suckPulseScale);
+            if (topIcon != null) topIcon.localScale = topIconBaseScale * iconScaleMul;
+
+            float textScaleMul = ComputeSuckPulseScale(elapsed, suckPulseDelay + textPulseDelay, totalDur, suckPulseScale);
+            if (totalText != null) totalText.transform.localScale = totalTextBaseScale * textScaleMul;
 
             yield return null;
         }
@@ -472,6 +478,18 @@ public class LeaderScoreUI : MonoBehaviour
 
         foreach (var rt in icons)
             if (rt != null) Destroy(rt.gameObject);
+    }
+
+    // startDelay 이전엔 1배(펄스 시작 전), 이후 (totalDur-startDelay) 구간에 sin 곡선(양 끝 0=원래크기,
+    // 중앙에서 peakScale배 피크)을 압축 재생. topIcon/totalText가 서로 다른 startDelay로 이 함수를 호출해
+    // "아이콘 먼저, 텍스트는 그 뒤"처럼 시작 시점만 어긋나게 만든다.
+    static float ComputeSuckPulseScale(float elapsed, float startDelay, float totalDur, float peakScale)
+    {
+        float pulseElapsed = Mathf.Max(0f, elapsed - startDelay);
+        float pulseDur = Mathf.Max(0.01f, totalDur - startDelay);
+        float pulseT = Mathf.Clamp01(pulseElapsed / pulseDur);
+        float pulse = Mathf.Sin(pulseT * Mathf.PI);
+        return Mathf.Lerp(1f, peakScale, pulse);
     }
 
     // count개를 popScatterRangeX 범위 안에서 "골고루" 흩어지도록 미리 배정하는 오프셋 목록.

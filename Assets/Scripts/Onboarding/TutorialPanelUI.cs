@@ -56,6 +56,28 @@ public class TutorialPanelUI : MonoBehaviour
         if (nextButton != null) nextButton.onClick.AddListener(() => _clicked = true);
     }
 
+    // 어떤 패널(다른 루트 Canvas에 떠 있는 모달 포함) 보다도 항상 위에 뜨도록 강제 — AlertUI.EnsureTopMost와
+    // 동일 패턴. 중첩 Canvas에 overrideSorting을 걸면 루트 Canvas 순서와 무관하게 전역에서 독립적으로 정렬된다.
+    // ⚠️ TutorialPanel(MenuCanvas/TutorialPanel)에는 씬에 이미 ModalLayer가 붙어있는데, 이게 ModalBlocker
+    // 스택에 등록된 채로 있으면 ModalBlocker.ApplyOrder()가 다른 모달이 열고 닫힐 때마다 이 Canvas의
+    // sortingOrder를 스택 계산값(보통 수십대)으로 계속 되돌려버려서, 여기서 아무리 높은 값을 넣어도 소용없고
+    // (프로젝트_alertui3_dispatch_invisible_bug와 동일 패턴으로) 공유 딤까지 끌어올려져 dim이 이중으로
+    // 겹쳐 보인다. AlertUI처럼 "자체 dim(TutorialHighlighter) + EnsureTopMost"로 완결된 패널이라 ModalBlocker
+    // 관리가 필요 없음 — 아예 꺼서 등록 해제(Unregister)시킨다.
+    void EnsureTopMost()
+    {
+        var modalLayer = panelRoot.GetComponent<ModalLayer>();
+        if (modalLayer != null) modalLayer.enabled = false;
+
+        var canvas = panelRoot.GetComponent<Canvas>();
+        if (canvas == null) canvas = panelRoot.AddComponent<Canvas>();
+        canvas.overrideSorting = true;
+        canvas.sortingOrder    = 32500; // AlertUI(32000)보다도 위 — "어떤 것보다 항상 제일 위"
+        if (panelRoot.GetComponent<GraphicRaycaster>() == null)
+            panelRoot.AddComponent<GraphicRaycaster>();
+        panelRoot.transform.SetAsLastSibling();
+    }
+
     // stepGroup 전체(여러 줄)를 순차 재생 — 마지막 줄 클릭까지 끝나면 반환.
     // anchoredPosition 지정 시 표시 전에 패널 위치를 그 값으로 옮김(스텝마다 다른 위치에 띄우고 싶을 때 사용).
     public IEnumerator PlayStepGroup(string stepGroup, Vector2? anchoredPosition = null)
@@ -71,6 +93,7 @@ public class TutorialPanelUI : MonoBehaviour
         if (anchoredPosition.HasValue && _panelRect != null)
             _panelRect.anchoredPosition = anchoredPosition.Value;
 
+        EnsureTopMost();
         panelRoot.SetActive(true);
 
         for (int i = 0; i < lines.Count; i++)
