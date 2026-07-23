@@ -7,7 +7,9 @@ using UnityEngine.UI;
 //      — OfficeManager.SpawnSecretary 가 튜토리얼 런이면 desk_03 대신 거기서 바로 시작시킴) → TutorialPanel 대사
 //      1-1(비서/나/비서 3줄) → 1-2(비서 1줄, TutorialDialog 차트) → 메뉴 버튼 강조 → (클릭→메뉴 열림)
 //      → 직원 버튼 강조 → (클릭→서브 열림) → 채용하기 버튼 강조
-//      → (클릭→TierPanel 열림) → tier1 버튼 강조(1단계만 선택 가능) → (클릭) → confirmBtn 강조 → (클릭) → 완료
+//      → (클릭→TierPanel 열림) → tier1 버튼 강조(1단계만 선택 가능) → (클릭) → confirmBtn 강조 → (클릭)
+//      → 몇 주 뒤 ConfirmHirePanel(3-1~3-6) → 채용 확정 시 튜토리얼 한정 보너스 라운드(HiringUI)로 패널
+//      안 닫고 자동 다음 후보 전환 → 4-1 대사 → 완료.
 //      → 시간이 다시 흐르는 순간(EndDimTimeStop) 비서는 GoToDesk()로 desk_03에 즉시 복귀.
 //
 // 강조(dim 스포트라이트) 자체는 TutorialHighlighter 공용 컴포넌트가 담당 — 이 클래스는 "어떤 순서로,
@@ -81,6 +83,18 @@ public class TutorialController : MonoBehaviour
     public Vector2 step3_5Position;
     [Tooltip("ConfirmHirePanel/confirmBtn — 3-5 대사 뒤 강조(클릭 대기, 실제 채용 확정 버튼)")]
     public Button confirmHireButton;
+
+    [Header("4-1/4-2 (튜토리얼 첫 채용 보너스 라운드 — 두 번째 후보로 자동 전환된 직후, HiringUI가 PlayTutorial4_1() 호출)")]
+    [Tooltip("TutorialDialog 차트의 stepGroup 값 — 직원이 늘어난 소감 대사(강조 없음)")]
+    public string step4_1 = "4-1";
+    [Tooltip("TutorialPanel의 RectTransform.anchoredPosition — 4-1 표시 위치")]
+    public Vector2 step4_1Position;
+    [Tooltip("TutorialDialog 차트의 stepGroup 값 — 이번엔 직접 골라보라는 안내(강조 없음, 2줄)")]
+    public string step4_2 = "4-2";
+    [Tooltip("TutorialPanel의 RectTransform.anchoredPosition — 4-2 표시 위치")]
+    public Vector2 step4_2Position;
+    [Tooltip("ConfirmHirePanel/nextCandidateButton — 4-2 대사 뒤 강조(클릭 대기, 후보 넘기기 화살표)")]
+    public Button nextCandidateButton;
 
     [Header("연출 (TutorialHighlighter 로 전달됨)")]
     [Range(0f, 1f)] public float dimAlpha = 0.8f;
@@ -241,8 +255,34 @@ public class TutorialController : MonoBehaviour
 
         yield return _highlighter.Hide();
 
-        OnboardingState.MarkTutorial3Done();
-        Destroy(gameObject); // 1-1~3-6 전부 끝 — 더 이상 대기할 스텝 없음
+        // ⚠️ 여기서 Destroy도 MarkTutorial3Done()도 안 함 — 3-6에서 채용한 후보는 튜토리얼 한정 보너스
+        // 라운드(HiringUI.DoHire의 _tutorialBonusHirePending 분기)로 이어져 패널이 안 닫히고 한 명 더
+        // 채용시킨다. Tutorial3Done은 그 두 번째 채용이 실제로 확정될 때(HiringUI.DoHire) 마크된다 —
+        // 여기서 미리 마크해버리면 두 번째 채용 전에 재접속했을 때 서버엔 아직 원본 3명 그대로인데
+        // Tutorial3Done=true라 튜토리얼이 다시 안 뜨고 빈 후보 화면만 보이는 불일치가 생긴다. 그 직후(두
+        // 번째 후보로 자동 전환된 다음) HiringUI가 PlayTutorial4_1()을 외부에서 호출하므로 이 컴포넌트가
+        // 계속 살아있어야 함.
+    }
+
+    // ── 4-1 (HiringUI.TutorialAdvanceAfterFirstHire — 첫 채용 보너스 라운드에서 두 번째 후보로
+    // 자동 전환하는 애니메이션이 끝난 직후 호출) ────────────────────────────────
+    public IEnumerator PlayTutorial4_1()
+    {
+        EnsureHighlighter();
+        yield return _highlighter.Show();
+
+        if (TutorialPanelUI.Instance != null)
+            yield return TutorialPanelUI.Instance.PlayStepGroup(step4_1, step4_1Position);
+
+        // 4-2: 기획자(첫 채용) 다음은 개발자를 뽑아보자는 안내 + 이번엔 직접 골라보라는 안내(대사 없이 이어짐).
+        if (TutorialPanelUI.Instance != null)
+            yield return TutorialPanelUI.Instance.PlayStepGroup(step4_2, step4_2Position);
+
+        // 4-2 강조: NextCandidateArrow 강조, 클릭 대기 — 대표님이 직접 후보를 넘겨보게. 대사 없음.
+        yield return _highlighter.Highlight(nextCandidateButton);
+
+        yield return _highlighter.Hide();
+        Destroy(gameObject); // 1-1~4-2 전부 끝 — 더 이상 대기할 스텝 없음
     }
 
     // ── dim 동안 시간 정지 (패널 켜는 것과 동일) ──────────────────────────────

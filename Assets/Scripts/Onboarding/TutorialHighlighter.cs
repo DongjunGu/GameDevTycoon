@@ -36,6 +36,7 @@ public class TutorialHighlighter : MonoBehaviour
     Coroutine _pulse;
     Rect _currentHoleRect;   // 마지막으로 적용된 단일 구멍 위치 — 다음 단일 강조가 여기서부터 이동해감
     bool _holeInitialized;   // 아직 한 번도 강조 안 했으면(첫 대상) 이동 없이 그냥 나타남
+    Button _holeCatcher;     // Highlight() 전용 — 구멍(대상+패딩) 전체를 덮는 투명 클릭캐처(아래 참고)
 
     // ── 공개 API ──────────────────────────────────────────────────────
     // dim 준비 + 구멍 없이 전체 덮은 상태로 훅 페이드인. 강조 시퀀스 시작 시 1회 호출.
@@ -52,6 +53,7 @@ public class TutorialHighlighter : MonoBehaviour
     {
         if (_dimCanvas == null) yield break;
         if (_pulse != null) { StopCoroutine(_pulse); _pulse = null; }
+        if (_holeCatcher != null) _holeCatcher.gameObject.SetActive(false); // 방어적 정리(Highlight 도중 중단 대비)
         yield return FadeDimOut();
         _dimCanvas.enabled = false;
         _holeInitialized = false; // 다음 Show()는 새 위치에 바로 나타남(슬라이드 없음)
@@ -67,6 +69,7 @@ public class TutorialHighlighter : MonoBehaviour
         // 직전이 BeginHighlight(펄스가 안 멈추고 계속 도는 강조)였다면, 펄스 코루틴이 다음 프레임에
         // 다시 그 자리에 구멍을 그려서 CollapseHole()을 무효화해버린다 — 반드시 먼저 멈춰야 한다.
         if (_pulse != null) { StopCoroutine(_pulse); _pulse = null; }
+        if (_holeCatcher != null) _holeCatcher.gameObject.SetActive(false); // 방어적 정리(Highlight 도중 중단 대비)
         _dimCanvas.enabled = true;
         CollapseHole();
         _holeInitialized = false;
@@ -76,6 +79,15 @@ public class TutorialHighlighter : MonoBehaviour
     // (다음 Highlight가 여기서부터 슬라이드 이동해감). 대상 자체는 절대 건드리지 않는다.
     // hideDimOnConfirmedClick: 클릭이 다른 모달(블러 캡처 등)을 동기적으로 여는 경우, 그 캡처 전에 dim을
     // 꺼야 할 때 사용(PointerDown에서 미리 끄고, 클릭 미확정 시 PointerUp 한 프레임 뒤 원복).
+    //
+    // ⚠️ 구멍은 대상 버튼보다 패딩(highlightHolePadding±pulse)만큼 더 크게 뚫리는데, 이 여백은 순전히
+    // 시각적인 것이라 버튼 자신의 실제 히트박스는 넓어지지 않는다 — 그 여백을 누르면 dim 구멍이라 dim에는
+    // 안 걸리지만 버튼도 안 맞아 클릭이 그대로 배경까지 뚫고 내려가버린다. 메뉴 버튼처럼 "빈 곳 클릭 시
+    // 메뉴 닫힘" 로직이 있는 대상이면 이 상태에서 그 로직이 "외부 클릭"으로 오판해 메뉴가 닫히고, 하이라이트는
+    // (버튼이 사라졌으니) 영원히 클릭을 못 받아 튜토리얼이 멈춘다. 구멍 전체(대상+패딩)를 덮는 투명
+    // 클릭캐처(_holeCatcher)를 dim 캔버스(sortingOrder=dimSortingOrder, 메뉴보다 항상 위) 소속으로 띄워서
+    // 해결 — 패딩 클릭도 캐처가 받아 target.onClick으로 그대로 포워딩하고, 캐처 자신이 메뉴보다 위 캔버스에
+    // 있어 MenuController의 "외부 클릭=닫기" 판정도 안 탄다(오버레이가 클릭을 가로챈 것으로 인식됨).
     public IEnumerator Highlight(Button target, bool hideDimOnConfirmedClick = false)
     {
         if (target == null || !target.gameObject.activeInHierarchy) yield break;
@@ -87,25 +99,53 @@ public class TutorialHighlighter : MonoBehaviour
         UnityEngine.Events.UnityAction cb = () => clicked = true;
         target.onClick.AddListener(cb);
 
-        EventTrigger trigger = null;
+        var catcher = EnsureHoleCatcher();
+        float maxPad = highlightHolePadding + highlightPulseAmplitude;
+        PositionCatcher(catcher, ComputeHoleRect(target.transform as RectTransform, maxPad));
+        catcher.gameObject.SetActive(true);
+        UnityEngine.Events.UnityAction catcherCb = () => target.onClick.Invoke();
+        catcher.onClick.AddListener(catcherCb);
+
+        EventTrigger trigger = null, catcherTrigger = null;
         if (hideDimOnConfirmedClick)
         {
-            trigger = target.gameObject.AddComponent<EventTrigger>();
-
-            var downEntry = new EventTrigger.Entry { eventID = EventTriggerType.PointerDown };
-            downEntry.callback.AddListener(_ => _dimCanvas.enabled = false);
-            trigger.triggers.Add(downEntry);
-
-            var upEntry = new EventTrigger.Entry { eventID = EventTriggerType.PointerUp };
-            upEntry.callback.AddListener(_ => StartCoroutine(RestoreDimIfNotConfirmed(() => clicked)));
-            trigger.triggers.Add(upEntry);
+            trigger = AddPressReleaseTrigger(target.gameObject, () => clicked);
+            catcherTrigger = AddPressReleaseTrigger(catcher.gameObject, () => clicked);
         }
 
         while (!clicked) yield return null;
         target.onClick.RemoveListener(cb);
+        catcher.onClick.RemoveListener(catcherCb);
+        catcher.gameObject.SetActive(false);
         if (trigger != null) Destroy(trigger);
+        if (catcherTrigger != null) Destroy(catcherTrigger);
 
         if (_pulse != null) { StopCoroutine(_pulse); _pulse = null; }
+    }
+
+    // PointerDown 즉시 dim을 끄고, PointerUp 한 프레임 뒤 클릭이 확정 안 됐으면(드래그로 이탈 등) 원복.
+    // target/캐처 양쪽에 동일하게 붙여써서 어느 쪽을 눌러도 같은 "확정 전 미리 끔" 동작을 보장한다.
+    // ⚠️ "dim을 끔"은 _dimCanvas.enabled가 아니라 타일만 끈다(HideDimTilesOnly) — 캔버스 자체를 끄면 같은
+    // 캔버스에 사는 _holeCatcher까지 그 순간 raycast 대상에서 빠져버려서, 패딩(캐처) 클릭으로 대상을 누른
+    // 경우 캐처 자신의 PointerUp/Click 판정이 깨져 클릭이 영영 확정 안 되는 문제가 있었다(hireButton 사례).
+    EventTrigger AddPressReleaseTrigger(GameObject go, System.Func<bool> wasClicked)
+    {
+        var trigger = go.AddComponent<EventTrigger>();
+
+        var downEntry = new EventTrigger.Entry { eventID = EventTriggerType.PointerDown };
+        downEntry.callback.AddListener(_ => HideDimTilesOnly());
+        trigger.triggers.Add(downEntry);
+
+        var upEntry = new EventTrigger.Entry { eventID = EventTriggerType.PointerUp };
+        upEntry.callback.AddListener(_ => StartCoroutine(RestoreDimIfNotConfirmed(wasClicked)));
+        trigger.triggers.Add(upEntry);
+
+        return trigger;
+    }
+
+    void HideDimTilesOnly()
+    {
+        foreach (var tile in _tilePool) tile.gameObject.SetActive(false);
     }
 
     // target을 강조한 채로 "유지"하고 즉시 반환(클릭/시간 대기 없음) — 호출부가 그동안 TutorialPanel 대사 등
@@ -157,7 +197,7 @@ public class TutorialHighlighter : MonoBehaviour
     IEnumerator RestoreDimIfNotConfirmed(System.Func<bool> wasClicked)
     {
         yield return null;
-        if (!wasClicked()) _dimCanvas.enabled = true; // 눌렀지만 클릭 미확정(드래그로 이탈 등) → dim 원복
+        if (!wasClicked()) ApplyHole(_currentHoleRect); // 눌렀지만 클릭 미확정(드래그로 이탈 등) → 타일 원복
     }
 
     IEnumerator PulseHole(RectTransform target)
@@ -284,6 +324,40 @@ public class TutorialHighlighter : MonoBehaviour
         while (_tilePool.Count <= index)
             _tilePool.Add(CreateDimTile($"DimTile{_tilePool.Count}"));
         return _tilePool[index];
+    }
+
+    // Highlight() 전용 — 구멍(대상+패딩) 전체를 덮는 완전 투명 클릭캐처. dim 타일과 같은 부모(_dimRoot)라
+    // 같은 Canvas(sortingOrder=dimSortingOrder)에 속해 항상 메뉴/일반 UI보다 위에서 클릭을 받는다.
+    Button EnsureHoleCatcher()
+    {
+        if (_holeCatcher != null) return _holeCatcher;
+
+        var go = new GameObject("TutorialHoleCatcher", typeof(RectTransform), typeof(Image), typeof(Button));
+        go.transform.SetParent(_dimRoot, false);
+
+        var rt = (RectTransform)go.transform;
+        rt.anchorMin = Vector2.zero; rt.anchorMax = Vector2.zero; rt.pivot = Vector2.zero;
+
+        var img = go.GetComponent<Image>();
+        img.color = new Color(0f, 0f, 0f, 0f); // 완전 투명 — 시각 변화 없이 클릭만 받음
+        img.raycastTarget = true;
+
+        var btn = go.GetComponent<Button>();
+        btn.transition = Selectable.Transition.None;
+        btn.targetGraphic = img;
+
+        _holeCatcher = btn;
+        go.SetActive(false);
+        return btn;
+    }
+
+    // dim 타일과 동일한 좌표 변환(부모 rect 기준점 보정)으로 캐처를 hole 위치/크기에 맞춤.
+    void PositionCatcher(Button catcher, Rect hole)
+    {
+        Rect p = _dimRoot.rect;
+        var rt = (RectTransform)catcher.transform;
+        rt.anchoredPosition = new Vector2(hole.xMin - p.xMin, hole.yMin - p.yMin);
+        rt.sizeDelta = new Vector2(hole.width, hole.height);
     }
 
     // 구멍 없이 dim 전체를 덮은 상태로 되돌림.

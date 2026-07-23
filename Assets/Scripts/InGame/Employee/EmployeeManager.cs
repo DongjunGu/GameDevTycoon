@@ -392,7 +392,13 @@ public class EmployeeManager : MonoBehaviour
     }
 
     // ── 채용 확정 ─────────────────────────────
-    public void HireEmployee(EmployeeData poolEmployee)
+    // saveImmediately=false — 신규 직원 자체는 여느 때처럼 즉시 서버 Insert 되지만, 뒤따르는 Money/GameTime/
+    // Project 4-set 저장은 건너뛴다. 튜토리얼 첫 채용 보너스 라운드(HiringUI._tutorialBonusHirePending)
+    // 전용 — 첫 번째 채용 시점에 저장해버리면 그 순간 EmployeeManager.HiringPendingTier/HiringListAJson은
+    // 아직 원래(3명) 값 그대로인데 ownedEmployees만 1명 늘어난 상태가 서버에 그대로 굳어버려서, 그 사이에
+    // 재접속하면 "이미 1명 채용된 상태로 후보 3명이 다시 뜨는" 불일치가 생긴다. 두 번째(진짜 종료) 채용에서
+    // ClearHiring() 이후 정상적으로 저장되므로 그때 한 번에 일관된 상태로 반영된다.
+    public void HireEmployee(EmployeeData poolEmployee, bool saveImmediately = true)
     {
         var inGameEmployee = new EmployeeData(
             id: System.Guid.NewGuid().ToString(),
@@ -471,9 +477,12 @@ public class EmployeeManager : MonoBehaviour
             if (DevelopmentManager.Instance.IsStarted)
                 DevelopmentManager.Instance.OnEmployeeHired(inGameEmployee);
 
-            MoneyManager.Instance?.SaveMoney();
-            GameTimeManager.Instance?.SaveGameTime();
-            ProjectSaveManager.Instance?.SaveProject();
+            if (saveImmediately)
+            {
+                MoneyManager.Instance?.SaveMoney();
+                GameTimeManager.Instance?.SaveGameTime();
+                ProjectSaveManager.Instance?.SaveProject();
+            }
             Debug.Log($"채용 완료: {inGameEmployee.employeeName} ({inGameEmployee.grade} / {inGameEmployee.potential})");
         });
     }
