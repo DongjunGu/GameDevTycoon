@@ -15,6 +15,8 @@ public class HiringUI : MonoBehaviour
     public GameObject hiringPanel;
     public GameObject confirmPanel;
     public GameObject loadingPanel;
+    [Tooltip("ConfirmHirePanel/CloseBtn — 튜토리얼 첫 채용 세션 동안(3-1~4-2) 숨김 처리됨")]
+    public Button closeButton;
 
     [Header("Tier Buttons")]
     [Tooltip("티어 버튼 GameObject 3개를 순서대로 인스펙터에 할당 (1단계/2단계/3단계). 2/3단계는 hire_tier2/3 해금 시 노출.")]
@@ -102,6 +104,14 @@ public class HiringUI : MonoBehaviour
     private int _hireCost;
     private int _currentIndex = -1;                 // _currentCandidates 내 현재 표시 중인 후보
     private readonly List<int> _hireCosts = new();  // 후보별 채용 비용 캐시 — 화살표로 넘길 때 재추첨 방지
+    // 튜토리얼 첫 채용 한정 — true면 다음 DoHire() 1회는 패널을 안 닫고 "한 명 더" 보너스 라운드로 처리(4-1로 이어짐).
+    private bool _tutorialBonusHirePending = false;
+    // 보너스 라운드의 첫 번째 후보 — 서버 Insert를 미루고 여기 보관해뒀다가, 두 번째 채용이 확정되는
+    // 순간 함께 처리한다(그 전에 재접속하면 서버엔 아무 채용 기록도 안 남아있어야 하므로).
+    private EmployeeData _tutorialPendingFirstHire;
+    // 튜토리얼 첫 채용 세션(3-1~4-2) 내내 CloseBtn/ConfirmRefreshBtn을 숨겨두기 위한 플래그 — 보너스 라운드
+    // 포함 세션 전체에 걸쳐 있어야 해서 _tutorialBonusHirePending(첫 채용 처리 직후 꺼짐)과는 수명이 다름.
+    private bool _tutorialButtonsHidden = false;
 
     private int  _currentTierIndex = -1;        // hire_refresh 재로드용 — 마지막 OnClickTier 의 티어
     private int  _selectedTierIndex = -1;       // 선택 표시용 — RefreshTierButtonVisibility 에서 초기화
@@ -452,8 +462,18 @@ public class HiringUI : MonoBehaviour
 
         // 튜토리얼 3-1/3-2 — ConfirmHirePanel 첫 노출 시 1회. 실제 로직/설정(대사 stepGroup, 위치,
         // roleBadgePanel 강조)은 전부 TutorialController 가 관리 — 여기서는 트리거만.
+        // 이 시점에 캡처 — 튜토리얼 첫 채용 한정으로 다음 DoHire() 1회를 "패널 유지 + 한 명 더" 보너스
+        // 라운드로 보낸다(OnboardingState.Tutorial3Done은 3-6 완료 직후 바로 true가 되므로 DoHire 시점에
+        // 다시 읽으면 이미 true라 이 시점에 미리 캡처해둬야 함).
         if (!OnboardingState.Tutorial3Done && TutorialController.Instance != null)
+        {
+            _tutorialBonusHirePending = true;
+            _tutorialButtonsHidden = true;
+            if (closeButton != null) closeButton.gameObject.SetActive(false);
+            if (confirmRefreshButton != null) confirmRefreshButton.gameObject.SetActive(false);
+            if (confirmRefreshLockedPanel != null) confirmRefreshLockedPanel.SetActive(false);
             StartCoroutine(TutorialController.Instance.PlayTutorial3());
+        }
     }
 
     // 비서 초상화 RandomEventUI 안내(EventPanel). 확인 시 onConfirm. type=Recruit 라 시간 강제재개(ResumeFromEvent) 안 함.
@@ -617,14 +637,18 @@ public class HiringUI : MonoBehaviour
         }
     }
 
-    // 후보가 2명 이상일 때만 화살표 + 좌/우 이력서 노출 (1명 이하면 가운데만).
+    // 후보가 2명 이상일 때만 화살표+우측 이력서 노출. 정확히 2명이면 좌측 이력서가 우측과 똑같은(유일하게
+    // 남은 다른) 후보를 중복 표시하게 되므로, 좌측 이력서+이전 화살표는 숨기고 다음(순환이라 결국 같은
+    // 대상) 방향으로만 넘기게 한다 — 3명 이상일 때만 좌측 미리보기가 실제로 다른 후보를 가리킴.
     void UpdateArrowButtons()
     {
-        bool multi = _currentCandidates != null && _currentCandidates.Count > 1;
-        if (prevCandidateButton != null) prevCandidateButton.gameObject.SetActive(multi);
-        if (nextCandidateButton != null) nextCandidateButton.gameObject.SetActive(multi);
-        if (resumeLeftPanel  != null) resumeLeftPanel.gameObject.SetActive(multi);
-        if (resumeRightPanel != null) resumeRightPanel.gameObject.SetActive(multi);
+        int n = _currentCandidates?.Count ?? 0;
+        bool hasNext = n > 1;
+        bool hasDistinctLeft = n > 2;
+        if (prevCandidateButton != null) prevCandidateButton.gameObject.SetActive(hasDistinctLeft);
+        if (nextCandidateButton != null) nextCandidateButton.gameObject.SetActive(hasNext);
+        if (resumeLeftPanel  != null) resumeLeftPanel.gameObject.SetActive(hasDistinctLeft);
+        if (resumeRightPanel != null) resumeRightPanel.gameObject.SetActive(hasNext);
     }
 
     // 캐러셀 3슬롯을 _currentIndex 기준으로 채운다 — 좌=이전 / 가운데=현재 / 우=다음 (양끝 순환).
@@ -647,10 +671,12 @@ public class HiringUI : MonoBehaviour
 
         // 좌·우 패널을 Setup "전에" 먼저 활성화 — 비활성 상태에서 Setup 하면 TMP 텍스트(수치)는
         // 메시 재생성이 누락돼 늦게 반영되는 반면 Image(초상)는 활성화 후 정상 표시되는 이슈 방지.
-        // (이미지는 미리 반영되는데 수치만 늦게 바뀌던 현상 교정 — 활성/비활성은 UpdateArrowButtons 와 동일 규칙: 후보 2명 이상)
-        bool multi = n > 1;
-        if (resumeLeftPanel  != null && resumeLeftPanel.gameObject.activeSelf  != multi) resumeLeftPanel.gameObject.SetActive(multi);
-        if (resumeRightPanel != null && resumeRightPanel.gameObject.activeSelf != multi) resumeRightPanel.gameObject.SetActive(multi);
+        // (이미지는 미리 반영되는데 수치만 늦게 바뀌던 현상 교정 — 활성/비활성은 UpdateArrowButtons 와 동일 규칙:
+        // 우측=후보 2명 이상, 좌측=정확히 2명일 땐 우측과 중복 표시라 3명 이상일 때만)
+        bool hasNext = n > 1;
+        bool hasDistinctLeft = n > 2;
+        if (resumeLeftPanel  != null && resumeLeftPanel.gameObject.activeSelf  != hasDistinctLeft) resumeLeftPanel.gameObject.SetActive(hasDistinctLeft);
+        if (resumeRightPanel != null && resumeRightPanel.gameObject.activeSelf != hasNext) resumeRightPanel.gameObject.SetActive(hasNext);
 
         // 좌:이전 / 중앙:현재 / 우:다음 후보 미리 표시 (이미지·수치 동시 세팅)
         if (resumeCenterPanel != null) resumeCenterPanel.Setup(center);
@@ -852,9 +878,17 @@ public class HiringUI : MonoBehaviour
             GameUIHelper.ShowLoanPrompt();
             return;
         }
+
+        // 튜토리얼 첫 채용 보너스 라운드의 첫 번째 채용은 서버에 아무것도 안 남긴다 — 돈 차감도 로컬에만
+        // 반영하고(saveImmediately:false), EmployeeManager.HireEmployee(실제 서버 Insert)조차 호출하지 않고
+        // _tutorialPendingFirstHire 에 잠깐 보관해둔다. 두 번째(진짜 종료) 채용이 확정되는 순간 두 명을
+        // 한꺼번에 채용 처리 — 그래야 3-1~4-2 사이 아무 때나 재접속해도 서버엔 "채용 시작 전" 원래 상태
+        // (후보 3명, 채용 0명) 그대로 남아있어 완전히 처음부터 다시 하게 된다(부분 진행 저장 없음).
+        bool deferSave = _tutorialBonusHirePending;
+
         if (_hireCost > 0)
         {
-            MoneyManager.Instance.SpendGold(_hireCost);
+            MoneyManager.Instance.SpendGold(_hireCost, saveImmediately: !deferSave);
             Debug.Log($"[채용] {_selectedEmployee.employeeName} 채용 비용 차감: {_hireCost:N0}G (강화 +{_selectedEmployee.enhancementLevel})");
         }
 
@@ -865,13 +899,53 @@ public class HiringUI : MonoBehaviour
             _conflictingOwned = null;
         }
 
+        // 튜토리얼 첫 채용 한정 보너스 라운드 — 실제 채용(서버 Insert)은 아직 안 하고 보류, 패널도 안 닫고
+        // 남은 후보 중 한 명을 더 채용시킨다. EndCandidateFlow/ClearHiring/패널 닫기/프로젝트 튜토리얼
+        // 트리거는 전부 "진짜 종료"인 두 번째 채용(이 분기를 다시 안 타는 정상 DoHire)에서만 실행됨.
+        if (_tutorialBonusHirePending)
+        {
+            _tutorialBonusHirePending = false;
+            _tutorialPendingFirstHire = _selectedEmployee;
+            if (hireStampImage != null) hireStampImage.gameObject.SetActive(false);
+            TutorialAdvanceAfterFirstHire(_currentIndex);
+            return;
+        }
+
+        // 보너스 라운드로 보류해뒀던 첫 번째 후보가 있으면 지금(두 번째 확정 시점) 같이 채용 처리 —
+        // 여기서부터 실제로 서버에 남는다. wasTutorialBonusRound는 아래서 OnboardingState.MarkTutorial3Done()
+        // 호출 여부를 가르는 데도 재사용(첫 채용만 하고 중단한 경우와 구분하기 위해 _tutorialPendingFirstHire를
+        // 지우기 전에 미리 캡처).
+        bool wasTutorialBonusRound = _tutorialPendingFirstHire != null;
+        if (_tutorialPendingFirstHire != null)
+        {
+            EmployeeManager.Instance.HireEmployee(_tutorialPendingFirstHire, saveImmediately: false);
+            _tutorialPendingFirstHire = null;
+        }
+        EmployeeManager.Instance.HireEmployee(_selectedEmployee); // 마지막 채용 — Money/GameTime/Project 정상 저장
+
+        // 튜토리얼 3-1~4-2 전체가 "진짜" 완료되는 유일한 지점 — 여기서만 Tutorial3Done을 마크한다(과거엔
+        // 3-6 직후 바로 마크했는데, 그러면 두 번째 채용을 안 끝내고 재접속했을 때 Tutorial3Done=true라서
+        // 튜토리얼이 다시 안 뜨고 그냥 빈 3명 후보 화면만 보여 어색했음). 이렇게 완료 시점까지 미루면
+        // "두 번째 채용 전 재접속 → 서버엔 원본 3명 그대로 → Tutorial3Done도 아직 false → 3-1부터 자동 재생"
+        // 이 자연스럽게 성립한다.
+        if (wasTutorialBonusRound) OnboardingState.MarkTutorial3Done();
+
+        // 튜토리얼 세션 동안 숨겨뒀던 버튼 복구 — 이후(2주뒤 등) 일반 채용에서도 정상 노출돼야 하므로
+        // 패널이 진짜로 닫히는 이 지점(보너스 라운드가 아닌 최종 확정)에서 원복.
+        if (_tutorialButtonsHidden)
+        {
+            _tutorialButtonsHidden = false;
+            if (closeButton != null) closeButton.gameObject.SetActive(true);
+            if (confirmRefreshButton != null) confirmRefreshButton.gameObject.SetActive(true);
+        }
+
         EndCandidateFlow();
-        EmployeeManager.Instance.HireEmployee(_selectedEmployee);
         EmployeeManager.Instance.ClearHiring();        // 채용 완료 → pending/확정 리스트 해제
         GameTimeManager.Instance?.SaveGameTime();
         hiringPanel.SetActive(false);
         confirmPanel.SetActive(false);     // ConfirmHirePanel 비활성화
         if (hireStampImage != null) hireStampImage.gameObject.SetActive(false); // 패널과 같은 시점에 도장도 정리
+        UpdateRefreshButton(); // confirmRefreshLockedPanel도 잠금 상태 기준으로 다시 정상 반영
 
         // 온보딩: 직원 획득 후 채용창 닫히면 바로 프로젝트 튜토리얼 (1회만).
         // pending=0(실행대기)로 무장 후 즉시 트리거 — ModalGate.WhenFree 가 채용창/다이얼로그 닫힘을 기다렸다 실행.
@@ -879,6 +953,41 @@ public class HiringUI : MonoBehaviour
         ProjectTutorialController.Instance?.TryFire();
 
         DialogManager.Instance.Resume();
+    }
+
+    // 튜토리얼 첫 채용 보너스 라운드 — 방금 채용한 후보(hiredIndex)를 목록에서 제거하고
+    // NextCandidateArrow(OnClickNextCandidate)와 동일한 넘김 애니메이션을 자동 재생해 다음 후보로
+    // 이동시킨 뒤, 애니메이션이 끝나면 튜토리얼 4-1 대사를 띄운다.
+    void TutorialAdvanceAfterFirstHire(int hiredIndex)
+    {
+        void RemoveHiredAndAdvance()
+        {
+            int n = _currentCandidates.Count;
+            int next = (hiredIndex + 1) % n;
+            _currentCandidates.RemoveAt(hiredIndex);
+            if (hiredIndex < _hireCosts.Count) _hireCosts.RemoveAt(hiredIndex);
+            _currentIndex = next > hiredIndex ? next - 1 : next; // RemoveAt으로 당겨진 인덱스 보정
+            PopulateConfirm();
+            UpdateArrowButtons();
+
+            // 의도적으로 아무것도 저장하지 않는다 — 서버의 HiringListAJson은 여전히(채용 전) 원본 3명
+            // 그대로 남아있어야 한다. 두 번째 채용이 확정될 때까지는 로컬(_currentCandidates/화면)만
+            // 갱신되고, 그 사이 재접속하면 서버 상태 기준으로 처음(3명, 0명 채용)부터 다시 하게 된다.
+        }
+
+        void PlayStep4_1()
+        {
+            if (TutorialController.Instance != null)
+                StartCoroutine(TutorialController.Instance.PlayTutorial4_1());
+        }
+
+        if (resumeFlipper != null && _currentCandidates.Count > 1)
+            resumeFlipper.Flip(+1, RemoveHiredAndAdvance, PlayStep4_1);
+        else
+        {
+            RemoveHiredAndAdvance();
+            PlayStep4_1();
+        }
     }
 
     // 보유 직원 유지하기 (비교 패널에서) — 채용 안 함, 모집 1회 소모

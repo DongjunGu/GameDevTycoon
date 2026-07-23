@@ -68,6 +68,15 @@ public static class TutorialDialogChartLoader
         {
             new() { dialogId = "tut_3_5_0", stepGroup = "3-5", order = 1, speakerName = "비서", portraitId = "portrait_secretary", text = "잠깐만요, 이 지원자… 스펙이 엄청난데요?\n이런 분은 얼른 저희 회사로 데려가버리죠" },
         },
+        ["4-1"] = new List<TutorialDialogLine>
+        {
+            new() { dialogId = "tut_4_1_0", stepGroup = "4-1", order = 1, speakerName = "비서", portraitId = "portrait_secretary", text = "이제 책임져야 할 직원이 한 명 늘었네요.\n어때요, 대표님이 된 게 실감 나시나요?" },
+        },
+        ["4-2"] = new List<TutorialDialogLine>
+        {
+            new() { dialogId = "tut_4_2_0", stepGroup = "4-2", order = 1, speakerName = "비서", portraitId = "portrait_secretary", text = "기획자를 뽑았으니 이번에는 [[개발자]]를 뽑아볼게요" },
+            new() { dialogId = "tut_4_2_1", stepGroup = "4-2", order = 2, speakerName = "비서", portraitId = "portrait_secretary", text = "두 번째부턴 익숙하시죠? 이번엔 대표님이 직접\n마음에 드는 사람으로 골라보세요" },
+        },
     };
 
     static Dictionary<string, List<TutorialDialogLine>> LoadFromServer()

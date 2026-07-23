@@ -46,7 +46,7 @@ public class HUDUI : MonoBehaviour
     void RefreshSalary()
     {
         int total = EmployeeManager.Instance.GetTotalSalary();
-        totalSalaryText.text = $"총 연봉: {total:N0}G";
+        totalSalaryText.text = $"{total:N0}G";
     }
     public void RefreshMoney()
     {
