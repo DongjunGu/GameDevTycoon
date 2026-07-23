@@ -46,12 +46,12 @@ public class HUDUI : MonoBehaviour
     void RefreshSalary()
     {
         int total = EmployeeManager.Instance.GetTotalSalary();
-        totalSalaryText.text = $"{total:N0}G";
+        totalSalaryText.text = $"{total:N0} G";
     }
     public void RefreshMoney()
     {
         if (moneyText != null)
-            moneyText.text = $"{MoneyManager.Instance.Gold:N0}G";
+            moneyText.text = $"{MoneyManager.Instance.Gold:N0} G";
     }
     public void RefreshTime()
     {
@@ -64,7 +64,7 @@ public class HUDUI : MonoBehaviour
     public void RefreshYearFee()
     {
         if (feeText != null)
-            feeText.text = $"{CurrentYearFee:N0}G";
+            feeText.text = $"{CurrentYearFee:N0} G";
     }
 
 }
