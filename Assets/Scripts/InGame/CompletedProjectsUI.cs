@@ -70,7 +70,7 @@ public class CompletedProjectsUI : MonoBehaviour
             {
                 var item = Instantiate(projectListItemPrefab, listContent);
                 item.transform.Find("NameText").GetComponent<TextMeshProUGUI>().text = project.projectName;
-                item.transform.Find("RevenueText").GetComponent<TextMeshProUGUI>().text = $"{project.totalRevenue:N0}G";
+                item.transform.Find("RevenueText").GetComponent<TextMeshProUGUI>().text = $"{project.totalRevenue:N0} G";
 
                 var captured = project;
                 item.GetComponent<Button>().onClick.AddListener(() => ShowDetail(captured));
@@ -86,7 +86,7 @@ public class CompletedProjectsUI : MonoBehaviour
         detailScaleText.text = $"규모: {ScaleToString((ProjectScale)data.scale)}";
         detailGenreText.text = $"장르: {GenreToString((ProjectGenre)data.genre)}";
         detailPlatformText.text = $"플랫폼: {PlatformToString((ProjectPlatform)data.platform)}";
-        detailRevenueText.text = $"매출: {data.totalRevenue:N0}G";
+        detailRevenueText.text = $"매출: {data.totalRevenue:N0} G";
         if (detailCriticTotalText != null)
             detailCriticTotalText.text = $"{data.criticTotalScore}";
         if (detailBestRankText != null)
@@ -111,7 +111,7 @@ public class CompletedProjectsUI : MonoBehaviour
 
     string ScaleToString(ProjectScale scale) => scale switch
     {
-        ProjectScale.Small => "소규모",
+        ProjectScale.Small => "소형",
         ProjectScale.Medium => "중형",
         ProjectScale.Large => "대형",
         _ => ""

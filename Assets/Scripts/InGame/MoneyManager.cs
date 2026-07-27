@@ -226,8 +226,8 @@ public class MoneyManager : MonoBehaviour
             GameTimeManager.Instance?.SaveGameTime();
             ProjectSaveManager.Instance?.SaveProject();
             string msg = resultValue >= 0
-                ? $"+{resultValue:N0}G 지급됐습니다."
-                : $"{resultValue:N0}G 차감됐습니다.";
+                ? $"+{resultValue:N0} G 지급됐습니다."
+                : $"{resultValue:N0} G 차감됐습니다.";
             ShowAfterDialog(msg);
         }
         if (resultType == "OpenHiring")

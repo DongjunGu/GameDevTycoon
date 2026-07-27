@@ -148,7 +148,7 @@ public class MerchantShopPanelUI : MonoBehaviour
         ItemGradeSet.Apply(frameImage, gradeSet, row.grade);
         if (ownedText != null) ownedText.text = $"(보유 {(ItemManager.Instance?.GetCount(id) ?? 0)})";
         int price = GetPrice(row);
-        if (priceText != null) priceText.text = $"{price:N0}G";
+        if (priceText != null) priceText.text = $"{price:N0} G";
 
         if (itemImage != null)
         {

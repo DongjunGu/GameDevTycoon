@@ -243,7 +243,7 @@ public class SalesUI : MonoBehaviour
                 float otakuSalesBonus  = CharacterTraitApplier.GetOtakuSalesBonus(_cachedGenre);
                 // 신의 축복(우기 전용 이벤트) 주사위 6: 다음 축복까지 매출 +10%.
                 float godBlessingBonus = CharacterUniqueEvents.GetGodBlessingSalesBonus();
-                // 장착 특성 'b6'(소규모) / 'a5'(중형) / 's7'(대작) — 규모별 매출 보너스.
+                // 장착 특성 'b6'(소형) / 'a5'(중형) / 's7'(대작) — 규모별 매출 보너스.
                 float scaleSaleBonus   = scale switch
                 {
                     ProjectScale.Small  => TraitEffectApplier.GetSmallScaleSaleBonus(),

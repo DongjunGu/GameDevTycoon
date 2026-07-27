@@ -105,7 +105,7 @@ public class LoanManager : MonoBehaviour
         var loan = dueLoans[index];
 
         AlertUI.Instance.ShowMoney(
-            $"대출 만기일입니다.\n원금: {loan.amount:N0}G\n이자율: {LoanManager.Instance.interestRate * 100:F0}%\n상환금액: {loan.repayAmount:N0}G",
+            $"대출 만기일입니다.\n원금: {loan.amount:N0} G\n이자율: {LoanManager.Instance.interestRate * 100:F0}%\n상환금액: {loan.repayAmount:N0} G",
             null,
             () =>
             {

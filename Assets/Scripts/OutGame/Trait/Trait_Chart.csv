@@ -12,7 +12,7 @@ trait_haggler_plus,중고 거래+,아이템 10% 할인가로 구매,B,itemDiscou
 trait_enhance_discount,b1,강화비 5% 감소,B,enhanceCostDiscount,5
 trait_high_sat_stat,b3,만족도 81 이상일 때 스탯 5% 추가 상승,B,highSatStatBonus,5
 trait_start_block,b5,랜덤 블록 아이템 1개 보유한 상태로 시작,B,startItem_blockRandom,1
-trait_small_sale,b6,소규모 게임 발매 시 매출 +5%,B,smallScaleSaleBonus,5
+trait_small_sale,b6,소형 게임 발매 시 매출 +5%,B,smallScaleSaleBonus,5
 trait_marketing_god,마케팅의 신,마케팅비 0원으로 최적화 적용,A,marketingFree,0
 trait_recruiter,호객행위,채용 공고 시 지원하는 인원 +1,A,recruitApplicants,1
 trait_enhance_discount_a,a1,강화비 10% 감소,A,enhanceCostDiscount,10

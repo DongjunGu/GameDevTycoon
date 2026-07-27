@@ -253,7 +253,7 @@ public class HiringUI : MonoBehaviour
             var priceText = FindChildText(tierButtons[i].transform, "priceText");
             if (priceText == null) continue;
             int cost = discounted ? Mathf.RoundToInt(Tiers[i].cost * 0.8f) : Tiers[i].cost;
-            priceText.text = $"{cost:N0}G";
+            priceText.text = $"{cost:N0} G";
         }
     }
 
@@ -684,7 +684,7 @@ public class HiringUI : MonoBehaviour
         if (resumeRightPanel != null) resumeRightPanel.Setup(_currentCandidates[(ci + 1) % n]);
 
         if (confirmHireCostText != null)
-            confirmHireCostText.text = _hireCost <= 0 ? "무료" : $"{_hireCost:N0}G";
+            confirmHireCostText.text = _hireCost <= 0 ? "무료" : $"{_hireCost:N0} G";
 
         // CountPanel — 현재 후보 순서/전체 후보 수 (예: 1/4). 화살표로 넘기면 PopulateConfirm 재호출로 자동 갱신.
         if (countText != null) countText.text = $"{ci + 1}/{n}";
@@ -951,6 +951,19 @@ public class HiringUI : MonoBehaviour
         // pending=0(실행대기)로 무장 후 즉시 트리거 — ModalGate.WhenFree 가 채용창/다이얼로그 닫힘을 기다렸다 실행.
         OnboardingState.ArmProjectTutorial(0);
         ProjectTutorialController.Instance?.TryFire();
+
+        // 온보딩: 튜토리얼 두 번째(진짜) 채용이 지금 막 확정됐으면 2초 뒤 5-1(사무실이 좁다는 소감) 재생.
+        // ArmTutorial5()는 지연 재생 "전"에 동기 호출 — 이 2초 사이(또는 5-1~5-4 도중) 재접속해도
+        // TutorialController.Start()가 pending을 보고 5-1부터 다시 재생할 수 있게 미리 저장해둔다.
+        if (wasTutorialBonusRound)
+        {
+            OnboardingState.ArmTutorial5();
+            DOVirtual.DelayedCall(2f, () =>
+            {
+                if (TutorialController.Instance != null)
+                    StartCoroutine(TutorialController.Instance.PlayTutorial5_1());
+            }).SetUpdate(true);
+        }
 
         DialogManager.Instance.Resume();
     }

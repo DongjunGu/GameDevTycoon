@@ -254,8 +254,8 @@ public class EmployeeData
     public string DevelopRangeText() => $"개발: {developMin}~{developMax}";
     public string PlanningRangeText() => $"기획: {planningMin}~{planningMax}";
     public string ArtRangeText() => $"아트: {artMin}~{artMax}";
-    public string SalaryRangeText() => $"연봉: {salary:N0}G";
-    public string SalaryText() => $"연봉: {salary:N0}G";
+    public string SalaryRangeText() => $"연봉: {salary:N0} G";
+    public string SalaryText() => $"연봉: {salary:N0} G";
 
     public float GetSatisfactionMultiplier()
     {

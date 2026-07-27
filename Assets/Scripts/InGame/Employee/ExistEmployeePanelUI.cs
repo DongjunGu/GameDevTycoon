@@ -24,6 +24,9 @@ public class ExistEmployeePanelUI : MonoBehaviour
     public TextMeshProUGUI artText;
     public TextMeshProUGUI creativityText;
 
+    [Header("Salary")]
+    public TextMeshProUGUI salaryValueText;
+
     public void Setup(EmployeeData owned)
     {
         if (owned == null) return;
@@ -43,5 +46,7 @@ public class ExistEmployeePanelUI : MonoBehaviour
         if (developText != null)    developText.text    = owned.DevelopText();
         if (artText != null)        artText.text         = owned.ArtText();
         if (creativityText != null) creativityText.text = owned.CreativityText();
+
+        if (salaryValueText != null) salaryValueText.text = owned.SalaryText();
     }
 }

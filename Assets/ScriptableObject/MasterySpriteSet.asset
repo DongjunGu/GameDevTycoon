@@ -12,8 +12,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0ab2d7dfecb3bc44e871cd8a113f29f0, type: 3}
   m_Name: MasterySpriteSet
   m_EditorClassIdentifier: Assembly-CSharp::MasterySpriteSet
-  novice: {fileID: 21300000, guid: 2b25896f3c4153f458240521516f9fc2, type: 3}
-  amateur: {fileID: 21300000, guid: 2b25896f3c4153f458240521516f9fc2, type: 3}
-  pro: {fileID: 21300000, guid: bf977eab3b18e324280c420bd6478ff2, type: 3}
-  veteran: {fileID: 21300000, guid: bf977eab3b18e324280c420bd6478ff2, type: 3}
-  master: {fileID: 21300000, guid: bf977eab3b18e324280c420bd6478ff2, type: 3}
+  novice: {fileID: 21300000, guid: a16557bfb24ebea42a4debb133eb4571, type: 3}
+  amateur: {fileID: 21300000, guid: f4a742fed9e39eb42889ae5216e78567, type: 3}
+  pro: {fileID: 21300000, guid: 3a41132c446f4114fa48f65afb71af9c, type: 3}
+  veteran: {fileID: 21300000, guid: d77c8892186bfd34497c77453682d2d0, type: 3}
+  master: {fileID: 21300000, guid: c229dc61523dbd241a885282f5198b36, type: 3}

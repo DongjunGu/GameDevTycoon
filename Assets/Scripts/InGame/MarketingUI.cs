@@ -105,7 +105,7 @@ public class MarketingUI : MonoBehaviour
             int displayCost = marketingFree ? 0 : cost;
             _slotCosts[i] = displayCost;
             slotPlatformTexts[i].text = name;
-            slotCostTexts[i].text = $"{displayCost:N0}G";
+            slotCostTexts[i].text = $"{displayCost:N0} G";
             var descText = GetSlotDescription(i);
             if (descText != null) descText.text = desc;
             slotButtons[i].interactable = true;

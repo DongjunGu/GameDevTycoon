@@ -23,7 +23,7 @@ using UnityEngine;
 //   fatigueReduce      → GenreFatigueManager 같은 장르 연속 제작 피로도 상승량 -value (c3) ← 구현됨
 //   enhanceCostDiscount→ EmployeeEnhancement 강화비 -value% (b1=5 / a1=10, 합산) ← 구현됨
 //   highSatStatBonus   → EmployeeData 만족도 81+ 시 스탯 배율 +value%p (b3=5 / a4=10, 합산) ← 구현됨
-//   smallScaleSaleBonus→ SalesUI 소규모 프로젝트 매출 +value% (b6) ← 구현됨
+//   smallScaleSaleBonus→ SalesUI 소형 프로젝트 매출 +value% (b6) ← 구현됨
 //   mediumScaleSaleBonus→ SalesUI 중형 프로젝트 매출 +value% (a5) ← 구현됨
 //   largeScaleSaleBonus→ SalesUI 대작 프로젝트 매출 +value% (s7) ← 구현됨
 //   perfectScoreSaleBonus→ SalesUI 평론가 100점 시 매출 +value% (s8) ← 구현됨
@@ -149,7 +149,7 @@ public static class TraitEffectApplier
         => satisfaction >= 81 ? SumEquipped("highSatStatBonus") / 100f : 0f;
 
     // ──────────── 규모별 매출 보너스 (b6 / a5 / s7) ────────────
-    // 소규모(ProjectScale.Small) 프로젝트 매출 bonusSum 에 가산할 값 (5 → 0.05).
+    // 소형(ProjectScale.Small) 프로젝트 매출 bonusSum 에 가산할 값 (5 → 0.05).
     public static float GetSmallScaleSaleBonus() => SumEquipped("smallScaleSaleBonus") / 100f;
     // 중형(ProjectScale.Medium) 프로젝트 매출 bonusSum 에 가산할 값 (5 → 0.05).
     public static float GetMediumScaleSaleBonus() => SumEquipped("mediumScaleSaleBonus") / 100f;
