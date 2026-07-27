@@ -159,6 +159,14 @@ public class DispatchPanelUI : MonoBehaviour
 
         ModalGate.I.Register(this);
         ShowPanelAndBuildList();
+
+        // 온보딩: 튜토리얼 6-1~6-3 — 기획팀장 선택 패널이 열릴 때마다(재접속으로 자연 재오픈된 경우 포함)
+        // 아직 완료 전이면 재생. 두 번째 슬롯(index 1)은 CEO(index 0) 다음의 첫 기획자 후보.
+        if (type == LeaderType.Planner && !OnboardingState.Tutorial6Done
+            && TutorialController.Instance != null && _slots.Count >= 2)
+        {
+            StartCoroutine(TutorialController.Instance.PlayTutorial6(_slots[1].selectButton));
+        }
     }
 
     void ShowPanelAndBuildList()

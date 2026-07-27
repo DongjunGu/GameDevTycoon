@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.Serialization;
@@ -34,6 +35,8 @@ public class ProjectSetupUI : MonoBehaviour
     public TextMeshProUGUI platformValueText; // 선택된 플랫폼명 (미선택 시 unselectedText)
     public TextMeshProUGUI genreValueText;    // 선택된 장르명
     public string unselectedText = "선택하기";
+    public Color detailUnselectedColor = new Color32(0xE9, 0xD0, 0xB1, 0xFF); // 미선택 상태 글자색
+    public Color detailSelectedColor   = new Color32(0xC5, 0x77, 0x6A, 0xFF); // 선택 완료 상태 글자색
 
     [Header("Platform Select Buttons (순서: Mobile/PC/Nintendo/Console)")]
     public Button[] platformButtons;          // PlatformPanel 안 플랫폼 선택 버튼 (인덱스 = ProjectPlatform enum)
@@ -107,6 +110,11 @@ public class ProjectSetupUI : MonoBehaviour
         if (platformButton != null) platformButton.onClick.AddListener(OpenPlatformPanel);
         if (genreButton    != null) genreButton.onClick.AddListener(OpenGenrePanel);
 
+        if (popCategoryButton     != null) { popCategoryButton.onClick.RemoveAllListeners();     popCategoryButton.onClick.AddListener(OnClickPopCategory); }
+        if (masteryCategoryButton != null) { masteryCategoryButton.onClick.RemoveAllListeners(); masteryCategoryButton.onClick.AddListener(OnClickMasteryCategory); }
+        if (popArrowImage     != null) popArrowImage.gameObject.SetActive(false);
+        if (masteryArrowImage != null) masteryArrowImage.gameObject.SetActive(false);
+
         if (startButton != null) { startButton.onClick.RemoveAllListeners(); startButton.onClick.AddListener(OnClickStartDevelopment); }
         if (closeButton != null) { closeButton.onClick.RemoveAllListeners(); closeButton.onClick.AddListener(OnClickClose); }
 
@@ -141,7 +149,7 @@ public class ProjectSetupUI : MonoBehaviour
         GameTimeManager.Instance.StopTime();
         ModalGate.I.Register(this);
 
-        // 새 설정 초기화 — 마지막 선택(로컬 저장)이 있으면 규모/플랫폼/장르 복원, 없으면 소규모+미선택.
+        // 새 설정 초기화 — 마지막 선택(로컬 저장)이 있으면 규모/플랫폼/장르 복원, 없으면 소형+미선택.
         _projectData = new ProjectData { scale = ProjectScale.Small };
         _genreChosen = false;
         _platformChosen = false;
@@ -158,8 +166,16 @@ public class ProjectSetupUI : MonoBehaviour
         UpdateScaleAvailability();
         RefreshScaleHighlight();
         UpdateDevCost();
-        if (platformValueText != null) platformValueText.text = _platformChosen ? _projectData.PlatformToString() : unselectedText;
-        if (genreValueText    != null) genreValueText.text    = _genreChosen    ? _projectData.GenreToString()    : unselectedText;
+        if (platformValueText != null)
+        {
+            platformValueText.text  = _platformChosen ? _projectData.PlatformToString() : unselectedText;
+            platformValueText.color = _platformChosen ? detailSelectedColor : detailUnselectedColor;
+        }
+        if (genreValueText != null)
+        {
+            genreValueText.text  = _genreChosen ? _projectData.GenreToString() : unselectedText;
+            genreValueText.color = _genreChosen ? detailSelectedColor : detailUnselectedColor;
+        }
     }
 
     // StageManager 단계에 따라 규모 버튼 잠금(1단계=소, 2단계=중까지, 3단계 이상=대까지). 잠긴 규모가 선택돼 있으면 사용 가능한 최대 규모로 낮춤.
@@ -286,6 +302,7 @@ public class ProjectSetupUI : MonoBehaviour
         RefreshPlatformHighlight();
         RefreshMain();
         ShowOnly(mainPanel);
+        TutorialController.Instance?.NotifyProjectSetupSelection(_platformChosen, _genreChosen);
     }
 
     // ── 장르 선택 (genrePanel 의 버튼 OnClick) → 메인 복귀 ──
@@ -301,6 +318,7 @@ public class ProjectSetupUI : MonoBehaviour
         UpdateGenreButtonLabels();
         RefreshMain();
         ShowOnly(mainPanel);
+        TutorialController.Instance?.NotifyProjectSetupSelection(_platformChosen, _genreChosen);
     }
 
     // GenreBtn1~5 (Left/Right 10개) 코드 배선 — 인스펙터 persistent call 없이 Start() 에서 일괄 연결.
@@ -325,7 +343,7 @@ public class ProjectSetupUI : MonoBehaviour
         int cost = CurrentDevCost;
         if (!MoneyManager.Instance.CanAfford(cost))
         {
-            AlertUI.Instance.ShowMoney($"개발금이 부족합니다.\n필요: {cost:N0}G / 보유: {MoneyManager.Instance.Gold:N0}G", null, null, bypassGate: true);
+            AlertUI.Instance.ShowMoney($"개발금이 부족합니다.\n필요: {cost:N0} G / 보유: {MoneyManager.Instance.Gold:N0} G", null, null, bypassGate: true);
             return;
         }
 
@@ -422,7 +440,7 @@ public class ProjectSetupUI : MonoBehaviour
     }
 
     // ══════════════════════════════════════════
-    // 장르 패널 인기도/피로도 — GenreBtnN 자식(PopPnael/FatPanel) 이미지 활성화 방식
+    // 장르 패널 인기도/피로도 — GenreBtnN 자식(PopPanel/FatPanel) 이미지 활성화 방식
     // ══════════════════════════════════════════
     [Header("Genre Buttons - Click")]
     public Button genreButtonRPG;
@@ -438,6 +456,17 @@ public class ProjectSetupUI : MonoBehaviour
 
     [Header("Genre Buttons - Mastery (MasteryPanel/MasteryImage 공용 SO)")]
     public MasterySpriteSet masterySpriteSet;
+
+    [Header("Genre Sort (categoryPanel/popCategory, masteryCategory)")]
+    public Button popCategoryButton;
+    public Button masteryCategoryButton;
+    public Image  popArrowImage;
+    public Image  masteryArrowImage;
+
+    // 정렬 상태: 0=기본 순서 / 1=내림차순 / 2=오름차순. 두 카테고리는 상호 배타 —
+    // 한쪽을 누르면 다른 쪽은 기본 상태(0)로 리셋(리스트 하나에 동시에 두 기준으로 정렬할 수 없으므로).
+    int _popSortState;
+    int _masterySortState;
 
     void UpdateGenreButtonLabels()
     {
@@ -455,9 +484,11 @@ public class ProjectSetupUI : MonoBehaviour
         RefreshGenreIndicators(genreButtonVisualNovel,       ProjectGenre.VisualNovel);
         RefreshGenreIndicators(genreButtonSports,            ProjectGenre.Sports);
         RefreshGenreIndicators(genreButtonPuzzle,            ProjectGenre.Puzzle);
+
+        ApplyGenreSort(); // 현재 정렬 상태를 최신 인기도/숙련도 값으로 다시 적용(패널 열 때마다 갱신)
     }
 
-    // FatPanel/FatImage1~3 는 피로도만큼, PopPnael/defaultImage(x3)의 자식 FireImage 는 인기도만큼 누적 활성화.
+    // FatPanel/FatImage1~3 는 피로도만큼, PopPanel/defaultImage(x3)의 자식 FireImage 는 인기도만큼 누적 활성화.
     // defaultImage 자체는 항상 표시되는 기본 이미지라 건드리지 않음.
     void RefreshGenreIndicators(Button genreButton, ProjectGenre genre)
     {
@@ -474,7 +505,7 @@ public class ProjectSetupUI : MonoBehaviour
                 if (img != null) img.gameObject.SetActive(fatigue >= i);
             }
 
-        var popPanel = genreButton.transform.Find("PopPnael");
+        var popPanel = genreButton.transform.Find("PopPanel");
         if (popPanel != null)
             for (int i = 0; i < popPanel.childCount; i++)
             {
@@ -520,4 +551,88 @@ public class ProjectSetupUI : MonoBehaviour
         var img = b.GetComponent<Image>();
         if (img != null) _genreNormalSprite[b] = img.sprite;
     }
+
+    // ══════════════════════════════════════════
+    // 장르 정렬 (categoryPanel/popCategory, masteryCategory)
+    // ══════════════════════════════════════════
+
+    // popCategory 클릭 — 기본→내림차순→오름차순→기본 순환. masteryCategory 쪽은 상호 배타로 리셋.
+    public void OnClickPopCategory()
+    {
+        _popSortState = (_popSortState + 1) % 3;
+        _masterySortState = 0;
+        ApplyArrowState(masteryArrowImage, 0);
+        ApplyArrowState(popArrowImage, _popSortState);
+        ApplyGenreSort();
+    }
+
+    // masteryCategory 클릭 — popCategory 와 동일한 3단 순환.
+    public void OnClickMasteryCategory()
+    {
+        _masterySortState = (_masterySortState + 1) % 3;
+        _popSortState = 0;
+        ApplyArrowState(popArrowImage, 0);
+        ApplyArrowState(masteryArrowImage, _masterySortState);
+        ApplyGenreSort();
+    }
+
+    // 화살표 표시 — state 0: 비활성 / 1: 활성(기본 방향, 내림차순) / 2: 활성 + Y축 반전(오름차순).
+    // 능력치 화살표(DispatchPanelUI.SetStatArrow)와 동일한 magY 반전 패턴 — 원래 크기(절대값)만 유지한 채 부호만 뒤집는다.
+    void ApplyArrowState(Image arrow, int state)
+    {
+        if (arrow == null) return;
+        arrow.gameObject.SetActive(state != 0);
+
+        var rt = arrow.rectTransform;
+        var s = rt.localScale;
+        float magY = Mathf.Abs(s.y);
+        if (magY < 0.0001f) magY = 1f;
+        rt.localScale = new Vector3(s.x, state == 2 ? magY : -magY, s.z);
+    }
+
+    // GenreBtn1~10과 각 버튼이 나타내는 장르 — WireGenreButton()에서 배선한 순서(=기본 정렬)와 동일하게 유지.
+    List<(Button btn, ProjectGenre genre)> GenreButtonPairs() => new()
+    {
+        (genreButtonRPG,               ProjectGenre.RPG),
+        (genreButtonFPS,                ProjectGenre.FPS),
+        (genreButtonArcade,             ProjectGenre.Arcade),
+        (genreButtonHealingSimulation,  ProjectGenre.HealingSimulation),
+        (genreButtonHorror,             ProjectGenre.Horror),
+        (genreButtonIdle,               ProjectGenre.Idle),
+        (genreButtonRTS,                ProjectGenre.RTS),
+        (genreButtonVisualNovel,        ProjectGenre.VisualNovel),
+        (genreButtonSports,             ProjectGenre.Sports),
+        (genreButtonPuzzle,             ProjectGenre.Puzzle),
+    };
+
+    // 현재 정렬 상태(_popSortState/_masterySortState)에 맞춰 GenreBtn1~10의 sibling index를 재배치.
+    // 둘 다 0(기본)이면 원래 선언 순서 그대로 복원. ScrollView/Content가 sibling 순서로 배치하므로
+    // SetSiblingIndex만으로 화면상 순서가 바뀐다(버튼 자체는 이동/재생성하지 않음).
+    void ApplyGenreSort()
+    {
+        var list = GenreButtonPairs();
+
+        IEnumerable<(Button btn, ProjectGenre genre)> ordered = list;
+        if (_popSortState == 1)
+            ordered = list.OrderByDescending(e => PopularityOf(e.genre));
+        else if (_popSortState == 2)
+            ordered = list.OrderBy(e => PopularityOf(e.genre));
+        else if (_masterySortState == 1)
+            ordered = list.OrderByDescending(e => (int)MasteryOf(e.genre));
+        else if (_masterySortState == 2)
+            ordered = list.OrderBy(e => (int)MasteryOf(e.genre));
+
+        int i = 0;
+        foreach (var e in ordered)
+        {
+            if (e.btn != null) e.btn.transform.SetSiblingIndex(i);
+            i++;
+        }
+    }
+
+    static int PopularityOf(ProjectGenre genre) =>
+        GenrePopularityManager.Instance != null ? GenrePopularityManager.Instance.GetPopularity(genre) : 1;
+
+    static MasteryTier MasteryOf(ProjectGenre genre) =>
+        MasteryManager.Instance != null ? MasteryManager.Instance.GetTier(genre) : MasteryTier.Novice;
 }

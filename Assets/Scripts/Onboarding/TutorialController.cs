@@ -9,7 +9,12 @@ using UnityEngine.UI;
 //      → 직원 버튼 강조 → (클릭→서브 열림) → 채용하기 버튼 강조
 //      → (클릭→TierPanel 열림) → tier1 버튼 강조(1단계만 선택 가능) → (클릭) → confirmBtn 강조 → (클릭)
 //      → 몇 주 뒤 ConfirmHirePanel(3-1~3-6) → 채용 확정 시 튜토리얼 한정 보너스 라운드(HiringUI)로 패널
-//      안 닫고 자동 다음 후보 전환 → 4-1 대사 → 완료.
+//      안 닫고 자동 다음 후보 전환 → 4-1/4-2 대사 → 두 번째(진짜) 채용 확정 2초 후 → 5-1 대사 → 5-2 대사 +
+//      메뉴→ProjectSetupMenuBtn→projectStartBtn 순차 강조 → (클릭→SummaryPanel 열림) → 5-3 대사(강조 없음,
+//      플랫폼/장르는 유저가 직접 SummaryPanel/GenrePanel/PlatformPanel에서 선택) → 둘 다 선택되면(ProjectSetupUI가
+//      TutorialController.NotifyProjectSetupSelection 호출) → 5-4 대사 + SummaryPanel/ConfirmBtn 강조(클릭
+//      →개발 시작) → 자동으로 열리는 기획팀장 선택(DispatchPanelUI)에서 6-1 대사 + 두 번째 슬롯(비 CEO
+//      직원) 강조(클릭) → 6-2 대사(강조 유지, planningPanel) → 6-3 dispatchConfirmBtn 강조(클릭) → 완료.
 //      → 시간이 다시 흐르는 순간(EndDimTimeStop) 비서는 GoToDesk()로 desk_03에 즉시 복귀.
 //
 // 강조(dim 스포트라이트) 자체는 TutorialHighlighter 공용 컴포넌트가 담당 — 이 클래스는 "어떤 순서로,
@@ -93,8 +98,52 @@ public class TutorialController : MonoBehaviour
     public string step4_2 = "4-2";
     [Tooltip("TutorialPanel의 RectTransform.anchoredPosition — 4-2 표시 위치")]
     public Vector2 step4_2Position;
-    [Tooltip("ConfirmHirePanel/nextCandidateButton — 4-2 대사 뒤 강조(클릭 대기, 후보 넘기기 화살표)")]
-    public Button nextCandidateButton;
+    [Tooltip("ConfirmHirePanel/PrevCandidateArrow(HiringUI.prevCandidateButton) — 4-2 대사 뒤 강조(클릭 대기, 후보 넘기기 화살표). 강조 사각형은 PrevCandidateArrowImage 자리를 감싸는 버튼 루트 기준")]
+    public Button prevCandidateButton;
+
+    [Header("5-1 (두 번째(진짜) 채용 확정 2초 후 — HiringUI.DoHire가 PlayTutorial5_1() 호출)")]
+    [Tooltip("TutorialDialog 차트의 stepGroup 값 — 사무실이 좁다는 소감 대사(강조 없음, 2줄)")]
+    public string step5_1 = "5-1";
+    [Tooltip("TutorialPanel의 RectTransform.anchoredPosition — 5-1 표시 위치")]
+    public Vector2 step5_1Position;
+
+    [Header("5-2 (5-1 대사 직후 이어서 — 프로젝트 시작 유도, PlayTutorial5_1() 안에서 계속 재생)")]
+    [Tooltip("TutorialDialog 차트의 stepGroup 값 — 게임 개발 시작 유도 대사(강조 없음)")]
+    public string step5_2 = "5-2";
+    [Tooltip("TutorialPanel의 RectTransform.anchoredPosition — 5-2 표시 위치")]
+    public Vector2 step5_2Position;
+    [Tooltip("ProjectSetupMenuBtn(TopMenuContainer) — 5-2 대사 뒤 강조(menuButton 클릭으로 메뉴 펼친 다음)")]
+    public Button projectSetupButton;
+    [Tooltip("projectStartBtn — projectSetupButton 강조 다음, 클릭 대기(실제 프로젝트 시작 버튼)")]
+    public Button projectStartButton;
+
+    [Header("5-3 (projectStartBtn 클릭 직후 — SummaryPanel(ProjectSetupUI.mainPanel)이 막 열린 상태, 대사만)")]
+    [Tooltip("TutorialDialog 차트의 stepGroup 값 — 소형+플랫폼/장르 직접 골라보라는 안내(강조 없음, 2줄)")]
+    public string step5_3 = "5-3";
+    [Tooltip("TutorialPanel의 RectTransform.anchoredPosition — 5-3 표시 위치")]
+    public Vector2 step5_3Position;
+
+    [Header("5-4 (플랫폼+장르 둘 다 선택된 직후 — ProjectSetupUI가 NotifyProjectSetupSelection() 호출)")]
+    [Tooltip("TutorialDialog 차트의 stepGroup 값 — 선택 칭찬 + 시작 유도 대사(강조 없음)")]
+    public string step5_4 = "5-4";
+    [Tooltip("TutorialPanel의 RectTransform.anchoredPosition — 5-4 표시 위치")]
+    public Vector2 step5_4Position;
+    [Tooltip("SummaryPanel/ConfirmBtn(ProjectSetupUI.startButton) — 5-4 대사 뒤 강조, 클릭 대기(실제 개발 시작 버튼)")]
+    public Button summaryConfirmButton;
+
+    [Header("6-1~6-3 (기획팀장 선택 — DispatchPanelUI.OpenLeaderInternal이 Planner 타입 첫 오픈 시 PlayTutorial6() 호출)")]
+    [Tooltip("TutorialDialog 차트의 stepGroup 값 — 직원 실력 확인 유도 대사(강조 없음)")]
+    public string step6_1 = "6-1";
+    [Tooltip("TutorialPanel의 RectTransform.anchoredPosition — 6-1 표시 위치")]
+    public Vector2 step6_1Position;
+    [Tooltip("TutorialDialog 차트의 stepGroup 값 — 팀장/능력치 설명 대사(강조 유지, planningPanel 위에 표시)")]
+    public string step6_2 = "6-2";
+    [Tooltip("TutorialPanel의 RectTransform.anchoredPosition — 6-2 표시 위치")]
+    public Vector2 step6_2Position;
+    [Tooltip("DispatchRightPanel/ChildPanel/AbilityPanel/planningPanel — 6-2 대사 뒤 강조 유지(대사가 뜨는 동안도)")]
+    public RectTransform planningPanel;
+    [Tooltip("DispatchPanel/.../dispatchConfirmBtn(DispatchPanelUI.confirmButton) — 6-3 강조, 클릭 대기(대사 없음)")]
+    public Button dispatchConfirmButton;
 
     [Header("연출 (TutorialHighlighter 로 전달됨)")]
     [Range(0f, 1f)] public float dimAlpha = 0.8f;
@@ -131,13 +180,24 @@ public class TutorialController : MonoBehaviour
             && RunStateManager.Instance != null && RunStateManager.Instance.IsTutorial;
         // 3-1/3-2는 IsTutorial과 무관하게(몇 주 뒤 다른 세션에서 재접속했을 수도 있음) 아직 안 했으면 대기.
         bool needStep3 = !OnboardingState.Tutorial3Done;
+        // 5-1~5-4는 이미 직원 2명이 서버에 커밋된 뒤라(3-1~4-2처럼 "재접속하면 자연히 리셋"되는 상태가
+        // 아님) HiringUI.DoHire가 무장해둔 pending 플래그로만 재개 여부를 판단 — 완료 전 재접속이면
+        // 처음(5-1)부터 다시 재생한다(3-1~4-2와 동일한 all-or-nothing 방식, 플랫폼/장르 선택도 로컬에
+        // 저장 안 되므로 어차피 다시 골라야 함).
+        bool needStep5 = OnboardingState.Tutorial5Pending && !OnboardingState.Tutorial5Done;
+        // 6-1~6-3은 3-1~4-2와 동일 이유로 pending 불필요 — DevelopmentManager가 pendingLeaderSelect를
+        // 자체 영속화해 재접속 시 기획팀장 선택 패널을 자연히 다시 열어준다. 그때 DispatchPanelUI가
+        // Instance.PlayTutorial6()을 직접 호출하므로, 여기서는 완료 여부만 보고 대기 상태를 유지하면 된다.
+        bool needStep6 = !OnboardingState.Tutorial6Done;
 
-        if (!needStep1 && !needStep3) { Destroy(gameObject); return; }
+        if (!needStep1 && !needStep3 && !needStep5 && !needStep6) { Destroy(gameObject); return; }
 
         Instance = this;
         if (needStep1) StartCoroutine(Run());
-        // needStep3만 남았으면 여기서 아무것도 안 하고 대기 — HiringUI.ShowConfirmDirect가
-        // Instance.PlayTutorial3()을 채용 확정 화면이 열릴 때 직접 호출한다.
+        else if (needStep5) StartCoroutine(PlayTutorial5_1());
+        // needStep3/needStep6만 남았으면 여기서 아무것도 안 하고 대기 — HiringUI.ShowConfirmDirect가
+        // Instance.PlayTutorial3()을, DispatchPanelUI가 Instance.PlayTutorial6()을 각각 패널이 열릴 때
+        // 직접 호출한다.
     }
 
     IEnumerator Run()
@@ -278,11 +338,111 @@ public class TutorialController : MonoBehaviour
         if (TutorialPanelUI.Instance != null)
             yield return TutorialPanelUI.Instance.PlayStepGroup(step4_2, step4_2Position);
 
-        // 4-2 강조: NextCandidateArrow 강조, 클릭 대기 — 대표님이 직접 후보를 넘겨보게. 대사 없음.
-        yield return _highlighter.Highlight(nextCandidateButton);
+        // 4-2 강조: PrevCandidateArrow(PrevCandidateArrowImage) 강조, 클릭 대기 — 대표님이 직접 후보를
+        // 넘겨보게. 대사 없음.
+        yield return _highlighter.Highlight(prevCandidateButton);
 
         yield return _highlighter.Hide();
-        Destroy(gameObject); // 1-1~4-2 전부 끝 — 더 이상 대기할 스텝 없음
+        // ⚠️ 여기서 Destroy 안 함 — 두 번째(진짜) 채용이 아직 확정 전이다. 확정 2초 후 HiringUI.DoHire가
+        // Instance.PlayTutorial5_1()을 외부에서 호출하므로 이 컴포넌트가 계속 살아있어야 함.
+    }
+
+    // ── 5-1/5-2 (HiringUI.DoHire — 튜토리얼 두 번째(진짜) 채용이 확정되고 2초 뒤 호출) ──────────
+    public IEnumerator PlayTutorial5_1()
+    {
+        EnsureHighlighter();
+        BeginDimTimeStop(); // ConfirmHirePanel이 이미 닫힌 뒤라 이번엔 직접 시간 정지
+        yield return _highlighter.Show();
+
+        if (TutorialPanelUI.Instance != null)
+            yield return TutorialPanelUI.Instance.PlayStepGroup(step5_1, step5_1Position);
+
+        // 5-2: 이어서 프로젝트 시작 유도 대사 + 메뉴 → ProjectSetupMenuBtn → projectStartBtn 순차 강조.
+        if (TutorialPanelUI.Instance != null)
+            yield return TutorialPanelUI.Instance.PlayStepGroup(step5_2, step5_2Position);
+
+        yield return _highlighter.Highlight(menuButton);
+        yield return new WaitForSecondsRealtime(settleDelay); // 메뉴 펼침
+        yield return _highlighter.Highlight(projectSetupButton);
+        yield return new WaitForSecondsRealtime(settleDelay); // ProjectSetupPanel 펼침
+        yield return _highlighter.Highlight(projectStartButton);
+        // projectStartBtn 클릭으로 ProjectSetupUI.OnClickProjectStart()가 이미 동기 실행돼 SummaryPanel이
+        // 열렸다 — 그 안부터는 ProjectSetupUI 자신이 StopTime/StartTime을 쥐고 있으므로(모달 자체 시간정지)
+        // 우리 쪽 시간정지는 여기서 끝내도 된다(계속 멈춰있음).
+        EndDimTimeStop();
+
+        // 5-3: SummaryPanel이 막 열린 상태 — 이전(메뉴 안) 강조 위치와는 완전히 다른 화면이라 슬라이드 없이
+        // 새로 나타나게 리셋 후, 강조 없이 대사만(플랫폼/장르 직접 골라보라는 안내).
+        _highlighter.CollapseAndResetOrigin();
+        if (TutorialPanelUI.Instance != null)
+            yield return TutorialPanelUI.Instance.PlayStepGroup(step5_3, step5_3Position);
+
+        // dim 해제 — 플랫폼/장르는 유저가 SummaryPanel/GenrePanel/PlatformPanel에서 직접 골라야 하니 자유 조작.
+        yield return _highlighter.Hide();
+        _waitingForProjectSetupChoice = true;
+        // ⚠️ 여기서 Destroy 안 함 — 플랫폼+장르가 둘 다 선택되면 ProjectSetupUI가
+        // NotifyProjectSetupSelection()을 외부에서 호출하고, 그때 PlayTutorial5_4()가 이어서 실행된다.
+    }
+
+    bool _waitingForProjectSetupChoice;
+
+    // ProjectSetupUI.OnClickPlatform/OnClickGenre 에서 선택이 바뀔 때마다 호출됨 — 5-3 대기 중이고
+    // 플랫폼+장르가 둘 다 선택된 순간에만 5-4로 이어간다(그 외엔 아무것도 안 함, 튜토리얼 밖 일반 플레이 포함).
+    public void NotifyProjectSetupSelection(bool platformChosen, bool genreChosen)
+    {
+        if (!_waitingForProjectSetupChoice) return;
+        if (!platformChosen || !genreChosen) return;
+        _waitingForProjectSetupChoice = false;
+        StartCoroutine(PlayTutorial5_4());
+    }
+
+    // ── 5-4 (플랫폼+장르 둘 다 선택된 직후 — NotifyProjectSetupSelection이 호출) ──────────────
+    IEnumerator PlayTutorial5_4()
+    {
+        EnsureHighlighter();
+        yield return _highlighter.Show(); // ProjectSetupUI가 이미 시간 정지 중이라 여긴 별도 시간정지 불필요
+
+        if (TutorialPanelUI.Instance != null)
+            yield return TutorialPanelUI.Instance.PlayStepGroup(step5_4, step5_4Position);
+
+        // SummaryPanel/ConfirmBtn 강조, 클릭 대기(실제 개발 시작).
+        yield return _highlighter.Highlight(summaryConfirmButton);
+
+        yield return _highlighter.Hide();
+        OnboardingState.MarkTutorial5Done();
+        // ⚠️ 여기서 Destroy 안 함 — 개발 시작 직후 자동으로 열리는 기획팀장 선택(DispatchPanelUI)에서
+        // 이어지는 6-1~6-3이 남아있다. DispatchPanelUI.OpenLeaderInternal이 Instance.PlayTutorial6()을
+        // 외부에서 호출하므로 이 컴포넌트가 계속 살아있어야 함.
+    }
+
+    // ── 6-1~6-3 (DispatchPanelUI.OpenLeaderInternal — 기획팀장 선택 패널이 Planner 타입으로 열릴 때 호출) ──
+    public IEnumerator PlayTutorial6(Button secondSlotButton)
+    {
+        EnsureHighlighter();
+        // DispatchPanelUI가 패널을 열면서 이미 GameTimeManager.StopTime()을 호출했으므로(모달 자체 시간정지)
+        // 여기서 별도 시간정지는 불필요.
+        yield return _highlighter.Show();
+
+        if (TutorialPanelUI.Instance != null)
+            yield return TutorialPanelUI.Instance.PlayStepGroup(step6_1, step6_1Position);
+
+        // 6-1 강조: 두 번째 슬롯(CEO가 아닌 직원) 강조, 클릭 대기.
+        yield return _highlighter.Highlight(secondSlotButton);
+
+        // 6-2: planningPanel 강조를 유지한 채로 대사 표시(같은 패널 안이라 슬롯 자리에서 자연스럽게 슬라이드).
+        yield return _highlighter.BeginHighlight(planningPanel);
+        if (TutorialPanelUI.Instance != null)
+            yield return TutorialPanelUI.Instance.PlayStepGroup(step6_2, step6_2Position);
+
+        // 6-3: dispatchConfirmBtn 강조, 클릭 대기(대사 없음). BeginHighlight로 계속 돌던 pulse를 먼저
+        // 접어야(CollapseAndResetOrigin) 새 Highlight의 pulse와 겹쳐 구멍이 두 자리에서 흔들리지 않는다
+        // (3-4→3-5 전환과 동일한 이유).
+        _highlighter.CollapseAndResetOrigin();
+        yield return _highlighter.Highlight(dispatchConfirmButton);
+
+        yield return _highlighter.Hide();
+        OnboardingState.MarkTutorial6Done();
+        Destroy(gameObject); // 1-1~6-3 전부 끝 — 온보딩 튜토리얼 전체 완료
     }
 
     // ── dim 동안 시간 정지 (패널 켜는 것과 동일) ──────────────────────────────

@@ -2045,7 +2045,7 @@ public class DevelopmentManager : MonoBehaviour
                 break;
             }
 
-            case 3: // 버그 — 규모별 RANDBETWEEN (소규모 1~4 / 중형 2~6 / 대작 4~8)
+            case 3: // 버그 — 규모별 RANDBETWEEN (소형 1~4 / 중형 2~6 / 대작 4~8)
                 int bugRaw = ProjectSetupUI.SelectedScale switch
                 {
                     ProjectScale.Small  => UnityEngine.Random.Range(1, 5), // 1~4

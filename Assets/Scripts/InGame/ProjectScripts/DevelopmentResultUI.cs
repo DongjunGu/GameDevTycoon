@@ -59,7 +59,7 @@ public class DevelopmentResultUI : MonoBehaviour
     public string LastProjectName => _lastProjectName;
     string GetScaleString(ProjectScale scale) => scale switch
     {
-        ProjectScale.Small => "소규모",
+        ProjectScale.Small => "소형",
         ProjectScale.Medium => "중형",
         ProjectScale.Large => "대형",
         _ => ""

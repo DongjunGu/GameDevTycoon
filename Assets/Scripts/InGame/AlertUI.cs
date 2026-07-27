@@ -178,7 +178,7 @@ public class AlertUI : MonoBehaviour
                     bool hasAmount = entry.goldAmount.HasValue;
                     moneyAmountRoot.SetActive(hasAmount);
                     if (hasAmount && moneyAmountText != null)
-                        moneyAmountText.text = $"{entry.goldAmount.Value:N0}G";
+                        moneyAmountText.text = $"{entry.goldAmount.Value:N0} G";
                 }
                 EnsureTopMost(moneyPanel);
                 moneyPanel.SetActive(true);

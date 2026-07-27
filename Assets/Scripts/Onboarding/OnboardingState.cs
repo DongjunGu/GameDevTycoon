@@ -11,6 +11,14 @@ public static class OnboardingState
     const string KEY_PROJ_TUT   = "onboarding_project_tutorial_done";    // 프로젝트 튜토리얼 완료
     const string KEY_PROJ_PEND  = "onboarding_project_tutorial_pending"; // 프로젝트 튜토리얼 카운트다운(-1 없음/0 실행대기/>0 남은주차)
     const string KEY_TUT3       = "onboarding_tutorial3_done";  // 튜토리얼 3-1(ConfirmHirePanel 첫 노출) 완료
+    const string KEY_TUT5       = "onboarding_tutorial5_done";  // 튜토리얼 5-1~5-4 완료
+    // 5-1~5-4 무장(진행 중, 아직 미완료) 여부 — 이 구간은 3-1~4-2와 달리 직원 2명이 이미 서버에 커밋된
+    // 뒤라 재접속해도 게임 상태가 자연히 리셋되지 않는다. pending 없이는 완료 전 재접속 시 통째로 유실됨.
+    const string KEY_TUT5_PEND  = "onboarding_tutorial5_pending";
+    // 튜토리얼 6-1~6-3 완료 — 기획팀장 선택(DispatchPanelUI, Planner). pending 불필요: DevelopmentManager가
+    // pendingLeaderSelect 를 자체 영속화해 재접속 시 이 패널을 자연히 다시 열어주므로(3-1~4-2와 동일한 이유),
+    // Tutorial6Done 이 false인 동안엔 패널이 열릴 때마다 매번 6-1부터 재생하면 된다.
+    const string KEY_TUT6       = "onboarding_tutorial6_done";
 
     // 튜토리얼 dim 이 떠 있는 동안 true (세션 전용, 저장 안 함).
     // 시간 정지 중에도 메뉴 버튼을 숨기지 않도록 MenuController 가 참조.
@@ -69,6 +77,34 @@ public static class OnboardingState
         PlayerPrefs.Save();
     }
 
+    // 튜토리얼 5-1~5-4 — 두 번째(진짜) 채용이 확정되고 2초 뒤 시작, 프로젝트 개발 시작 확정까지.
+    public static bool Tutorial5Done => PlayerPrefs.GetInt(KEY_TUT5, 0) == 1;
+    public static void MarkTutorial5Done()
+    {
+        PlayerPrefs.SetInt(KEY_TUT5, 1);
+        PlayerPrefs.DeleteKey(KEY_TUT5_PEND); // 완료됐으니 무장 해제(이미 done 체크로 걸러지지만 위생상 정리)
+        PlayerPrefs.Save();
+    }
+
+    // 두 번째(진짜) 채용 확정 시 HiringUI.DoHire가 호출 — 5-1 재생 시작 "전"에 무장해 둬야 그 사이에
+    // 재접속해도(2초 지연 포함) 다음 진입 시 TutorialController.Start()가 5-1부터 재개할 수 있다.
+    public static bool Tutorial5Pending => PlayerPrefs.GetInt(KEY_TUT5_PEND, 0) == 1;
+    public static void ArmTutorial5()
+    {
+        if (Tutorial5Done) return;
+        PlayerPrefs.SetInt(KEY_TUT5_PEND, 1);
+        PlayerPrefs.Save();
+    }
+
+    // 튜토리얼 6-1~6-3 — 기획팀장 선택 패널(DispatchPanelUI, Planner)이 처음 열릴 때(재접속 시 자연
+    // 재오픈 포함) 마다 재생하다가, 실제로 팀장을 확정하면 1회만 마크.
+    public static bool Tutorial6Done => PlayerPrefs.GetInt(KEY_TUT6, 0) == 1;
+    public static void MarkTutorial6Done()
+    {
+        PlayerPrefs.SetInt(KEY_TUT6, 1);
+        PlayerPrefs.Save();
+    }
+
     // 테스트용 — 온보딩 재노출 (TestResetBtn 등에서 빌드에서도 호출 가능하도록 UNITY_EDITOR 가드 제거)
     public static void ResetAll()
     {
@@ -78,6 +114,9 @@ public static class OnboardingState
         PlayerPrefs.DeleteKey(KEY_PROJ_TUT);
         PlayerPrefs.DeleteKey(KEY_PROJ_PEND);
         PlayerPrefs.DeleteKey(KEY_TUT3);
+        PlayerPrefs.DeleteKey(KEY_TUT5);
+        PlayerPrefs.DeleteKey(KEY_TUT5_PEND);
+        PlayerPrefs.DeleteKey(KEY_TUT6);
         PlayerPrefs.Save();
         Debug.Log("[Onboarding] 플래그 리셋 — 다음 진입 시 컷씬+튜토리얼 재노출");
     }

@@ -57,7 +57,7 @@ public class LoanUI : MonoBehaviour
         int dueYear = GameTimeManager.Instance.Year + 1;
 
         ConfirmUI.Instance.Show(
-            $"{amount:N0}G 대출\n이자율: {rate:F0}% → 상환금액: {repayAmount:N0}G\n만기: {dueYear}년 {GameTimeManager.Instance.Month}월 {GameTimeManager.Instance.Week}주",
+            $"{amount:N0} G 대출\n이자율: {rate:F0}% → 상환금액: {repayAmount:N0} G\n만기: {dueYear}년 {GameTimeManager.Instance.Month}월 {GameTimeManager.Instance.Week}주",
             onConfirm: () =>
             {
                 // 대출금 입금(AddGold)은 SaveLoan 서버 콜백 이후라 비동기 — 입금 완료 후에야
@@ -82,13 +82,13 @@ public class LoanUI : MonoBehaviour
             int availableAmount = LoanManager.LoanAmounts[loanLevel - 1];
             int repayAmount = LoanManager.Instance.CalcRepayAmount(availableAmount);
             float rate = LoanManager.Instance.interestRate * 100f;
-            activeLoanText.text = $"현재 대출 없음\n현재 {availableAmount:N0}G 대출 가능합니다.\n(이자율 {rate:F0}% / 상환 {repayAmount:N0}G)";
+            activeLoanText.text = $"현재 대출 없음\n현재 {availableAmount:N0} G 대출 가능합니다.\n(이자율 {rate:F0}% / 상환 {repayAmount:N0} G)";
             return;
         }
 
         string text = "현재 대출 현황\n";
         foreach (var loan in loans)
-            text += $"{loan.amount:N0}G → 상환 {loan.repayAmount:N0}G\n(만기: {loan.year}년 {loan.month}월 {loan.week}주)\n";
+            text += $"{loan.amount:N0} G → 상환 {loan.repayAmount:N0} G\n(만기: {loan.year}년 {loan.month}월 {loan.week}주)\n";
 
         activeLoanText.text = text;
     }
