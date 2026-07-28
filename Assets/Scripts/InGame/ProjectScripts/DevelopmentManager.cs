@@ -1350,8 +1350,9 @@ public class DevelopmentManager : MonoBehaviour
     // 4회차 조준 선택(유저 UI에서 호출) — U 범위 결정 → ds/회차점수 계산 → 정산/저장 → 4회차 연출 재생까지 이어감.
     public void SelectRound4Aim(LeaderScoreAim aim)
     {
+        Debug.Log($"[DevelopmentManager] SelectRound4Aim({aim}) 호출됨 — _pendingRound4={(_pendingRound4 != null ? "존재" : "NULL")}");
         var ctx = _pendingRound4;
-        if (ctx == null) return;
+        if (ctx == null) { Debug.LogWarning("[DevelopmentManager] SelectRound4Aim: _pendingRound4가 null이라 아무 것도 안 하고 리턴 — 이미 소비됐거나 아직 준비 안 됨"); return; }
         _pendingRound4 = null;
 
         (int uMin, int uMax) = GetAimURange(aim);

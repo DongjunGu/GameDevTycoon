@@ -62,6 +62,7 @@ public class LeaderScoreAimButtons : MonoBehaviour
 
     void Select(LeaderScoreAim aim)
     {
+        Debug.Log($"[LeaderScoreAimButtons] Select({aim}) 호출됨 — DevelopmentManager.Instance={(DevelopmentManager.Instance != null)}");
         HideButtons();
         DevelopmentManager.Instance.SelectRound4Aim(aim);
     }

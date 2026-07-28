@@ -27,6 +27,10 @@ public class TutorialHighlighter : MonoBehaviour
     public float highlightPulseAmplitude = 6f;
     [Tooltip("하이라이트가 이전 대상 위치에서 다음 대상 위치로 슬라이드 이동하는 시간(초)")]
     public float holeMoveDuration = 0.15f;
+    [Tooltip("새 대상이 처음 나타날 때(첫 강조 또는 CollapseAndResetOrigin 직후) 구멍이 대상보다 이 값(px)만큼 더 크게 벌어진 채로 시작해서 사방에서 좁혀지듯 대상 크기로 줄어든다. ⚠️ 너무 크면 시작 구멍이 화면 대부분(직전 강조 위치 포함)을 덮어버려서, 대상과 완전히 다른 위치라도 마치 직전 위치에서 슬라이드해온 것처럼 보인다 — 대상 크기 대비 적당히 작게 유지할 것")]
+    public float appearExpandPadding = 70f;
+    [Tooltip("위 '사방에서 좁혀지는' 등장 연출의 소요 시간(초) — holeMoveDuration과 별개로 조절 가능")]
+    public float appearDuration = 0.28f;
     [Tooltip("게임 UI/ModalBlocker 보다 위에 그려지도록 하는 dim Canvas sortingOrder")]
     public int dimSortingOrder = 200;
 
@@ -34,27 +38,85 @@ public class TutorialHighlighter : MonoBehaviour
     RectTransform _dimRoot;
     readonly List<Image> _tilePool = new(); // 구멍(1개든 여러 개든) 주변을 덮는 dim 타일 풀 — 필요한 만큼만 활성화
     Coroutine _pulse;
+
+    // _pulse는 여러 PlayTutorialX() 코루틴이 겹쳐 돌 때(예: 5-4의 Hide 흐름과 6-1의 Show/Highlight 흐름이
+    // 같은 클릭으로 거의 동시에 진행) 공유되는 필드라, "내가 시작한 펄스"를 그냥 필드로 stop하면 그 사이
+    // 다른 세션이 필드를 자기 펄스로 덮어썼을 경우 엉뚱하게 남의 펄스를 죽이고 내 펄스는 고아로 계속 돈다
+    // (5-4의 마지막 강조가 안 사라지고 6-1 하이라이트 순간에야 사라지던 버그의 원인). 그래서 시작한
+    // 코루틴 핸들을 로컬로 들고 있다가 "그 핸들"을 직접 Stop하고, 필드는 아직도 그 핸들을 가리킬 때만 null.
+    Coroutine StartPulse(IEnumerator routine)
+    {
+        var c = StartCoroutine(routine);
+        _pulse = c;
+        return c;
+    }
+
+    // 내가 시작한 펄스(myPulse)만 정확히 멈춘다 — 그 사이 다른 세션이 _pulse를 자기 것으로 덮어썼어도 안전.
+    void StopPulse(Coroutine myPulse)
+    {
+        if (myPulse != null) StopCoroutine(myPulse);
+        if (_pulse == myPulse) _pulse = null;
+    }
+
+    // 지금 _pulse에 뭐가 들어있든(누구 세션이든) 무조건 멈춘다 — Hide()/CollapseAndResetOrigin()처럼
+    // "다음으로 넘어가기 전에 떠 있는 펄스는 전부 정리"가 목적인 곳에서만 사용.
+    void StopAnyPulse()
+    {
+        if (_pulse != null) { StopCoroutine(_pulse); _pulse = null; }
+    }
     Rect _currentHoleRect;   // 마지막으로 적용된 단일 구멍 위치 — 다음 단일 강조가 여기서부터 이동해감
     bool _holeInitialized;   // 아직 한 번도 강조 안 했으면(첫 대상) 이동 없이 그냥 나타남
     Button _holeCatcher;     // Highlight() 전용 — 구멍(대상+패딩) 전체를 덮는 투명 클릭캐처(아래 참고)
 
+    // Show()/Hide() 레이스 가드용 세대 카운터 — 같은 TutorialController가 1-1~8-1 내내 하나의
+    // TutorialHighlighter 인스턴스를 계속 재사용하는데, 서로 다른 PlayTutorialX() 코루틴의 Show()/Hide()가
+    // "같은 클릭"으로 거의 동시에(심지어 같은 프레임 안에서 StartCoroutine이 동기 실행되며) 겹쳐 돌 수 있다.
+    // ⚠️ Hide()가 "자기 시작 시점의 _generation"을 읽는 방식은 불충분하다 — 실측 결과 늦은 Hide()가 이미
+    // 새 Show()가 세대를 올린 "이후"에야 시작되는 경우가 있어서(같은 세대값을 관측), 시작 시점 비교로는
+    // 걸러지지 않는다. 그래서 Show()는 자신의 세대를 "리턴값처럼" 호출부에 반드시 넘겨주고, 호출부가 그
+    // 값을 로컬 변수에 들고 있다가 대응되는 Hide()에 명시적으로 전달해야 한다 — Hide()가 호출되는 "시점"이
+    // 아니라 그 Hide()와 짝을 이루는 Show()가 "실제로 몇 번째 세대였는지"로 판단해야 늦게 끝나는 stale
+    // Hide()가 그 사이 시작된 새 Show()를 덮어쓰는 걸 막을 수 있다.
+    int _generation;
+
+    // Show() 호출 직후 호출부가 캡처해서 대응되는 Hide()에 넘겨야 하는 세대값.
+    public int CurrentGeneration => _generation;
+
     // ── 공개 API ──────────────────────────────────────────────────────
     // dim 준비 + 구멍 없이 전체 덮은 상태로 훅 페이드인. 강조 시퀀스 시작 시 1회 호출.
+    // 리턴하는 세대값을 호출부가 들고 있다가 Hide(그 값)로 넘겨야 레이스가 안전하다.
     public IEnumerator Show()
     {
         EnsureDim();
+        _generation++;
+        // ⚠️ 방어적으로 무조건 정리 — 직전 세션의 pulse가 어떤 이유로든(레이스, 예외 등) 자기 정리를 못 하고
+        // 남아있으면 매 프레임 자기 자리에 구멍을 계속 다시 뚫어서(PulseHole), 지금부터 시작하는 이 새
+        // 세션의 CollapseHole()이 화면을 다 덮어도 다음 프레임에 그 자리가 다시 뚫려버린다 — 5-4 confirm
+        // 버튼 자리처럼 완전히 다른 화면으로 넘어간 뒤에도 예전 하이라이트가 안 없어지고 남아있던 원인.
+        StopAnyPulse();
         _dimCanvas.enabled = true;
         CollapseHole();
+        // ⚠️ 반드시 여기서 리셋 — 직전 세션의 Hide()가 레이스 가드에 걸려 스킵된 경우(늦게 끝나서 자기
+        // 세대가 이미 낡았다고 판단해 정리를 건너뜀) _holeInitialized가 true로 남아있을 수 있다. 그 상태로
+        // 두면 이번 세션의 첫 Highlight/BeginHighlight가 "이어서 슬라이드"로 오판해서, 이전 세션(예: 5-4)의
+        // 마지막 강조 위치에서 이번 세션(예: 6-1)의 첫 대상으로 하이라이트가 이동하는 것처럼 보인다.
+        // Show()는 항상 "새 세션의 시작"이므로 무조건 여기서 false로 강제해 다음 강조가 새로 나타나게 한다.
+        _holeInitialized = false;
         yield return FadeDimIn();
     }
 
     // dimAlpha → 0 페이드아웃 후 캔버스 비활성. 강조 시퀀스 끝날 때 1회 호출.
-    public IEnumerator Hide()
+    // myGeneration: 이 Hide()와 짝을 이루는 Show() 직후 CurrentGeneration으로 캡처해둔 값을 반드시 전달할 것 —
+    // 생략(null)하면 호출 시점의 _generation을 대신 읽지만, 이미 다른 코루틴의 새 Show()가 세대를 올린
+    // "이후"에 이 Hide()가 시작됐다면(관측된 실제 레이스 패턴) 같은 값을 읽어버려 가드가 무력화된다.
+    public IEnumerator Hide(int? myGeneration = null)
     {
         if (_dimCanvas == null) yield break;
-        if (_pulse != null) { StopCoroutine(_pulse); _pulse = null; }
+        int gen = myGeneration ?? _generation;
+        StopAnyPulse();
         if (_holeCatcher != null) _holeCatcher.gameObject.SetActive(false); // 방어적 정리(Highlight 도중 중단 대비)
-        yield return FadeDimOut();
+        yield return FadeDimOut(gen);
+        if (_generation != gen) yield break; // 내 세대 이후 새 Show()가 시작됨 — 그쪽 상태를 건드리지 않는다
         _dimCanvas.enabled = false;
         _holeInitialized = false; // 다음 Show()는 새 위치에 바로 나타남(슬라이드 없음)
     }
@@ -63,12 +125,17 @@ public class TutorialHighlighter : MonoBehaviour
     // 다음 Highlight가 슬라이드 이동 없이 새 위치에 바로 나타나게 origin을 리셋한다.
     // ⚠️ hideDimOnConfirmedClick(예: hireButton)로 직전 Highlight가 끝나면 _dimCanvas가 꺼진 채로
     // 남아있으므로, 여기서 반드시 다시 켜야 다음 Highlight가 보인다.
+    // ⚠️ 세대(_generation)는 여기서 올리지 않는다 — 이 메서드는 항상 "같은 코루틴" 안에서, 그 코루틴이
+    // 이미 자기 Show() 뒤에 캡처해둔 genN을 여전히 들고 있다가 뒤이어 나올 자기 Hide(genN)에 넘길 목적으로
+    // 호출된다. 여기서 세대를 올리면 그 genN이 곧바로 stale 취급돼서, 코루틴 끝의 정상적인 Hide(genN)가
+    // "다른 Show()가 이미 시작됐다"고 오판해 dimCanvas를 절대 안 끄는(dim이 안 풀리는) 버그가 생긴다.
+    // (동기 메서드라 Show()의 비동기 FadeDimIn 같은 "끼어들 틈"이 없어 세대 보호 자체가 애초에 불필요함.)
     public void CollapseAndResetOrigin()
     {
         EnsureDim();
         // 직전이 BeginHighlight(펄스가 안 멈추고 계속 도는 강조)였다면, 펄스 코루틴이 다음 프레임에
         // 다시 그 자리에 구멍을 그려서 CollapseHole()을 무효화해버린다 — 반드시 먼저 멈춰야 한다.
-        if (_pulse != null) { StopCoroutine(_pulse); _pulse = null; }
+        StopAnyPulse();
         if (_holeCatcher != null) _holeCatcher.gameObject.SetActive(false); // 방어적 정리(Highlight 도중 중단 대비)
         _dimCanvas.enabled = true;
         CollapseHole();
@@ -94,7 +161,7 @@ public class TutorialHighlighter : MonoBehaviour
         if (!target.gameObject.activeInHierarchy) { Debug.LogWarning($"[TutorialHighlighter] Highlight 대상 '{target.name}'이 비활성(activeInHierarchy=false) — 강조 스킵됨(클릭 대기도 영원히 안 걸림)"); yield break; }
 
         yield return MoveOrAppear(target.transform as RectTransform);
-        _pulse = StartCoroutine(PulseHole(target.transform as RectTransform));
+        var myPulse = StartPulse(PulseHole(target.transform as RectTransform));
 
         bool clicked = false;
         UnityEngine.Events.UnityAction cb = () => clicked = true;
@@ -102,7 +169,8 @@ public class TutorialHighlighter : MonoBehaviour
 
         var catcher = EnsureHoleCatcher();
         float maxPad = highlightHolePadding + highlightPulseAmplitude;
-        PositionCatcher(catcher, ComputeHoleRect(target.transform as RectTransform, maxPad));
+        var catcherRect = ComputeHoleRect(target.transform as RectTransform, maxPad);
+        PositionCatcher(catcher, catcherRect);
         catcher.gameObject.SetActive(true);
         UnityEngine.Events.UnityAction catcherCb = () => target.onClick.Invoke();
         catcher.onClick.AddListener(catcherCb);
@@ -121,7 +189,47 @@ public class TutorialHighlighter : MonoBehaviour
         if (trigger != null) Destroy(trigger);
         if (catcherTrigger != null) Destroy(catcherTrigger);
 
-        if (_pulse != null) { StopCoroutine(_pulse); _pulse = null; }
+        StopPulse(myPulse);
+    }
+
+    // Highlight()와 동일하지만 "보여주는 자리"와 "실제 클릭 동작"이 다른 특수 케이스용 — 강조 구멍/펄스는
+    // visualTarget 위치에 뜨지만, 클릭하면 actionButton.onClick이 실행된다(visualTarget 자신의 onClick은
+    // 안 건드림). 예: NextCandidateArrow(투명 히트박스, 150x160)보다 실제 화살표 이미지인
+    // NextCandidateArrowImage(54x108)가 훨씬 작아서, 히트박스 전체가 아니라 눈에 보이는 이미지 크기에
+    // 딱 맞춰 강조하고 싶을 때.
+    public IEnumerator HighlightWithAction(RectTransform visualTarget, Button actionButton)
+    {
+        if (visualTarget == null || actionButton == null)
+        {
+            Debug.LogWarning($"[TutorialHighlighter] HighlightWithAction 대상이 null(visual={visualTarget != null}, action={actionButton != null}) — 강조 스킵됨(클릭 대기도 영원히 안 걸림)");
+            yield break;
+        }
+        if (!visualTarget.gameObject.activeInHierarchy)
+        {
+            Debug.LogWarning($"[TutorialHighlighter] HighlightWithAction 시각 대상 '{visualTarget.name}'이 비활성(activeInHierarchy=false) — 강조 스킵됨(클릭 대기도 영원히 안 걸림)");
+            yield break;
+        }
+
+        yield return MoveOrAppear(visualTarget);
+        var myPulse = StartPulse(PulseHole(visualTarget));
+
+        bool clicked = false;
+        UnityEngine.Events.UnityAction cb = () => clicked = true;
+        actionButton.onClick.AddListener(cb);
+
+        var catcher = EnsureHoleCatcher();
+        float maxPad = highlightHolePadding + highlightPulseAmplitude;
+        PositionCatcher(catcher, ComputeHoleRect(visualTarget, maxPad));
+        catcher.gameObject.SetActive(true);
+        UnityEngine.Events.UnityAction catcherCb = () => actionButton.onClick.Invoke();
+        catcher.onClick.AddListener(catcherCb);
+
+        while (!clicked) yield return null;
+        actionButton.onClick.RemoveListener(cb);
+        catcher.onClick.RemoveListener(catcherCb);
+        catcher.gameObject.SetActive(false);
+
+        StopPulse(myPulse);
     }
 
     // PointerDown 즉시 dim을 끄고, PointerUp 한 프레임 뒤 클릭이 확정 안 됐으면(드래그로 이탈 등) 원복.
@@ -156,8 +264,8 @@ public class TutorialHighlighter : MonoBehaviour
         if (target == null) { Debug.LogWarning($"[TutorialHighlighter] BeginHighlight 대상이 null — 강조 스킵됨"); yield break; }
         if (!target.gameObject.activeInHierarchy) { Debug.LogWarning($"[TutorialHighlighter] BeginHighlight 대상 '{target.name}'이 비활성(activeInHierarchy=false) — 강조 스킵됨"); yield break; }
         yield return MoveOrAppear(target);
-        if (_pulse != null) StopCoroutine(_pulse);
-        _pulse = StartCoroutine(PulseHole(target));
+        StopAnyPulse(); // 이전(어느 세션이든) 펄스는 정지 — 이 펄스는 다음 BeginHighlight/Highlight/Hide/CollapseAndResetOrigin이 정리할 때까지 계속 돎
+        StartPulse(PulseHole(target));
     }
 
     // 여러 대상을 동시에 강조한 채로 clickTarget 클릭을 기다린다(슬라이드 없이 바로 나타남). 3-4처럼
@@ -169,8 +277,8 @@ public class TutorialHighlighter : MonoBehaviour
         EnsureDim();
         _holeInitialized = false; // 다중 구멍은 슬라이드 대상이 아님 — 다음 단일 강조는 새로 나타나야 함
 
-        if (_pulse != null) StopCoroutine(_pulse);
-        _pulse = StartCoroutine(PulseHoles(highlightTargets));
+        StopAnyPulse();
+        var myPulse = StartPulse(PulseHoles(highlightTargets));
 
         bool clicked = false;
         UnityEngine.Events.UnityAction cb = () => clicked = true;
@@ -178,7 +286,7 @@ public class TutorialHighlighter : MonoBehaviour
         while (!clicked) yield return null;
         clickTarget.onClick.RemoveListener(cb);
 
-        if (_pulse != null) { StopCoroutine(_pulse); _pulse = null; }
+        StopPulse(myPulse);
     }
 
     // ── 내부 공통 구현 ────────────────────────────────────────────────
@@ -190,10 +298,21 @@ public class TutorialHighlighter : MonoBehaviour
             yield return MoveHole(_currentHoleRect, destRect);
         else
         {
-            ApplyHole(destRect);
+            yield return AppearHole(destRect);
             _currentHoleRect = destRect;
             _holeInitialized = true;
         }
+    }
+
+    // 새 대상이 처음 나타날 때(첫 강조 또는 CollapseAndResetOrigin 직후) 즉시 팍 뚫리지 않고, destRect보다
+    // appearExpandPadding만큼 사방으로 더 크게 벌어진 구멍에서 시작해 destRect 크기로 좁혀지며 나타난다 —
+    // MoveHole과 동일한 ease-out lerp를 재사용(시작 rect와 소요시간만 다름).
+    IEnumerator AppearHole(Rect dest)
+    {
+        Rect from = new Rect(
+            dest.x - appearExpandPadding, dest.y - appearExpandPadding,
+            dest.width + appearExpandPadding * 2f, dest.height + appearExpandPadding * 2f);
+        yield return MoveHole(from, dest, appearDuration);
     }
 
     IEnumerator RestoreDimIfNotConfirmed(System.Func<bool> wasClicked)
@@ -231,9 +350,9 @@ public class TutorialHighlighter : MonoBehaviour
     }
 
     // 구멍을 from → to로 슬라이드 이동시킨다(ease-out) — 강조가 곧장 나타나지 않고 이동하는 느낌을 줌.
-    IEnumerator MoveHole(Rect from, Rect to)
+    IEnumerator MoveHole(Rect from, Rect to, float duration = -1f)
     {
-        float dur = Mathf.Max(0.0001f, holeMoveDuration);
+        float dur = Mathf.Max(0.0001f, duration >= 0f ? duration : holeMoveDuration);
         float t = 0f;
         while (t < dur)
         {
@@ -373,6 +492,7 @@ public class TutorialHighlighter : MonoBehaviour
     void EnsureDim()
     {
         if (_dimCanvas != null) return;
+        Debug.Log($"[TutorialHighlighter] EnsureDim() 새 dimCanvas 생성 (highlighter iid={GetInstanceID()})");
 
         var go = new GameObject("TutorialDim", typeof(RectTransform));
         go.transform.SetParent(transform, false);
@@ -423,17 +543,20 @@ public class TutorialHighlighter : MonoBehaviour
         SetDimAlpha(dimAlpha);
     }
 
-    // FadeDimIn의 대칭 — dimAlpha → 0으로 짧게 빠져나감.
-    IEnumerator FadeDimOut()
+    // FadeDimIn의 대칭 — dimAlpha → 0으로 짧게 빠져나감. generation은 Hide()의 레이스 가드용 — 도중에
+    // 새 Show()가 시작되면(세대 증가) 그쪽 FadeDimIn과 alpha를 두고 다투지 않도록 즉시 중단한다.
+    IEnumerator FadeDimOut(int generation)
     {
         float dur = Mathf.Max(0.0001f, dimFadeInDuration);
         float t = 0f;
         while (t < dur)
         {
+            if (_generation != generation) yield break;
             t += Time.unscaledDeltaTime;
             SetDimAlpha(Mathf.Lerp(dimAlpha, 0f, Mathf.Clamp01(t / dur)));
             yield return null;
         }
+        if (_generation != generation) yield break;
         SetDimAlpha(0f);
     }
 
