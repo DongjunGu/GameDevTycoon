@@ -1040,6 +1040,12 @@ public class DevelopmentManager : MonoBehaviour
     private PendingRound4Context _pendingRound4;
     public bool IsPendingRound4Aim => _pendingRound4 != null;
 
+    // 온보딩 튜토리얼(1~3회차) 전용 고정 U — 합계 31 이상이면 스테이지(M=1.35~1.8)가 뭐가 나오든,
+    // 4회차 "강" 조준의 랜덤 U(11~16)가 뭐가 나오든 누적ds가 항상 100을 넘겨(burst) 7-6의
+    // "고장/점수 날아감" 설명이 매번 맞아떨어진다(여유 있게 32, 최소 요구치는 31). 유도 공식:
+    // 33 + M×(U1+U2+U3) + 11 + M×11(=4회차 최소 U) > 100 → U1+U2+U3 > 30.48, 최악 M=1.35 기준.
+    static readonly int[] TutorialFixedRound123U = { 8, 11, 13 };
+
     // ── 테스트 전용 진입점 ──────────────────────────────────────
     // 프로젝트 진행 상태(개발 단계/기여도/저장)에 전혀 영향 없이 팀장점수 연출만 실행해본다.
     // 4회차까지 끝나도 저장이나 DevelopmentPanelUI 반영이 일절 일어나지 않고 그냥 패널만 닫힌다.
@@ -1181,6 +1187,10 @@ public class DevelopmentManager : MonoBehaviour
 
             float S = GetLeaderGrowthS(employee.enhancementLevel);
 
+            // 온보딩 튜토리얼(7-1~7-6) 전용 — 기획팀장 첫 팀장점수 화면이 아직 안 끝났으면 1~3회차 U를
+            // TutorialFixedRound123U로 고정해 4회차 "강" 선택 시 항상 burst가 나오게 한다.
+            bool tutorialFixedRolls = type == LeaderType.Planner && !OnboardingState.Tutorial7Done;
+
             // 보너스 임계선(90/95/99) 지급 상태 리셋 — 새 팀장점수 세션 시작
             _leaderBonusGranted = new bool[3];
             _leaderBonusAmounts = new float[3];
@@ -1199,7 +1209,9 @@ public class DevelopmentManager : MonoBehaviour
 
             for (int r = 0; r < 3; r++)
             {
-                int roll = UnityEngine.Random.Range(1, LeaderDsMaxRoll[r] + 1); // 1~상한 정수
+                int roll = tutorialFixedRolls
+                    ? TutorialFixedRound123U[r]
+                    : UnityEngine.Random.Range(1, LeaderDsMaxRoll[r] + 1); // 1~상한 정수
                 float ds = 11f + roll * M;
                 cumDs += ds;
                 cumDsAfter[r] = cumDs;
@@ -1249,7 +1261,23 @@ public class DevelopmentManager : MonoBehaviour
                     EmployeeManager.Instance.SaveAllEmployees();
                 }
 
-                LeaderScoreUI.Instance.ShowPendingRound4(employee, type, fullRoundScores, roundScores, cumDsAfter);
+                // 온보딩 튜토리얼 7-1~7-6 — 기획팀장(첫 팀장점수 화면) 한정, 아직 완료 전이면 1회차만 먼저
+                // 재생하고 TutorialController에 넘겨 대사(7-1/7-2) 이후 2~3회차를 이어가게 한다.
+                // 재접속 재개(BuildAndShowLeaderScore가 이 경로로 다시 불려도)도 Tutorial7Done이 false인
+                // 동안엔 매번 이 분기를 타 처음부터 다시 재생(3-1~4-2와 동일한 all-or-nothing 성격).
+                if (type == LeaderType.Planner && !OnboardingState.Tutorial7Done && TutorialController.Instance != null)
+                {
+                    LeaderScoreUI.Instance.ShowRound1Then(employee, type, fullRoundScores, roundScores, cumDsAfter,
+                        () => TutorialController.Instance.StartCoroutine(TutorialController.Instance.PlayTutorial7_1(() =>
+                        {
+                            LeaderScoreUI.Instance.ContinueRounds2And3(type, fullRoundScores, roundScores, cumDsAfter);
+                            TutorialController.Instance.StartCoroutine(TutorialController.Instance.PlayTutorial7_3ToEnd());
+                        })));
+                }
+                else
+                {
+                    LeaderScoreUI.Instance.ShowPendingRound4(employee, type, fullRoundScores, roundScores, cumDsAfter);
+                }
                 return;
             }
 

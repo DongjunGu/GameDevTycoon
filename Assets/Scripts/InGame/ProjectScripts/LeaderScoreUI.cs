@@ -87,6 +87,12 @@ public class LeaderScoreUI : MonoBehaviour
     private float _pendingPrevCumDs;
     private LeaderType _pendingUiType;
 
+    // 회차 연출 코루틴이 "화면상 재생"을 끝낸 시점(confirmButton이 눌릴 수 있게 된 순간)마다 호출됨 —
+    // 정상 4회차 완료든 오버플로(burst)로 조기 종료든 동일하게 발생. 온보딩 튜토리얼(7-6)이 burst
+    // 연출이 다 끝난 뒤에 대사를 띄우기 위해 구독. _onComplete(게임 진행 재개)와는 별개 — 그건 유저가
+    // confirmButton을 눌러야만 발동.
+    public System.Action OnRoundsVisualComplete;
+
     // 1~3회차 "연출"까지 다 재생되고 4회차 조준 선택을 기다리는 중인지 — 계산 완료(DevelopmentManager.IsPendingRound4Aim)와
     // 달리 코루틴 애니메이션이 실제로 끝난 시점에만 true. 버튼 UI는 이 값을 폴링해야 함.
     public bool IsWaitingForRound4Aim { get; private set; }
@@ -192,6 +198,37 @@ public class LeaderScoreUI : MonoBehaviour
                                      0f, -1, 0f, 0, 3));
     }
 
+    // 온보딩 튜토리얼(7-1/7-2) 전용 — 1회차만 재생하고 멈춘다. 정상 흐름의 "4회차 대기"
+    // 눈금/버튼(90/95/99 임계선, aimButtonsRoot)은 아직 3회차가 안 끝났으므로 절대 안 뜨게
+    // announceRound4Wait=false로 호출(끝나도 IsWaitingForRound4Aim 안 세움).
+    public void ShowRound1Then(EmployeeData employee, LeaderType type,
+                     float[] fullRoundScores, float[] roundScores, float[] cumDsAfter,
+                     System.Action onRound1Done, bool testMode = false)
+    {
+        InitPanel(employee, type, testMode);
+        StartCoroutine(PlayRound1ThenCoroutine(type, fullRoundScores, roundScores, cumDsAfter, onRound1Done));
+    }
+
+    IEnumerator PlayRound1ThenCoroutine(LeaderType type,
+                     float[] fullRoundScores, float[] roundScores, float[] cumDsAfter,
+                     System.Action onRound1Done)
+    {
+        yield return StartCoroutine(PlayRoundsCoroutine(type, fullRoundScores, roundScores, cumDsAfter,
+                                     0f, -1, 0f, 0, 1, announceRound4Wait: false));
+        onRound1Done?.Invoke();
+    }
+
+    // 온보딩 튜토리얼 전용 — ShowRound1Then으로 1회차만 재생해둔 상태에서 2~3회차를 이어서 재생.
+    // InitPanel을 다시 부르지 않음(이미 초기화됨, _pendingDisplayedTotal/_pendingPrevCumDs가 1회차
+    // 결과를 들고 있어 PlayRoundsCoroutine 내부에서 자연히 이어받음). 끝나면 기존 ShowPendingRound4와
+    // 동일하게 4회차 대기 상태(눈금/aimButtonsRoot 노출)로 전환된다.
+    public void ContinueRounds2And3(LeaderType type,
+                     float[] fullRoundScores, float[] roundScores, float[] cumDsAfter)
+    {
+        StartCoroutine(PlayRoundsCoroutine(type, fullRoundScores, roundScores, cumDsAfter,
+                                     0f, -1, 0f, 1, 3));
+    }
+
     // 유저가 조준(약/중/강)을 선택해 4회차가 계산된 뒤 호출 — 4회차만 재생하고 최종 정산까지 이어간다.
     public void PlayRound4AndFinish(float[] fullRoundScores, float[] roundScores, float[] cumDsAfter,
                      float total, int overflowRound, float cutFactor,
@@ -253,7 +290,7 @@ public class LeaderScoreUI : MonoBehaviour
     IEnumerator PlayRoundsCoroutine(LeaderType type,
                               float[] fullRoundScores, float[] roundScores, float[] cumDsAfter,
                               float total, int overflowRound, float cutFactor,
-                              int fromRound, int toRoundExclusive)
+                              int fromRound, int toRoundExclusive, bool announceRound4Wait = true)
     {
         if (fromRound == 0) yield return new WaitForSeconds(0.5f);
 
@@ -323,8 +360,12 @@ public class LeaderScoreUI : MonoBehaviour
         if (!reachedEnd)
         {
             // 1~3회차 연출까지 다 끝남 — 이제부터 4회차 조준 선택 대기 (커튼/스트레스 경고는 계속 돌아감).
-            IsWaitingForRound4Aim = true;
-            ShowThresholdTicks();
+            // announceRound4Wait=false(튜토리얼 1회차 단독 재생)면 아직 3회차 전이므로 이 상태로 안 넘어간다.
+            if (announceRound4Wait)
+            {
+                IsWaitingForRound4Aim = true;
+                ShowThresholdTicks();
+            }
             yield break;
         }
 
@@ -350,6 +391,7 @@ public class LeaderScoreUI : MonoBehaviour
 
         yield return new WaitForSeconds(0.5f);
         if (confirmButton) confirmButton.interactable = true;
+        OnRoundsVisualComplete?.Invoke();
     }
 
     // 누적 ds 100 초과 시: 전 회차(0..overflowRound-1) 점수를 full → cut 값으로 내림

@@ -14,7 +14,12 @@ using UnityEngine.UI;
 //      플랫폼/장르는 유저가 직접 SummaryPanel/GenrePanel/PlatformPanel에서 선택) → 둘 다 선택되면(ProjectSetupUI가
 //      TutorialController.NotifyProjectSetupSelection 호출) → 5-4 대사 + SummaryPanel/ConfirmBtn 강조(클릭
 //      →개발 시작) → 자동으로 열리는 기획팀장 선택(DispatchPanelUI)에서 6-1 대사 + 두 번째 슬롯(비 CEO
-//      직원) 강조(클릭) → 6-2 대사(강조 유지, planningPanel) → 6-3 dispatchConfirmBtn 강조(클릭) → 완료.
+//      직원) 강조(클릭) → 6-2 대사(강조 유지, planningPanel) → 6-3 dispatchConfirmBtn 강조(클릭) →
+//      자동으로 뜨는 팀장점수 화면(LeaderScoreUI)에서 1회차만 재생 후 7-1 대사 → 7-2 대사(강조 유지,
+//      dsSlider) → 2~3회차 이어서 재생 → 4회차 대기 상태가 되면 7-3 대사(2줄, 강조 없음) → 7-4 대사
+//      (강조 유지, aimButtonsRoot, 이 구간 내내 조준 버튼 클릭 잠금) → 7-5 대사(2줄, 강조 유지,
+//      aimHighButton) → 마지막 줄 이후에만 클릭 허용 + 강제 오버플로 무장 → 클릭 시 4회차(burst)
+//      연출 → 다 끝나면 7-6 대사(2줄, 강조 없음) → 완료.
 //      → 시간이 다시 흐르는 순간(EndDimTimeStop) 비서는 GoToDesk()로 desk_03에 즉시 복귀.
 //
 // 강조(dim 스포트라이트) 자체는 TutorialHighlighter 공용 컴포넌트가 담당 — 이 클래스는 "어떤 순서로,
@@ -145,6 +150,42 @@ public class TutorialController : MonoBehaviour
     [Tooltip("DispatchPanel/.../dispatchConfirmBtn(DispatchPanelUI.confirmButton) — 6-3 강조, 클릭 대기(대사 없음)")]
     public Button dispatchConfirmButton;
 
+    [Header("7-1~7-6 (첫 기획팀장 점수 화면 — DevelopmentManager.BuildAndShowLeaderScore가 PlayTutorial7_1()/PlayTutorial7_3ToEnd() 호출)")]
+    [Tooltip("TutorialDialog 차트의 stepGroup 값 — 1회차 끝난 직후 소감 대사(강조 없음)")]
+    public string step7_1 = "7-1";
+    [Tooltip("TutorialPanel의 RectTransform.anchoredPosition — 7-1 표시 위치")]
+    public Vector2 step7_1Position;
+    [Tooltip("TutorialDialog 차트의 stepGroup 값 — 스트레스 설명 대사(강조 유지, dsSlider 위에 표시)")]
+    public string step7_2 = "7-2";
+    [Tooltip("TutorialPanel의 RectTransform.anchoredPosition — 7-2 표시 위치")]
+    public Vector2 step7_2Position;
+    [Tooltip("LeaderScoreUI.dsSlider — 7-2 대사 뒤 강조 유지(대사가 뜨는 동안도)")]
+    public RectTransform dsSliderRect;
+    [Tooltip("TutorialDialog 차트의 stepGroup 값 — 3회차 끝난 직후(4회차 대기) 스트레스↔점수 상관 설명(강조 없음, 2줄)")]
+    public string step7_3 = "7-3";
+    [Tooltip("TutorialPanel의 RectTransform.anchoredPosition — 7-3 표시 위치")]
+    public Vector2 step7_3Position;
+    [Tooltip("TutorialDialog 차트의 stepGroup 값 — 4회차 조준 선택 안내(강조 유지, aimButtonsRoot 위에 표시)")]
+    public string step7_4 = "7-4";
+    [Tooltip("TutorialPanel의 RectTransform.anchoredPosition — 7-4 표시 위치")]
+    public Vector2 step7_4Position;
+    [Tooltip("LeaderScoreAimButtons.aimButtonsRoot — 7-4/7-5-1 강조(이 구간 동안 자식 버튼 클릭은 코드로 막아둠)")]
+    public RectTransform aimButtonsRootRect;
+    [Tooltip("TutorialDialog 차트의 stepGroup 값 — 강도별 스트레스 범위 참고 + \"강\" 유도(강조 유지, aimHighButton 위에 표시, 2줄)")]
+    public string step7_5 = "7-5";
+    [Tooltip("TutorialPanel의 RectTransform.anchoredPosition — 7-5 표시 위치")]
+    public Vector2 step7_5Position;
+    [Tooltip("LeaderScoreAimButtons.lowButton(아무 것도 안 함, 7-4/7-5 동안 interactable=false로 잠금)")]
+    public Button aimLowButton;
+    [Tooltip("LeaderScoreAimButtons.midButton(위와 동일하게 잠금)")]
+    public Button aimMidButton;
+    [Tooltip("LeaderScoreAimButtons.highButton(\"강\") — 7-4/7-5-1 동안은 잠금, 7-5-2 대사 뒤에만 강조+클릭 허용")]
+    public Button aimHighButton;
+    [Tooltip("TutorialDialog 차트의 stepGroup 값 — 스트레스 100 초과(burst)로 점수 깎인 직후 설명(강조 없음, 2줄)")]
+    public string step7_6 = "7-6";
+    [Tooltip("TutorialPanel의 RectTransform.anchoredPosition — 7-6 표시 위치")]
+    public Vector2 step7_6Position;
+
     [Header("연출 (TutorialHighlighter 로 전달됨)")]
     [Range(0f, 1f)] public float dimAlpha = 0.8f;
     [Tooltip("dim이 0→dimAlpha로 빠르게 훅 들어오는 시간(초) — 짧을수록 순간 집중 유도")]
@@ -189,15 +230,18 @@ public class TutorialController : MonoBehaviour
         // 자체 영속화해 재접속 시 기획팀장 선택 패널을 자연히 다시 열어준다. 그때 DispatchPanelUI가
         // Instance.PlayTutorial6()을 직접 호출하므로, 여기서는 완료 여부만 보고 대기 상태를 유지하면 된다.
         bool needStep6 = !OnboardingState.Tutorial6Done;
+        // 7-1~7-6도 6단계와 동일 이유로 pending 불필요 — 첫 기획팀장 점수 화면이 열릴 때마다(재접속
+        // 자연 재개 포함) DevelopmentManager.BuildAndShowLeaderScore가 완료 여부를 직접 체크해서 부른다.
+        bool needStep7 = !OnboardingState.Tutorial7Done;
 
-        if (!needStep1 && !needStep3 && !needStep5 && !needStep6) { Destroy(gameObject); return; }
+        if (!needStep1 && !needStep3 && !needStep5 && !needStep6 && !needStep7) { Destroy(gameObject); return; }
 
         Instance = this;
         if (needStep1) StartCoroutine(Run());
         else if (needStep5) StartCoroutine(PlayTutorial5_1());
-        // needStep3/needStep6만 남았으면 여기서 아무것도 안 하고 대기 — HiringUI.ShowConfirmDirect가
-        // Instance.PlayTutorial3()을, DispatchPanelUI가 Instance.PlayTutorial6()을 각각 패널이 열릴 때
-        // 직접 호출한다.
+        // needStep3/needStep6/needStep7만 남았으면 여기서 아무것도 안 하고 대기 — HiringUI.ShowConfirmDirect가
+        // Instance.PlayTutorial3()을, DispatchPanelUI가 Instance.PlayTutorial6()을, DevelopmentManager가
+        // Instance.PlayTutorial7_1()을 각각 해당 시점에 직접 호출한다.
     }
 
     IEnumerator Run()
@@ -442,7 +486,89 @@ public class TutorialController : MonoBehaviour
 
         yield return _highlighter.Hide();
         OnboardingState.MarkTutorial6Done();
-        Destroy(gameObject); // 1-1~6-3 전부 끝 — 온보딩 튜토리얼 전체 완료
+        // ⚠️ 여기서 Destroy 안 함 — 팀장 확정 직후 자동으로 뜨는 팀장점수 화면(LeaderScoreUI)에서
+        // 이어지는 7-1~7-6이 남아있다. DevelopmentManager.BuildAndShowLeaderScore가
+        // Instance.PlayTutorial7_1()을 외부에서 호출하므로 이 컴포넌트가 계속 살아있어야 함.
+    }
+
+    // ── 7-1/7-2 (DevelopmentManager.BuildAndShowLeaderScore — 팀장점수 1회차 끝난 직후 호출) ──────
+    // 1회차만 먼저 재생돼있는 상태(LeaderScoreUI.ShowRound1Then)에서 대사만 보여주고, 끝나면
+    // onDone(2~3회차 재생 시작)을 호출한다. 강조는 없음(7-1)/dsSlider 유지(7-2).
+    public IEnumerator PlayTutorial7_1(System.Action onDone)
+    {
+        EnsureHighlighter();
+        // LeaderScoreUI.InitPanel이 이미 GameTimeManager.StopTime()을 호출했으므로 별도 시간정지 불필요.
+        yield return _highlighter.Show();
+
+        if (TutorialPanelUI.Instance != null)
+            yield return TutorialPanelUI.Instance.PlayStepGroup(step7_1, step7_1Position);
+
+        // 7-2: dsSlider 강조를 유지한 채로 대사 표시.
+        yield return _highlighter.BeginHighlight(dsSliderRect);
+        if (TutorialPanelUI.Instance != null)
+            yield return TutorialPanelUI.Instance.PlayStepGroup(step7_2, step7_2Position);
+
+        yield return _highlighter.Hide();
+        onDone?.Invoke(); // 2~3회차 재생 시작(LeaderScoreUI.ContinueRounds2And3)
+    }
+
+    // ── 7-3~7-6 (PlayTutorial7_1의 onDone → 2~3회차 재생 직후 호출) ──────────────────────────
+    // 2~3회차 연출이 실제로 끝나 4회차 대기 상태(IsWaitingForRound4Aim)가 될 때까지 기다린 뒤 진행.
+    public IEnumerator PlayTutorial7_3ToEnd()
+    {
+        while (LeaderScoreUI.Instance == null || !LeaderScoreUI.Instance.IsWaitingForRound4Aim)
+            yield return null;
+
+        // 유저가 안내(7-3~7-5-1) 끝나기 전에 조준 버튼을 못 누르게 즉시 잠금 — aimButtonsRoot 자체는
+        // LeaderScoreAimButtons.Update()가 자동으로 활성화하지만(폴링), interactable은 별도라 여기서
+        // 직접 꺼야 한다. 7-5-2에서 aimHighButton만 다시 켬(그 외엔 계속 잠김 — "강" 강제 유도).
+        if (aimLowButton  != null) aimLowButton.interactable  = false;
+        if (aimMidButton  != null) aimMidButton.interactable  = false;
+        if (aimHighButton != null) aimHighButton.interactable = false;
+
+        EnsureHighlighter();
+        yield return _highlighter.Show();
+
+        // 7-3: 강조 없이 대사만(2줄) — 스트레스가 높을수록 점수가 높다는 상관관계 설명.
+        if (TutorialPanelUI.Instance != null)
+            yield return TutorialPanelUI.Instance.PlayStepGroup(step7_3, step7_3Position);
+
+        // 7-4: aimButtonsRoot 강조 유지한 채 대사(아직 클릭은 안 됨).
+        yield return _highlighter.BeginHighlight(aimButtonsRootRect);
+        if (TutorialPanelUI.Instance != null)
+            yield return TutorialPanelUI.Instance.PlayStepGroup(step7_4, step7_4Position);
+
+        // 7-5-1/7-5-2: "강"(aimHighButton) 으로 강조 이동, 유지한 채 대사 2줄 — 마지막 줄까지는 여전히 잠김.
+        yield return _highlighter.BeginHighlight(aimHighButton != null ? (RectTransform)aimHighButton.transform : null);
+        if (TutorialPanelUI.Instance != null)
+            yield return TutorialPanelUI.Instance.PlayStepGroup(step7_5, step7_5Position);
+
+        // 7-5-2 대사 직후에만 클릭 허용 — DevelopmentManager가 1~3회차 U를 이미 고정해뒀으므로(합 31 이상)
+        // "강" 조준의 4회차 U가 얼마가 나오든 항상 100을 넘겨 burst된다(강제 오버플로 불필요).
+        // BeginHighlight로 계속 돌던 pulse를 먼저 접어야(CollapseAndResetOrigin) 새 Highlight의 pulse와
+        // 안 겹친다(3-4→3-5, 6-2→6-3과 동일한 이유). 같은 자리라 슬라이드 없이 그대로 다시 나타남.
+        _highlighter.CollapseAndResetOrigin();
+        if (aimHighButton != null) aimHighButton.interactable = true;
+        yield return _highlighter.Highlight(aimHighButton); // 클릭 → LeaderScoreAimButtons.Select(High) → SelectRound4Aim
+
+        yield return _highlighter.Hide();
+
+        // 4회차(burst 확정) 연출이 화면상 다 끝날 때까지 대기 — LeaderScoreUI.OnRoundsVisualComplete 1회성 구독.
+        bool roundsDone = false;
+        System.Action onRoundsDone = () => roundsDone = true;
+        if (LeaderScoreUI.Instance != null) LeaderScoreUI.Instance.OnRoundsVisualComplete += onRoundsDone;
+        while (!roundsDone) yield return null;
+        if (LeaderScoreUI.Instance != null) LeaderScoreUI.Instance.OnRoundsVisualComplete -= onRoundsDone;
+
+        // 7-6: 강조 없이 대사만(2줄) — burst로 점수가 깎인 이유 설명.
+        EnsureHighlighter();
+        yield return _highlighter.Show();
+        if (TutorialPanelUI.Instance != null)
+            yield return TutorialPanelUI.Instance.PlayStepGroup(step7_6, step7_6Position);
+
+        yield return _highlighter.Hide();
+        OnboardingState.MarkTutorial7Done();
+        Destroy(gameObject); // 1-1~7-6 전부 끝 — 온보딩 튜토리얼 전체 완료
     }
 
     // ── dim 동안 시간 정지 (패널 켜는 것과 동일) ──────────────────────────────
