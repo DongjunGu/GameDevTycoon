@@ -22,6 +22,10 @@ public static class OnboardingState
     // 튜토리얼 7-1~7-6 완료 — 첫 기획팀장 점수 화면(DevelopmentManager.BuildAndShowLeaderScore, Planner).
     // pending 불필요: 6단계와 동일한 이유(재접속 재개도 BuildAndShowLeaderScore를 다시 타므로 자연 재생).
     const string KEY_TUT7       = "onboarding_tutorial7_done";
+    // 튜토리얼 8-1 완료 — 팀장점수 패널이 실제로 닫히고(LeaderScoreUI.OnConfirmClosed) 개발이 시작된 뒤
+    // SupriseQuestUI 강조. pending 불필요: CurrentStage==Developing 자체가 이미 서버에 커밋되는 상태라
+    // (7단계까지 끝났다는 건 개발이 진짜 시작됐다는 뜻) 재접속해도 그 상태 그대로 자연히 재개된다.
+    const string KEY_TUT8       = "onboarding_tutorial8_done";
 
     // 튜토리얼 dim 이 떠 있는 동안 true (세션 전용, 저장 안 함).
     // 시간 정지 중에도 메뉴 버튼을 숨기지 않도록 MenuController 가 참조.
@@ -81,16 +85,20 @@ public static class OnboardingState
     }
 
     // 튜토리얼 5-1~5-4 — 두 번째(진짜) 채용이 확정되고 2초 뒤 시작, 프로젝트 개발 시작 확정까지.
+    // (Tutorial5Pending은 여기서 해제 안 함 — 아래 참고)
     public static bool Tutorial5Done => PlayerPrefs.GetInt(KEY_TUT5, 0) == 1;
     public static void MarkTutorial5Done()
     {
         PlayerPrefs.SetInt(KEY_TUT5, 1);
-        PlayerPrefs.DeleteKey(KEY_TUT5_PEND); // 완료됐으니 무장 해제(이미 done 체크로 걸러지지만 위생상 정리)
         PlayerPrefs.Save();
     }
 
     // 두 번째(진짜) 채용 확정 시 HiringUI.DoHire가 호출 — 5-1 재생 시작 "전"에 무장해 둬야 그 사이에
     // 재접속해도(2초 지연 포함) 다음 진입 시 TutorialController.Start()가 5-1부터 재개할 수 있다.
+    // ⚠️ 5-4(프로젝트 개발 시작)~6-3(팀장 확정)까지는 서버에 아무것도 저장되지 않는다(팀장점수 burst
+    // 시점에만 값 잠금 저장) — 그래서 이 pending은 Tutorial5Done이 아니라 Tutorial6Done에서 해제한다.
+    // 즉 5-1~6-2 구간 어디서 중단/재접속하든(플랫폼/장르를 이미 골랐어도, 개발을 이미 시작했어도) 서버
+    // 상태는 그 이전으로 되돌아가 있으므로 처음(5-1)부터 다시 재생하는 게 실제 게임 상태와 일치한다.
     public static bool Tutorial5Pending => PlayerPrefs.GetInt(KEY_TUT5_PEND, 0) == 1;
     public static void ArmTutorial5()
     {
@@ -105,6 +113,7 @@ public static class OnboardingState
     public static void MarkTutorial6Done()
     {
         PlayerPrefs.SetInt(KEY_TUT6, 1);
+        PlayerPrefs.DeleteKey(KEY_TUT5_PEND); // 5-1 재생 무장 해제 — 이제부터는 재접속해도 5-1로 안 돌아감(7단계 자체 재생 로직으로 이어짐)
         PlayerPrefs.Save();
     }
 
@@ -114,6 +123,15 @@ public static class OnboardingState
     public static void MarkTutorial7Done()
     {
         PlayerPrefs.SetInt(KEY_TUT7, 1);
+        PlayerPrefs.Save();
+    }
+
+    // 튜토리얼 8-1 — 팀장점수 패널을 실제로 닫은(confirm) 직후, 개발 화면의 SupriseQuestUI(도전 과제)
+    // 강조. 강조만 하고 클릭 대기는 없음(대사 3줄 끝나면 자동 종료).
+    public static bool Tutorial8Done => PlayerPrefs.GetInt(KEY_TUT8, 0) == 1;
+    public static void MarkTutorial8Done()
+    {
+        PlayerPrefs.SetInt(KEY_TUT8, 1);
         PlayerPrefs.Save();
     }
 
@@ -130,6 +148,7 @@ public static class OnboardingState
         PlayerPrefs.DeleteKey(KEY_TUT5_PEND);
         PlayerPrefs.DeleteKey(KEY_TUT6);
         PlayerPrefs.DeleteKey(KEY_TUT7);
+        PlayerPrefs.DeleteKey(KEY_TUT8);
         PlayerPrefs.Save();
         Debug.Log("[Onboarding] 플래그 리셋 — 다음 진입 시 컷씬+튜토리얼 재노출");
     }

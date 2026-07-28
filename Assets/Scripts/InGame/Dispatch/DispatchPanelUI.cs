@@ -165,7 +165,10 @@ public class DispatchPanelUI : MonoBehaviour
         if (type == LeaderType.Planner && !OnboardingState.Tutorial6Done
             && TutorialController.Instance != null && _slots.Count >= 2)
         {
-            StartCoroutine(TutorialController.Instance.PlayTutorial6(_slots[1].selectButton));
+            // 캡처해둔 Button 참조 대신 slotParent(스크롤뷰 Content)를 넘겨서, 하이라이트 직전에
+            // "지금 두 번째 자식"을 다시 찾게 한다 — 대사가 뜨는 동안 슬롯이 재생성되면 미리 캡처한
+            // Button 참조가 파괴된 오브젝트가 돼버려 하이라이트가 조용히 스킵되는 문제를 회피.
+            StartCoroutine(TutorialController.Instance.PlayTutorial6(slotParent));
         }
     }
 

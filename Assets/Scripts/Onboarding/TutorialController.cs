@@ -103,8 +103,10 @@ public class TutorialController : MonoBehaviour
     public string step4_2 = "4-2";
     [Tooltip("TutorialPanel의 RectTransform.anchoredPosition — 4-2 표시 위치")]
     public Vector2 step4_2Position;
-    [Tooltip("ConfirmHirePanel/PrevCandidateArrow(HiringUI.prevCandidateButton) — 4-2 대사 뒤 강조(클릭 대기, 후보 넘기기 화살표). 강조 사각형은 PrevCandidateArrowImage 자리를 감싸는 버튼 루트 기준")]
-    public Button prevCandidateButton;
+    [Tooltip("ConfirmHirePanel/NextCandidateArrow/NextCandidateArrowImage — 4-2 강조가 '보여지는' 자리(눈에 보이는 화살표 이미지, 54x108). NextCandidateArrow 자신은 투명 히트박스(150x160)라 그대로 강조하면 이미지보다 훨씬 크게 뚫림")]
+    public RectTransform nextCandidateArrowImageRect;
+    [Tooltip("ConfirmHirePanel/NextCandidateArrow(HiringUI.nextCandidateButton) — 4-2 강조 클릭 시 '실제로 실행되는' 동작(후보 넘기기 히트박스)")]
+    public Button nextCandidateButton;
 
     [Header("5-1 (두 번째(진짜) 채용 확정 2초 후 — HiringUI.DoHire가 PlayTutorial5_1() 호출)")]
     [Tooltip("TutorialDialog 차트의 stepGroup 값 — 사무실이 좁다는 소감 대사(강조 없음, 2줄)")]
@@ -186,6 +188,14 @@ public class TutorialController : MonoBehaviour
     [Tooltip("TutorialPanel의 RectTransform.anchoredPosition — 7-6 표시 위치")]
     public Vector2 step7_6Position;
 
+    [Header("8-1 (팀장점수 패널이 실제로 닫히고 개발 시작된 직후 — LeaderScoreUI.OnConfirmClosed 호출)")]
+    [Tooltip("HUDCanvas/.../DevelopmentPanel/SupriseQuestUI — 강조 유지, 클릭 대기 없음(대사 3줄 끝나면 자동 종료)")]
+    public RectTransform surpriseQuestUIRect;
+    [Tooltip("TutorialDialog 차트의 stepGroup 값 — 도전 과제(SupriseQuestUI) 소개 대사(강조 유지, 3줄)")]
+    public string step8_1 = "8-1";
+    [Tooltip("TutorialPanel의 RectTransform.anchoredPosition — 8-1 표시 위치")]
+    public Vector2 step8_1Position;
+
     [Header("연출 (TutorialHighlighter 로 전달됨)")]
     [Range(0f, 1f)] public float dimAlpha = 0.8f;
     [Tooltip("dim이 0→dimAlpha로 빠르게 훅 들어오는 시간(초) — 짧을수록 순간 집중 유도")]
@@ -198,6 +208,10 @@ public class TutorialController : MonoBehaviour
     public float highlightPulseAmplitude = 6f;
     [Tooltip("하이라이트가 이전 대상 위치에서 다음 대상 위치로 슬라이드 이동하는 시간(초)")]
     public float holeMoveDuration = 0.15f;
+    [Tooltip("새 대상이 처음 나타날 때 구멍이 대상보다 이 값(px)만큼 더 크게 벌어진 채로 시작해서 사방에서 좁혀지듯 줄어든다. 너무 크면 직전 강조 위치까지 덮어버려 슬라이드처럼 보이니 주의")]
+    public float appearExpandPadding = 70f;
+    [Tooltip("위 '사방에서 좁혀지는' 등장 연출의 소요 시간(초)")]
+    public float appearDuration = 0.28f;
     [Tooltip("게임씬 진입 후 DialogManager 준비를 기다리는 최대 시간(초). 준비되면 그 즉시 대사 표시.")]
     public float startupTimeout = 5f;
 
@@ -212,6 +226,8 @@ public class TutorialController : MonoBehaviour
         _highlighter.highlightHolePadding = highlightHolePadding;
         _highlighter.highlightPulseAmplitude = highlightPulseAmplitude;
         _highlighter.holeMoveDuration = holeMoveDuration;
+        _highlighter.appearExpandPadding = appearExpandPadding;
+        _highlighter.appearDuration = appearDuration;
     }
 
     void Start()
@@ -221,24 +237,32 @@ public class TutorialController : MonoBehaviour
             && RunStateManager.Instance != null && RunStateManager.Instance.IsTutorial;
         // 3-1/3-2는 IsTutorial과 무관하게(몇 주 뒤 다른 세션에서 재접속했을 수도 있음) 아직 안 했으면 대기.
         bool needStep3 = !OnboardingState.Tutorial3Done;
-        // 5-1~5-4는 이미 직원 2명이 서버에 커밋된 뒤라(3-1~4-2처럼 "재접속하면 자연히 리셋"되는 상태가
-        // 아님) HiringUI.DoHire가 무장해둔 pending 플래그로만 재개 여부를 판단 — 완료 전 재접속이면
-        // 처음(5-1)부터 다시 재생한다(3-1~4-2와 동일한 all-or-nothing 방식, 플랫폼/장르 선택도 로컬에
-        // 저장 안 되므로 어차피 다시 골라야 함).
-        bool needStep5 = OnboardingState.Tutorial5Pending && !OnboardingState.Tutorial5Done;
-        // 6-1~6-3은 3-1~4-2와 동일 이유로 pending 불필요 — DevelopmentManager가 pendingLeaderSelect를
-        // 자체 영속화해 재접속 시 기획팀장 선택 패널을 자연히 다시 열어준다. 그때 DispatchPanelUI가
-        // Instance.PlayTutorial6()을 직접 호출하므로, 여기서는 완료 여부만 보고 대기 상태를 유지하면 된다.
+        // 5-1~6-2(팀장 확정 전)는 서버에 아무것도 저장되지 않는 구간(플랫폼/장르 선택, 개발 시작, 팀장
+        // 선택 전부 팀장점수 burst 시점에야 값 잠금 저장됨) — 즉 이 구간 어디서 중단/재접속하든 서버
+        // 상태는 4-2 직후로 되돌아가 있으므로, Tutorial6Done(팀장 확정)이 아직이면 무조건 처음(5-1)부터
+        // 다시 재생한다(3-1~4-2와 동일한 all-or-nothing 방식). Tutorial5Pending은 이제 Tutorial6Done에서
+        // 해제된다(OnboardingState.MarkTutorial6Done 참고).
+        bool needStep5 = OnboardingState.Tutorial5Pending && !OnboardingState.Tutorial6Done;
+        // needStep5와 조건이 사실상 같아졌지만(Tutorial5Pending은 4-2 직후 무장돼 6Done까지 유지됨),
+        // Tutorial5Pending이 아직 무장 안 된 예외적 상황을 대비한 방어적 폴백으로 남겨둠 — 이 경우엔
+        // Start()가 능동적으로 아무것도 안 하고, DispatchPanelUI가 패널을 열 때 Instance.PlayTutorial6()을
+        // 직접 호출하는 것만 기다린다.
         bool needStep6 = !OnboardingState.Tutorial6Done;
         // 7-1~7-6도 6단계와 동일 이유로 pending 불필요 — 첫 기획팀장 점수 화면이 열릴 때마다(재접속
         // 자연 재개 포함) DevelopmentManager.BuildAndShowLeaderScore가 완료 여부를 직접 체크해서 부른다.
         bool needStep7 = !OnboardingState.Tutorial7Done;
+        // 8-1은 6/7단계와 달리 재트리거해줄 외부 진입점이 없다(LeaderScoreUI.OnConfirmClosed는 같은 세션
+        // 안에서만 발동) — 대신 CurrentStage==Developing 자체가 "7단계까지 끝나고 개발이 진짜 시작됨"을
+        // 뜻하는, 이미 서버에 커밋된 상태이므로 재접속 시 이 조건으로 직접 재개한다.
+        bool needStep8 = OnboardingState.Tutorial7Done && !OnboardingState.Tutorial8Done
+            && DevelopmentManager.Instance != null && DevelopmentManager.Instance.CurrentStage == ProjectStage.Developing;
 
-        if (!needStep1 && !needStep3 && !needStep5 && !needStep6 && !needStep7) { Destroy(gameObject); return; }
+        if (!needStep1 && !needStep3 && !needStep5 && !needStep6 && !needStep7 && !needStep8) { Destroy(gameObject); return; }
 
         Instance = this;
         if (needStep1) StartCoroutine(Run());
         else if (needStep5) StartCoroutine(PlayTutorial5_1());
+        else if (needStep8) StartCoroutine(PlayTutorial8_1());
         // needStep3/needStep6/needStep7만 남았으면 여기서 아무것도 안 하고 대기 — HiringUI.ShowConfirmDirect가
         // Instance.PlayTutorial3()을, DispatchPanelUI가 Instance.PlayTutorial6()을, DevelopmentManager가
         // Instance.PlayTutorial7_1()을 각각 해당 시점에 직접 호출한다.
@@ -280,6 +304,7 @@ public class TutorialController : MonoBehaviour
         // 대사만 있고 하이라이트 대상이 없는 구간이라도 CollapseAndResetOrigin()으로 구멍만 접어 유지.
         EnsureHighlighter();
         yield return _highlighter.Show(); // 0 → dimAlpha 빠르게 훅 들어와 집중 유도
+        int gen1 = _highlighter.CurrentGeneration; // 아래 Hide()에 그대로 넘겨 레이스 방지(TutorialHighlighter.Hide 주석 참고)
 
         if (TutorialPanelUI.Instance != null)
         {
@@ -307,7 +332,7 @@ public class TutorialController : MonoBehaviour
         // 2-2: TierPanel/confirmBtn 강조 (대사 없음, 하이라이트만)
         yield return _highlighter.Highlight(hireConfirmButton);
 
-        yield return _highlighter.Hide();
+        yield return _highlighter.Hide(gen1);
         EndDimTimeStop();
         OnboardingState.MarkTutorialDone();
         // ⚠️ 여기서 Destroy 안 함 — Tutorial3Done 이 아직이면 이 컴포넌트가 계속 살아서 HiringUI의
@@ -323,6 +348,7 @@ public class TutorialController : MonoBehaviour
     {
         EnsureHighlighter();
         yield return _highlighter.Show();
+        int gen3 = _highlighter.CurrentGeneration;
 
         if (TutorialPanelUI.Instance != null)
             yield return TutorialPanelUI.Instance.PlayStepGroup(step3_1, step3_1Position);
@@ -357,7 +383,7 @@ public class TutorialController : MonoBehaviour
         if (ConfirmUI.Instance != null)
             yield return _highlighter.Highlight(ConfirmUI.Instance.confirmButton);
 
-        yield return _highlighter.Hide();
+        yield return _highlighter.Hide(gen3);
 
         // ⚠️ 여기서 Destroy도 MarkTutorial3Done()도 안 함 — 3-6에서 채용한 후보는 튜토리얼 한정 보너스
         // 라운드(HiringUI.DoHire의 _tutorialBonusHirePending 분기)로 이어져 패널이 안 닫히고 한 명 더
@@ -374,6 +400,7 @@ public class TutorialController : MonoBehaviour
     {
         EnsureHighlighter();
         yield return _highlighter.Show();
+        int gen4 = _highlighter.CurrentGeneration;
 
         if (TutorialPanelUI.Instance != null)
             yield return TutorialPanelUI.Instance.PlayStepGroup(step4_1, step4_1Position);
@@ -382,11 +409,11 @@ public class TutorialController : MonoBehaviour
         if (TutorialPanelUI.Instance != null)
             yield return TutorialPanelUI.Instance.PlayStepGroup(step4_2, step4_2Position);
 
-        // 4-2 강조: PrevCandidateArrow(PrevCandidateArrowImage) 강조, 클릭 대기 — 대표님이 직접 후보를
-        // 넘겨보게. 대사 없음.
-        yield return _highlighter.Highlight(prevCandidateButton);
+        // 4-2 강조: 눈에 보이는 화살표 이미지(NextCandidateArrowImage) 자리를 강조하되, 실제 클릭 동작은
+        // 히트박스(NextCandidateArrow)로 — 대표님이 직접 후보를 넘겨보게. 대사 없음.
+        yield return _highlighter.HighlightWithAction(nextCandidateArrowImageRect, nextCandidateButton);
 
-        yield return _highlighter.Hide();
+        yield return _highlighter.Hide(gen4);
         // ⚠️ 여기서 Destroy 안 함 — 두 번째(진짜) 채용이 아직 확정 전이다. 확정 2초 후 HiringUI.DoHire가
         // Instance.PlayTutorial5_1()을 외부에서 호출하므로 이 컴포넌트가 계속 살아있어야 함.
     }
@@ -397,6 +424,7 @@ public class TutorialController : MonoBehaviour
         EnsureHighlighter();
         BeginDimTimeStop(); // ConfirmHirePanel이 이미 닫힌 뒤라 이번엔 직접 시간 정지
         yield return _highlighter.Show();
+        int gen5 = _highlighter.CurrentGeneration;
 
         if (TutorialPanelUI.Instance != null)
             yield return TutorialPanelUI.Instance.PlayStepGroup(step5_1, step5_1Position);
@@ -422,7 +450,7 @@ public class TutorialController : MonoBehaviour
             yield return TutorialPanelUI.Instance.PlayStepGroup(step5_3, step5_3Position);
 
         // dim 해제 — 플랫폼/장르는 유저가 SummaryPanel/GenrePanel/PlatformPanel에서 직접 골라야 하니 자유 조작.
-        yield return _highlighter.Hide();
+        yield return _highlighter.Hide(gen5);
         _waitingForProjectSetupChoice = true;
         // ⚠️ 여기서 Destroy 안 함 — 플랫폼+장르가 둘 다 선택되면 ProjectSetupUI가
         // NotifyProjectSetupSelection()을 외부에서 호출하고, 그때 PlayTutorial5_4()가 이어서 실행된다.
@@ -445,6 +473,7 @@ public class TutorialController : MonoBehaviour
     {
         EnsureHighlighter();
         yield return _highlighter.Show(); // ProjectSetupUI가 이미 시간 정지 중이라 여긴 별도 시간정지 불필요
+        int gen54 = _highlighter.CurrentGeneration;
 
         if (TutorialPanelUI.Instance != null)
             yield return TutorialPanelUI.Instance.PlayStepGroup(step5_4, step5_4Position);
@@ -452,7 +481,10 @@ public class TutorialController : MonoBehaviour
         // SummaryPanel/ConfirmBtn 강조, 클릭 대기(실제 개발 시작).
         yield return _highlighter.Highlight(summaryConfirmButton);
 
-        yield return _highlighter.Hide();
+        // ⚠️ 이 클릭이 실제로 개발을 시작시켜 DispatchPanelUI가 곧장(같은 프레임에 가깝게) PlayTutorial6()의
+        // Show()를 호출할 수 있다 — 세대를 명시적으로 넘겨야 늦게 끝나는 이 Hide()가 6-1의 Show()를
+        // 덮어쓰지 않는다(TutorialHighlighter.Hide 주석 참고, 실제로 관측된 레이스).
+        yield return _highlighter.Hide(gen54);
         OnboardingState.MarkTutorial5Done();
         // ⚠️ 여기서 Destroy 안 함 — 개발 시작 직후 자동으로 열리는 기획팀장 선택(DispatchPanelUI)에서
         // 이어지는 6-1~6-3이 남아있다. DispatchPanelUI.OpenLeaderInternal이 Instance.PlayTutorial6()을
@@ -460,17 +492,29 @@ public class TutorialController : MonoBehaviour
     }
 
     // ── 6-1~6-3 (DispatchPanelUI.OpenLeaderInternal — 기획팀장 선택 패널이 Planner 타입으로 열릴 때 호출) ──
-    public IEnumerator PlayTutorial6(Button secondSlotButton)
+    public IEnumerator PlayTutorial6(Transform slotParent)
     {
         EnsureHighlighter();
         // DispatchPanelUI가 패널을 열면서 이미 GameTimeManager.StopTime()을 호출했으므로(모달 자체 시간정지)
         // 여기서 별도 시간정지는 불필요.
         yield return _highlighter.Show();
+        int gen6 = _highlighter.CurrentGeneration;
 
         if (TutorialPanelUI.Instance != null)
             yield return TutorialPanelUI.Instance.PlayStepGroup(step6_1, step6_1Position);
 
         // 6-1 강조: 두 번째 슬롯(CEO가 아닌 직원) 강조, 클릭 대기.
+        // 대사가 뜨는 동안 목록이 재생성됐을 가능성을 배제하기 위해 지금 이 시점에 "무조건 두 번째 자식"을
+        // 다시 찾는다(캡처해둔 Button 참조를 쓰지 않음) — DispatchSlotPrefab(Clone)의 selectButton은
+        // 슬롯 루트의 자식이라 GetComponentInChildren으로 찾아야 함.
+        Button secondSlotButton = null;
+        if (slotParent != null && slotParent.childCount >= 2)
+            secondSlotButton = slotParent.GetChild(1).GetComponentInChildren<Button>(true);
+        else
+            Debug.LogWarning($"[TutorialController] PlayTutorial6: slotParent={(slotParent != null ? slotParent.name : "null")}, childCount={(slotParent != null ? slotParent.childCount : -1)} — 두 번째 자식을 못 찾음");
+        Debug.Log(secondSlotButton != null
+            ? $"[TutorialController] PlayTutorial6: 6-1 강조 대상 resolve됨 — name={secondSlotButton.name}, path={GetPath(secondSlotButton.transform)}, activeInHierarchy={secondSlotButton.gameObject.activeInHierarchy}, interactable={secondSlotButton.interactable}"
+            : "[TutorialController] PlayTutorial6: secondSlotButton이 null로 resolve됨");
         yield return _highlighter.Highlight(secondSlotButton);
 
         // 6-2: planningPanel 강조를 유지한 채로 대사 표시(같은 패널 안이라 슬롯 자리에서 자연스럽게 슬라이드).
@@ -484,7 +528,9 @@ public class TutorialController : MonoBehaviour
         _highlighter.CollapseAndResetOrigin();
         yield return _highlighter.Highlight(dispatchConfirmButton);
 
-        yield return _highlighter.Hide();
+        // ⚠️ 이 클릭이 팀장을 확정시켜 곧장 팀장점수 화면(7-1)의 Show()로 이어질 수 있다 — 세대를
+        // 명시적으로 넘겨 레이스 방지(5-4→6-1과 동일한 이유, TutorialHighlighter.Hide 주석 참고).
+        yield return _highlighter.Hide(gen6);
         OnboardingState.MarkTutorial6Done();
         // ⚠️ 여기서 Destroy 안 함 — 팀장 확정 직후 자동으로 뜨는 팀장점수 화면(LeaderScoreUI)에서
         // 이어지는 7-1~7-6이 남아있다. DevelopmentManager.BuildAndShowLeaderScore가
@@ -499,6 +545,7 @@ public class TutorialController : MonoBehaviour
         EnsureHighlighter();
         // LeaderScoreUI.InitPanel이 이미 GameTimeManager.StopTime()을 호출했으므로 별도 시간정지 불필요.
         yield return _highlighter.Show();
+        int gen71 = _highlighter.CurrentGeneration;
 
         if (TutorialPanelUI.Instance != null)
             yield return TutorialPanelUI.Instance.PlayStepGroup(step7_1, step7_1Position);
@@ -508,7 +555,7 @@ public class TutorialController : MonoBehaviour
         if (TutorialPanelUI.Instance != null)
             yield return TutorialPanelUI.Instance.PlayStepGroup(step7_2, step7_2Position);
 
-        yield return _highlighter.Hide();
+        yield return _highlighter.Hide(gen71);
         onDone?.Invoke(); // 2~3회차 재생 시작(LeaderScoreUI.ContinueRounds2And3)
     }
 
@@ -528,6 +575,7 @@ public class TutorialController : MonoBehaviour
 
         EnsureHighlighter();
         yield return _highlighter.Show();
+        int gen73 = _highlighter.CurrentGeneration;
 
         // 7-3: 강조 없이 대사만(2줄) — 스트레스가 높을수록 점수가 높다는 상관관계 설명.
         if (TutorialPanelUI.Instance != null)
@@ -551,7 +599,7 @@ public class TutorialController : MonoBehaviour
         if (aimHighButton != null) aimHighButton.interactable = true;
         yield return _highlighter.Highlight(aimHighButton); // 클릭 → LeaderScoreAimButtons.Select(High) → SelectRound4Aim
 
-        yield return _highlighter.Hide();
+        yield return _highlighter.Hide(gen73);
 
         // 4회차(burst 확정) 연출이 화면상 다 끝날 때까지 대기 — LeaderScoreUI.OnRoundsVisualComplete 1회성 구독.
         bool roundsDone = false;
@@ -563,12 +611,40 @@ public class TutorialController : MonoBehaviour
         // 7-6: 강조 없이 대사만(2줄) — burst로 점수가 깎인 이유 설명.
         EnsureHighlighter();
         yield return _highlighter.Show();
+        int gen76 = _highlighter.CurrentGeneration;
         if (TutorialPanelUI.Instance != null)
             yield return TutorialPanelUI.Instance.PlayStepGroup(step7_6, step7_6Position);
 
-        yield return _highlighter.Hide();
+        yield return _highlighter.Hide(gen76);
         OnboardingState.MarkTutorial7Done();
-        Destroy(gameObject); // 1-1~7-6 전부 끝 — 온보딩 튜토리얼 전체 완료
+
+        // 8-1: confirmBtn을 눌러 팀장점수 패널이 "실제로" 닫힐 때까지 대기 — 위 Hide()로 dim이 걷혀야
+        // confirmBtn 클릭이 가능해지므로(그 전엔 dim이 화면 전체를 덮어 클릭 자체가 막혀있음) 여기서
+        // 구독해도 이벤트를 놓칠 위험이 없다.
+        bool confirmClosed = false;
+        System.Action onConfirmClosed = () => confirmClosed = true;
+        if (LeaderScoreUI.Instance != null) LeaderScoreUI.Instance.OnConfirmClosed += onConfirmClosed;
+        while (!confirmClosed) yield return null;
+        if (LeaderScoreUI.Instance != null) LeaderScoreUI.Instance.OnConfirmClosed -= onConfirmClosed;
+
+        yield return PlayTutorial8_1();
+    }
+
+    // ── 8-1 (LeaderScoreUI.OnConfirmClosed — 팀장점수 패널이 실제로 닫히고 개발이 시작된 직후) ──────
+    public IEnumerator PlayTutorial8_1()
+    {
+        EnsureHighlighter();
+        BeginDimTimeStop(); // LeaderScoreUI.OnClickConfirm이 이미 GameTimeManager.StartTime()을 호출했으므로 이번엔 직접 시간 정지
+        yield return _highlighter.Show();
+        int gen81 = _highlighter.CurrentGeneration;
+
+        yield return _highlighter.BeginHighlight(surpriseQuestUIRect);
+        if (TutorialPanelUI.Instance != null)
+            yield return TutorialPanelUI.Instance.PlayStepGroup(step8_1, step8_1Position);
+
+        yield return _highlighter.Hide(gen81);
+        OnboardingState.MarkTutorial8Done();
+        Destroy(gameObject); // 1-1~8-1 전부 끝 — 온보딩 튜토리얼 전체 완료
     }
 
     // ── dim 동안 시간 정지 (패널 켜는 것과 동일) ──────────────────────────────
@@ -604,5 +680,15 @@ public class TutorialController : MonoBehaviour
     {
         if (Instance == this) Instance = null;
         EndDimTimeStop(); // 중간에 파괴돼도 시간 정지 누수 방지
+    }
+
+    // 진단 로그용 — 하이라이트 대상이 정확히 어느 오브젝트인지 계층 경로로 확인하기 위함.
+    static string GetPath(Transform t)
+    {
+        if (t == null) return "(null)";
+        var sb = new System.Text.StringBuilder(t.name);
+        var cur = t.parent;
+        while (cur != null) { sb.Insert(0, cur.name + "/"); cur = cur.parent; }
+        return sb.ToString();
     }
 }

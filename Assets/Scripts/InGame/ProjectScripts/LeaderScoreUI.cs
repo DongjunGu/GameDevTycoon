@@ -93,6 +93,10 @@ public class LeaderScoreUI : MonoBehaviour
     // confirmButton을 눌러야만 발동.
     public System.Action OnRoundsVisualComplete;
 
+    // confirmButton을 눌러 패널이 실제로 닫힌 직후(_onComplete 호출 다음) 발동 — 온보딩 튜토리얼 8-1이
+    // "패널이 닫히고 나서" SupriseQuestUI를 강조하기 위해 구독.
+    public System.Action OnConfirmClosed;
+
     // 1~3회차 "연출"까지 다 재생되고 4회차 조준 선택을 기다리는 중인지 — 계산 완료(DevelopmentManager.IsPendingRound4Aim)와
     // 달리 코루틴 애니메이션이 실제로 끝난 시점에만 true. 버튼 UI는 이 값을 폴링해야 함.
     public bool IsWaitingForRound4Aim { get; private set; }
@@ -234,6 +238,7 @@ public class LeaderScoreUI : MonoBehaviour
                      float total, int overflowRound, float cutFactor,
                      System.Action onComplete)
     {
+        Debug.Log("[LeaderScoreUI] PlayRound4AndFinish 호출됨 — 4회차 연출 시작");
         _onComplete = onComplete;
         IsWaitingForRound4Aim = false;
 
@@ -277,7 +282,11 @@ public class LeaderScoreUI : MonoBehaviour
             stressWarningImage.color = swc;
         }
 
-        if (confirmButton) confirmButton.interactable = false;
+        // confirmBtn은 화면 전체를 덮는 투명 레이캐스트 버튼(anchor 풀스트레치) — interactable=false만으로는
+        // 레이캐스트 차단이 안 풀려서(Button.interactable은 클릭 반응만 막지 raycastTarget은 그대로) 4회차
+        // 결과가 나오기 전까지는 아예 SetActive(false)로 꺼야 뒤에 있는 다른 버튼(예: 튜토리얼 7-x 강조
+        // 대상)이 클릭을 받을 수 있다.
+        if (confirmButton) { confirmButton.interactable = false; confirmButton.gameObject.SetActive(false); }
         leaderscorePanel.SetActive(true);
         GameTimeManager.Instance?.StopTime(); // 팀장 점수 연출 동안 시간 정지
         ModalGate.I.Register(this); // 점수 표시 중 다른 모달(상인 Alert 등) 차단
@@ -390,7 +399,8 @@ public class LeaderScoreUI : MonoBehaviour
         StopWorkingAnimations();
 
         yield return new WaitForSeconds(0.5f);
-        if (confirmButton) confirmButton.interactable = true;
+        // 4회차(또는 오버플로) 결과가 화면에 다 나온 지금에야 confirmBtn을 켠다 — 위 InitPanel 주석 참고.
+        if (confirmButton) { confirmButton.gameObject.SetActive(true); confirmButton.interactable = true; }
         OnRoundsVisualComplete?.Invoke();
     }
 
@@ -796,5 +806,6 @@ public class LeaderScoreUI : MonoBehaviour
         GameTimeManager.Instance?.StartTime();
         ModalGate.I.Unregister(this);
         _onComplete?.Invoke();
+        OnConfirmClosed?.Invoke();
     }
 }
