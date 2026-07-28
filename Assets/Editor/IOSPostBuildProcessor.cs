@@ -1,3 +1,8 @@
+// UnityEditor.iOS.Xcode는 iOS Build Support 모듈이 설치된 환경에서만 어셈블리가 존재한다.
+// #if UNITY_IOS로 감싸지 않으면(=빌드 타겟과 무관하게 항상 컴파일 시도) 그 모듈이 없는 팀원 환경에서
+// CS0234로 컴파일이 깨져 Unity가 Safe Mode로 진입한다 — UNITY_IOS는 빌드 타겟이 iOS일 때만 정의되므로
+// 이렇게 감싸면 다른 타겟(Android/Windows 등) 환경에서는 이 파일 전체가 컴파일 대상에서 제외된다.
+#if UNITY_IOS
 using System.IO;
 using UnityEditor;
 using UnityEditor.Callbacks;
@@ -33,3 +38,4 @@ public static class IOSPostBuildProcessor
         proj.WriteToFile(projPath);
     }
 }
+#endif

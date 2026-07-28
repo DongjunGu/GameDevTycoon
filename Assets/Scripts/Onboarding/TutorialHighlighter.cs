@@ -90,7 +90,8 @@ public class TutorialHighlighter : MonoBehaviour
     // 있어 MenuController의 "외부 클릭=닫기" 판정도 안 탄다(오버레이가 클릭을 가로챈 것으로 인식됨).
     public IEnumerator Highlight(Button target, bool hideDimOnConfirmedClick = false)
     {
-        if (target == null || !target.gameObject.activeInHierarchy) yield break;
+        if (target == null) { Debug.LogWarning($"[TutorialHighlighter] Highlight 대상이 null — 강조 스킵됨(클릭 대기도 영원히 안 걸림)"); yield break; }
+        if (!target.gameObject.activeInHierarchy) { Debug.LogWarning($"[TutorialHighlighter] Highlight 대상 '{target.name}'이 비활성(activeInHierarchy=false) — 강조 스킵됨(클릭 대기도 영원히 안 걸림)"); yield break; }
 
         yield return MoveOrAppear(target.transform as RectTransform);
         _pulse = StartCoroutine(PulseHole(target.transform as RectTransform));
@@ -152,7 +153,8 @@ public class TutorialHighlighter : MonoBehaviour
     // 다른 걸 진행하고, 다 끝나면 Hide() 또는 다음 BeginHighlight로 넘어가면 된다. 이전 대상에서 슬라이드 이동.
     public IEnumerator BeginHighlight(RectTransform target)
     {
-        if (target == null || !target.gameObject.activeInHierarchy) yield break;
+        if (target == null) { Debug.LogWarning($"[TutorialHighlighter] BeginHighlight 대상이 null — 강조 스킵됨"); yield break; }
+        if (!target.gameObject.activeInHierarchy) { Debug.LogWarning($"[TutorialHighlighter] BeginHighlight 대상 '{target.name}'이 비활성(activeInHierarchy=false) — 강조 스킵됨"); yield break; }
         yield return MoveOrAppear(target);
         if (_pulse != null) StopCoroutine(_pulse);
         _pulse = StartCoroutine(PulseHole(target));
