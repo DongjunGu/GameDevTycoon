@@ -19,6 +19,9 @@ public static class OnboardingState
     // pendingLeaderSelect 를 자체 영속화해 재접속 시 이 패널을 자연히 다시 열어주므로(3-1~4-2와 동일한 이유),
     // Tutorial6Done 이 false인 동안엔 패널이 열릴 때마다 매번 6-1부터 재생하면 된다.
     const string KEY_TUT6       = "onboarding_tutorial6_done";
+    // 튜토리얼 7-1~7-6 완료 — 첫 기획팀장 점수 화면(DevelopmentManager.BuildAndShowLeaderScore, Planner).
+    // pending 불필요: 6단계와 동일한 이유(재접속 재개도 BuildAndShowLeaderScore를 다시 타므로 자연 재생).
+    const string KEY_TUT7       = "onboarding_tutorial7_done";
 
     // 튜토리얼 dim 이 떠 있는 동안 true (세션 전용, 저장 안 함).
     // 시간 정지 중에도 메뉴 버튼을 숨기지 않도록 MenuController 가 참조.
@@ -105,6 +108,15 @@ public static class OnboardingState
         PlayerPrefs.Save();
     }
 
+    // 튜토리얼 7-1~7-6 — 첫 기획팀장 점수 화면이 열릴 때마다(재접속 자연 재오픈 포함) 재생하다가,
+    // 4회차(burst)까지 연출이 끝나면 1회만 마크.
+    public static bool Tutorial7Done => PlayerPrefs.GetInt(KEY_TUT7, 0) == 1;
+    public static void MarkTutorial7Done()
+    {
+        PlayerPrefs.SetInt(KEY_TUT7, 1);
+        PlayerPrefs.Save();
+    }
+
     // 테스트용 — 온보딩 재노출 (TestResetBtn 등에서 빌드에서도 호출 가능하도록 UNITY_EDITOR 가드 제거)
     public static void ResetAll()
     {
@@ -117,6 +129,7 @@ public static class OnboardingState
         PlayerPrefs.DeleteKey(KEY_TUT5);
         PlayerPrefs.DeleteKey(KEY_TUT5_PEND);
         PlayerPrefs.DeleteKey(KEY_TUT6);
+        PlayerPrefs.DeleteKey(KEY_TUT7);
         PlayerPrefs.Save();
         Debug.Log("[Onboarding] 플래그 리셋 — 다음 진입 시 컷씬+튜토리얼 재노출");
     }
