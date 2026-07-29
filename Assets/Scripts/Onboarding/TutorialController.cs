@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -188,13 +189,59 @@ public class TutorialController : MonoBehaviour
     [Tooltip("TutorialPanel의 RectTransform.anchoredPosition — 7-6 표시 위치")]
     public Vector2 step7_6Position;
 
-    [Header("8-1 (팀장점수 패널이 실제로 닫히고 개발 시작된 직후 — LeaderScoreUI.OnConfirmClosed 호출)")]
+    [Header("8-1 (프로젝트 진행도 15% 시점 — DevelopmentManager.DevelopmentCoroutine 직접 호출)")]
     [Tooltip("HUDCanvas/.../DevelopmentPanel/SupriseQuestUI — 강조 유지, 클릭 대기 없음(대사 3줄 끝나면 자동 종료)")]
     public RectTransform surpriseQuestUIRect;
     [Tooltip("TutorialDialog 차트의 stepGroup 값 — 도전 과제(SupriseQuestUI) 소개 대사(강조 유지, 3줄)")]
     public string step8_1 = "8-1";
     [Tooltip("TutorialPanel의 RectTransform.anchoredPosition — 8-1 표시 위치")]
     public Vector2 step8_1Position;
+
+    [Header("9-1/9-2/9-3 (개발팀장 점수, 4회차 조준 대기~선택~결과 — DevelopmentManager 호출)")]
+    [Tooltip("TutorialDialog 차트의 stepGroup 값 — 4회차 조준 대기 시점 안내(강조 없음, 2줄). 약/중/강 버튼은 잠그지 않음")]
+    public string step9_1 = "9-1";
+    [Tooltip("TutorialPanel의 RectTransform.anchoredPosition — 9-1 표시 위치")]
+    public Vector2 step9_1Position;
+    [Tooltip("TutorialDialog 차트의 stepGroup 값 — 약/중 선택 시 반응 대사(강조 없음, 1줄)")]
+    public string step9_2LowMid = "9-2a";
+    [Tooltip("TutorialDialog 차트의 stepGroup 값 — 강 선택 시 반응 대사(강조 없음, 1줄)")]
+    public string step9_2High = "9-2b";
+    [Tooltip("TutorialPanel의 RectTransform.anchoredPosition — 9-2 표시 위치")]
+    public Vector2 step9_2Position;
+    [Tooltip("TutorialDialog 차트의 stepGroup 값 — 스트레스 게이지 다 오른 뒤, 약 선택 시 반응 대사(강조 없음, 1줄)")]
+    public string step9_3Low = "9-3a";
+    [Tooltip("TutorialDialog 차트의 stepGroup 값 — 스트레스 게이지 다 오른 뒤, 중 선택 시 반응 대사(강조 없음, 1줄)")]
+    public string step9_3Mid = "9-3b";
+    [Tooltip("TutorialDialog 차트의 stepGroup 값 — 스트레스 게이지 다 오른 뒤, 강 선택 시 반응 대사(강조 없음, 1줄)")]
+    public string step9_3High = "9-3c";
+    [Tooltip("TutorialPanel의 RectTransform.anchoredPosition — 9-3 표시 위치")]
+    public Vector2 step9_3Position;
+
+    [Header("10-1/10-2 (직원 카드 확인 + 만족도 소개 → AcWar 결정적 발동 — PlayTutorial9_2 종료 직후 이어서 재생)")]
+    [Tooltip("TutorialDialog 차트의 stepGroup 값 — 직원 클릭 유도 대사(강조 없음, 1줄)")]
+    public string step10_1 = "10-1";
+    [Tooltip("TutorialPanel의 RectTransform.anchoredPosition — 10-1 표시 위치")]
+    public Vector2 step10_1Position;
+    [Tooltip("강조 + 클릭 대기 대상 데스크 ID — 이 자리에 앉은 직원을 강조한다")]
+    public string step10_1DeskId = "desk_01";
+    [Tooltip("TutorialDialog 차트의 stepGroup 값 — 만족도 슬라이더 소개 대사(강조 유지, 3줄)")]
+    public string step10_2 = "10-2";
+    [Tooltip("TutorialPanel의 RectTransform.anchoredPosition — 10-2 표시 위치")]
+    public Vector2 step10_2Position;
+
+    [Header("10-3 (AcWar 이벤트 완전히 종료 후 — RandomEventManager.TriggerTutorialAcWar의 onResolved 호출)")]
+    [Tooltip("EmployeeCardUI/EmployeeCardPanel/ECMiddlePanel — 만족도 변화의 의미 설명(강조 유지, 4줄)")]
+    public RectTransform ecMiddlePanelRect;
+    [Tooltip("TutorialDialog 차트의 stepGroup 값 — 만족도 의미 설명(강조 유지, 4줄). 1번째 줄 텍스트에 {직원이름} 플레이스홀더 사용")]
+    public string step10_3 = "10-3";
+    [Tooltip("TutorialPanel의 RectTransform.anchoredPosition — 10-3 표시 위치")]
+    public Vector2 step10_3Position;
+
+    [Header("12-1 (아트팀장 선택 — DispatchPanelUI.OpenLeaderInternal이 Artist 타입 첫 오픈 시 PlayTutorial12() 호출, 75% 진행도. 11단계는 추후 별도 구현 예정)")]
+    [Tooltip("TutorialDialog 차트의 stepGroup 값 — 아트 직원이 없어 대표님이 직접 맡아야 한다는 안내(강조 유지, 3줄)")]
+    public string step12_1 = "12-1";
+    [Tooltip("TutorialPanel의 RectTransform.anchoredPosition — 12-1 표시 위치")]
+    public Vector2 step12_1Position;
 
     [Header("연출 (TutorialHighlighter 로 전달됨)")]
     [Range(0f, 1f)] public float dimAlpha = 0.8f;
@@ -251,21 +298,33 @@ public class TutorialController : MonoBehaviour
         // 7-1~7-6도 6단계와 동일 이유로 pending 불필요 — 첫 기획팀장 점수 화면이 열릴 때마다(재접속
         // 자연 재개 포함) DevelopmentManager.BuildAndShowLeaderScore가 완료 여부를 직접 체크해서 부른다.
         bool needStep7 = !OnboardingState.Tutorial7Done;
-        // 8-1은 6/7단계와 달리 재트리거해줄 외부 진입점이 없다(LeaderScoreUI.OnConfirmClosed는 같은 세션
-        // 안에서만 발동) — 대신 CurrentStage==Developing 자체가 "7단계까지 끝나고 개발이 진짜 시작됨"을
-        // 뜻하는, 이미 서버에 커밋된 상태이므로 재접속 시 이 조건으로 직접 재개한다.
-        bool needStep8 = OnboardingState.Tutorial7Done && !OnboardingState.Tutorial8Done
-            && DevelopmentManager.Instance != null && DevelopmentManager.Instance.CurrentStage == ProjectStage.Developing;
+        // 8-1은 진행도 15% 시점에 DevelopmentManager.DevelopmentCoroutine이 Instance.PlayTutorial8_1()을
+        // 직접 호출한다(9단계와 동일한 방식) — 재접속 시에도 _elapsed가 복원된 채 코루틴이 다시 돌면서
+        // 그 15% 체크를 자연히 다시 타므로, 여기서 별도로 즉시 재생시킬 필요가 없다(오히려 즉시 재생하면
+        // 진행도와 무관하게 너무 일찍 뜨게 됨).
+        bool needStep8 = OnboardingState.Tutorial7Done && !OnboardingState.Tutorial8Done;
+        // 9-1/9-2는 개발팀장 점수 화면(진행도 25% 시점에 열림, 8-1보다 한참 뒤) — 6/7단계와 동일 이유로
+        // pending 불필요, BuildAndShowLeaderScore가 Programmer 타입일 때 이 조건을 직접 체크해서 부른다.
+        bool needStep9 = !OnboardingState.Tutorial9Done;
+        // 10-1~10-3은 9-2 코루틴 끝에서 곧바로 이어지는 all-or-nothing 구간(5-1~6-2와 동일 방식) — 9단계는
+        // 끝났는데 10단계가 아직이면(재접속으로 도중 끊긴 경우 포함) 아래에서 무조건 10-1부터 다시 재생한다.
+        bool needStep10 = !OnboardingState.Tutorial10Done;
+        // 12-1은 아트팀장 선택(75% 진행도)이 열릴 때마다(재접속 자연 재오픈 포함) DispatchPanelUI가 완료
+        // 여부를 직접 체크해서 부른다 — 6/7/9단계와 동일 이유로 pending 불필요. 11단계는 아직 미구현.
+        bool needStep12 = !OnboardingState.Tutorial12Done;
 
-        if (!needStep1 && !needStep3 && !needStep5 && !needStep6 && !needStep7 && !needStep8) { Destroy(gameObject); return; }
+        if (!needStep1 && !needStep3 && !needStep5 && !needStep6 && !needStep7 && !needStep8 && !needStep9 && !needStep10 && !needStep12) { Destroy(gameObject); return; }
 
         Instance = this;
         if (needStep1) StartCoroutine(Run());
         else if (needStep5) StartCoroutine(PlayTutorial5_1());
-        else if (needStep8) StartCoroutine(PlayTutorial8_1());
-        // needStep3/needStep6/needStep7만 남았으면 여기서 아무것도 안 하고 대기 — HiringUI.ShowConfirmDirect가
-        // Instance.PlayTutorial3()을, DispatchPanelUI가 Instance.PlayTutorial6()을, DevelopmentManager가
-        // Instance.PlayTutorial7_1()을 각각 해당 시점에 직접 호출한다.
+        // 10-1~10-3은 외부 재트리거 진입점이 없는 all-or-nothing 구간(5-1~6-2와 동일한 방식) — 9단계까지는
+        // 끝났는데 10단계가 아직 안 끝났으면(재접속 등으로 10-1~10-3 도중 끊긴 경우 포함) 여기서 무조건
+        // 처음(10-1)부터 다시 재생한다.
+        else if (needStep10 && OnboardingState.Tutorial9Done) StartCoroutine(PlayTutorial10_1());
+        // needStep3/needStep6/needStep7/needStep8/needStep9만 남았으면 여기서 아무것도 안 하고 대기 —
+        // HiringUI.ShowConfirmDirect가 Instance.PlayTutorial3()을, DispatchPanelUI가 Instance.PlayTutorial6()을,
+        // DevelopmentManager가 Instance.PlayTutorial7_1()/PlayTutorial8_1()을 각각 해당 시점에 직접 호출한다.
     }
 
     IEnumerator Run()
@@ -443,6 +502,12 @@ public class TutorialController : MonoBehaviour
         // 우리 쪽 시간정지는 여기서 끝내도 된다(계속 멈춰있음).
         EndDimTimeStop();
 
+        // SummaryPanel의 CloseBtn(OnClickClose)은 장르/플랫폼 선택을 전부 초기화하고 프로젝트 설정 자체를
+        // 취소해버리므로, 5-x 튜토리얼이 이 패널을 붙잡고 있는 동안(5-4에서 실제 개발이 시작될 때까지)은
+        // 눌리면 안 된다 — 여기서 숨기고 PlayTutorial5_4에서 개발 시작 직후 되돌린다.
+        if (ProjectSetupUI.Instance != null && ProjectSetupUI.Instance.closeButton != null)
+            ProjectSetupUI.Instance.closeButton.gameObject.SetActive(false);
+
         // 5-3: SummaryPanel이 막 열린 상태 — 이전(메뉴 안) 강조 위치와는 완전히 다른 화면이라 슬라이드 없이
         // 새로 나타나게 리셋 후, 강조 없이 대사만(플랫폼/장르 직접 골라보라는 안내).
         _highlighter.CollapseAndResetOrigin();
@@ -480,6 +545,11 @@ public class TutorialController : MonoBehaviour
 
         // SummaryPanel/ConfirmBtn 강조, 클릭 대기(실제 개발 시작).
         yield return _highlighter.Highlight(summaryConfirmButton);
+
+        // 5-1에서 숨겨뒀던 CloseBtn 복원 — 개발이 시작돼 SummaryPanel이 어차피 닫히지만, 상태 정합성을
+        // 위해 명시적으로 되돌려둔다.
+        if (ProjectSetupUI.Instance != null && ProjectSetupUI.Instance.closeButton != null)
+            ProjectSetupUI.Instance.closeButton.gameObject.SetActive(true);
 
         // ⚠️ 이 클릭이 실제로 개발을 시작시켜 DispatchPanelUI가 곧장(같은 프레임에 가깝게) PlayTutorial6()의
         // Show()를 호출할 수 있다 — 세대를 명시적으로 넘겨야 늦게 끝나는 이 Hide()가 6-1의 Show()를
@@ -617,24 +687,15 @@ public class TutorialController : MonoBehaviour
 
         yield return _highlighter.Hide(gen76);
         OnboardingState.MarkTutorial7Done();
-
-        // 8-1: confirmBtn을 눌러 팀장점수 패널이 "실제로" 닫힐 때까지 대기 — 위 Hide()로 dim이 걷혀야
-        // confirmBtn 클릭이 가능해지므로(그 전엔 dim이 화면 전체를 덮어 클릭 자체가 막혀있음) 여기서
-        // 구독해도 이벤트를 놓칠 위험이 없다.
-        bool confirmClosed = false;
-        System.Action onConfirmClosed = () => confirmClosed = true;
-        if (LeaderScoreUI.Instance != null) LeaderScoreUI.Instance.OnConfirmClosed += onConfirmClosed;
-        while (!confirmClosed) yield return null;
-        if (LeaderScoreUI.Instance != null) LeaderScoreUI.Instance.OnConfirmClosed -= onConfirmClosed;
-
-        yield return PlayTutorial8_1();
+        // 8-1은 여기서 바로 이어지지 않음 — DevelopmentManager.DevelopmentCoroutine이 진행도 15%
+        // 지점에서 Instance.PlayTutorial8_1()을 직접 호출한다(아래 참고).
     }
 
-    // ── 8-1 (LeaderScoreUI.OnConfirmClosed — 팀장점수 패널이 실제로 닫히고 개발이 시작된 직후) ──────
+    // ── 8-1 (DevelopmentManager.DevelopmentCoroutine — 프로젝트 진행도 15% 시점에 직접 호출) ──────
     public IEnumerator PlayTutorial8_1()
     {
         EnsureHighlighter();
-        BeginDimTimeStop(); // LeaderScoreUI.OnClickConfirm이 이미 GameTimeManager.StartTime()을 호출했으므로 이번엔 직접 시간 정지
+        BeginDimTimeStop(); // DevelopmentCoroutine이 진행 중(시간 흐르는 중)에 호출하므로 여기서 직접 시간 정지
         yield return _highlighter.Show();
         int gen81 = _highlighter.CurrentGeneration;
 
@@ -643,8 +704,206 @@ public class TutorialController : MonoBehaviour
             yield return TutorialPanelUI.Instance.PlayStepGroup(step8_1, step8_1Position);
 
         yield return _highlighter.Hide(gen81);
+        EndDimTimeStop();
+        // ⚠️ 위 EndDimTimeStop() 명시 호출 필수 — 예전엔 8-1 끝나고 바로 Destroy(gameObject)해서
+        // OnDestroy()가 이걸 대신 불러줬는데(중간에 파괴돼도 시간 정지 누수 방지용), 9-1/9-2를 위해
+        // Destroy를 없애면서 그 경로가 사라졌다 — 안 부르면 게임 시간이 영원히 멈춘 채로 남는다
+        // (BeginDimTimeStop만 걸리고 짝이 안 맞음). "팀장점수 패널 닫히면 시간이 가야 하는데 안 감" 버그.
         OnboardingState.MarkTutorial8Done();
-        Destroy(gameObject); // 1-1~8-1 전부 끝 — 온보딩 튜토리얼 전체 완료
+        // ⚠️ 여기서 Destroy 안 함 — 개발팀장(Programmer) 점수 화면(진행도 25% 시점, 한참 뒤)에서 이어지는
+        // 9-1/9-2가 남아있다. DevelopmentManager.BuildAndShowLeaderScore가 Instance.PlayTutorial9_1()을
+        // 외부에서 호출하므로 이 컴포넌트가 계속 살아있어야 함.
+    }
+
+    // ── 9-1 (DevelopmentManager.BuildAndShowLeaderScore — 개발팀장 점수, 4회차 조준 대기 시점) ──────
+    public IEnumerator PlayTutorial9_1()
+    {
+        while (LeaderScoreUI.Instance == null || !LeaderScoreUI.Instance.IsWaitingForRound4Aim)
+            yield return null;
+
+        // ⚠️ LeaderScoreAimButtons가 interactable을 스스로 리셋하지 않아서, 이전 7-x(기획팀장) 라운드가
+        // "강"만 남기고 잠가둔 상태(7-5-1/7-5-2)가 그대로 남아있다 — 여기서 세 버튼 다 명시적으로 풀어줘야
+        // 실제로 약/중/강 자유 선택이 된다(안 풀면 강만 눌리는 버그).
+        if (aimLowButton  != null) aimLowButton.interactable  = true;
+        if (aimMidButton  != null) aimMidButton.interactable  = true;
+        if (aimHighButton != null) aimHighButton.interactable = true;
+
+        EnsureHighlighter();
+        yield return _highlighter.Show();
+        int gen91 = _highlighter.CurrentGeneration;
+
+        // 강조 없이 대사만 — 약/중/강 버튼을 잠그지 않는다(7-x와 달리 유저가 자유롭게 고름).
+        // dim이 떠 있는 동안은 버튼이 화면에 덮여 자연히 클릭이 안 되고, Hide() 이후에야 눌릴 수 있다.
+        if (TutorialPanelUI.Instance != null)
+            yield return TutorialPanelUI.Instance.PlayStepGroup(step9_1, step9_1Position);
+
+        yield return _highlighter.Hide(gen91);
+        // 여기서 Tutorial9Done 마크 안 함 — 유저가 실제로 조준 버튼을 눌러야(9-2) 완료된다.
+    }
+
+    // ── 9-2/9-3 (DevelopmentManager.SelectRound4Aim — 유저가 조준 버튼을 실제로 누른 직후, 결과 반영 전) ──
+    // 9-2: 4회차 결과/스트레스 상승 애니메이션(PlayRound4AndFinish)을 이 대사가 끝날 때까지 미뤄야 하므로,
+    // 호출부가 onDone에 그 실행을 넘겨준다 — 대사가 먼저 뜨고, 대사가 끝나야 스트레스가 오르기 시작한다.
+    // 9-3: onDone(=PlayRound4AndFinish) 실행 후 스트레스 게이지가 다 올라갈 때까지(LeaderScoreUI.
+    // OnRoundsVisualComplete, 7-6과 동일 신호) 기다렸다가 선택지(약/중/강)별 반응 대사.
+    public IEnumerator PlayTutorial9_2(LeaderScoreAim aim, System.Action onDone)
+    {
+        EnsureHighlighter();
+        yield return _highlighter.Show();
+        int gen92 = _highlighter.CurrentGeneration;
+
+        string step92 = aim == LeaderScoreAim.High ? step9_2High : step9_2LowMid;
+        if (TutorialPanelUI.Instance != null)
+            yield return TutorialPanelUI.Instance.PlayStepGroup(step92, step9_2Position);
+
+        yield return _highlighter.Hide(gen92);
+        onDone?.Invoke();
+
+        bool roundsDone = false;
+        System.Action onRoundsDone = () => roundsDone = true;
+        if (LeaderScoreUI.Instance != null) LeaderScoreUI.Instance.OnRoundsVisualComplete += onRoundsDone;
+        while (!roundsDone) yield return null;
+        if (LeaderScoreUI.Instance != null) LeaderScoreUI.Instance.OnRoundsVisualComplete -= onRoundsDone;
+
+        EnsureHighlighter();
+        yield return _highlighter.Show();
+        int gen93 = _highlighter.CurrentGeneration;
+
+        string step93 = aim switch
+        {
+            LeaderScoreAim.Low  => step9_3Low,
+            LeaderScoreAim.Mid  => step9_3Mid,
+            LeaderScoreAim.High => step9_3High,
+            _ => step9_3Low
+        };
+        if (TutorialPanelUI.Instance != null)
+            yield return TutorialPanelUI.Instance.PlayStepGroup(step93, step9_3Position);
+
+        yield return _highlighter.Hide(gen93);
+        OnboardingState.MarkTutorial9Done();
+
+        // 10-1: LeaderScoreUI(개발팀장 점수 결과 패널)가 아직 화면에 떠 있으므로, 플레이어가 실제로
+        // confirmBtn을 눌러 그 패널을 닫을 때까지 먼저 기다린 뒤(위 Hide()로 dim이 걷혀야 confirmBtn 클릭이
+        // 가능해지므로, 여기서 구독해도 이벤트를 놓칠 위험이 없다) 2초(realtime) 뒤에 발동한다.
+        bool confirmClosed = false;
+        System.Action onConfirmClosed = () => confirmClosed = true;
+        if (LeaderScoreUI.Instance != null) LeaderScoreUI.Instance.OnConfirmClosed += onConfirmClosed;
+        while (!confirmClosed) yield return null;
+        if (LeaderScoreUI.Instance != null) LeaderScoreUI.Instance.OnConfirmClosed -= onConfirmClosed;
+
+        yield return new WaitForSecondsRealtime(2f);
+
+        yield return PlayTutorial10_1();
+    }
+
+    // ── 10-1/10-2 (위 PlayTutorial9_2 끝에서 이어서 호출) ──────────────────────
+    public IEnumerator PlayTutorial10_1()
+    {
+        EnsureHighlighter();
+        BeginDimTimeStop(); // LeaderScoreUI.OnClickConfirm이 이미 StartTime()을 호출했으므로 이번엔 직접 시간 정지
+        yield return _highlighter.Show();
+        int gen10 = _highlighter.CurrentGeneration;
+
+        // 10-1: 직원 클릭 유도 대사(강조 없음)
+        if (TutorialPanelUI.Instance != null)
+            yield return TutorialPanelUI.Instance.PlayStepGroup(step10_1, step10_1Position);
+
+        // desk_01 직원 강조 + 클릭(=EmployeeCardUI가 그 직원 카드로 열림) 대기.
+        var deskChar = OfficeManager.Instance?.GetCharacterAtDesk(step10_1DeskId);
+        string deskEmpId = deskChar != null ? deskChar.employeeId : null;
+        yield return _highlighter.BeginHighlightWorld(deskChar != null ? deskChar.transform : null);
+
+        bool cardShown = false;
+        System.Action<string> onCardShown = id => { if (id == deskEmpId) cardShown = true; };
+        if (EmployeeCardUI.Instance != null) EmployeeCardUI.Instance.OnCardShown += onCardShown;
+        while (!cardShown) yield return null;
+        if (EmployeeCardUI.Instance != null) EmployeeCardUI.Instance.OnCardShown -= onCardShown;
+
+        // 카드가 열리는 즉시 — AcWar 발동을 위해 desk_01 직원을 master_desk로 강제 이동 시작. 지금은 시간이
+        // 멈춰있어(BeginDimTimeStop) 실제로는 안 걷다가, 아래 EndDimTimeStop으로 시간이 풀리는 순간부터
+        // 실제로 걸어가기 시작한다(CharacterMover가 GameTimeManager.IsRunning을 체크하므로).
+        // onResolved: 선택지 확인 + 결과 AlertUI까지 전부 닫힌 뒤(=진짜 이벤트 종료 시점)에만 10-3으로 이어감.
+        if (!string.IsNullOrEmpty(deskEmpId))
+            RandomEventManager.Instance?.TriggerTutorialAcWar(deskEmpId,
+                winner => StartCoroutine(PlayTutorial10_3(winner)));
+
+        // 10-2: 만족도 슬라이더로 강조 이동(슬라이드) + 대사 3줄
+        RectTransform satisfactionRT = EmployeeCardUI.Instance != null && EmployeeCardUI.Instance.satisfactionSlider != null
+            ? EmployeeCardUI.Instance.satisfactionSlider.transform as RectTransform
+            : null;
+        yield return _highlighter.BeginHighlight(satisfactionRT);
+        if (TutorialPanelUI.Instance != null)
+            yield return TutorialPanelUI.Instance.PlayStepGroup(step10_2, step10_2Position);
+
+        yield return _highlighter.Hide(gen10);
+        EndDimTimeStop();
+        // 여기서부터 desk_01 직원이 실제로 master_desk로 걸어가고, 도착하면 RandomEventManager.OnPatrolArrived가
+        // 평소와 동일하게 RandomEventChoiceUI(AcWar)를 자연히 띄운다 — 선택→결과 AlertUI까지 전부 기존
+        // 프로덕션 로직 그대로 진행되며, 그게 완전히 끝나면 TriggerTutorialAcWar의 onResolved 콜백이
+        // PlayTutorial10_3()을 이어서 호출한다(바로 위 참고).
+    }
+
+    // ── 10-3 (RandomEventManager.TriggerTutorialAcWar의 onResolved — AcWar 선택+결과 AlertUI까지 전부
+    // 닫힌 직후 호출) — 만족도의 의미를 설명. winner: 플레이어가 고른 쪽(만족도가 오른 직원).
+    public IEnumerator PlayTutorial10_3(EmployeeData winner)
+    {
+        EnsureHighlighter();
+        BeginDimTimeStop(); // AcWar 확인 흐름이 이미 시간을 재개했으므로 여기서 직접 다시 정지
+        yield return _highlighter.Show();
+        int gen103 = _highlighter.CurrentGeneration;
+
+        // {직원이름} 플레이스홀더를 실제 이름으로 임시 치환 — RandomEvent 차트와 동일한
+        // "템플릿 캡처 → 치환 → 복원" 패턴(TutorialDialogChartLoader.Cache는 재생마다 새로 안 만들어져
+        // 원본 템플릿을 반드시 복원해야 다음 재생에서 이름이 안 남는다).
+        string winnerName = winner != null ? winner.employeeName : "";
+        List<string> originalTexts = null;
+        if (TutorialDialogChartLoader.Cache.TryGetValue(step10_3, out var lines) && lines != null)
+        {
+            originalTexts = new List<string>(lines.Count);
+            foreach (var line in lines)
+            {
+                originalTexts.Add(line.text);
+                line.text = line.text?.Replace("{직원이름}", winnerName);
+            }
+        }
+
+        yield return _highlighter.BeginHighlight(ecMiddlePanelRect);
+        if (TutorialPanelUI.Instance != null)
+            yield return TutorialPanelUI.Instance.PlayStepGroup(step10_3, step10_3Position);
+
+        if (originalTexts != null)
+            for (int i = 0; i < lines.Count; i++) lines[i].text = originalTexts[i];
+
+        yield return _highlighter.Hide(gen103);
+        EndDimTimeStop();
+        OnboardingState.MarkTutorial10Done();
+    }
+
+    // ── 12-1 (DispatchPanelUI.OpenLeaderInternal — 아트팀장 선택 패널이 Artist 타입으로 열릴 때 호출) ──
+    // 아트 직원이 없는 게 전제라 후보는 CEO 1명뿐(BuildLeaderCandidates가 CEO를 index 0에 넣음) — 그 슬롯을
+    // 강조만 하고 클릭 대기는 없음(8-1과 동일 패턴 — 대사 끝나면 자동 종료, 이후 조작은 유저가 자유롭게).
+    public IEnumerator PlayTutorial12(Transform slotParent)
+    {
+        EnsureHighlighter();
+        // DispatchPanelUI가 패널을 열면서 이미 GameTimeManager.StopTime()을 호출했으므로(모달 자체 시간정지)
+        // 여기서 별도 시간정지는 불필요(6-1과 동일 이유).
+        yield return _highlighter.Show();
+        int gen12 = _highlighter.CurrentGeneration;
+
+        // 대사가 뜨는 동안 목록이 재생성됐을 가능성을 배제하기 위해 지금 이 시점에 "무조건 첫 번째 자식"을
+        // 다시 찾는다(6-1과 동일한 이유 — 캡처해둔 Button 참조는 재생성 시 파괴된 오브젝트가 될 수 있음).
+        Button firstSlotButton = null;
+        if (slotParent != null && slotParent.childCount >= 1)
+            firstSlotButton = slotParent.GetChild(0).GetComponentInChildren<Button>(true);
+        else
+            Debug.LogWarning($"[TutorialController] PlayTutorial12: slotParent={(slotParent != null ? slotParent.name : "null")}, childCount={(slotParent != null ? slotParent.childCount : -1)} — 첫 번째 자식을 못 찾음");
+
+        yield return _highlighter.BeginHighlight(firstSlotButton != null ? (RectTransform)firstSlotButton.transform : null);
+        if (TutorialPanelUI.Instance != null)
+            yield return TutorialPanelUI.Instance.PlayStepGroup(step12_1, step12_1Position);
+
+        yield return _highlighter.Hide(gen12);
+        OnboardingState.MarkTutorial12Done();
     }
 
     // ── dim 동안 시간 정지 (패널 켜는 것과 동일) ──────────────────────────────

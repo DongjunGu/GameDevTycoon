@@ -318,6 +318,9 @@ public class OfficeManager : MonoBehaviour
         var obj    = Instantiate(prefab, desk.GetWorkWorldPos(), Quaternion.identity);
         var oc     = obj.GetComponent<OfficeCharacter>();
         oc.Init(ceo.id, desk);
+        // 일반 직원은 GoToDesk() 이동이 끝나야(OnArrived) 앉는 애니메이션이 걸리는데, CEO는 데스크 위치에
+        // 바로 Instantiate돼 이동 자체가 없어 그 콜백이 안 타서 서 있는 채로 남는다 — 직접 적용.
+        oc.ApplyDeskAnimation();
 
         _characters[ceo.id] = oc;
 
@@ -379,6 +382,15 @@ public class OfficeManager : MonoBehaviour
     public OfficeCharacter GetCharacter(string employeeId)
     {
         return _characters.TryGetValue(employeeId, out var oc) ? oc : null;
+    }
+
+    // deskId(예: "desk_01")에 현재 앉아있는 OfficeCharacter (없으면 null) — 튜토리얼이 "특정 자리의 직원"을
+    // 지목해 강조해야 할 때 사용.
+    public OfficeCharacter GetCharacterAtDesk(string deskId)
+    {
+        foreach (var oc in _characters.Values)
+            if (oc.assignedDesk != null && oc.assignedDesk.deskId == deskId) return oc;
+        return null;
     }
 
     // 특정 직원의 patrol 여부 확인 (DevelopmentManager 틱 체크용)

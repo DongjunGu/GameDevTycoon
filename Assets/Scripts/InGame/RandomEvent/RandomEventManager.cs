@@ -403,6 +403,14 @@ public class RandomEventManager : MonoBehaviour
         _scheduledEvents.Clear();
         _nextScheduledIndex = 0;
 
+        // 튜토리얼(9단계까지) 진행 중엔 차트 기반 랜덤이벤트를 아예 스케줄하지 않는다 — 지정한 이벤트만
+        // 별도 진입점으로 나중에 하나씩 수동 발동시킬 예정이라, 여기서는 완전히 비워둔 채로 리턴.
+        if (!OnboardingState.Tutorial9Done)
+        {
+            Debug.Log("[RandomEventManager] 튜토리얼 진행 중 — 랜덤이벤트 스케줄 스킵");
+            return;
+        }
+
         // 디버그 모드: 지정 이벤트를 진행도 1%에 강제 배치
         if (debugMode)
         {
@@ -1180,6 +1188,53 @@ public class RandomEventManager : MonoBehaviour
             : $"{emp.employeeName}이 도망쳤습니다!\n남은 팀원들의 만족도가 10 하락합니다.";
 
         _pendingRunAlerts.Add(new RunEventPayload { alertMessage = alertMsg, weeksLeft = 2 });
+    }
+
+    // ── 튜토리얼 10단계 전용 — AcWar(에어컨 전쟁) 결정적 발동 ──────────
+    // deskEmployeeId(예: desk_01 직원)를 emp1(패트롤 대상)로 강제 고정하고, 서로 다른 역할의 다른 보유
+    // 직원 1명을 emp2로 골라 즉시 master_desk로 강제 이동시킨다 — 도착하면 평소와 동일하게
+    // OnPatrolArrived → ShowChoiceEventAfterDelay 로 이어져 RandomEventChoiceUI가 자연스럽게 뜬다.
+    // onResolved: 선택지 확인(OnClickConfirm) 후 결과 AlertUI까지 전부 닫혀 정말로 이벤트가 끝난 시점에
+    // 1회 호출 — 플레이어가 고른 쪽(만족도가 오른 "승자") EmployeeData를 넘겨준다. 튜토리얼 10-3이 이걸로
+    // "누구의 만족도가 올랐는지" 대사에 이름을 채워 넣는다.
+    public void TriggerTutorialAcWar(string deskEmployeeId, System.Action<EmployeeData> onResolved = null)
+    {
+        var emp1 = EmployeeManager.Instance?.GetEmployee(deskEmployeeId);
+        if (emp1 == null) { Debug.LogWarning($"[Tutorial] AcWar 발동 실패 — {deskEmployeeId} 직원을 찾을 수 없음"); return; }
+
+        var emp2 = EmployeeManager.Instance.ownedEmployees
+            .Find(e => e.id != emp1.id && e.role != emp1.role && !IsTargetDispatched(e.id));
+        if (emp2 == null) { Debug.LogWarning("[Tutorial] AcWar 발동 실패 — 다른 역할의 (파견 제외) 직원이 없음"); return; }
+
+        if (_choiceEventPool.Count == 0)
+        {
+            RandomEvents_Dev.Register(_eventPool, this, RandomEventChartLoader.Cache);
+            RandomEvents_Choice.Register(_choiceEventPool, this, RandomEventChoiceChartLoader.Cache);
+        }
+
+        var data = RandomEvents_Choice.CreateTwoEmpFightEvent(
+            RandomEventType.AcWar, RandomEventChoiceChartLoader.Cache, emp1, emp2);
+        data.cancelled = false;
+        data.onSetup?.Invoke();
+        if (data.cancelled) return;
+
+        if (onResolved != null && data.choices != null && data.choices.Count >= 2)
+        {
+            EmployeeData winner = null;
+            var origOnChoose0 = data.choices[0].onChoose;
+            data.choices[0].onChoose = () => { origOnChoose0?.Invoke(); winner = emp1; };
+            var origOnChoose1 = data.choices[1].onChoose;
+            data.choices[1].onChoose = () => { origOnChoose1?.Invoke(); winner = emp2; };
+
+            data.onConfirm = () =>
+            {
+                DevelopmentManager.Instance.ResumeFromEvent();
+                onResolved(winner);
+            };
+        }
+
+        _pendingChoiceEvent = data;
+        OfficeManager.Instance?.ForceCharacterToPatrolPoint(emp1.id, "master_desk", stayDuration: 1f);
     }
 
     // ── 테스트용 즉시 발동 ────────────────────────────────────

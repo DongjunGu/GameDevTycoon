@@ -158,7 +158,19 @@ public class TutorialHighlighter : MonoBehaviour
     public IEnumerator Highlight(Button target, bool hideDimOnConfirmedClick = false)
     {
         if (target == null) { Debug.LogWarning($"[TutorialHighlighter] Highlight 대상이 null — 강조 스킵됨(클릭 대기도 영원히 안 걸림)"); yield break; }
-        if (!target.gameObject.activeInHierarchy) { Debug.LogWarning($"[TutorialHighlighter] Highlight 대상 '{target.name}'이 비활성(activeInHierarchy=false) — 강조 스킵됨(클릭 대기도 영원히 안 걸림)"); yield break; }
+
+        // 튜토리얼 중 기본 SetActive(false)로 꺼둔 버튼(예: MenuController의 menuButton)이라도 지금 이
+        // 순간만은 강조 대상이므로 보이고 클릭 가능해야 한다 — activeInHierarchy 체크보다 먼저 되살린다.
+        // (부모까지 비활성이면 이걸로도 activeInHierarchy는 여전히 false일 수 있음 — 그 경우는 원래대로 스킵)
+        bool prevSelfActive = target.gameObject.activeSelf;
+        if (!prevSelfActive) target.gameObject.SetActive(true);
+
+        if (!target.gameObject.activeInHierarchy)
+        {
+            Debug.LogWarning($"[TutorialHighlighter] Highlight 대상 '{target.name}'이 비활성(activeInHierarchy=false) — 강조 스킵됨(클릭 대기도 영원히 안 걸림)");
+            if (!prevSelfActive) target.gameObject.SetActive(prevSelfActive);
+            yield break;
+        }
 
         yield return MoveOrAppear(target.transform as RectTransform);
         var myPulse = StartPulse(PulseHole(target.transform as RectTransform));
@@ -189,6 +201,7 @@ public class TutorialHighlighter : MonoBehaviour
         if (trigger != null) Destroy(trigger);
         if (catcherTrigger != null) Destroy(catcherTrigger);
 
+        target.gameObject.SetActive(prevSelfActive);
         StopPulse(myPulse);
     }
 
@@ -289,11 +302,36 @@ public class TutorialHighlighter : MonoBehaviour
         StopPulse(myPulse);
     }
 
+    // world-space 캐릭터(스프라이트, RectTransform 없음) 전용 BeginHighlight — 클릭 대기는 호출부가 별도로
+    // 처리한다(캐릭터는 Button이 아니라 OfficeCharacter.OnPointerClick으로 직접 클릭되므로). 나머지 동작
+    // (등장/슬라이드/펄스)은 BeginHighlight(RectTransform)와 동일.
+    public IEnumerator BeginHighlightWorld(Transform target)
+    {
+        if (target == null) { Debug.LogWarning($"[TutorialHighlighter] BeginHighlightWorld 대상이 null — 강조 스킵됨"); yield break; }
+        yield return MoveOrAppearWorld(target);
+        StopAnyPulse();
+        StartPulse(PulseHoleWorld(target));
+    }
+
     // ── 내부 공통 구현 ────────────────────────────────────────────────
     IEnumerator MoveOrAppear(RectTransform target)
     {
         EnsureDim();
         Rect destRect = ComputeHoleRect(target, highlightHolePadding);
+        if (_holeInitialized)
+            yield return MoveHole(_currentHoleRect, destRect);
+        else
+        {
+            yield return AppearHole(destRect);
+            _currentHoleRect = destRect;
+            _holeInitialized = true;
+        }
+    }
+
+    IEnumerator MoveOrAppearWorld(Transform target)
+    {
+        EnsureDim();
+        Rect destRect = ComputeHoleRectWorld(target, highlightHolePadding);
         if (_holeInitialized)
             yield return MoveHole(_currentHoleRect, destRect);
         else
@@ -329,6 +367,19 @@ public class TutorialHighlighter : MonoBehaviour
             t += Time.unscaledDeltaTime * 4f;
             float pad = highlightHolePadding + highlightPulseAmplitude * Mathf.Sin(t);
             _currentHoleRect = ComputeHoleRect(target, pad);
+            ApplyHole(_currentHoleRect);
+            yield return null;
+        }
+    }
+
+    IEnumerator PulseHoleWorld(Transform target)
+    {
+        float t = 0f;
+        while (true)
+        {
+            t += Time.unscaledDeltaTime * 4f;
+            float pad = highlightHolePadding + highlightPulseAmplitude * Mathf.Sin(t);
+            _currentHoleRect = ComputeHoleRectWorld(target, pad);
             ApplyHole(_currentHoleRect);
             yield return null;
         }
@@ -374,15 +425,36 @@ public class TutorialHighlighter : MonoBehaviour
     // target의 화면상 사각형을 dim 루트의 로컬 좌표계로 변환 + padding 적용.
     Rect ComputeHoleRect(RectTransform target, float padding)
     {
-        var cam = _dimCanvas.worldCamera;
         var corners = new Vector3[4];
         target.GetWorldCorners(corners);
+        return WorldCornersToLocalRect(corners, padding);
+    }
 
+    // world-space 캐릭터(스프라이트, RectTransform 없음) 전용 — SpriteRenderer의 실제 렌더 바운드를
+    // 4모서리로 변환해 ComputeHoleRect와 동일한 변환 파이프라인(WorldCornersToLocalRect)을 공유한다.
+    Rect ComputeHoleRectWorld(Transform target, float padding)
+    {
+        var rend = target.GetComponentInChildren<SpriteRenderer>();
+        Bounds b = rend != null ? rend.bounds : new Bounds(target.position, new Vector3(1.5f, 2f, 0f));
+        var corners = new Vector3[4]
+        {
+            new Vector3(b.min.x, b.min.y, 0f),
+            new Vector3(b.min.x, b.max.y, 0f),
+            new Vector3(b.max.x, b.max.y, 0f),
+            new Vector3(b.max.x, b.min.y, 0f),
+        };
+        return WorldCornersToLocalRect(corners, padding);
+    }
+
+    // 월드 좌표 4모서리 → dim 루트 로컬 좌표계 사각형 변환 + padding 적용 (RectTransform/world 공용).
+    Rect WorldCornersToLocalRect(Vector3[] worldCorners, float padding)
+    {
+        var cam = _dimCanvas.worldCamera;
         Vector2 min = new Vector2(float.PositiveInfinity, float.PositiveInfinity);
         Vector2 max = new Vector2(float.NegativeInfinity, float.NegativeInfinity);
-        for (int i = 0; i < 4; i++)
+        for (int i = 0; i < worldCorners.Length; i++)
         {
-            Vector2 screenPoint = RectTransformUtility.WorldToScreenPoint(cam, corners[i]);
+            Vector2 screenPoint = RectTransformUtility.WorldToScreenPoint(cam, worldCorners[i]);
             RectTransformUtility.ScreenPointToLocalPointInRectangle(_dimRoot, screenPoint, cam, out var localPoint);
             min = Vector2.Min(min, localPoint);
             max = Vector2.Max(max, localPoint);
