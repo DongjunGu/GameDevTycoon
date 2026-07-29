@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 // ──────────────────────────────────────────────────────────────────────────
 // 캐릭터 전용 이벤트(유니크) 테스트 패널 — 에디터 플레이 모드에서만 자동 생성.
@@ -146,16 +147,39 @@ public class CharacterEventTester : MonoBehaviour
         GUILayout.Space(8);
         GUILayout.Label("<b>━━ 온보딩 ━━</b>", Rich());
         GUILayout.Label($"IntroDone: {OnboardingState.IntroDone} / TutorialDone: {OnboardingState.TutorialDone} / RunState.tutorial: {RunStateManager.Instance?.IsTutorial}");
+        GUILayout.Label($"3:{OnboardingState.Tutorial3Done} 5:{OnboardingState.Tutorial5Done}(pend:{OnboardingState.Tutorial5Pending}) 6:{OnboardingState.Tutorial6Done} 7:{OnboardingState.Tutorial7Done} 8:{OnboardingState.Tutorial8Done} 9:{OnboardingState.Tutorial9Done} 10:{OnboardingState.Tutorial10Done} 12:{OnboardingState.Tutorial12Done}");
 #if UNITY_EDITOR
         if (GUILayout.Button("온보딩 리셋 (컷씬/튜토리얼 재노출)")) { OnboardingState.ResetAll(); Set("온보딩 리셋 — LoadingScene부터 다시 실행"); }
-        if (GUILayout.Button("현재 씬에서 튜토리얼만 강제 재실행 (RunState.tutorial=true)"))
+        if (GUILayout.Button("온보딩 들어가기 (리셋 + RunState.tutorial=true + 씬 재시작)"))
         {
             OnboardingState.ResetAll();
             if (RunStateManager.Instance != null)
-                RunStateManager.Instance.SetTutorial(true, success => Set(success ? "RunState.tutorial=true 저장 완료 — GameScene 재시작(또는 F5)하면 튜토리얼 실행" : "RunState.tutorial 저장 실패"));
+            {
+                RunStateManager.Instance.SetTutorial(true, success =>
+                {
+                    if (success) { Set("RunState.tutorial=true 저장 완료 — 씬 재시작"); SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex); }
+                    else Set("RunState.tutorial 저장 실패");
+                });
+            }
             else
                 Set("RunStateManager 인스턴스 없음");
         }
+        if (GUILayout.Button("튜토리얼 완전 해제 (전부 완료 처리 + RunState.tutorial=false)")) DisableTutorial();
+        GUILayout.Label("아래 버튼은 이전 단계를 전부 '완료' 처리만 함 — 그 단계의 실제 트리거(패널 열기 등)는\n직접 눌러야 재생됨. 단, 7/9(팀장점수)는 위 '팀장점수 테스트' 버튼이 실제 게임 상태 없이\n곧바로 트리거해줌(테스트라 프로젝트/직원 데이터엔 영향 없음). TutorialController가 죽지\n않은 상태(그 단계가 아직 false)일 때만 유효.");
+        GUILayout.BeginHorizontal();
+        if (GUILayout.Button("3부터")) JumpToOnboardingStep(3);
+        if (GUILayout.Button("5부터")) JumpToOnboardingStep(5);
+        if (GUILayout.Button("6부터")) JumpToOnboardingStep(6);
+        if (GUILayout.Button("7부터")) JumpToOnboardingStep(7);
+        if (GUILayout.Button("8부터")) JumpToOnboardingStep(8);
+        if (GUILayout.Button("9부터")) JumpToOnboardingStep(9);
+        if (GUILayout.Button("10부터")) JumpToOnboardingStep(10);
+        if (GUILayout.Button("12부터")) JumpToOnboardingStep(12);
+        GUILayout.EndHorizontal();
+        GUILayout.BeginHorizontal();
+        if (GUILayout.Button("7-1~7-6 지금 바로 테스트 (기획팀장, 아무 직원)")) QuickTestLeaderTutorial(7, LeaderType.Planner);
+        if (GUILayout.Button("9-1~9-3 지금 바로 테스트 (개발팀장, 아무 직원)")) QuickTestLeaderTutorial(9, LeaderType.Programmer);
+        GUILayout.EndHorizontal();
 #endif
 
         GUILayout.Space(6);
@@ -167,6 +191,46 @@ public class CharacterEventTester : MonoBehaviour
 
     GUIStyle Rich() { var s = new GUIStyle(GUI.skin.label) { richText = true, wordWrap = true }; return s; }
     void Set(string msg) { _status = msg; Debug.Log("[EventTester] " + msg); }
+
+    // step보다 앞선 온보딩 단계는 전부 완료 처리, step 자신은 안 건드림(false로 남겨 그 단계가 다시 뜨게).
+    // ⚠️ 이건 OnboardingState 플래그만 조작 — 그 단계가 실제로 필요로 하는 게임 상태(직원 존재, 프로젝트
+    // 진행 중 등)까지 만들어주진 않음. 팀장점수 화면(7/9단계)은 위 "팀장점수 테스트" 버튼으로 게임 상태
+    // 없이도 트리거 가능. TutorialController.Instance는 needStep10(=!Tutorial10Done)이 살아있는 한 죽지
+    // 않으므로, step을 10 미만으로 잡아도(예: 6부터) 10까지 전부 아직 false라 안전하게 유지됨.
+    void JumpToOnboardingStep(int step)
+    {
+        if (step > 3) OnboardingState.MarkTutorial3Done();
+        if (step > 5) OnboardingState.MarkTutorial5Done();
+        if (step > 6) OnboardingState.MarkTutorial6Done(); // Tutorial5Pending도 여기서 같이 해제됨
+        if (step > 7) OnboardingState.MarkTutorial7Done();
+        if (step > 8) OnboardingState.MarkTutorial8Done();
+        if (step > 9) OnboardingState.MarkTutorial9Done();
+        if (step > 10) OnboardingState.MarkTutorial10Done();
+        if (step > 12) OnboardingState.MarkTutorial12Done(); // 11단계는 아직 미구현
+        Set($"온보딩 {step}단계 전까지 완료 처리함 — {step}단계의 실제 트리거를 직접 눌러줘");
+    }
+
+    // 온보딩 전체(컷씬 포함)를 완료 처리 + RunState.tutorial=false — 이후 세션은 튜토리얼 훅이 전혀
+    // 안 걸리고 일반 플레이만 된다(다른 기능 테스트할 때 튜토리얼이 끼어드는 걸 막는 용도).
+    void DisableTutorial()
+    {
+        OnboardingState.MarkIntroDone();
+        OnboardingState.MarkTutorialDone();
+        JumpToOnboardingStep(13); // 3~12단계 전부 완료 처리
+        if (RunStateManager.Instance != null)
+            RunStateManager.Instance.SetTutorial(false, success => Set(success ? "튜토리얼 완전 해제 완료 (RunState.tutorial=false)" : "온보딩 플래그는 껐지만 RunState 저장 실패"));
+        else
+            Set("온보딩 플래그는 전부 완료 처리함 (RunStateManager 없음 — tutorial 플래그는 못 끔)");
+    }
+
+    // 7단계(기획팀장)/9단계(개발팀장) 전용 — 단계 점프 + 팀장점수 테스트 진입을 한 번에.
+    void QuickTestLeaderTutorial(int step, LeaderType type)
+    {
+        JumpToOnboardingStep(step);
+        var e = EmployeeManager.Instance?.ownedEmployees.Count > 0 ? EmployeeManager.Instance.ownedEmployees[0] : null;
+        if (e != null) DevelopmentManager.Instance?.TestLeaderScore(e, type);
+        else Set("보유 직원이 없음");
+    }
 
     // ── 채용 ──
     void HireUnique(string masterId)

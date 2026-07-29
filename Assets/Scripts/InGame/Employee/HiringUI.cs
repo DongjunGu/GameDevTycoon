@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using TMPro;
@@ -912,17 +913,72 @@ public class HiringUI : MonoBehaviour
         }
 
         // 보너스 라운드로 보류해뒀던 첫 번째 후보가 있으면 지금(두 번째 확정 시점) 같이 채용 처리 —
-        // 여기서부터 실제로 서버에 남는다. wasTutorialBonusRound는 아래서 OnboardingState.MarkTutorial3Done()
-        // 호출 여부를 가르는 데도 재사용(첫 채용만 하고 중단한 경우와 구분하기 위해 _tutorialPendingFirstHire를
-        // 지우기 전에 미리 캡처).
-        bool wasTutorialBonusRound = _tutorialPendingFirstHire != null;
+        // 여기서부터 실제로 서버에 남는다. 둘 다 같은 프레임에 HireEmployee를 부르면 각자의 비동기 Insert
+        // 콜백(→ OfficeManager.OnEmployeeHired 스폰)이 거의 동시에 도착해 두 캐릭터가 스폰 지점에 겹쳐서
+        // 나타나는 게 눈에 띄게 어색했음 — 1초 텀을 두고 순차 스폰되도록 코루틴으로 분리.
         if (_tutorialPendingFirstHire != null)
         {
-            EmployeeManager.Instance.HireEmployee(_tutorialPendingFirstHire, saveImmediately: false);
+            var firstHire = _tutorialPendingFirstHire;
+            var secondHire = _selectedEmployee;
             _tutorialPendingFirstHire = null;
+            StartCoroutine(FinishTutorialDualHire(firstHire, secondHire));
+            return;
         }
         EmployeeManager.Instance.HireEmployee(_selectedEmployee); // 마지막 채용 — Money/GameTime/Project 정상 저장
+        FinishHireCommon(false);
+    }
 
+    // 튜토리얼 보너스 라운드 전용 — 첫 번째 채용을 먼저 확정(스폰)시키고 1초 뒤 두 번째를 확정해 스폰이
+    // 겹치지 않게 한다. 둘 다 끝난 뒤에야 공통 마무리(FinishHireCommon)로 이어감.
+    IEnumerator FinishTutorialDualHire(EmployeeData firstHire, EmployeeData secondHire)
+    {
+        // ⚠️ 이 시점엔 아직 BeginCandidateFlow()의 시간 정지가 걸려있어(CharacterMover가
+        // GameTimeManager.IsRunning을 체크하므로) 스폰만 되고 실제로는 안 걸어간다 — 아래서 1초 텀을 둬도
+        // 이동 자체가 멈춰있어서, 나중에(FinishHireCommon 안에서) 시간이 풀리는 순간 두 캐릭터가 동시에
+        // 걷기 시작해 결국 같이 도착하는 것처럼 보였다. 여기서 미리 EndCandidateFlow()를 불러 시간을 먼저
+        // 풀어야 실제로 순차 도보 연출이 보인다(_candidateFlowActive 가드 덕에 중복 호출 안전 — 아래
+        // FinishHireCommon 안의 호출은 이미 비활성 상태라 no-op).
+        EndCandidateFlow();
+
+        // ⚠️ HireEmployee가 반환하는 EmployeeData는 새 GUID id로 새로 생성된 "인게임" 오브젝트라
+        // firstHire.id/secondHire.id(풀 후보 id)와 다르다 — 아래 WaitUntilSeated는 실제 스폰된
+        // OfficeCharacter를 _characters 딕셔너리(인게임 id 기준)에서 찾으므로 반드시 이 반환값을 써야 한다.
+        // (예전엔 firstHire.id를 그대로 써서 캐릭터를 영영 못 찾아 10초 타임아웃 x2 = 20초씩 헛대기했었음)
+        var firstInGame  = EmployeeManager.Instance.HireEmployee(firstHire, saveImmediately: false);
+        yield return new WaitForSecondsRealtime(1f); // 시간 정지 중일 수 있어 real time 사용
+        var secondInGame = EmployeeManager.Instance.HireEmployee(secondHire); // 마지막 채용 — Money/GameTime/Project 정상 저장
+        FinishHireCommon(true);
+
+        // 온보딩 5-1은 "직원들이 자리에 앉고 나서" 뜨도록 — 두 캐릭터가 각자 데스크 도착(이동 종료)할
+        // 때까지 대기한 뒤에 재생한다(예전엔 고정 2초 딜레이라 이동이 안 끝났는데 뜨는 경우가 있었음).
+        OnboardingState.ArmTutorial5();
+        yield return WaitUntilSeated(firstInGame.id);
+        yield return WaitUntilSeated(secondInGame.id);
+        if (TutorialController.Instance != null)
+            StartCoroutine(TutorialController.Instance.PlayTutorial5_1());
+    }
+
+    // employeeId 캐릭터가 스폰되고 데스크까지의 이동(CharacterMover)이 끝날 때까지 대기.
+    // 스폰 자체가 실패하는 경우를 대비해 "존재 대기" 구간에만 방어적 타임아웃(10초, real time)을 둔다.
+    IEnumerator WaitUntilSeated(string employeeId)
+    {
+        OfficeCharacter oc = null;
+        float waited = 0f;
+        while (oc == null && waited < 10f)
+        {
+            oc = OfficeManager.Instance?.GetCharacter(employeeId);
+            if (oc == null) { yield return null; waited += Time.unscaledDeltaTime; }
+        }
+        if (oc == null) yield break;
+
+        var mover = oc.GetComponent<CharacterMover>();
+        while (mover != null && mover.IsMoving) yield return null;
+    }
+
+    // DoHire의 공통 마무리 — 단일 채용/튜토리얼 보너스 라운드(2연속 채용) 양쪽에서 재사용.
+    // wasTutorialBonusRound: OnboardingState.MarkTutorial3Done() 호출 여부 + 5-1 예약 여부를 가른다.
+    void FinishHireCommon(bool wasTutorialBonusRound)
+    {
         // 튜토리얼 3-1~4-2 전체가 "진짜" 완료되는 유일한 지점 — 여기서만 Tutorial3Done을 마크한다(과거엔
         // 3-6 직후 바로 마크했는데, 그러면 두 번째 채용을 안 끝내고 재접속했을 때 Tutorial3Done=true라서
         // 튜토리얼이 다시 안 뜨고 그냥 빈 3명 후보 화면만 보여 어색했음). 이렇게 완료 시점까지 미루면
@@ -952,18 +1008,9 @@ public class HiringUI : MonoBehaviour
         OnboardingState.ArmProjectTutorial(0);
         ProjectTutorialController.Instance?.TryFire();
 
-        // 온보딩: 튜토리얼 두 번째(진짜) 채용이 지금 막 확정됐으면 2초 뒤 5-1(사무실이 좁다는 소감) 재생.
-        // ArmTutorial5()는 지연 재생 "전"에 동기 호출 — 이 2초 사이(또는 5-1~5-4 도중) 재접속해도
-        // TutorialController.Start()가 pending을 보고 5-1부터 다시 재생할 수 있게 미리 저장해둔다.
-        if (wasTutorialBonusRound)
-        {
-            OnboardingState.ArmTutorial5();
-            DOVirtual.DelayedCall(2f, () =>
-            {
-                if (TutorialController.Instance != null)
-                    StartCoroutine(TutorialController.Instance.PlayTutorial5_1());
-            }).SetUpdate(true);
-        }
+        // 온보딩: 튜토리얼 두 번째(진짜) 채용의 5-1(사무실이 좁다는 소감) 재생 트리거는 이제
+        // FinishTutorialDualHire(호출부) 쪽에서 "직원들이 자리에 앉고 나서" 재생하도록 직접 처리한다 —
+        // ArmTutorial5()도 그쪽에서 같이 호출됨(재접속 시 pending 복원 목적으로 예약 "전"에 동기 호출).
 
         DialogManager.Instance.Resume();
     }

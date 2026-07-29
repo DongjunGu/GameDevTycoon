@@ -53,6 +53,8 @@ public class EmployeeListUI : MonoBehaviour
     public Slider satisfactionSlider;
     public SatisfactionFillSet satisfactionFillSet; // 구간별 Fill sprite 묶음 (공용 에셋)
     public TextMeshProUGUI satisfactionText;
+    [Tooltip("EmployeeInfoPanel/ERSalaryPanel/SalaryValueText — 연봉 값만 표시(라벨은 별도 정적 UI)")]
+    public TextMeshProUGUI salaryText;
     public GameObject dispatchedBadge;        // 파견중 badge (옵션)
     public TextMeshProUGUI planningText;
     public TextMeshProUGUI developText;
@@ -477,6 +479,7 @@ public class EmployeeListUI : MonoBehaviour
             SatisfactionFillSet.Apply(satisfactionSlider, satisfactionFillSet, emp.satisfaction);
         }
         SetText(satisfactionText, $"{emp.satisfaction}/100");
+        SetText(salaryText, $"{emp.salary:N0} G");
 
         if (dispatchedBadge != null)
             dispatchedBadge.SetActive(IsDispatched(emp.id));

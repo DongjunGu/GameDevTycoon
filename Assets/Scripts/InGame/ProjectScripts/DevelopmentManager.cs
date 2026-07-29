@@ -276,7 +276,7 @@ public class DevelopmentManager : MonoBehaviour
     public void StartDevelopment()
     {
         GameTimeManager.Instance.SetProjectSpeed(ProjectSetupUI.SelectedScale);
-        float baseDuration = 80f; // 전 규모 총 80초로 통일 (주수 16/24/32 차등은 secondsPerWeek가 담당)
+        float baseDuration = GameTimeManager.BaseDevDurationSeconds; // 주수 16/24/32 차등은 secondsPerWeek가 담당
 
         // 인원 수에 따른 개발 기간 조정 (추천 인원 대비 1명 차이 = 1주 증감)
         int recommended = ProjectData.GetRecommendedStaff(ProjectSetupUI.SelectedScale);
@@ -284,10 +284,10 @@ public class DevelopmentManager : MonoBehaviour
         int diff = actual - recommended; // 양수: 초과(기간 감소), 음수: 부족(기간 증가)
         float secondsPerWeek = ProjectSetupUI.SelectedScale switch
         {
-            ProjectScale.Small  => 80f / 16f, // 5.0초/주
-            ProjectScale.Medium => 80f / 24f, // 3.33초/주
-            ProjectScale.Large  => 80f / 32f, // 2.5초/주
-            _ => 80f / 16f
+            ProjectScale.Small  => baseDuration / 16f,
+            ProjectScale.Medium => baseDuration / 24f,
+            ProjectScale.Large  => baseDuration / 32f,
+            _ => baseDuration / 16f
         };
         developmentDuration = baseDuration - diff * secondsPerWeek;
         // 게으른 천재 +2주는 여기서 더하지 않고, 개발 시작(팀장 선택 직후)에 ExtendDevelopmentDuration 으로 적용
@@ -530,6 +530,16 @@ public class DevelopmentManager : MonoBehaviour
                         _tickIndexMap[employee.id]++;
                     }
                 }
+            }
+
+            // 튜토리얼 8-1: 진행도 15% 시점에 1회. Tutorial7Done(팀장점수 튜토리얼까지 끝남)이고
+            // Tutorial8Done이 아직이면 발동 — PlayTutorial8_1()이 내부에서 시간을 멈추므로(BeginDimTimeStop)
+            // 위 !GameTimeManager.Instance.IsRunning 체크가 자동으로 _elapsed 누적을 멈춰준다. 코루틴을
+            // 종료하지 않고 그대로 이어가면 되므로 25%/75%처럼 yield break + 외부 재시작이 필요 없다.
+            if (!OnboardingState.Tutorial8Done && OnboardingState.Tutorial7Done && progress >= 0.15f
+                && TutorialController.Instance != null)
+            {
+                yield return TutorialController.Instance.PlayTutorial8_1();
             }
 
             if (!_triggered25 && progress >= 0.25f)
@@ -1046,6 +1056,12 @@ public class DevelopmentManager : MonoBehaviour
     // 33 + M×(U1+U2+U3) + 11 + M×11(=4회차 최소 U) > 100 → U1+U2+U3 > 30.48, 최악 M=1.35 기준.
     static readonly int[] TutorialFixedRound123U = { 8, 11, 13 };
 
+    // 온보딩 튜토리얼(9-1~9-3, 개발팀장) 전용 고정 U — M을 1.35로 함께 고정하는 게 전제. cumDs3(1~3회차
+    // 누적) = 21.8+24.5+27.2 = 73.5. 4회차는 SelectRound4Aim에서 아im별로 별도 고정(중/강=11→99.35,
+    // 약=6(그 범위 최댓값)→91.6) — 약은 99에 못 미쳐도 "그래도 좋은 결과"라는 9-3 대사와 일치, 중/강은
+    // 딱 99대(오버플로 직전)로 맞아떨어져 "무려 99라니"/"심장 아프다" 대사와 일치.
+    static readonly int[] TutorialFixedRound123U_Dev = { 8, 10, 12 };
+
     // ── 테스트 전용 진입점 ──────────────────────────────────────
     // 프로젝트 진행 상태(개발 단계/기여도/저장)에 전혀 영향 없이 팀장점수 연출만 실행해본다.
     // 4회차까지 끝나도 저장이나 DevelopmentPanelUI 반영이 일절 일어나지 않고 그냥 패널만 닫힌다.
@@ -1071,8 +1087,12 @@ public class DevelopmentManager : MonoBehaviour
             _ => 0
         };
 
+        // 온보딩 튜토리얼 테스트 지원 — F9 "팀장점수 테스트" 버튼으로도 실제 플레이와 동일한 U/M 고정값이
+        // 적용되고 7-1~7-6/9-1~9-3 훅이 그대로 타도록(프로젝트/실제 팀장 배정 없이 내용만 미리 확인 가능).
+        bool tutorialFixedRolls    = type == LeaderType.Planner    && !OnboardingState.Tutorial7Done;
+        bool tutorialFixedRollsDev = type == LeaderType.Programmer && !OnboardingState.Tutorial9Done;
         int stage = RollLeaderStage(employee.enhancementLevel);
-        float M = LeaderStageM[stage - 1];
+        float M = tutorialFixedRollsDev ? 1.35f : LeaderStageM[stage - 1];
         float K = 0.8738f + 0.026409f * Mathf.Pow(skill, 0.9081f);
         bool lazyGenius = type == LeaderType.Programmer && CharacterTraitApplier.HasLazyGeniusOwned();
         if (lazyGenius) K *= CharacterTraitApplier.LAZY_GENIUS_LEADER_BONUS;
@@ -1092,7 +1112,9 @@ public class DevelopmentManager : MonoBehaviour
 
         for (int r = 0; r < 3; r++)
         {
-            int roll = UnityEngine.Random.Range(1, LeaderDsMaxRoll[r] + 1);
+            int roll = tutorialFixedRolls    ? TutorialFixedRound123U[r]
+                     : tutorialFixedRollsDev ? TutorialFixedRound123U_Dev[r]
+                     : UnityEngine.Random.Range(1, LeaderDsMaxRoll[r] + 1);
             float ds = 11f + roll * M;
             cumDs += ds;
             cumDsAfter[r] = cumDs;
@@ -1123,7 +1145,23 @@ public class DevelopmentManager : MonoBehaviour
                 fullRoundScores = fullRoundScores, roundScores = roundScores, cumDsAfter = cumDsAfter,
                 testMode = true
             };
-            LeaderScoreUI.Instance.ShowPendingRound4(employee, type, fullRoundScores, roundScores, cumDsAfter, testMode: true);
+            if (tutorialFixedRolls && TutorialController.Instance != null)
+            {
+                // 7-1~7-6 — 실제 흐름(BuildAndShowLeaderScore)과 동일한 분기: 1회차만 먼저 재생 → 7-1/7-2
+                // 대사 → 2~3회차 이어재생 → 7-3~7-6.
+                LeaderScoreUI.Instance.ShowRound1Then(employee, type, fullRoundScores, roundScores, cumDsAfter,
+                    () => TutorialController.Instance.StartCoroutine(TutorialController.Instance.PlayTutorial7_1(() =>
+                    {
+                        LeaderScoreUI.Instance.ContinueRounds2And3(type, fullRoundScores, roundScores, cumDsAfter);
+                        TutorialController.Instance.StartCoroutine(TutorialController.Instance.PlayTutorial7_3ToEnd());
+                    })), testMode: true);
+            }
+            else
+            {
+                LeaderScoreUI.Instance.ShowPendingRound4(employee, type, fullRoundScores, roundScores, cumDsAfter, testMode: true);
+                if (tutorialFixedRollsDev && TutorialController.Instance != null)
+                    TutorialController.Instance.StartCoroutine(TutorialController.Instance.PlayTutorial9_1());
+            }
             return;
         }
 
@@ -1175,9 +1213,18 @@ public class DevelopmentManager : MonoBehaviour
                 _ => 0
             };
 
+            // 온보딩 튜토리얼(7-1~7-6) 전용 — 기획팀장 첫 팀장점수 화면이 아직 안 끝났으면 1~3회차 U를
+            // TutorialFixedRound123U로 고정해 4회차 "강" 선택 시 항상 burst가 나오게 한다.
+            bool tutorialFixedRolls = type == LeaderType.Planner && !OnboardingState.Tutorial7Done;
+            // 온보딩 튜토리얼(9-1~9-3) 전용 — 개발팀장 첫 팀장점수 화면이 아직 안 끝났으면 1~3회차 U를
+            // TutorialFixedRound123U_Dev로 고정 + M도 1.35로 강제(위 배열 계산이 그 M을 전제로 함).
+            // enhancementLevel<=8이면 RollLeaderStage가 어차피 결정적으로 1(=1.35)을 반환하지만(신규
+            // 미강화 팀장이 실제로도 이 경로), 혹시 모를 강화된 팀장 대비 명시적으로 강제.
+            bool tutorialFixedRollsDev = type == LeaderType.Programmer && !OnboardingState.Tutorial9Done;
+
             // 강화도(성수) 기반 단계 추첨 → 추천가중치 M
             int stage = RollLeaderStage(employee.enhancementLevel);
-            float M = LeaderStageM[stage - 1];
+            float M = tutorialFixedRollsDev ? 1.35f : LeaderStageM[stage - 1];
 
             // K(능력치) = 0.8738 + 0.026409 × 주스탯^0.9081
             float K = 0.8738f + 0.026409f * Mathf.Pow(skill, 0.9081f);
@@ -1186,10 +1233,6 @@ public class DevelopmentManager : MonoBehaviour
                 K *= CharacterTraitApplier.LAZY_GENIUS_LEADER_BONUS;
 
             float S = GetLeaderGrowthS(employee.enhancementLevel);
-
-            // 온보딩 튜토리얼(7-1~7-6) 전용 — 기획팀장 첫 팀장점수 화면이 아직 안 끝났으면 1~3회차 U를
-            // TutorialFixedRound123U로 고정해 4회차 "강" 선택 시 항상 burst가 나오게 한다.
-            bool tutorialFixedRolls = type == LeaderType.Planner && !OnboardingState.Tutorial7Done;
 
             // 보너스 임계선(90/95/99) 지급 상태 리셋 — 새 팀장점수 세션 시작
             _leaderBonusGranted = new bool[3];
@@ -1209,9 +1252,9 @@ public class DevelopmentManager : MonoBehaviour
 
             for (int r = 0; r < 3; r++)
             {
-                int roll = tutorialFixedRolls
-                    ? TutorialFixedRound123U[r]
-                    : UnityEngine.Random.Range(1, LeaderDsMaxRoll[r] + 1); // 1~상한 정수
+                int roll = tutorialFixedRolls    ? TutorialFixedRound123U[r]
+                         : tutorialFixedRollsDev ? TutorialFixedRound123U_Dev[r]
+                         : UnityEngine.Random.Range(1, LeaderDsMaxRoll[r] + 1); // 1~상한 정수
                 float ds = 11f + roll * M;
                 cumDs += ds;
                 cumDsAfter[r] = cumDs;
@@ -1277,6 +1320,12 @@ public class DevelopmentManager : MonoBehaviour
                 else
                 {
                     LeaderScoreUI.Instance.ShowPendingRound4(employee, type, fullRoundScores, roundScores, cumDsAfter);
+                    // 온보딩 튜토리얼 9-1 — 개발팀장(Programmer) 첫 팀장점수 화면 한정, 아직 완료 전이면
+                    // 1~3회차가 자연 재생되는 동안 4회차 대기 상태(IsWaitingForRound4Aim)를 폴링해서 안내
+                    // 대사만 띄운다(7단계와 달리 약/중/강을 잠그지 않음 — 9-2에서 SelectRound4Aim 훅으로
+                    // 선택지별 반응을 이어간다). 재접속 재개도 이 경로를 다시 타므로 자연히 커버됨.
+                    if (type == LeaderType.Programmer && !OnboardingState.Tutorial9Done && TutorialController.Instance != null)
+                        TutorialController.Instance.StartCoroutine(TutorialController.Instance.PlayTutorial9_1());
                 }
                 return;
             }
@@ -1356,7 +1405,19 @@ public class DevelopmentManager : MonoBehaviour
         _pendingRound4 = null;
 
         (int uMin, int uMax) = GetAimURange(aim);
-        int U = UnityEngine.Random.Range(uMin, uMax + 1);
+        int U;
+        if (ctx.type == LeaderType.Programmer && !OnboardingState.Tutorial9Done)
+        {
+            // 9-1~9-3 전용 — 1~3회차가 이미 TutorialFixedRound123U_Dev+M=1.35로 고정돼 cumDs3=73.5.
+            // 중/강(둘 다 U=11이 범위 안)은 ds4=25.85로 누적 99.35(딱 99대, 안 터짐) — 9-3의 "무려
+            // 99라니"/"심장 아프다" 대사와 일치. 약은 11이 범위(1~6) 밖이라 그 범위 최댓값(6)으로
+            // 고정 — ds4=18.1, 누적 91.6(99에는 못 미치지만 안전) — "그래도 좋은 결과" 대사와 일치.
+            U = aim == LeaderScoreAim.Low ? 6 : 11;
+        }
+        else
+        {
+            U = UnityEngine.Random.Range(uMin, uMax + 1);
+        }
         float ds4 = 11f + U * ctx.M;
         float cumDs = ctx.cumDs3 + ds4;
 
@@ -1433,8 +1494,22 @@ public class DevelopmentManager : MonoBehaviour
             ? () => { /* 테스트 — 확정해도 프로젝트에 아무 영향 없음 */ }
             : () => ContinueAfterLeaderScore(type, employee, jealousyTarget, leaderCount, total, hunsuBonus, hunsuBonusTarget);
 
-        LeaderScoreUI.Instance.PlayRound4AndFinish(fullRoundScores, roundScores, cumDsAfter,
-                                    total, overflowRound, cutFactor, onComplete);
+        // 온보딩 튜토리얼 9-2 — 개발팀장(Programmer) 한정, 아직 완료 전이면 4회차 결과/스트레스 상승 연출
+        // (PlayRound4AndFinish)을 곧장 재생하지 않고 선택지별(약/중 vs 강) 반응 대사부터 보여준 뒤에 이어간다
+        // — 대사가 뜨는 동안은 스트레스가 안 오르고, 대사가 끝나야 오르기 시작해야 하므로 실제 재생 호출
+        // 자체를 onDone 콜백으로 넘긴다. testMode(F9 "개발" 테스트 버튼)도 포함 — 실제 프로젝트에는 영향
+        // 없이(onComplete가 빈 람다) 튜토리얼 내용만 미리 확인할 수 있게 하기 위함.
+        if (type == LeaderType.Programmer && !OnboardingState.Tutorial9Done && TutorialController.Instance != null)
+        {
+            TutorialController.Instance.StartCoroutine(TutorialController.Instance.PlayTutorial9_2(aim, () =>
+                LeaderScoreUI.Instance.PlayRound4AndFinish(fullRoundScores, roundScores, cumDsAfter,
+                                            total, overflowRound, cutFactor, onComplete)));
+        }
+        else
+        {
+            LeaderScoreUI.Instance.PlayRound4AndFinish(fullRoundScores, roundScores, cumDsAfter,
+                                        total, overflowRound, cutFactor, onComplete);
+        }
     }
 
     // 팀장점수 확정(또는 재접속 재개 후 확정) → 개발 진행으로 이어가는 공통 로직.
@@ -1457,12 +1532,13 @@ public class DevelopmentManager : MonoBehaviour
             // 게으른 천재: 첫 팀장(기획) 선정 직후 1회 — 기간 +2주 / 캐릭터 감속 4주(연장의 2배)
             if (type == LeaderType.Planner && CharacterTraitApplier.HasLazyGeniusOwned())
             {
+                float baseDurLazy = GameTimeManager.BaseDevDurationSeconds;
                 float spw = ProjectSetupUI.SelectedScale switch
                 {
-                    ProjectScale.Small  => 80f / 16f,
-                    ProjectScale.Medium => 80f / 24f,
-                    ProjectScale.Large  => 80f / 32f,
-                    _ => 80f / 16f
+                    ProjectScale.Small  => baseDurLazy / 16f,
+                    ProjectScale.Medium => baseDurLazy / 24f,
+                    ProjectScale.Large  => baseDurLazy / 32f,
+                    _ => baseDurLazy / 16f
                 };
                 float ext = CharacterTraitApplier.LAZY_GENIUS_EXTRA_WEEKS * spw;
                 ExtendDevelopmentDuration(ext, ext * 2f);
@@ -1664,16 +1740,16 @@ public class DevelopmentManager : MonoBehaviour
         bool pendingLeaderSelect = false, bool pendingInvestmentUI = false,
         bool pendingCreativityGame = false, bool pendingDebuggingAlert = false)
     {
-        float baseDuration = 80f; // 전 규모 총 80초로 통일 (주수 16/24/32 차등은 secondsPerWeek가 담당)
+        float baseDuration = GameTimeManager.BaseDevDurationSeconds; // 주수 16/24/32 차등은 secondsPerWeek가 담당
         int recommended = ProjectData.GetRecommendedStaff(ProjectSetupUI.SelectedScale);
         int actual = EmployeeManager.Instance.ownedEmployees.Count;
         int diff = actual - recommended;
         float secondsPerWeek = ProjectSetupUI.SelectedScale switch
         {
-            ProjectScale.Small  => 80f / 16f, // 5.0초/주
-            ProjectScale.Medium => 80f / 24f, // 3.33초/주
-            ProjectScale.Large  => 80f / 32f, // 2.5초/주
-            _ => 80f / 16f
+            ProjectScale.Small  => baseDuration / 16f,
+            ProjectScale.Medium => baseDuration / 24f,
+            ProjectScale.Large  => baseDuration / 32f,
+            _ => baseDuration / 16f
         };
         // 게으른 천재 +2주는 savedDuration 에 이미 반영돼 복원됨(ExtendDevelopmentDuration 시점에 baked). 캐릭터 속도 감소도 networkSlowEndElapsed 로 복원.
         developmentDuration = savedDuration > 0f ? savedDuration : baseDuration - diff * secondsPerWeek;

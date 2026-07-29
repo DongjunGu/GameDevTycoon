@@ -722,9 +722,12 @@ public static class RandomEvents_Choice
     }
 
     // 두 직원 싸움 계열 이벤트 공통 생성 (TangsuYukFight / AntiMintchoc / AcWar)
-    static RandomEventChoiceData CreateTwoEmpFightEvent(
+    // forcedEmp1/forcedEmp2: 둘 다 지정되면 역할 랜덤 선정을 건너뛰고 그대로 사용(튜토리얼 등 결정적 발동용).
+    public static RandomEventChoiceData CreateTwoEmpFightEvent(
         RandomEventType type,
-        Dictionary<string, RandomEventChoiceChartRow> chart)
+        Dictionary<string, RandomEventChoiceChartRow> chart,
+        EmployeeData forcedEmp1 = null,
+        EmployeeData forcedEmp2 = null)
     {
         EmployeeData emp1 = null;
         EmployeeData emp2 = null;
@@ -804,32 +807,40 @@ public static class RandomEvents_Choice
 
         evt.onSetup = () =>
         {
-            // 파견중(사무실 부재) 직원은 master_desk 로 강제이동이 불가(_characters 에 없음) → 싸움 대상에서 제외.
-            bool Eligible(EmployeeData e) =>
-                DispatchManager.Instance == null || !DispatchManager.Instance.IsDispatched(e.id);
-
-            var availableRoles = new List<EmployeeRole>();
-            foreach (var r in new[] { EmployeeRole.Planner, EmployeeRole.Programmer, EmployeeRole.Artist })
-                if (EmployeeManager.Instance.ownedEmployees.Exists(e => e.role == r && Eligible(e)))
-                    availableRoles.Add(r);
-
-            if (availableRoles.Count < 2)
+            if (forcedEmp1 != null && forcedEmp2 != null)
             {
-                evt.cancelled = true;
-                Debug.LogWarning("[EmployeeFight] 취소 — 서로 다른 역할의 (파견 제외) 직원이 2명 미만");
-                return;
+                emp1 = forcedEmp1;
+                emp2 = forcedEmp2;
             }
-
-            for (int i = availableRoles.Count - 1; i > 0; i--)
+            else
             {
-                int j = UnityEngine.Random.Range(0, i + 1);
-                var tmp = availableRoles[i]; availableRoles[i] = availableRoles[j]; availableRoles[j] = tmp;
-            }
+                // 파견중(사무실 부재) 직원은 master_desk 로 강제이동이 불가(_characters 에 없음) → 싸움 대상에서 제외.
+                bool Eligible(EmployeeData e) =>
+                    DispatchManager.Instance == null || !DispatchManager.Instance.IsDispatched(e.id);
 
-            var pool1 = EmployeeManager.Instance.ownedEmployees.FindAll(e => e.role == availableRoles[0] && Eligible(e));
-            var pool2 = EmployeeManager.Instance.ownedEmployees.FindAll(e => e.role == availableRoles[1] && Eligible(e));
-            emp1 = pool1[UnityEngine.Random.Range(0, pool1.Count)];
-            emp2 = pool2[UnityEngine.Random.Range(0, pool2.Count)];
+                var availableRoles = new List<EmployeeRole>();
+                foreach (var r in new[] { EmployeeRole.Planner, EmployeeRole.Programmer, EmployeeRole.Artist })
+                    if (EmployeeManager.Instance.ownedEmployees.Exists(e => e.role == r && Eligible(e)))
+                        availableRoles.Add(r);
+
+                if (availableRoles.Count < 2)
+                {
+                    evt.cancelled = true;
+                    Debug.LogWarning("[EmployeeFight] 취소 — 서로 다른 역할의 (파견 제외) 직원이 2명 미만");
+                    return;
+                }
+
+                for (int i = availableRoles.Count - 1; i > 0; i--)
+                {
+                    int j = UnityEngine.Random.Range(0, i + 1);
+                    var tmp = availableRoles[i]; availableRoles[i] = availableRoles[j]; availableRoles[j] = tmp;
+                }
+
+                var pool1 = EmployeeManager.Instance.ownedEmployees.FindAll(e => e.role == availableRoles[0] && Eligible(e));
+                var pool2 = EmployeeManager.Instance.ownedEmployees.FindAll(e => e.role == availableRoles[1] && Eligible(e));
+                emp1 = pool1[UnityEngine.Random.Range(0, pool1.Count)];
+                emp2 = pool2[UnityEngine.Random.Range(0, pool2.Count)];
+            }
 
             evt.portraitId       = emp1.portraitId;
             evt.portraitId2      = emp2.portraitId;

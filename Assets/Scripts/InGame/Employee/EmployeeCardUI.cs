@@ -67,6 +67,9 @@ public class EmployeeCardUI : MonoBehaviour
 
     private string _currentEmployeeId;
 
+    // 카드가 특정 직원으로 열릴 때마다 발동 — 튜토리얼이 "이 직원의 카드가 열렸는지"를 기다릴 때 사용.
+    public event System.Action<string> OnCardShown;
+
     void Awake()
     {
         if (Instance != null) { Destroy(gameObject); return; }
@@ -117,6 +120,7 @@ public class EmployeeCardUI : MonoBehaviour
 
         if (cardPanel != null) cardPanel.SetActive(true);
         PositionSelectedArrow(emp.id);
+        OnCardShown?.Invoke(emp.id);
     }
 
     // 카드와 함께 뜨는 선택 화살표 — 캐릭터 머리 위(statPopupAnchor 없으면 0.6유닛 위) 기준 12px 추가로 위에 표시.
@@ -363,6 +367,11 @@ public class EmployeeCardUI : MonoBehaviour
         }
 
         // ② 닫기 판정 — Mouse / Touchscreen 명시적 체크
+        // 다이얼로그/랜덤이벤트 선택지/AlertUI 등은 대부분 GameTimeManager.StopTime()으로 열려있는 동안
+        // 시간을 멈춘다 — 그 UI들을 조작하는 클릭에 카드가 같이 닫혀버리지 않도록, 시간이 멈춰있는 동안은
+        // 바깥 클릭 닫기 판정 자체를 건너뛴다.
+        if (GameTimeManager.Instance != null && !GameTimeManager.Instance.IsRunning) return;
+
         // (Pointer.current는 시뮬레이터에서 터치 전환 타이밍에 따라 wasPressedThisFrame을 놓치는 케이스가 있음)
         Vector2 mousePos;
         if (!TryGetPressedPointerPosition(out mousePos)) return;

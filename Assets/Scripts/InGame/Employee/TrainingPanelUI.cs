@@ -310,8 +310,29 @@ public class TrainingPanelUI : MonoBehaviour
     [Tooltip("EllipseImage 최종 alpha (0~255, 기존 리소스 기준 36)")]
     public float portraitEllipseRestAlpha255 = 36f;
 
+    [Header("EllipseImage/ShineEffect(들) 반짝임 — EllipseImage 활성화된 동안만 재생")]
+    [Tooltip("각 ShineEffect가 다음 반짝임까지 대기하는 시간 범위(초) — 서로 안 겹치게 랜덤")]
+    public float shineMinInterval = 0.2f;
+    public float shineMaxInterval = 1.0f;
+    [Tooltip("페이드 인/아웃 각각의 시간(초)")]
+    public float shineFadeDuration = 0.3f;
+
+    [Header("FaillImage/sprinkle(들) — 강화 실패 시 제자리에서 반짝임+맥동, TrainingFailPanel 활성 동안만 재생")]
+    [Tooltip("스케일 1↔1.3 왕복 1회 소요 시간(초) 범위 — 각 sprinkle마다 랜덤이라 서로 안 맞물림")]
+    public float sprinkleScaleMinDuration = 0.6f;
+    public float sprinkleScaleMaxDuration = 1.1f;
+    [Tooltip("알파가 새 랜덤값으로 바뀌는 데 걸리는 시간(초)")]
+    public float sprinkleAlphaChangeDuration = 0.4f;
+    [Tooltip("알파가 랜덤으로 오갈 범위(0~1)")]
+    public float sprinkleAlphaMin = 0.3f;
+    public float sprinkleAlphaMax = 1f;
+
     bool _resultResolved;
     GameObject _successRoot, _failRoot, _ellipse;
+    Image[] _shineEffects;
+    readonly List<Tween> _shineTweens = new();
+    Image[] _sprinkles;
+    readonly List<Tween> _sprinkleTweens = new();
     RectTransform _portraitEllipseRT;
     Image _portraitEllipseImg;
     GameObject _nameTextGo, _enhBeforeGo, _enhArrowGo, _enhAfterGo;
@@ -337,6 +358,34 @@ public class TrainingPanelUI : MonoBehaviour
         var portraitEllipseT = FindDeep(root, "EllipseImage");
         _portraitEllipseRT  = portraitEllipseT as RectTransform;
         _portraitEllipseImg = portraitEllipseT != null ? portraitEllipseT.GetComponent<Image>() : null;
+
+        // EllipseImage 자식 중 "ShineEffect"로 시작하는 것 전부 수집(개수 가변 — ShineEffect, ShineEffect (1)...).
+        if (_portraitEllipseRT != null)
+        {
+            var shines = new List<Image>();
+            foreach (Transform child in _portraitEllipseRT)
+            {
+                if (!child.name.StartsWith("ShineEffect")) continue;
+                var img = child.GetComponent<Image>();
+                if (img != null) shines.Add(img);
+            }
+            _shineEffects = shines.ToArray();
+        }
+
+        // TrainingFailPanel/.../FaillImage 자식 중 "sprinkle" 전부 수집(전부 동일하게 이름 붙어있음).
+        var failImageT = FindDeep(root, "FaillImage");
+        if (failImageT != null)
+        {
+            var sprinkles = new List<Image>();
+            foreach (Transform child in failImageT)
+            {
+                if (!child.name.Equals("sprinkle", System.StringComparison.OrdinalIgnoreCase)) continue;
+                var img = child.GetComponent<Image>();
+                if (img != null) sprinkles.Add(img);
+            }
+            _sprinkles = sprinkles.ToArray();
+        }
+
         _resultImageRT = FindDeep(root, "ResultImage") as RectTransform;
         _detailRT      = FindDeep(root, "ResultDetailPanel") as RectTransform;
         _vlg           = _detailRT != null ? _detailRT.GetComponent<VerticalLayoutGroup>() : null;
@@ -403,7 +452,7 @@ public class TrainingPanelUI : MonoBehaviour
         }
         else
         {
-            // 실패: EllipseImage 숨김 + 캐릭터 이름 삽입 + TouchText 깜빡임
+            // 실패: EllipseImage 숨김 + 캐릭터 이름 삽입 + TouchText 깜빡임 + sprinkle 반짝임/맥동
             SetActiveSafe(_ellipse, false);
             string empName = _selected != null ? _selected.employeeName : "";
             SetText(_failDetailText, $"'{empName}' 강화에 성공하지 못했습니다");
@@ -415,6 +464,7 @@ public class TrainingPanelUI : MonoBehaviour
                 touch.gameObject.SetActive(true);
                 _blinkTween = touch.DOFade(0.25f, 0.45f).SetLoops(-1, LoopType.Yoyo).SetUpdate(true);
             }
+            StartSprinkles();
         }
     }
 
@@ -471,6 +521,9 @@ public class TrainingPanelUI : MonoBehaviour
         _animSeq.AppendCallback(() => SetActiveSafe(successPortraitImage?.gameObject, true));
         if (successPortraitImage != null)
             _animSeq.Join(successPortraitImage.DOFade(1f, portraitEllipseRevealDuration).SetUpdate(true));
+
+        // EllipseImage 펼쳐지는 연출이 끝난 직후부터 ShineEffect들이 각자 랜덤 타이밍으로 반짝이기 시작.
+        _animSeq.AppendCallback(StartShineEffects);
 
         // 2) ResultImage ScaleY 0→1
         if (_resultImageRT != null)
@@ -537,6 +590,97 @@ public class TrainingPanelUI : MonoBehaviour
     {
         _animSeq?.Kill();    _animSeq    = null;
         _blinkTween?.Kill(); _blinkTween = null;
+        StopShineEffects();
+        StopSprinkles();
+    }
+
+    // FaillImage 자식 sprinkle들 — 제자리에서 스케일 1↔1.3 무한 왕복(개별 랜덤 주기) + 알파가 계속
+    // 새 랜덤값으로 부드럽게 바뀜(둘은 서로 독립적인 루프). 강화 실패 결과가 뜨는 동안만 재생.
+    void StartSprinkles()
+    {
+        StopSprinkles();
+        if (_sprinkles == null) return;
+        foreach (var img in _sprinkles)
+        {
+            if (img == null) continue;
+            img.rectTransform.localScale = Vector3.one;
+            var c = img.color; c.a = Random.Range(sprinkleAlphaMin, sprinkleAlphaMax); img.color = c;
+
+            float scaleDur = Random.Range(sprinkleScaleMinDuration, sprinkleScaleMaxDuration);
+            var scaleTween = img.rectTransform
+                .DOScale(1.3f, scaleDur)
+                .SetEase(Ease.InOutSine)
+                .SetLoops(-1, LoopType.Yoyo)
+                .SetUpdate(true).SetTarget(this);
+            _sprinkleTweens.Add(scaleTween);
+
+            ScheduleSprinkleAlpha(img);
+        }
+    }
+
+    void ScheduleSprinkleAlpha(Image img)
+    {
+        if (img == null) return;
+        float target = Random.Range(sprinkleAlphaMin, sprinkleAlphaMax);
+        var t = img.DOFade(target, sprinkleAlphaChangeDuration)
+            .SetUpdate(true).SetTarget(this)
+            .OnComplete(() => ScheduleSprinkleAlpha(img));
+        _sprinkleTweens.Add(t);
+    }
+
+    void StopSprinkles()
+    {
+        foreach (var t in _sprinkleTweens) t?.Kill();
+        _sprinkleTweens.Clear();
+        if (_sprinkles != null)
+            foreach (var img in _sprinkles)
+            {
+                if (img == null) continue;
+                img.rectTransform.localScale = Vector3.one;
+                var c = img.color; c.a = 1f; img.color = c;
+            }
+    }
+
+    // EllipseImage 자식 ShineEffect들 — 각자 랜덤 간격으로 알파 0→1→0을 반복(서로 안 겹치는 자연스러운 반짝임).
+    void StartShineEffects()
+    {
+        StopShineEffects();
+        if (_shineEffects == null) return;
+        foreach (var img in _shineEffects)
+        {
+            if (img == null) continue;
+            var c = img.color; c.a = 0f; img.color = c;
+            ScheduleShine(img);
+        }
+    }
+
+    void ScheduleShine(Image img)
+    {
+        float delay = Random.Range(shineMinInterval, shineMaxInterval);
+        var t = DOVirtual.DelayedCall(delay, () => PlayShineCycle(img)).SetUpdate(true).SetTarget(this);
+        _shineTweens.Add(t);
+    }
+
+    void PlayShineCycle(Image img)
+    {
+        if (img == null) return;
+        var seq = DOTween.Sequence().SetUpdate(true).SetTarget(this);
+        seq.Append(img.DOFade(1f, shineFadeDuration));
+        seq.Append(img.DOFade(0f, shineFadeDuration));
+        seq.OnComplete(() => ScheduleShine(img));
+        _shineTweens.Add(seq);
+    }
+
+    void StopShineEffects()
+    {
+        foreach (var t in _shineTweens) t?.Kill();
+        _shineTweens.Clear();
+        if (_shineEffects != null)
+            foreach (var img in _shineEffects)
+            {
+                if (img == null) continue;
+                var c = img.color; c.a = 0f; img.color = c;
+            }
     }
 
     static void SetActiveSafe(GameObject go, bool on) { if (go != null) go.SetActive(on); }

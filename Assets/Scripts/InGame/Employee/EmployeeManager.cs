@@ -398,7 +398,10 @@ public class EmployeeManager : MonoBehaviour
     // 아직 원래(3명) 값 그대로인데 ownedEmployees만 1명 늘어난 상태가 서버에 그대로 굳어버려서, 그 사이에
     // 재접속하면 "이미 1명 채용된 상태로 후보 3명이 다시 뜨는" 불일치가 생긴다. 두 번째(진짜 종료) 채용에서
     // ClearHiring() 이후 정상적으로 저장되므로 그때 한 번에 일관된 상태로 반영된다.
-    public void HireEmployee(EmployeeData poolEmployee, bool saveImmediately = true)
+    // 반환값: 새로 생성된 인게임 EmployeeData(새 GUID id, poolEmployee.id와 다름) — 서버 Insert는 비동기라
+    // 이 반환 시점엔 아직 저장 완료 전이지만, id 자체는 위에서 이미 동기 생성되므로 호출부가 "이 직원이
+    // 실제로 스폰될 때"를 이 id로 미리 기다릴 수 있다(OfficeManager.GetCharacter 등).
+    public EmployeeData HireEmployee(EmployeeData poolEmployee, bool saveImmediately = true)
     {
         var inGameEmployee = new EmployeeData(
             id: System.Guid.NewGuid().ToString(),
@@ -485,6 +488,8 @@ public class EmployeeManager : MonoBehaviour
             }
             Debug.Log($"채용 완료: {inGameEmployee.employeeName} ({inGameEmployee.grade} / {inGameEmployee.potential})");
         });
+
+        return inGameEmployee;
     }
 
     // ── Grade / Potential 헬퍼 ────────────────

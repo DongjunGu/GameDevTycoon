@@ -29,17 +29,26 @@ public class GameTimeManager : MonoBehaviour
 
     public float secondsPerWeek = 6f;
 
-    // 개발(Developing) 시계 속도: 전 규모 총 80초로 통일하되 주수(16/24/32)는 유지 → 80/주수
+    // 개발 총 소요시간 기준값(초) — 원래 전 규모 80초 통일. 아직 프로젝트를 한 번도 출시 안 했으면(=지금
+    // 진행 중인 게 온보딩 튜토리얼의 첫 프로젝트, 무조건 소형만 나옴) 절반(40초)으로 단축해 빨리 넘어가게
+    // 한다. 이 값을 쓰는 모든 곳(GameTimeManager.SetProjectSpeed + DevelopmentManager 3곳)이 반드시 이
+    // 프로퍼티를 거쳐야 동기화가 깨지지 않는다 — 절대 80f/40f를 직접 하드코딩하지 말 것.
+    public static float BaseDevDurationSeconds =>
+        CompletedProjectManager.Instance != null && CompletedProjectManager.Instance.completedProjects.Count > 0
+            ? 80f : 40f;
+
+    // 개발(Developing) 시계 속도: 전 규모 총 BaseDevDurationSeconds초로 통일하되 주수(16/24/32)는 유지.
     public void SetProjectSpeed(ProjectScale scale)
     {
+        float baseDur = BaseDevDurationSeconds;
         secondsPerWeek = scale switch
         {
-            ProjectScale.Small  => 80f / 16f, // 5.0초/주
-            ProjectScale.Medium => 80f / 24f, // 3.33초/주
-            ProjectScale.Large  => 80f / 32f, // 2.5초/주
-            _ => 80f / 16f
+            ProjectScale.Small  => baseDur / 16f,
+            ProjectScale.Medium => baseDur / 24f,
+            ProjectScale.Large  => baseDur / 32f,
+            _ => baseDur / 16f
         };
-        Debug.Log($"[GameTimeManager] SetProjectSpeed: {scale} → {secondsPerWeek}초/주");
+        Debug.Log($"[GameTimeManager] SetProjectSpeed: {scale} → {secondsPerWeek}초/주 (기준 {baseDur}초)");
     }
 
     // 디버깅(BugFixing) 시계 속도: 규모 무관 4초/주 고정

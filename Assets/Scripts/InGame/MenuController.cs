@@ -142,20 +142,43 @@ public class MenuController : MonoBehaviour
             // 현재 상태 즉시 반영 (씬 진입 시 이미 정지 상태일 수 있음)
             OnTimeStopChanged(!GameTimeManager.Instance.IsRunning);
         }
+
+        // 온보딩 튜토리얼(9단계까지) 진행 중엔 메뉴 버튼 오브젝트 자체를 꺼버린다 — 튜토리얼이 스스로
+        // 강조하는 시점(TutorialHighlighter.Highlight)에만 일시적으로 다시 SetActive(true)로 되살아난다.
+        if (menuButton != null && !OnboardingState.Tutorial10Done)
+        {
+            _tutorialHideActive = true;
+            menuButton.gameObject.SetActive(false);
+        }
+        OnboardingState.OnOnboardingFullyDone += OnOnboardingFullyDone;
     }
+
+    // 튜토리얼(9단계까지) 진행 중엔 true — 이 동안은 아래 OnTimeStopChanged가 menuButton의 SetActive를
+    // 건드리지 않는다(시간 정지/재개가 수시로 오가는 튜토리얼 중에 매번 되살아나 버리는 것 방지).
+    bool _tutorialHideActive;
 
     void OnDestroy()
     {
         if (GameTimeManager.Instance != null)
             GameTimeManager.Instance.OnTimeStopChanged -= OnTimeStopChanged;
+        OnboardingState.OnOnboardingFullyDone -= OnOnboardingFullyDone;
+    }
+
+    void OnOnboardingFullyDone()
+    {
+        _tutorialHideActive = false;
+        if (menuButton != null) menuButton.gameObject.SetActive(true);
     }
 
     void OnTimeStopChanged(bool stopped)
     {
         if (menuButton == null) return;
-        // 튜토리얼 dim 중에는 시간이 멈춰도 메뉴 버튼을 숨기지 않음 (튜토리얼이 메뉴를 강조·클릭하게 하므로)
-        if (stopped && OnboardingState.TutorialActive) return;
-        menuButton.gameObject.SetActive(!stopped);
+        if (!_tutorialHideActive)
+        {
+            // 튜토리얼 dim 중에는 시간이 멈춰도 메뉴 버튼을 숨기지 않음 (튜토리얼이 메뉴를 강조·클릭하게 하므로)
+            if (!(stopped && OnboardingState.TutorialActive))
+                menuButton.gameObject.SetActive(!stopped);
+        }
         // 정지 시 펼쳐진 메뉴도 같이 닫음 (버튼이 사라지니 뒷정리)
         if (stopped && _topOpen) CloseTopMenu();
     }

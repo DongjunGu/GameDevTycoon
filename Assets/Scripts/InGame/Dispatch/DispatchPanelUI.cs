@@ -170,6 +170,14 @@ public class DispatchPanelUI : MonoBehaviour
             // Button 참조가 파괴된 오브젝트가 돼버려 하이라이트가 조용히 스킵되는 문제를 회피.
             StartCoroutine(TutorialController.Instance.PlayTutorial6(slotParent));
         }
+
+        // 온보딩: 튜토리얼 12-1 — 아트팀장 선택 패널이 열릴 때마다(재접속으로 자연 재오픈된 경우 포함)
+        // 아직 완료 전이면 재생. 아트 직원이 없는 게 전제라 첫 번째(유일한) 슬롯이 곧 CEO.
+        if (type == LeaderType.Artist && !OnboardingState.Tutorial12Done
+            && TutorialController.Instance != null && _slots.Count >= 1)
+        {
+            StartCoroutine(TutorialController.Instance.PlayTutorial12(slotParent));
+        }
     }
 
     void ShowPanelAndBuildList()
