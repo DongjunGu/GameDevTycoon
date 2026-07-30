@@ -31,6 +31,12 @@ public class CreativityGameGridUI : MonoBehaviour, IBeginDragHandler, IDragHandl
     private List<GameObject> _ghostObjs = new(); // 배치 미리보기용(초록/빨강) — 제거 애니메이션용 고스트와 별개.
     private CreativityGameBlockUI _liftedBlock;
 
+    // ── 튜토리얼 전용 강제 배치 제한 ─────────────────────────────────────────
+    // shape(참조 동일성으로 판별)를 anchor 자리에만 배치 가능하게 제한 — 그 외 모든 조합은 거부된다.
+    private int[][] _forcedShape;
+    private Vector2Int? _forcedAnchor;
+    private List<GameObject> _targetMarkerObjs = new();
+
     private RectTransform _rt;
     private Canvas        _canvas;
     private Camera        _eventCam;
@@ -240,6 +246,10 @@ public class CreativityGameGridUI : MonoBehaviour, IBeginDragHandler, IDragHandl
 
     public bool IsPlacementValid(int[][] shape, Vector2Int anchor)
     {
+        // 튜토리얼 강제 배치 제한 — 지정된 (shape, anchor) 조합이 아니면 전부 거부.
+        if (_forcedAnchor.HasValue && (shape != _forcedShape || anchor != _forcedAnchor.Value))
+            return false;
+
         foreach (var cell in shape)
         {
             int r = anchor.x + cell[0];
@@ -249,6 +259,123 @@ public class CreativityGameGridUI : MonoBehaviour, IBeginDragHandler, IDragHandl
             if (_filled[r, c]) return false;
         }
         return true;
+    }
+
+    // ── 튜토리얼 전용 — 강제 배치 제한 + 목표 위치 마커 ──────────────────────
+    // shape는 CreativityGameBlockUI.Shape(원본 배열)를 그대로 넘겨야 참조 비교가 성립한다.
+    public void SetForcedAnchor(int[][] shape, Vector2Int anchor)
+    {
+        _forcedShape  = shape;
+        _forcedAnchor = anchor;
+    }
+
+    public void ClearForcedAnchor()
+    {
+        _forcedShape  = null;
+        _forcedAnchor = null;
+    }
+
+    // 드래그 시작 전부터(ShowGhost와 별개, 계속 유지) "여기에 놓아야 한다"를 반투명 색으로 미리 표시.
+    public void ShowTargetMarker(int[][] shape, Vector2Int anchor, Color color)
+    {
+        HideTargetMarker();
+        foreach (var cell in shape)
+        {
+            int r = anchor.x + cell[0];
+            int c = anchor.y + cell[1];
+            if (r < 0 || r >= MaxSize || c < 0 || c >= MaxSize) continue;
+            if (!_validCells.Contains((r, c))) continue;
+
+            var go = new GameObject("TargetMarker");
+            var rt = go.AddComponent<RectTransform>();
+            rt.SetParent(transform, false);
+            rt.sizeDelta        = new Vector2(_cellSize, _cellSize);
+            rt.anchorMin        = rt.anchorMax = new Vector2(0.5f, 0.5f);
+            rt.pivot            = new Vector2(0.5f, 0.5f);
+            rt.anchoredPosition = CellAnchoredPos(r, c);
+
+            go.AddComponent<LayoutElement>().ignoreLayout = true;
+            rt.SetAsLastSibling();
+
+            var img = go.AddComponent<Image>();
+            img.color = new Color(color.r, color.g, color.b, TargetMarkerAlpha);
+            img.raycastTarget = false;
+            _targetMarkerObjs.Add(go);
+        }
+    }
+
+    // 알파값 60(0~255 기준) — 0~1 스케일로 환산.
+    const float TargetMarkerAlpha = 60f / 255f;
+
+    public void HideTargetMarker()
+    {
+        foreach (var go in _targetMarkerObjs)
+            if (go != null) Destroy(go);
+        _targetMarkerObjs.Clear();
+    }
+
+    // 현재 SetForcedAnchor로 지정된 shape+anchor(=TargetMarker가 표시 중인 칸들)의 기하학적 중심을
+    // 월드 좌표로 반환 — 손가락 드래그 힌트처럼 그리드 밖(다른 부모) UI를 이 위치로 옮길 때 사용.
+    // ShowTargetMarker 호출 후(=_forcedShape/_forcedAnchor가 세팅된 상태)에만 유효.
+    public Vector3 GetForcedAnchorWorldCenter()
+    {
+        if (_forcedShape == null || _forcedAnchor == null) return _rt.position;
+
+        int minR = int.MaxValue, maxR = int.MinValue, minC = int.MaxValue, maxC = int.MinValue;
+        foreach (var cell in _forcedShape)
+        {
+            int r = _forcedAnchor.Value.x + cell[0];
+            int c = _forcedAnchor.Value.y + cell[1];
+            if (r < minR) minR = r; if (r > maxR) maxR = r;
+            if (c < minC) minC = c; if (c > maxC) maxC = c;
+        }
+        Vector2 offsetFromCenter = (CellAnchoredPos(minR, minC) + CellAnchoredPos(maxR, maxC)) * 0.5f;
+
+        var corners = new Vector3[4];
+        _rt.GetWorldCorners(corners);
+        Vector3 gridWorldCenter = (corners[0] + corners[2]) * 0.5f;
+        Vector3 worldOffset = _rt.TransformVector(new Vector3(offsetFromCenter.x, offsetFromCenter.y, 0f));
+        return gridWorldCenter + worldOffset;
+    }
+
+    // 투명 RectTransform — "Grid" 자신(항상 7×7 고정 크기라 대부분 빈 여백)이 아니라, 실제로 보이는
+    // 활성 칸(_validCells) 영역만 딱 감싸는 사각형을 반환한다(예: 4x4면 16칸짜리 정사각형만).
+    // BuildGrid 이후에 호출해야 유효값이 나옴. 튜토리얼 강조 등 외부에서 사용.
+    private RectTransform _activeAreaRect;
+    public RectTransform GetActiveAreaRect()
+    {
+        if (_validCells == null || _validCells.Count == 0) return _rt;
+
+        int minR = int.MaxValue, maxR = int.MinValue, minC = int.MaxValue, maxC = int.MinValue;
+        foreach (var (r, c) in _validCells)
+        {
+            if (r < minR) minR = r; if (r > maxR) maxR = r;
+            if (c < minC) minC = c; if (c > maxC) maxC = c;
+        }
+
+        if (_activeAreaRect == null)
+        {
+            var go = new GameObject("ActiveAreaRect");
+            _activeAreaRect = go.AddComponent<RectTransform>();
+            _activeAreaRect.SetParent(transform, false);
+            _activeAreaRect.anchorMin = _activeAreaRect.anchorMax = new Vector2(0.5f, 0.5f);
+            _activeAreaRect.pivot = new Vector2(0.5f, 0.5f);
+            // ⚠️ Grid는 GridLayoutGroup이 붙어있어, ignoreLayout 없이 자식을 추가하면 "49번째 칸 다음
+            // 50번째 셀"로 취급돼 GridLayoutGroup이 이 오브젝트의 위치/크기(anchoredPosition/sizeDelta)를
+            // 강제로 자기 grid 계산값(엉뚱한 8번째 행 자리, cellSize 크기)으로 덮어써버린다 — 방금 위에서
+            // 계산한 4x4 중심/크기가 매 프레임 무시되고, 그 부수효과로 고스트/하이라이트까지 같이 어긋나
+            // 보였음. ShowGhost/ShowTargetMarker와 동일하게 레이아웃에서 제외해야 한다.
+            go.AddComponent<LayoutElement>().ignoreLayout = true;
+            _activeAreaRect.SetAsLastSibling();
+        }
+
+        Vector2 center = (CellAnchoredPos(minR, minC) + CellAnchoredPos(maxR, maxC)) * 0.5f;
+        _activeAreaRect.anchoredPosition = center;
+        _activeAreaRect.sizeDelta = new Vector2(
+            (maxC - minC + 1) * CellStep - _cellGap,
+            (maxR - minR + 1) * CellStep - _cellGap);
+
+        return _activeAreaRect;
     }
 
     // ── 배치 미리보기 고스트(초록/빨강) ─────────────────────────────────────────

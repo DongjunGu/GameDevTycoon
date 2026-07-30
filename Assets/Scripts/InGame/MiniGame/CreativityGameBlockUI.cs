@@ -23,6 +23,15 @@ public class CreativityGameBlockUI : MonoBehaviour,
     public Sprite[] ResolvedCellSprites   => _resolvedCellSprite ?? _cellSprites;
     public float[]  ResolvedCellRotations => _resolvedCellRotZ; // null 이면 전부 무회전(0도)
 
+    // 튜토리얼 등 외부에서 이 블록을 식별/강조/강제배치 지정할 때 사용.
+    public int[][] Shape => _shape;
+    public Color   Color => _color;
+    // CreativityGameData.BlockShape.name — CreativityGameUI가 스폰 직후 세팅(Init에는 없음).
+    public string  ShapeName;
+
+    // 슬롯에서 그리드로 드래그를 "시작"한 순간(트레이→그리드) 발동 — 튜토리얼이 강조를 그 즉시 해제할 때 사용.
+    public event System.Action OnDragStarted;
+
     private float _previewCellSize;
     private float _previewCellGap;
     private float _gridCellSize;
@@ -130,6 +139,16 @@ public class CreativityGameBlockUI : MonoBehaviour,
         _eventCam = _canvas != null && _canvas.renderMode != RenderMode.ScreenSpaceOverlay
                   ? _canvas.worldCamera : null;
 
+        ResolveSnakeOrientation();
+        BuildVisual();
+    }
+
+    // CreativityGameUI.ReapplyBlockSprites 에서 호출 — 모양/위치/그리드 배치 상태는 그대로 두고
+    // 셀 스프라이트/회전만 새로 받아 다시 그린다(CreativityBlockSpriteConfig 즉시 적용용).
+    public void RefreshVisual(Sprite[] cellSprites, float[] cellRotations)
+    {
+        _cellSprites       = cellSprites;
+        _baseCellRotations = cellRotations;
         ResolveSnakeOrientation();
         BuildVisual();
     }
@@ -291,6 +310,7 @@ public class CreativityGameBlockUI : MonoBehaviour,
     public void OnBeginDrag(PointerEventData e)
     {
         if (_isPlaced) return;
+        OnDragStarted?.Invoke();
         _rt.DOKill();
         _rt.localScale = Vector3.one;
 

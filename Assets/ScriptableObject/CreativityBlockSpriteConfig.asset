@@ -14,19 +14,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::CreativityBlockSpriteConfig
   entries:
   - blockName: H2
-    cellSprites:
-    - {fileID: -7766637424382265647, guid: 69a964b0db48ad2499ad2487c4f50828, type: 3}
-    - {fileID: 2808559760237250731, guid: 69a964b0db48ad2499ad2487c4f50828, type: 3}
-    cellRotations:
-    - 0
-    - 0
+    cellSprites: []
+    cellRotations: []
   - blockName: V2
-    cellSprites:
-    - {fileID: -7766637424382265647, guid: 69a964b0db48ad2499ad2487c4f50828, type: 3}
-    - {fileID: 2808559760237250731, guid: 69a964b0db48ad2499ad2487c4f50828, type: 3}
-    cellRotations:
-    - 270
-    - 270
+    cellSprites: []
+    cellRotations: []
   - blockName: G_TR
     cellSprites: []
     cellRotations: []
@@ -40,23 +32,11 @@ MonoBehaviour:
     cellSprites: []
     cellRotations: []
   - blockName: V3
-    cellSprites:
-    - {fileID: -7766637424382265647, guid: 69a964b0db48ad2499ad2487c4f50828, type: 3}
-    - {fileID: 4149926256698089342, guid: 69a964b0db48ad2499ad2487c4f50828, type: 3}
-    - {fileID: 2808559760237250731, guid: 69a964b0db48ad2499ad2487c4f50828, type: 3}
-    cellRotations:
-    - 270
-    - 270
-    - 270
+    cellSprites: []
+    cellRotations: []
   - blockName: H3
-    cellSprites:
-    - {fileID: -7766637424382265647, guid: 69a964b0db48ad2499ad2487c4f50828, type: 3}
-    - {fileID: 4149926256698089342, guid: 69a964b0db48ad2499ad2487c4f50828, type: 3}
-    - {fileID: 2808559760237250731, guid: 69a964b0db48ad2499ad2487c4f50828, type: 3}
-    cellRotations:
-    - 0
-    - 0
-    - 0
+    cellSprites: []
+    cellRotations: []
   - blockName: Sq
     cellSprites: []
     cellRotations: []
@@ -94,10 +74,8 @@ MonoBehaviour:
     cellSprites: []
     cellRotations: []
   - blockName: Dot
-    cellSprites:
-    - {fileID: -7766637424382265647, guid: 69a964b0db48ad2499ad2487c4f50828, type: 3}
-    cellRotations:
-    - 0
+    cellSprites: []
+    cellRotations: []
   - blockName: L_D
     cellSprites: []
     cellRotations: []

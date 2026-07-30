@@ -22,6 +22,10 @@ public class OfficeCharacter : MonoBehaviour, IPointerClickHandler
 
     public string employeeId;
     public WorkStation assignedDesk;
+
+    // 창의성 블록 팝업(BlockFloatingVisual)이 실제로 spawn된 순간 발동 — 튜토리얼이 그 오브젝트를
+    // 강조 대상으로 잡을 때 사용(EnqueuePopup으로 대기열에 밀렸다가 나중에 뜨는 경우까지 커버).
+    public event System.Action<Transform> OnBlockPopupSpawned;
     public Transform statPopupAnchor; // 머리 위 위치 (Inspector에서 설정)
     public Vector2 statTickPopupOffset = new Vector2(1.2f, 0.7f); // StatTickPopup 위치 (캐릭터 기준 오프셋)
 
@@ -321,7 +325,8 @@ public class OfficeCharacter : MonoBehaviour, IPointerClickHandler
             Vector3 pos = statPopupAnchor != null
                 ? statPopupAnchor.position
                 : transform.position + Vector3.up * 0.6f;
-            BlockFloatingVisual.Spawn(pos, req.cells, req.color, OnPopupFinished);
+            var bfv = BlockFloatingVisual.Spawn(pos, req.cells, req.color, OnPopupFinished);
+            OnBlockPopupSpawned?.Invoke(bfv.transform);
         }
         else
         {

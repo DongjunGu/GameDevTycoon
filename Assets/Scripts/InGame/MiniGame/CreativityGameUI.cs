@@ -60,7 +60,7 @@ public class CreativityGameUI : MonoBehaviour
     [SerializeField] Transform _blockTray;   // VerticalLayoutGroup
     [Tooltip("블록 뒤에 깔리는 슬롯 배경 프리팹 (Image 1개, 인스펙터에서 스프라이트/색상 커스텀 가능)")]
     [SerializeField] GameObject _blockSlotPrefab;
-    [Tooltip("블록 모양별 셀 스프라이트 지정 에셋. 비어있으면 3칸 블록에 Snake 스프라이트를 쓰는 기존 방식으로 fallback.")]
+    [Tooltip("블록 모양별 셀 스프라이트 지정 에셋. 특정 모양에 스프라이트가 없으면 단색(BlockShape.color)으로 표시.")]
     [SerializeField] CreativityBlockSpriteConfig _blockSpriteConfig;
 
     [Header("UI")]
@@ -76,7 +76,7 @@ public class CreativityGameUI : MonoBehaviour
     [SerializeField] TextMeshProUGUI _gridBlockLevelText;
 
     [Header("퍼펙트 보너스")]
-    [Tooltip("그리드를 전부 채우면 텍스트가 채워지는 라벨 (항상 활성, 보너스 없으면 공백)")]
+    [Tooltip("그리드를 전부 채워 보너스를 받는 동안만 활성화되는 라벨 (평소엔 GameObject 비활성)")]
     [SerializeField] TextMeshProUGUI _perfectBonusText;
 
     [Header("아이템 (랜덤/전설 블록)")]
@@ -146,13 +146,35 @@ public class CreativityGameUI : MonoBehaviour
 
     // ── 런타임 ───────────────────────────────────────────────────────────────
     private int _score;
+    private int _grantedBonusAmount;   // 현재 지급 중인 퍼펙트 보너스 액수 (0=미지급) — 그리드가 다시 안 차면 이만큼 회수
     private float _displayScore;       // 화면에 현재 표시 중인 점수 (카운트업 lerp 대상)
     private Coroutine _scoreAnimCo;    // 점수 카운트업 코루틴
-    private bool _bonusGranted; // 퍼펙트 보너스 즉시 지급 여부 (라운드당 1회만 지급 — 재충전 악용 방지)
     private readonly List<CreativityGameBlockUI> _activeBlocks = new();
     private readonly List<CreativityGameData.BlockShape> _earnedBlocks = new();
     private CreativityGameData.GridShape _fixedGrid;
     private System.Action _onClose;
+
+    // 튜토리얼 등 외부에서 그리드 강제배치/마커 API에 접근할 때 사용.
+    public CreativityGameGridUI GridUI => _gridUI;
+    // 블록이 그리드에 실제로 배치 완료될 때마다 발동 — 튜토리얼이 "그 블록이 놓였는지" 기다릴 때 사용.
+    public event System.Action<CreativityGameBlockUI> OnAnyBlockPlaced;
+
+    public CreativityGameBlockUI FindActiveBlockByShapeName(string name)
+        => _activeBlocks.Find(b => b != null && b.ShapeName == name);
+
+    // CreativityBlockSpriteConfigEditor 의 "게임에 즉시 적용" 버튼에서 호출 — 이미 스폰된 블록(트레이
+    // 대기 중이든 그리드에 배치돼있든 전부)의 셀 스프라이트/회전을 config 최신 값 기준으로 다시 계산해서
+    // 다시 그린다. 패널을 닫았다 열지 않아도 Play 모드에서 바로 확인할 수 있게 하기 위함.
+    public void ReapplyBlockSprites()
+    {
+        foreach (var block in _activeBlocks)
+        {
+            if (block == null) continue;
+            var def = System.Array.Find(CreativityGameData.Blocks, b => b.name == block.ShapeName);
+            if (def == null) continue;
+            block.RefreshVisual(CellSpritesFor(def), CellRotationsFor(def));
+        }
+    }
 
     // ── 생명주기 ─────────────────────────────────────────────────────────────
     private bool _initialized;
@@ -202,7 +224,7 @@ public class CreativityGameUI : MonoBehaviour
     {
         _onClose = onClose;
         _score   = 0;
-        _bonusGranted = false;
+        _grantedBonusAmount = 0;
         _panel.SetActive(true);
         GameTimeManager.Instance?.StopTime(); // 미니게임 동안 시간 정지 (OnClickConfirm 의 StartTime 과 1:1)
         ModalGate.I.Register(this);
@@ -214,6 +236,17 @@ public class CreativityGameUI : MonoBehaviour
         SpawnEarnedBlocks();
         RefreshItemControls();
         RefreshLevelTexts();
+
+        // 온보딩 튜토리얼 13-3~13-5 — 첫 프로젝트 한정, all-or-nothing 구간(5-1~6-2/10-1~10-3과 동일 방식).
+        // 13-5(디버깅 시작 안내)까지 끝나야 완료로 치므로, 재접속 등으로 패널이 다시 열렸을 때 13-4까지는
+        // 끝났어도 13-5가 아직이면 13-3부터 처음부터 다시 재생한다 — 이 시점엔 그리드/트레이가 항상 새로
+        // 빌드되므로(배치 진행상황은 저장 안 됨) 다시 처음부터 유도해도 실제 게임 상태와 자연히 일치한다.
+        if (!OnboardingState.Tutorial13_5Done
+            && CompletedProjectManager.Instance != null && CompletedProjectManager.Instance.completedProjects.Count == 0
+            && TutorialController.Instance != null)
+        {
+            StartCoroutine(TutorialController.Instance.PlayTutorial13_3());
+        }
     }
 
     // 테크트리 창의성/블록 가치 단계 표시 갱신
@@ -272,31 +305,10 @@ public class CreativityGameUI : MonoBehaviour
         return slotGO;
     }
 
-    // ── 셀별 스프라이트 (임시: 3칸 블록을 뱀 모양으로) ──────────────────────
-    // Resources/Sprites/Snake.png (슬라이스: Snake_0/1/2) 를 로드해 이름순 정렬.
-    Sprite[] _snakeSprites;
-    Sprite[] SnakeSprites
-    {
-        get
-        {
-            if (_snakeSprites == null)
-            {
-                _snakeSprites = Resources.LoadAll<Sprite>("Sprites/Snake");
-                System.Array.Sort(_snakeSprites, (a, b) => string.CompareOrdinal(a.name, b.name));
-            }
-            return _snakeSprites;
-        }
-    }
-
-    // 이 블록에 적용할 셀별 스프라이트 (없으면 null → 단색).
-    // _blockSpriteConfig 에 블록 이름으로 등록된 스프라이트가 있으면 우선 사용,
-    // 없으면 3칸 블록에 Snake 스프라이트를 쓰는 기존 임시 방식으로 fallback.
+    // 이 블록에 적용할 셀별 스프라이트 — _blockSpriteConfig 에 블록 이름으로 등록된 스프라이트가 있으면
+    // 그대로 사용, 없으면 null(BuildVisual 이 단색 BlockShape.color 로 그림).
     Sprite[] CellSpritesFor(CreativityGameData.BlockShape def)
-    {
-        var configured = _blockSpriteConfig != null ? _blockSpriteConfig.GetSprites(def.name) : null;
-        if (configured != null) return configured;
-        return (def.cells.Length == 3 && SnakeSprites != null && SnakeSprites.Length >= 3) ? SnakeSprites : null;
-    }
+        => _blockSpriteConfig != null ? _blockSpriteConfig.GetSprites(def.name) : null;
 
     // CellSpritesFor 로 고른 스프라이트 배열과 같은 인덱스로 대응하는 기본 회전(도). config에 없으면 null(전부 0도).
     float[] CellRotationsFor(CreativityGameData.BlockShape def)
@@ -343,6 +355,7 @@ public class CreativityGameUI : MonoBehaviour
 
         var block = blockGO.AddComponent<CreativityGameBlockUI>();
         block.Init(def.cells, def.color, _gridUI, this, previewCell, 2f, CellSpritesFor(def), _blockReturnDuration, CellRotationsFor(def));
+        block.ShapeName = def.name;
         AttachSlotDragArea(slotGO, block);
         _activeBlocks.Add(block);
     }
@@ -420,9 +433,26 @@ public class CreativityGameUI : MonoBehaviour
 
             var block = blockGO.AddComponent<CreativityGameBlockUI>();
             block.Init(def.cells, def.color, _gridUI, this, previewCell, 2f, CellSpritesFor(def), _blockReturnDuration, CellRotationsFor(def));
+            block.ShapeName = def.name;
             AttachSlotDragArea(slotGO, block);
             _activeBlocks.Add(block);
         }
+    }
+
+    // 튜토리얼(첫 프로젝트)에서는 획득 순서와 무관하게 항상 이 순서로 트레이에 배치 —
+    // 가이드 배치 진행(Sq→T_U)과 화면상 배치가 시각적으로 맞아떨어지게 하기 위함.
+    static readonly string[] TutorialBlockDisplayOrder = { "Sq", "V2", "V3", "T_U", "G_TR" };
+
+    void SortEarnedBlocksForTutorial()
+    {
+        _earnedBlocks.Sort((a, b) =>
+        {
+            int ia = System.Array.IndexOf(TutorialBlockDisplayOrder, a.name);
+            int ib = System.Array.IndexOf(TutorialBlockDisplayOrder, b.name);
+            if (ia < 0) ia = int.MaxValue;
+            if (ib < 0) ib = int.MaxValue;
+            return ia.CompareTo(ib);
+        });
     }
 
     void SpawnEarnedBlocks()
@@ -432,6 +462,9 @@ public class CreativityGameUI : MonoBehaviour
         _activeBlocks.Clear();
 
         foreach (Transform child in _blockTray) Destroy(child.gameObject);
+
+        if (CompletedProjectManager.Instance != null && CompletedProjectManager.Instance.completedProjects.Count == 0)
+            SortEarnedBlocksForTutorial();
 
         int count = _earnedBlocks.Count;
         if (count == 0) return;
@@ -462,6 +495,7 @@ public class CreativityGameUI : MonoBehaviour
 
             var block = blockGO.AddComponent<CreativityGameBlockUI>();
             block.Init(def.cells, def.color, _gridUI, this, previewCell, 2f, CellSpritesFor(def), _blockReturnDuration, CellRotationsFor(def));
+            block.ShapeName = def.name;
             AttachSlotDragArea(slotGO, block);
             _activeBlocks.Add(block);
         }
@@ -517,6 +551,7 @@ public class CreativityGameUI : MonoBehaviour
     {
         _score = _gridUI.CountFilledCells() * BaseScorePerCell;
         UpdateScore();
+        OnAnyBlockPlaced?.Invoke(block);
     }
 
     // CreativityGameBlockUI.LiftFromGrid 에서 호출
@@ -530,13 +565,22 @@ public class CreativityGameUI : MonoBehaviour
     {
         int bonus = GetBonusScore();
         if (_perfectBonusText != null)
-            _perfectBonusText.text = bonus > 0 ? "퍼펙트 보너스!" : "";
-
-        // 퍼펙트 보너스 최초 달성 시 즉시 지급 — 이후 블록을 뗐다 다시 채워도 라운드당 1회만.
-        if (bonus > 0 && !_bonusGranted)
         {
-            _bonusGranted = true;
+            _perfectBonusText.gameObject.SetActive(bonus > 0);
+            _perfectBonusText.text = bonus > 0 ? $"+{bonus}" : "";
+        }
+
+        // 그리드가 꽉 차는 순간 즉시 지급, 그러다 블록을 빼서 다시 안 차면(bonus==0) 지급했던 만큼 회수.
+        // 다시 채우면 또 지급 — "라운드당 1회 고정"이 아니라 확인 시점과 무관하게 꽉 찬 상태 여부를 그대로 따라감.
+        if (bonus > 0 && _grantedBonusAmount == 0)
+        {
+            _grantedBonusAmount = bonus;
             DevelopmentPanelUI.Instance?.AddValuesInstant(0f, 0f, 0f, 0f, bonus);
+        }
+        else if (bonus == 0 && _grantedBonusAmount > 0)
+        {
+            DevelopmentPanelUI.Instance?.AddValuesInstant(0f, 0f, 0f, 0f, -_grantedBonusAmount);
+            _grantedBonusAmount = 0;
         }
 
         AnimateScoreText();
@@ -584,14 +628,11 @@ public class CreativityGameUI : MonoBehaviour
         _scoreAnimCo = null;
     }
 
-    // 현재 표시할 점수 값으로 텍스트 갱신 (보너스도 표시값 기준으로 함께 카운트업).
+    // 현재 표시할 점수 값으로 텍스트 갱신.
     void SetScoreDisplay(int shown)
     {
         _displayScore = shown;
-        int bonus = IsGridFullyFilled ? shown / 10 : 0;
-        _scoreText.text = bonus > 0
-            ? $"창의성 +{shown} (+Bonus {bonus})"
-            : $"창의성 +{shown}";
+        _scoreText.text = $"{shown}";
     }
 
     // 디버그: 그리드 전부 강제 채움 → 퍼펙트 보너스 표시 테스트
@@ -621,14 +662,13 @@ public class CreativityGameUI : MonoBehaviour
     {
         _gridUI.ResetPlacedBlocks();
         _score = 0;
-        _bonusGranted = false;
         UpdateScore();
     }
 
     // 확인 버튼 (항상 활성 — Inspector에서 Button.onClick 에 연결)
     public void OnClickConfirm()
     {
-        // 퍼펙트 보너스는 UpdateScore()에서 이미 즉시 지급됐으므로 여기선 기본 점수만 지급.
+        // 퍼펙트 보너스는 UpdateScore()에서 이미 즉시 지급/회수 처리됐으므로 여기선 기본 점수만 지급.
         if (_score > 0f)
             DevelopmentPanelUI.Instance.AddValuesInstant(0f, 0f, 0f, 0f, _score);
 

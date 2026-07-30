@@ -114,6 +114,14 @@ public class MarketingUI : MonoBehaviour
             slotButtons[i].onClick.AddListener(() => OnClickSlot(capturedIndex));
         }
         marketingPanel.SetActive(true);
+
+        // 온보딩 튜토리얼 15-1/15-2 — 첫 프로젝트 한정, 마케팅 패널 열릴 때.
+        if (!OnboardingState.Tutorial15Done
+            && CompletedProjectManager.Instance != null && CompletedProjectManager.Instance.completedProjects.Count == 0
+            && TutorialController.Instance != null)
+        {
+            TutorialController.Instance.StartCoroutine(TutorialController.Instance.PlayTutorial15());
+        }
     }
 
     void OnClickSlot(int index)

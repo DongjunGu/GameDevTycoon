@@ -36,6 +36,21 @@ public static class OnboardingState
     // 튜토리얼 12-1 완료 — 아트팀장 선택(75% 진행도). 아트 직원이 없어 CEO가 유일한 후보인 상황 안내.
     // 11단계는 아직 미구현(추후 추가 예정) — 번호가 이어지지 않아도 각 플래그는 독립적이라 문제 없음.
     const string KEY_TUT12      = "onboarding_tutorial12_done";
+    // 튜토리얼 13-1/13-2 완료 — 진행도 ~95% 시점 첫 직원의 확정 창의성 틱 발동 직후, 창의성 점수/블록 안내.
+    const string KEY_TUT13      = "onboarding_tutorial13_done";
+    // 튜토리얼 13-4 완료 — 창의성 미니게임 진입 시 Sq/T_U 블록을 지정 위치(b1.png 기준)에만 놓게 유도.
+    const string KEY_TUT13_4    = "onboarding_tutorial13_4_done";
+    // 튜토리얼 13-5 완료 — 디버깅 단계 시작 직후, 창의성 능력치가 버그 제거에도 쓰인다는 안내.
+    const string KEY_TUT13_5    = "onboarding_tutorial13_5_done";
+    // 튜토리얼 14-1 완료 — 디버깅 끝나고 DevelopmentResultPanel 활성화 직후, 첫 게임 완성 + 기여도 확인 안내.
+    const string KEY_TUT14_1    = "onboarding_tutorial14_1_done";
+    // 튜토리얼 15-1/15-2 완료 — 마케팅 패널 열릴 때, 마케팅 중요성 + LeftPanel 두 번째 슬롯 안내.
+    const string KEY_TUT15      = "onboarding_tutorial15_done";
+    // 튜토리얼 16-1 완료 — 판매 패널 열리고 1주차 매출 bar가 오르는 동안(시간 정지 없이), 대박 반응.
+    const string KEY_TUT16_1    = "onboarding_tutorial16_1_done";
+    // 튜토리얼 18-1 완료 — 아직 미구현(콘텐츠 없음). EmployeeCardUI 아이템/강화 버튼이 이 플래그가 true가
+    // 될 때까지 잠겨있음(ApplyItemTrainingLock) — 실제 18-1 트리거가 구현되면 그때 MarkTutorial18_1Done 호출부 추가.
+    const string KEY_TUT18_1    = "onboarding_tutorial18_1_done";
 
     // 튜토리얼 dim 이 떠 있는 동안 true (세션 전용, 저장 안 함).
     // 시간 정지 중에도 메뉴 버튼을 숨기지 않도록 MenuController 가 참조.
@@ -152,25 +167,79 @@ public static class OnboardingState
         PlayerPrefs.Save();
     }
 
-    // 튜토리얼 10단계 — 직원 카드/만족도 소개 + AcWar 이벤트 체험(10-1~10-3). 이후에도 12단계(75% 아트팀장)
-    // 등이 이어지지만, 메뉴 버튼 잠금은 "온보딩 초반 UI 훑어보기" 구간만 막으면 되므로 여기서 풀어도 된다
-    // (12단계는 한참 뒤 실제 게임 진행 중에 자연히 발생하는 이벤트라 메뉴가 이미 열려있어도 무방).
+    // 튜토리얼 10단계 — 직원 카드/만족도 소개 + AcWar 이벤트 체험(10-1~10-3).
     public static bool Tutorial10Done => PlayerPrefs.GetInt(KEY_TUT10, 0) == 1;
     public static void MarkTutorial10Done()
     {
         PlayerPrefs.SetInt(KEY_TUT10, 1);
         PlayerPrefs.Save();
-        OnOnboardingFullyDone?.Invoke();
     }
-
-    // 온보딩 전체 완료 시점 알림 — 그동안 비활성화해 둔 UI(예: MenuController의 메뉴 버튼)를 되살릴 때 사용.
-    public static event System.Action OnOnboardingFullyDone;
 
     // 튜토리얼 12-1 — 아트팀장 선택(75% 진행도, 아트 직원이 없어 CEO만 후보인 상황) 안내 완료.
     public static bool Tutorial12Done => PlayerPrefs.GetInt(KEY_TUT12, 0) == 1;
     public static void MarkTutorial12Done()
     {
         PlayerPrefs.SetInt(KEY_TUT12, 1);
+        PlayerPrefs.Save();
+    }
+
+    // 튜토리얼 13-1/13-2 — 진행도 ~95% 확정 창의성 틱 발동 직후, 창의성 점수/블록 안내 완료.
+    public static bool Tutorial13Done => PlayerPrefs.GetInt(KEY_TUT13, 0) == 1;
+    public static void MarkTutorial13Done()
+    {
+        PlayerPrefs.SetInt(KEY_TUT13, 1);
+        PlayerPrefs.Save();
+    }
+
+    // 튜토리얼 13-4 — 창의성 미니게임 Sq/T_U 블록 지정 위치 유도 완료.
+    public static bool Tutorial13_4Done => PlayerPrefs.GetInt(KEY_TUT13_4, 0) == 1;
+    public static void MarkTutorial13_4Done()
+    {
+        PlayerPrefs.SetInt(KEY_TUT13_4, 1);
+        PlayerPrefs.Save();
+    }
+
+    // 튜토리얼 13-5 — 디버깅 시작 직후, 창의성 능력치가 버그 제거에도 쓰인다는 안내 완료.
+    // ⚠️ 여기가 "마지막 단계"라서 특별 취급하지 않는다 — MenuController는 더 이상 특정 단계 완료를
+    // 직접 구독하지 않고 TutorialController.IsFullyDone()을 폴링한다. 새 단계를 추가할 때 이 파일에는
+    // KEY_TUT.../Tutorial...Done/Mark...Done만 늘리고, TutorialController.IsFullyDone()에 그 단계의
+    // needStepN 한 줄만 추가하면 된다(다른 파일은 손댈 필요 없음).
+    public static bool Tutorial13_5Done => PlayerPrefs.GetInt(KEY_TUT13_5, 0) == 1;
+    public static void MarkTutorial13_5Done()
+    {
+        PlayerPrefs.SetInt(KEY_TUT13_5, 1);
+        PlayerPrefs.Save();
+    }
+
+    // 튜토리얼 14-1 — 디버깅 끝나고 DevelopmentResultPanel 활성화 직후, 첫 게임 완성 + 기여도 확인 안내 완료.
+    public static bool Tutorial14_1Done => PlayerPrefs.GetInt(KEY_TUT14_1, 0) == 1;
+    public static void MarkTutorial14_1Done()
+    {
+        PlayerPrefs.SetInt(KEY_TUT14_1, 1);
+        PlayerPrefs.Save();
+    }
+
+    // 튜토리얼 15-1/15-2 — 마케팅 패널 열릴 때, 마케팅 중요성 + LeftPanel 두 번째 슬롯 안내 완료.
+    public static bool Tutorial15Done => PlayerPrefs.GetInt(KEY_TUT15, 0) == 1;
+    public static void MarkTutorial15Done()
+    {
+        PlayerPrefs.SetInt(KEY_TUT15, 1);
+        PlayerPrefs.Save();
+    }
+
+    // 튜토리얼 16-1 — 판매 패널 열리고 1주차 매출 bar가 오르는 동안(시간 정지 없이), 대박 반응 완료.
+    public static bool Tutorial16_1Done => PlayerPrefs.GetInt(KEY_TUT16_1, 0) == 1;
+    public static void MarkTutorial16_1Done()
+    {
+        PlayerPrefs.SetInt(KEY_TUT16_1, 1);
+        PlayerPrefs.Save();
+    }
+
+    // 튜토리얼 18-1 — 아직 미구현. 실제 콘텐츠가 붙으면 그 트리거에서 이 메서드를 호출할 것.
+    public static bool Tutorial18_1Done => PlayerPrefs.GetInt(KEY_TUT18_1, 0) == 1;
+    public static void MarkTutorial18_1Done()
+    {
+        PlayerPrefs.SetInt(KEY_TUT18_1, 1);
         PlayerPrefs.Save();
     }
 
@@ -191,6 +260,13 @@ public static class OnboardingState
         PlayerPrefs.DeleteKey(KEY_TUT9);
         PlayerPrefs.DeleteKey(KEY_TUT10);
         PlayerPrefs.DeleteKey(KEY_TUT12);
+        PlayerPrefs.DeleteKey(KEY_TUT13);
+        PlayerPrefs.DeleteKey(KEY_TUT13_4);
+        PlayerPrefs.DeleteKey(KEY_TUT13_5);
+        PlayerPrefs.DeleteKey(KEY_TUT14_1);
+        PlayerPrefs.DeleteKey(KEY_TUT15);
+        PlayerPrefs.DeleteKey(KEY_TUT16_1);
+        PlayerPrefs.DeleteKey(KEY_TUT18_1);
         PlayerPrefs.Save();
         Debug.Log("[Onboarding] 플래그 리셋 — 다음 진입 시 컷씬+튜토리얼 재노출");
     }

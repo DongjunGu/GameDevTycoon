@@ -60,6 +60,16 @@ public class EmployeeCardUI : MonoBehaviour
     [Tooltip("만족도 슬라이더가 1초당 변하는 단위 수 (값이 클수록 빠름)")]
     public float satisfactionAnimSpeed = 30f;
 
+    [Header("아이템/강화 버튼 — 튜토리얼 18-1 전까지 잠금")]
+    [Tooltip("\"아이템\" 버튼 — 18-1 전까지 interactable=false")]
+    public Button itemUseBtn;
+    [Tooltip("itemUseBtn 위에 덮이는 잠금 표시(터치 차단) — 18-1 전까지 활성")]
+    public GameObject itemUseLockBG;
+    [Tooltip("\"강화하기\" 버튼 — 18-1 전까지 interactable=false")]
+    public Button trainingEmployeeBtn;
+    [Tooltip("trainingEmployeeBtn 위에 덮이는 잠금 표시(터치 차단) — 18-1 전까지 활성")]
+    public GameObject trainingLockBG;
+
     [Header("선택 캐릭터 머리 위 화살표 (월드스페이스, 카드와 동시에 표시)")]
     [Tooltip("SpriteRenderer가 붙은 월드스페이스 오브젝트. 카드가 열릴 때 선택된 캐릭터 머리 위(12px)로 이동해 표시")]
     public Transform selectedArrow;
@@ -117,10 +127,23 @@ public class EmployeeCardUI : MonoBehaviour
 
         // 동적 수치(능력치 텍스트 등) 즉시 반영
         RefreshDynamic(emp);
+        ApplyItemTrainingLock();
 
         if (cardPanel != null) cardPanel.SetActive(true);
         PositionSelectedArrow(emp.id);
         OnCardShown?.Invoke(emp.id);
+    }
+
+    // 아이템/강화 버튼 — 튜토리얼 18-1 완료 전까지 interactable=false + LockBG 활성.
+    void ApplyItemTrainingLock()
+    {
+        bool locked = !OnboardingState.Tutorial18_1Done;
+
+        if (itemUseBtn != null) itemUseBtn.interactable = !locked;
+        if (itemUseLockBG != null) itemUseLockBG.SetActive(locked);
+
+        if (trainingEmployeeBtn != null) trainingEmployeeBtn.interactable = !locked;
+        if (trainingLockBG != null) trainingLockBG.SetActive(locked);
     }
 
     // 카드와 함께 뜨는 선택 화살표 — 캐릭터 머리 위(statPopupAnchor 없으면 0.6유닛 위) 기준 12px 추가로 위에 표시.
