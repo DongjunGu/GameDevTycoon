@@ -262,6 +262,12 @@ public class DevelopmentManager : MonoBehaviour
     private Dictionary<string, CharacterState> _prevStateMap = new();
     private Dictionary<string, int> _midDevSeeds = new();
     private Dictionary<string, float> _midDevElapsed = new();
+    // 튜토리얼(13-1/13-2) 전용 — 마지막 틱을 강제로 창의성으로 고정해둔 직원 id(InitTickMapWithSeed 참고).
+    private string _tutorialCreativityEmployeeId;
+    // 튜토리얼 전용 — 창의성 틱이 발동할 때마다 이 풀(중복 없이 5종)에서 하나씩 소비. 개발이 끝나도 남아있으면
+    // ShowCreativityGame()에서 나머지를 전부 강제 지급. null이면 튜토리얼 아님(일반 랜덤 추첨 사용).
+    private List<string> _tutorialCreativityPool;
+    static readonly string[] TutorialCreativityBlockNames = { "G_TR", "V3", "V2", "Sq", "T_U" };
     private Coroutine _bugFixCoroutine;
     private Coroutine _characterSlowCoroutine;
     private bool _bugFixReleased = false;
@@ -379,8 +385,29 @@ public class DevelopmentManager : MonoBehaviour
         _tickTimesMap.Clear();
         _tickIndexMap.Clear();
         _tickOrderMap.Clear();
+        _tutorialCreativityEmployeeId = null;
+        _tutorialCreativityPool = null;
 
         string[] tickTypeNames = { "잭팟", "성공", "창의성", "버그", "꽝" };
+
+        // 튜토리얼(=한 번도 프로젝트를 출시 안 한 첫 판) 한정 — 첫 번째 직원의 마지막(12번째) 틱은 12개
+        // 구간 중 [11/12, 12/12)=진행도 약 91.7~100% 구간에 랜덤 배치되므로("95%") 그 틱을 무조건
+        // 창의성(tickType=2)으로 고정해, 크리에이티비티 미니게임을 최소 1회는 보장 체험시킨다.
+        bool forceCreativityTick = CompletedProjectManager.Instance != null
+            && CompletedProjectManager.Instance.completedProjects.Count == 0;
+
+        // 튜토리얼 전용 창의성 블록 풀 — 지정 5종을 seed로 결정적 셔플(재접속 시 같은 seed면 같은 순서로
+        // 재현됨)해, AccumulateByType의 창의성 틱이 이 순서대로(중복 없이) 하나씩 소비한다.
+        if (forceCreativityTick)
+        {
+            _tutorialCreativityPool = new List<string>(TutorialCreativityBlockNames);
+            for (int i = _tutorialCreativityPool.Count - 1; i > 0; i--)
+            {
+                int j = rng.Next(0, i + 1);
+                (_tutorialCreativityPool[i], _tutorialCreativityPool[j]) = (_tutorialCreativityPool[j], _tutorialCreativityPool[i]);
+            }
+        }
+        bool isFirstEmployee = true;
 
         foreach (var employee in EmployeeManager.Instance.ownedEmployees)
         {
@@ -395,6 +422,12 @@ public class DevelopmentManager : MonoBehaviour
             _tickIndexMap[employee.id] = 0;
             bool empOvertime = employee.isOvertimeWorker || IsOvertimeMode || IsVoluntaryOvertimeActive;
             int[] order = BuildTickOrder(tickCount, empOvertime, employee.EffectiveCreativitySkill, rng);
+            if (forceCreativityTick && isFirstEmployee)
+            {
+                order[tickCount - 1] = 2;
+                _tutorialCreativityEmployeeId = employee.id;
+            }
+            isFirstEmployee = false;
             _tickOrderMap[employee.id] = order;
 
             var sb = new System.Text.StringBuilder();
@@ -526,6 +559,28 @@ public class DevelopmentManager : MonoBehaviour
                 {
                     if (curState == CharacterState.Working)
                     {
+                        // 튜토리얼 13-1/13-2 — 방금 강제해둔 그 창의성 틱(마지막 인덱스)이 지금 막
+                        // 발동하려는 참이면, AccumulateByType이 안에서 동기 호출하는
+                        // ShowBlockPopup→...→SpawnPopup이 뜨는 순간을 이벤트로 잡아 튜토리얼을 잇는다.
+                        bool isTutorialCreativityTick = !OnboardingState.Tutorial13Done
+                            && employee.id == _tutorialCreativityEmployeeId
+                            && index == _tickTimesMap[employee.id].Count - 1;
+                        if (isTutorialCreativityTick)
+                        {
+                            var oc = OfficeManager.Instance?.GetCharacter(employee.id);
+                            if (oc != null)
+                            {
+                                System.Action<Transform> onSpawned = null;
+                                onSpawned = t =>
+                                {
+                                    oc.OnBlockPopupSpawned -= onSpawned;
+                                    if (TutorialController.Instance != null)
+                                        TutorialController.Instance.StartCoroutine(TutorialController.Instance.PlayTutorial13(employee, t));
+                                };
+                                oc.OnBlockPopupSpawned += onSpawned;
+                            }
+                        }
+
                         AccumulateByType(employee, order[index]);
                         _tickIndexMap[employee.id]++;
                     }
@@ -684,6 +739,18 @@ public class DevelopmentManager : MonoBehaviour
 
     public void ShowCreativityGame()
     {
+        // 튜토리얼 — 상시개발값 틱으로 5종을 다 못 뽑았으면(예: 2개만 발동) 미니게임 진입 직전에 나머지를
+        // 강제 지급해 매 플레이 5종 전부(G_TR/V3/V2/Sq/T_U) 확보되게 한다.
+        if (_tutorialCreativityPool != null && _tutorialCreativityPool.Count > 0)
+        {
+            foreach (var name in _tutorialCreativityPool)
+            {
+                var shape = System.Array.Find(CreativityGameData.Blocks, b => b.name == name);
+                if (shape != null) CreativityGameUI.Instance?.AddEarnedBlock(shape);
+            }
+            _tutorialCreativityPool.Clear();
+        }
+
         AlertUI.Instance.Show("창의성을 올리세요!", () =>
         {
             CreativityGameUI.Instance.Open(() =>
@@ -706,6 +773,16 @@ public class DevelopmentManager : MonoBehaviour
                     ProjectSaveManager.Instance.SaveProject();
                     _bugFixReleased = false;
                     _bugFixCoroutine = StartCoroutine(BugFixCoroutine());
+
+                    // 온보딩 튜토리얼 13-5 — 첫 프로젝트 한정, 디버깅 시작 직후 창의성 능력치도 버그
+                    // 제거에 쓰인다는 안내. BeginDimTimeStop이 위 BugFixCoroutine의 StartTime을 다시
+                    // 멈춰서 대사가 뜨는 동안 디버깅 진행이 자연히 일시정지된다.
+                    if (!OnboardingState.Tutorial13_5Done
+                        && CompletedProjectManager.Instance != null && CompletedProjectManager.Instance.completedProjects.Count == 0
+                        && TutorialController.Instance != null)
+                    {
+                        TutorialController.Instance.StartCoroutine(TutorialController.Instance.PlayTutorial13_5());
+                    }
                 });
             });
         });
@@ -827,6 +904,14 @@ public class DevelopmentManager : MonoBehaviour
         RandomEventManager.Instance.CheckInvestmentResult(planning, develop, art, creativity, () =>
         {
             DevelopmentResultUI.Instance.Show(planning, develop, art, bug, creativity);
+
+            // 온보딩 튜토리얼 14-1 — 첫 프로젝트 한정, 결과 패널이 뜨자마자.
+            if (!OnboardingState.Tutorial14_1Done
+                && CompletedProjectManager.Instance != null && CompletedProjectManager.Instance.completedProjects.Count == 0
+                && TutorialController.Instance != null)
+            {
+                TutorialController.Instance.StartCoroutine(TutorialController.Instance.PlayTutorial14_1());
+            }
         });
     }
 
@@ -1050,11 +1135,11 @@ public class DevelopmentManager : MonoBehaviour
     private PendingRound4Context _pendingRound4;
     public bool IsPendingRound4Aim => _pendingRound4 != null;
 
-    // 온보딩 튜토리얼(1~3회차) 전용 고정 U — 합계 31 이상이면 스테이지(M=1.35~1.8)가 뭐가 나오든,
-    // 4회차 "강" 조준의 랜덤 U(11~16)가 뭐가 나오든 누적ds가 항상 100을 넘겨(burst) 7-6의
-    // "고장/점수 날아감" 설명이 매번 맞아떨어진다(여유 있게 32, 최소 요구치는 31). 유도 공식:
-    // 33 + M×(U1+U2+U3) + 11 + M×11(=4회차 최소 U) > 100 → U1+U2+U3 > 30.48, 최악 M=1.35 기준.
-    static readonly int[] TutorialFixedRound123U = { 8, 11, 13 };
+    // 온보딩 튜토리얼(1~3회차) 전용 고정 U — 사용자 지정값. 4회차도(SelectRound4Aim에서) U=16으로 같이
+    // 고정하므로, 신규 채용 직원(enhancementLevel<=8 → RollLeaderStage가 항상 stage=1, M=1.35 확정) 기준
+    // 4회차까지 전부 고정: ds1=11+7×1.35=20.45, ds2=11+9×1.35=23.15, ds3=11+11×1.35=25.85,
+    // ds4=11+16×1.35=32.6 → 누적 102.05 > 100, "강" 선택 시 항상 burst 확정.
+    static readonly int[] TutorialFixedRound123U = { 7, 9, 11 };
 
     // 온보딩 튜토리얼(9-1~9-3, 개발팀장) 전용 고정 U — M을 1.35로 함께 고정하는 게 전제. cumDs3(1~3회차
     // 누적) = 21.8+24.5+27.2 = 73.5. 4회차는 SelectRound4Aim에서 아im별로 별도 고정(중/강=11→99.35,
@@ -1413,6 +1498,12 @@ public class DevelopmentManager : MonoBehaviour
             // 99라니"/"심장 아프다" 대사와 일치. 약은 11이 범위(1~6) 밖이라 그 범위 최댓값(6)으로
             // 고정 — ds4=18.1, 누적 91.6(99에는 못 미치지만 안전) — "그래도 좋은 결과" 대사와 일치.
             U = aim == LeaderScoreAim.Low ? 6 : 11;
+        }
+        else if (ctx.type == LeaderType.Planner && !OnboardingState.Tutorial7Done)
+        {
+            // 7-x 전용 — 약/중은 잠겨있어 "강"만 선택 가능. 1~3회차(TutorialFixedRound123U={7,9,11})와
+            // 마찬가지로 U를 그 범위 최댓값(16)으로 고정해 4회차까지 완전히 결정적으로 burst 확정.
+            U = 16;
         }
         else
         {
@@ -2142,7 +2233,20 @@ public class DevelopmentManager : MonoBehaviour
 
             case 2: // 창의성
             {
-                var earnedBlock = CreativityGameData.DrawRandomBlock();
+                CreativityGameData.BlockShape earnedBlock;
+                if (_tutorialCreativityPool != null && _tutorialCreativityPool.Count > 0)
+                {
+                    // 튜토리얼 — 고정 풀에서 순서대로(중복 없이) 하나 소비. 5개를 다 쓰고도 창의성 틱이 더
+                    // 발동하면(추가 직원/추가 틱) 그때부턴 일반 랜덤 추첨으로 자연스럽게 폴백.
+                    string pickName = _tutorialCreativityPool[0];
+                    _tutorialCreativityPool.RemoveAt(0);
+                    earnedBlock = System.Array.Find(CreativityGameData.Blocks, b => b.name == pickName)
+                                  ?? CreativityGameData.DrawRandomBlock();
+                }
+                else
+                {
+                    earnedBlock = CreativityGameData.DrawRandomBlock();
+                }
                 CreativityGameUI.Instance?.AddEarnedBlock(earnedBlock);
                 OfficeManager.Instance?.ShowBlockPopup(employee.id, earnedBlock.cells, earnedBlock.color);
                 // 기여도: 블록 획득 = 창의성 5점으로 간주

@@ -35,6 +35,15 @@ public class CreativityBlockSpriteConfigEditor : Editor
         if (GUILayout.Button("블록 정의와 동기화 (새로 추가된 블록 반영)"))
             SyncEntries();
 
+        using (new EditorGUI.DisabledScope(!Application.isPlaying))
+        {
+            string label = Application.isPlaying
+                ? "게임에 즉시 적용 (열려있는 미니게임의 블록 다시 그리기)"
+                : "게임에 즉시 적용 — Play 모드에서만 가능";
+            if (GUILayout.Button(label))
+                ApplyToRunningGame();
+        }
+
         EditorGUILayout.Space(8);
 
         DrawGroup("2칸 블록", CreativityGameData.Blocks2);
@@ -195,6 +204,19 @@ public class CreativityBlockSpriteConfigEditor : Editor
             bool on = occupied.Contains((r, c));
             EditorGUI.DrawRect(cellRect, on ? color : new Color(0f, 0f, 0f, 0.08f));
         }
+    }
+
+    // Play 모드에서 인스펙터 수정 내용을 즉시 게임에 반영 — 이미 스폰된 블록은 Init() 시점에만 스프라이트가
+    // 고정되므로, 패널을 껐다 켜지 않고도 바로 확인할 수 있게 CreativityGameUI.ReapplyBlockSprites 를 호출.
+    void ApplyToRunningGame()
+    {
+        var ui = CreativityGameUI.Instance;
+        if (ui == null)
+        {
+            Debug.LogWarning("[CreativityBlockSpriteConfigEditor] CreativityGameUI.Instance 를 찾을 수 없음 — 씬에 미니게임 패널이 있는지 확인하세요.");
+            return;
+        }
+        ui.ReapplyBlockSprites();
     }
 
     void SyncEntries()

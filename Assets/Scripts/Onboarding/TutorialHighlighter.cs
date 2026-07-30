@@ -265,8 +265,14 @@ public class TutorialHighlighter : MonoBehaviour
         return trigger;
     }
 
+    // PointerDown~클릭확정 사이엔 true — 이 동안은 PulseHole()이 매 프레임 부르는 ApplyHole()이 타일을
+    // 다시 켜버리지 못하게 막는다(안 막으면 HideDimTilesOnly로 숨긴 다음 프레임에 PulseHole이 그대로
+    // 다시 그려서 도로 나타남 — "클릭해도 하이라이트가 안 사라지고 패널 열린 뒤에야 늦게 사라지는" 버그 원인).
+    bool _dimHiddenForPress;
+
     void HideDimTilesOnly()
     {
+        _dimHiddenForPress = true;
         foreach (var tile in _tilePool) tile.gameObject.SetActive(false);
     }
 
@@ -356,18 +362,25 @@ public class TutorialHighlighter : MonoBehaviour
     IEnumerator RestoreDimIfNotConfirmed(System.Func<bool> wasClicked)
     {
         yield return null;
-        if (!wasClicked()) ApplyHole(_currentHoleRect); // 눌렀지만 클릭 미확정(드래그로 이탈 등) → 타일 원복
+        if (!wasClicked())
+        {
+            _dimHiddenForPress = false; // 미확정 → PulseHole이 다시 그리도록 허용
+            ApplyHole(_currentHoleRect); // 눌렀지만 클릭 미확정(드래그로 이탈 등) → 타일 원복
+        }
+        // 확정된 경우엔 _dimHiddenForPress를 여기서 안 풀어준다 — Highlight()가 곧 StopPulse로 펄스 자체를
+        // 정지시키므로, 그때까지 PulseHole이 계속 타일을 다시 켜지 못하게 계속 억제해야 함.
     }
 
     IEnumerator PulseHole(RectTransform target)
     {
+        _dimHiddenForPress = false; // 새 강조 세션 시작 — 이전 press 상태 잔재 제거
         float t = 0f;
         while (true)
         {
             t += Time.unscaledDeltaTime * 4f;
             float pad = highlightHolePadding + highlightPulseAmplitude * Mathf.Sin(t);
             _currentHoleRect = ComputeHoleRect(target, pad);
-            ApplyHole(_currentHoleRect);
+            if (!_dimHiddenForPress) ApplyHole(_currentHoleRect);
             yield return null;
         }
     }

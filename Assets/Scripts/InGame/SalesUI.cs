@@ -361,13 +361,22 @@ public class SalesUI : MonoBehaviour
                 
                 cumulativeRevenue = endRevenue;
                 totalRevenueText.text = $"{cumulativeRevenue:N0} G";
-                UpdateBestRank(CalcRank(revenuePerPeriod[i])); // 복원 시에도 최고순위 누적
+                UpdateBestRank(GetRank(revenuePerPeriod[i], i)); // 복원 시에도 최고순위 누적
                 continue;
             }
 
             // 미완료 주차 - 애니메이션
-            
+
             barImage.sizeDelta = new Vector2(barImage.sizeDelta.x, 0f);
+
+            // 온보딩 튜토리얼 16-1 — 첫 프로젝트 한정, 1주차 bar 애니메이션이 막 시작될 때. 시간을 멈추지
+            // 않고(대사 진행 중에도 bar가 계속 오르는 걸 보여줘야 함) 그냥 병렬로 fire-and-forget 실행.
+            if (i == 0 && !OnboardingState.Tutorial16_1Done
+                && CompletedProjectManager.Instance != null && CompletedProjectManager.Instance.completedProjects.Count == 0
+                && TutorialController.Instance != null)
+            {
+                TutorialController.Instance.TriggerTutorial16_1();
+            }
 
             int startRevenue = cumulativeRevenue;
 
@@ -394,7 +403,7 @@ public class SalesUI : MonoBehaviour
             int weeklyRevenue = revenuePerPeriod[i];
             if (firstSaleBonusPct > 0)
                 weeklyRevenue = Mathf.RoundToInt(weeklyRevenue * (1f + firstSaleBonusPct / 100f));
-            int rank = CalcRank(weeklyRevenue);
+            int rank = GetRank(weeklyRevenue, i);
             UpdateBestRank(rank);
             
             if (rankText != null)
@@ -442,6 +451,9 @@ public class SalesUI : MonoBehaviour
 
     void OnSalesComplete(int cumulativeRevenue)
     {
+        // 16-1이 시간 안 멈추고 진행 중일 수 있음 — 판매가 먼저 끝나 패널이 닫히면 하이라이트/대사도 같이 정리.
+        TutorialController.Instance?.CancelTutorial16_1IfRunning();
+
         _barsCoroutine = null;
         panelRT.DOKill();
         panelRT.localPosition = _panelOpenLocalPos;
@@ -480,6 +492,19 @@ public class SalesUI : MonoBehaviour
         if (rank <= 0 || _currentSalesProject == null) return;
         if (_currentSalesProject.bestRank == 0 || rank < _currentSalesProject.bestRank)
             _currentSalesProject.bestRank = rank;
+    }
+
+    // 튜토리얼(첫 프로젝트, 소형=3주) 한정 — 실제 매출과 무관하게 1주차→2주차→3주차 순위를 이 값으로 고정.
+    static readonly int[] TutorialRankSequence = { 1, 5, 11 };
+
+    // weekIndex(0-based) 기준 순위 — 튜토리얼이면 실제 매출 무시하고 TutorialRankSequence 그대로,
+    // 아니면 기존처럼 CalcRank(weeklyRevenue)로 계산.
+    int GetRank(int weeklyRevenue, int weekIndex)
+    {
+        if (CompletedProjectManager.Instance != null && CompletedProjectManager.Instance.completedProjects.Count == 0
+            && weekIndex >= 0 && weekIndex < TutorialRankSequence.Length)
+            return TutorialRankSequence[weekIndex];
+        return CalcRank(weeklyRevenue);
     }
 
     int CalcRank(int weeklyRevenue)

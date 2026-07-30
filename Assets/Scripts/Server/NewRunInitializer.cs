@@ -58,8 +58,8 @@ public static class NewRunInitializer
             resetCall(onOneDone);
         }
 
-        // 튜토리얼 런은 시작 자금을 3,000G로 고정 (일반 런은 MoneyManager 기본값 15,000G)
-        if (MoneyManager.Instance != null)            Issue(cb => MoneyManager.Instance.ResetForNewRun(cb, tutorial ? 3000 : 15000));
+        // 튜토리얼 런은 시작 자금을 30,000G로 고정 (일반 런은 MoneyManager 기본값 15,000G)
+        if (MoneyManager.Instance != null)            Issue(cb => MoneyManager.Instance.ResetForNewRun(cb, tutorial ? 30000 : 15000));
         // EmployeeManager 가 GameTimeManager 보다 먼저 — GameTimeManager.SaveGameTime 이 내부적으로
         // SaveAllEmployees 를 호출하므로, ownedEmployees 가 먼저 비워져 있어야 stale UpdateV2 가 새 런의
         // DeleteV2 와 충돌해 "gameInfo not found" 404 를 내는 race 를 차단.

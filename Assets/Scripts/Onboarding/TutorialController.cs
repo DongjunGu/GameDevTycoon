@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using DG.Tweening;
 
 // 첫 게임씬 진입 시 1회 실행되는 온보딩 튜토리얼.
 // 흐름: 비서 대사(DialogManager "tutorial_intro", 비서는 스폰 시점부터 이미 point1/master_desk에 서있음
@@ -243,6 +244,67 @@ public class TutorialController : MonoBehaviour
     [Tooltip("TutorialPanel의 RectTransform.anchoredPosition — 12-1 표시 위치")]
     public Vector2 step12_1Position;
 
+    [Header("13-1/13-2 (진행도 ~95% 확정 창의성 틱 — DevelopmentManager.DevelopmentCoroutine가 그 틱 발동 직후 PlayTutorial13() 호출)")]
+    [Tooltip("HUDCanvas/SafeAreaPanel/DevelopmentPanel/MainScorePanel/CreavPanel — 창의성 점수 강조(강조 유지, 3줄)")]
+    public RectTransform creavPanelRect;
+    [Tooltip("TutorialDialog 차트의 stepGroup 값 — 창의성 점수 소개(강조 유지, 3줄)")]
+    public string step13_1 = "13-1";
+    [Tooltip("TutorialPanel의 RectTransform.anchoredPosition — 13-1 표시 위치")]
+    public Vector2 step13_1Position;
+    [Tooltip("TutorialDialog 차트의 stepGroup 값 — 직원 머리 위 창의성 블록 소개(강조 유지, 2줄)")]
+    public string step13_2 = "13-2";
+    [Tooltip("TutorialPanel의 RectTransform.anchoredPosition — 13-2 표시 위치")]
+    public Vector2 step13_2Position;
+
+    [Header("13-3/13-4 (CreativityGameUI.Open — 창의성 미니게임 진입 직후 PlayTutorial13_3() 호출, 첫 프로젝트 한정)")]
+    [Tooltip("TutorialDialog 차트의 stepGroup 값 — 가방에 블록을 채우면 점수를 얻는다는 소개(강조 유지, 2줄)")]
+    public string step13_3 = "13-3";
+    [Tooltip("TutorialPanel의 RectTransform.anchoredPosition — 13-3 표시 위치")]
+    public Vector2 step13_3Position;
+    [Tooltip("CreativityCanvas/.../BlockTrayArea/InfoPanel/ScorePanel — 점수 강조(강조 유지, 2줄)")]
+    public RectTransform scorePanelRect;
+    [Tooltip("GuideBlockPlacement 중 표시되는 손가락 드래그 힌트 이미지 — 블록 하이라이트 위치↔목표 자리(TargetMarker) 중앙을\n루프 왕복하며 \"이걸 끌어다 놓으라\"는 뜻을 시각적으로 안내. Image의 RectTransform. raycastTarget은 꺼둘 것(드래그 방해 금지).\n평소엔 비활성 상태로 두면 됨(코드가 필요할 때만 SetActive).")]
+    public RectTransform dragHintFinger;
+    [Tooltip("손가락 힌트가 시작점↔목표점을 한 번 왕복하는 데 걸리는 시간(초)")]
+    public float dragHintLoopDuration = 0.9f;
+    [Tooltip("TutorialDialog 차트의 stepGroup 값 — Sq 배치 후 점수 상승 반응(강조 유지, 2줄)")]
+    public string step13_4 = "13-4";
+    [Tooltip("TutorialPanel의 RectTransform.anchoredPosition — 13-4 표시 위치")]
+    public Vector2 step13_4Position;
+
+    [Header("13-5 (디버깅 단계 시작 직후 — DevelopmentManager.ShowCreativityGame 콜백 체인에서 PlayTutorial13_5() 호출, 첫 프로젝트 한정)")]
+    [Tooltip("TutorialDialog 차트의 stepGroup 값 — 창의성 능력치가 버그 제거에도 쓰인다는 안내(강조 없음, 2줄)")]
+    public string step13_5 = "13-5";
+    [Tooltip("TutorialPanel의 RectTransform.anchoredPosition — 13-5 표시 위치")]
+    public Vector2 step13_5Position;
+
+    [Header("14-1 (디버깅 끝나고 DevelopmentResultPanel 활성화 직후 — DevelopmentManager.ShowResultInternal 콜백 체인에서 PlayTutorial14_1() 호출, 첫 프로젝트 한정)")]
+    [Tooltip("TutorialDialog 차트의 stepGroup 값 — 첫 게임 완성 축하 + 기여도 확인 안내(강조 없음, 2줄)")]
+    public string step14_1 = "14-1";
+    [Tooltip("TutorialPanel의 RectTransform.anchoredPosition — 14-1 표시 위치")]
+    public Vector2 step14_1Position;
+
+    [Header("15-1/15-2 (MarketingUI.Show — 마케팅 패널 열릴 때 PlayTutorial15() 호출, 첫 프로젝트 한정)")]
+    [Tooltip("TutorialDialog 차트의 stepGroup 값 — 마케팅의 중요성 소개(강조 없음, 1줄)")]
+    public string step15_1 = "15-1";
+    [Tooltip("TutorialPanel의 RectTransform.anchoredPosition — 15-1 표시 위치")]
+    public Vector2 step15_1Position;
+    [Tooltip("TutorialDialog 차트의 stepGroup 값 — 마케팅비 부족 시 페널티 경고(강조 유지, 1줄)")]
+    public string step15_2 = "15-2";
+    [Tooltip("TutorialPanel의 RectTransform.anchoredPosition — 15-2 표시 위치")]
+    public Vector2 step15_2Position;
+    [Tooltip("MarketingUI.slotButtons[1] (LeftPanel 두 번째 슬롯 = \"PC방 광고\")의 RectTransform — 강조 대상")]
+    public RectTransform marketingSecondSlotRect;
+
+    [Header("16-1 (SalesUI — 판매 패널 열리고 1주차 bar 애니메이션 시작 시 PlayTutorial16_1() 호출, 첫 프로젝트 한정)")]
+    [Tooltip("⚠️ 이 스텝은 시간을 멈추지 않는다(BeginDimTimeStop 미사용) — 매출 bar가 계속 오르는 걸 보여주면서 대사 진행. " +
+             "TutorialDialog 차트의 stepGroup 값 — 매출 속도에 놀라는 반응(강조 유지, 2줄)")]
+    public string step16_1 = "16-1";
+    [Tooltip("TutorialPanel의 RectTransform.anchoredPosition — 16-1 표시 위치")]
+    public Vector2 step16_1Position;
+    [Tooltip("SalesUI.chartBG(SalesPanel/chartBG)의 RectTransform — 강조 대상")]
+    public RectTransform chartBGRect;
+
     [Header("연출 (TutorialHighlighter 로 전달됨)")]
     [Range(0f, 1f)] public float dimAlpha = 0.8f;
     [Tooltip("dim이 0→dimAlpha로 빠르게 훅 들어오는 시간(초) — 짧을수록 순간 집중 유도")]
@@ -275,6 +337,35 @@ public class TutorialController : MonoBehaviour
         _highlighter.holeMoveDuration = holeMoveDuration;
         _highlighter.appearExpandPadding = appearExpandPadding;
         _highlighter.appearDuration = appearDuration;
+    }
+
+    // 지금까지 정의된 모든 튜토리얼 단계가 전부 끝났는지(=온보딩 완전 종료) — 아래 Start()의 자폭 판정과
+    // 반드시 같은 needStepN 목록을 유지해야 한다. 새 단계를 추가할 때 여기 한 줄만 같이 추가하면, 이 값을
+    // 참조하는 외부 코드(MenuController 등)는 손댈 필요가 전혀 없다 — "마지막 단계가 몇 번인지"를 특정
+    // 이벤트 발동 지점으로 수동 지정/이동하는 방식(과거 OnboardingState.OnOnboardingFullyDone)은 매번
+    // 최신 마지막 단계로 옮겨줘야 해서 새 단계 추가 시 자꾸 깜빡하는 문제가 있었음 — 그래서 폐기.
+    public static bool IsFullyDone()
+    {
+        bool needStep1 = !OnboardingState.TutorialDone
+            && RunStateManager.Instance != null && RunStateManager.Instance.IsTutorial;
+        bool needStep3 = !OnboardingState.Tutorial3Done;
+        bool needStep5 = OnboardingState.Tutorial5Pending && !OnboardingState.Tutorial6Done;
+        bool needStep6 = !OnboardingState.Tutorial6Done;
+        bool needStep7 = !OnboardingState.Tutorial7Done;
+        bool needStep8 = OnboardingState.Tutorial7Done && !OnboardingState.Tutorial8Done;
+        bool needStep9 = !OnboardingState.Tutorial9Done;
+        bool needStep10 = !OnboardingState.Tutorial10Done;
+        bool needStep12 = !OnboardingState.Tutorial12Done;
+        bool needStep13 = !OnboardingState.Tutorial13Done;
+        bool needStep13_4 = !OnboardingState.Tutorial13_4Done;
+        bool needStep13_5 = !OnboardingState.Tutorial13_5Done;
+        bool needStep14_1 = !OnboardingState.Tutorial14_1Done;
+        bool needStep15 = !OnboardingState.Tutorial15Done;
+        bool needStep16_1 = !OnboardingState.Tutorial16_1Done;
+
+        return !needStep1 && !needStep3 && !needStep5 && !needStep6 && !needStep7 && !needStep8
+            && !needStep9 && !needStep10 && !needStep12 && !needStep13 && !needStep13_4 && !needStep13_5
+            && !needStep14_1 && !needStep15 && !needStep16_1;
     }
 
     void Start()
@@ -312,8 +403,27 @@ public class TutorialController : MonoBehaviour
         // 12-1은 아트팀장 선택(75% 진행도)이 열릴 때마다(재접속 자연 재오픈 포함) DispatchPanelUI가 완료
         // 여부를 직접 체크해서 부른다 — 6/7/9단계와 동일 이유로 pending 불필요. 11단계는 아직 미구현.
         bool needStep12 = !OnboardingState.Tutorial12Done;
+        // 13-1/13-2는 진행도 ~95% 지점에서 그 확정 창의성 틱이 실제로 발동할 때 DevelopmentCoroutine이
+        // 직접 체크해서 부른다(8단계와 동일 이유) — 재접속해도 _elapsed 복원 후 같은 틱 인덱스 체크를
+        // 자연히 다시 타므로 여기서 즉시 재생시킬 필요 없음.
+        bool needStep13 = !OnboardingState.Tutorial13Done;
+        // 13-4는 창의성 미니게임이 열릴 때마다(재접속 자연 재오픈 포함) CreativityGameUI.Open이 완료
+        // 여부를 직접 체크해서 부른다 — pending 불필요.
+        bool needStep13_4 = !OnboardingState.Tutorial13_4Done;
+        // 13-5는 디버깅 단계가 시작될 때 DevelopmentManager.ShowCreativityGame 콜백 체인에서 직접 체크해서
+        // 부른다 — pending 불필요.
+        bool needStep13_5 = !OnboardingState.Tutorial13_5Done;
+        // 14-1은 디버깅이 끝나고 DevelopmentResultPanel이 뜰 때 DevelopmentManager.ShowResultInternal 콜백
+        // 체인에서 직접 체크해서 부른다 — pending 불필요.
+        bool needStep14_1 = !OnboardingState.Tutorial14_1Done;
+        // 15-1/15-2는 마케팅 패널이 열릴 때마다(재접속 자연 재오픈 포함) MarketingUI.Show가 직접 체크해서
+        // 부른다 — pending 불필요.
+        bool needStep15 = !OnboardingState.Tutorial15Done;
+        // 16-1은 판매 패널이 열릴 때마다(재접속 자연 재오픈 포함) SalesUI.ShowBarsSequentially가 1주차
+        // bar 애니메이션 시작 시점에 직접 체크해서 부른다 — pending 불필요.
+        bool needStep16_1 = !OnboardingState.Tutorial16_1Done;
 
-        if (!needStep1 && !needStep3 && !needStep5 && !needStep6 && !needStep7 && !needStep8 && !needStep9 && !needStep10 && !needStep12) { Destroy(gameObject); return; }
+        if (IsFullyDone()) { Destroy(gameObject); return; }
 
         Instance = this;
         if (needStep1) StartCoroutine(Run());
@@ -904,6 +1014,255 @@ public class TutorialController : MonoBehaviour
 
         yield return _highlighter.Hide(gen12);
         OnboardingState.MarkTutorial12Done();
+    }
+
+    // ── 13-1/13-2 (DevelopmentManager.DevelopmentCoroutine — 진행도 ~95% 지점, 첫 직원의 확정
+    // 창의성 틱이 실제로 발동(블록 팝업 spawn)한 직후 호출) ───────────────────────────────
+    public IEnumerator PlayTutorial13(EmployeeData employee, Transform blockTransform)
+    {
+        EnsureHighlighter();
+        // 블록 팝업(BlockFloatingVisual)의 떠오르는 애니메이션도 GameTimeManager.IsRunning을 보고
+        // 진행되므로, 여기서 시간을 멈추면 그 자리에 뜬 채로 같이 멈춰 안정적인 강조 대상이 된다.
+        BeginDimTimeStop();
+        yield return _highlighter.Show();
+        int gen13 = _highlighter.CurrentGeneration;
+
+        // 13-1: 창의성 점수 패널 강조 + 대사 3줄("이 점수는 왜 0점이야?" → "창의성 점수예요" → "블록으로 얻어요")
+        yield return _highlighter.BeginHighlight(creavPanelRect);
+        if (TutorialPanelUI.Instance != null)
+            yield return TutorialPanelUI.Instance.PlayStepGroup(step13_1, step13_1Position);
+
+        // 13-2: 강조가 직원 머리 위 창의성 블록(월드스페이스)으로 이동 + 대사 2줄
+        yield return _highlighter.BeginHighlightWorld(blockTransform);
+        if (TutorialPanelUI.Instance != null)
+            yield return TutorialPanelUI.Instance.PlayStepGroup(step13_2, step13_2Position);
+
+        yield return _highlighter.Hide(gen13);
+        EndDimTimeStop(); // 여기서 시간이 다시 흐르면 멈춰있던 블록 팝업도 남은 애니메이션을 마저 재생하고 정상 소멸
+        OnboardingState.MarkTutorial13Done();
+    }
+
+    // ── 13-3/13-4 (CreativityGameUI.Open — 창의성 미니게임 진입 직후, 첫 프로젝트 한정) ──────
+    // 13-3: "Grid"(7x7 고정, 대부분 빈 여백) 대신 실제 활성 4x4 영역만 강조 + 대사 2줄.
+    // 이어서 b1.png 설계대로 Sq 블록을 강조해 클릭/드래그를 유도하고, 드래그가 시작되는 즉시 강조를
+    // 풀면서 그리드에는 Sq가 들어가야 할 자리(4x4 중앙, 로컬(0,0)~(1,1))만 표시 + 그 자리에만
+    // 배치되도록 강제한다. 실제로 놓이면(점수 반영 완료) 13-4: ScorePanel 강조 + 대사 2줄 → 이어서
+    // 같은 방식으로 T_U(로컬(2,1)~(3,2)의 T자, b1.png 기준)까지 배치 유도.
+    public IEnumerator PlayTutorial13_3()
+    {
+        var miniGame = CreativityGameUI.Instance;
+        var grid = miniGame != null ? miniGame.GridUI : null;
+        var block = miniGame != null ? miniGame.FindActiveBlockByShapeName("Sq") : null;
+        if (miniGame == null || grid == null || block == null)
+        {
+            Debug.LogWarning("[TutorialController] PlayTutorial13_3: CreativityGameUI/GridUI/Sq 블록 중 하나를 못 찾음 — 스킵");
+            yield break;
+        }
+
+        EnsureHighlighter();
+        // CreativityGameUI.Open()이 이미 GameTimeManager.StopTime()을 호출했으므로 별도 시간정지 불필요.
+        yield return _highlighter.Show();
+        int gen133 = _highlighter.CurrentGeneration;
+
+        // 13-3: Grid 전체(7x7)가 아니라 실제 보이는 4x4 영역만 강조.
+        yield return _highlighter.BeginHighlight(grid.GetActiveAreaRect());
+        if (TutorialPanelUI.Instance != null)
+            yield return TutorialPanelUI.Instance.PlayStepGroup(step13_3, step13_3Position);
+
+        yield return _highlighter.Hide(gen133);
+
+        // 4x4(튜토리얼 고정 그리드, Level1Grids 유일값) 중앙 오프셋은 (7-4)/2=1 — b1.png 로컬 좌표에
+        // (1,1)을 더하면 물리 좌표가 나온다. Sq(2x2, 셰이프 로컬(0,0)~(1,1))는 b1.png 로컬(0,0)~(1,1)
+        // 자리라 물리 anchor는 그대로 (1,1).
+        yield return GuideBlockPlacement(miniGame, grid, "Sq", new Vector2Int(1, 1));
+
+        // 13-4: 점수가 반영된 뒤(GuideBlockPlacement 안의 OnAnyBlockPlaced가 이미 UpdateScore까지 완료) ScorePanel 강조 + 대사 2줄.
+        EnsureHighlighter();
+        yield return _highlighter.Show();
+        int gen134 = _highlighter.CurrentGeneration;
+
+        yield return _highlighter.BeginHighlight(scorePanelRect);
+        if (TutorialPanelUI.Instance != null)
+            yield return TutorialPanelUI.Instance.PlayStepGroup(step13_4, step13_4Position);
+
+        yield return _highlighter.Hide(gen134);
+
+        // 이어서 T_U — b1.png 로컬 (2,2),(3,1),(3,2),(3,3)이 목표 자리. T_U 셰이프 자체 좌표(0,1)(1,0)(1,1)(1,2)
+        // 기준으로 역산하면 anchor=(3,2)일 때 물리 좌표 (3,3)(4,2)(4,3)(4,4)로 정확히 매핑된다.
+        yield return GuideBlockPlacement(miniGame, grid, "T_U", new Vector2Int(3, 2));
+
+        OnboardingState.MarkTutorial13_4Done();
+    }
+
+    // 지정한 이름의 블록을 강조 → 드래그 시작 즉시 강조 해제 → anchor 자리에만 배치 가능하도록 강제 +
+    // 목표 위치 마커 표시 → 실제로 그 자리에 놓일 때까지 대기. 13-3(Sq)/T_U 등 여러 블록에서 재사용.
+    IEnumerator GuideBlockPlacement(CreativityGameUI miniGame, CreativityGameGridUI grid, string shapeName, Vector2Int anchor)
+    {
+        var block = miniGame.FindActiveBlockByShapeName(shapeName);
+        if (block == null)
+        {
+            Debug.LogWarning($"[TutorialController] GuideBlockPlacement: '{shapeName}' 블록을 못 찾음 — 스킵");
+            yield break;
+        }
+
+        EnsureHighlighter();
+        yield return _highlighter.Show();
+        int gen = _highlighter.CurrentGeneration;
+
+        grid.SetForcedAnchor(block.Shape, anchor);
+        grid.ShowTargetMarker(block.Shape, anchor, block.Color);
+
+        yield return _highlighter.BeginHighlight((RectTransform)block.transform);
+
+        // 손가락 힌트 — 블록이 원래 있던 자리(하이라이트 중앙)에서 목표 자리(TargetMarker 중앙)까지
+        // 왕복 루프시켜 "이걸 여기로 끌어다 놓으라"는 걸 시각적으로 안내. 드래그 시작하면 바로 정지.
+        StartDragHint((RectTransform)block.transform, grid.GetForcedAnchorWorldCenter());
+
+        bool dragStarted = false;
+        System.Action onDragStarted = () => dragStarted = true;
+        block.OnDragStarted += onDragStarted;
+        while (!dragStarted) yield return null;
+        block.OnDragStarted -= onDragStarted;
+
+        StopDragHint();
+        yield return _highlighter.Hide(gen);
+
+        // 표시된 자리에 실제로 놓일 때까지 대기(그 외 위치/다른 블록은 SetForcedAnchor에 의해 전부 거부됨).
+        bool placed = false;
+        System.Action<CreativityGameBlockUI> onPlaced = b => { if (b == block) placed = true; };
+        miniGame.OnAnyBlockPlaced += onPlaced;
+        while (!placed) yield return null;
+        miniGame.OnAnyBlockPlaced -= onPlaced;
+
+        grid.ClearForcedAnchor();
+        grid.HideTargetMarker();
+    }
+
+    // ── 손가락 드래그 힌트 (GuideBlockPlacement 전용) ──────────────────────────
+    // fromRect(블록이 원래 있던 자리) 중앙 ↔ toWorldPos(목표 자리 중앙)를 왕복 루프.
+    // 서로 다른 부모(트레이/그리드) 밑이라 World 좌표로 직접 옮긴다 — 같은 Canvas 안이면 문제 없음.
+    void StartDragHint(RectTransform fromRect, Vector3 toWorldPos)
+    {
+        if (dragHintFinger == null || fromRect == null) return;
+        StopDragHint();
+
+        dragHintFinger.gameObject.SetActive(true);
+        dragHintFinger.position = GetRectWorldCenter(fromRect);
+        dragHintFinger.DOKill();
+        dragHintFinger.DOMove(toWorldPos, dragHintLoopDuration)
+            .SetEase(Ease.InOutSine)
+            .SetLoops(-1, LoopType.Restart) // 왕복(Yoyo) 아님 — 끝나면 시작점으로 즉시 복귀 후 다시 출발
+            .SetUpdate(true); // BeginDimTimeStop으로 시간이 멈춰있어도 계속 움직이게
+    }
+
+    void StopDragHint()
+    {
+        if (dragHintFinger == null) return;
+        dragHintFinger.DOKill();
+        dragHintFinger.gameObject.SetActive(false);
+    }
+
+    static Vector3 GetRectWorldCenter(RectTransform rt)
+    {
+        var corners = new Vector3[4];
+        rt.GetWorldCorners(corners);
+        return (corners[0] + corners[2]) * 0.5f;
+    }
+
+    // ── 13-5 (DevelopmentManager.ShowCreativityGame — 디버깅 단계 시작 직후, 첫 프로젝트 한정) ──
+    public IEnumerator PlayTutorial13_5()
+    {
+        EnsureHighlighter();
+        BeginDimTimeStop(); // 디버깅이 이미 시작(StartTime)된 뒤라 여기서 직접 다시 정지
+        yield return _highlighter.Show();
+        int gen135 = _highlighter.CurrentGeneration;
+
+        // 강조 없음 — 대사만.
+        if (TutorialPanelUI.Instance != null)
+            yield return TutorialPanelUI.Instance.PlayStepGroup(step13_5, step13_5Position);
+
+        yield return _highlighter.Hide(gen135);
+        EndDimTimeStop();
+        OnboardingState.MarkTutorial13_5Done();
+    }
+
+    // ── 14-1 (DevelopmentResultUI.Show — 디버깅 끝나고 결과 패널 활성화 직후, 첫 프로젝트 한정) ──
+    public IEnumerator PlayTutorial14_1()
+    {
+        EnsureHighlighter();
+        BeginDimTimeStop(); // 결과 패널이 이미 StopTime 걸어둔 상태 — 페어링된 별도 잠금이라 안전(13-5와 동일 패턴)
+        yield return _highlighter.Show();
+        int gen141 = _highlighter.CurrentGeneration;
+
+        // 강조 없음 — 대사만.
+        if (TutorialPanelUI.Instance != null)
+            yield return TutorialPanelUI.Instance.PlayStepGroup(step14_1, step14_1Position);
+
+        yield return _highlighter.Hide(gen141);
+        EndDimTimeStop();
+        OnboardingState.MarkTutorial14_1Done();
+    }
+
+    // ── 15-1/15-2 (MarketingUI.Show — 마케팅 패널 열릴 때, 첫 프로젝트 한정) ──
+    public IEnumerator PlayTutorial15()
+    {
+        EnsureHighlighter();
+        BeginDimTimeStop(); // 마케팅 패널이 이미 StopTime 걸어둔 상태 — 페어링된 별도 잠금이라 안전(13-5/14-1과 동일 패턴)
+        yield return _highlighter.Show();
+        int gen15 = _highlighter.CurrentGeneration;
+
+        // 15-1 — 강조 없음, 대사만.
+        if (TutorialPanelUI.Instance != null)
+            yield return TutorialPanelUI.Instance.PlayStepGroup(step15_1, step15_1Position);
+
+        // 15-2 — LeftPanel 두 번째 슬롯 강조 유지.
+        if (marketingSecondSlotRect != null)
+            yield return _highlighter.BeginHighlight(marketingSecondSlotRect);
+        if (TutorialPanelUI.Instance != null)
+            yield return TutorialPanelUI.Instance.PlayStepGroup(step15_2, step15_2Position);
+
+        yield return _highlighter.Hide(gen15);
+        EndDimTimeStop();
+        OnboardingState.MarkTutorial15Done();
+    }
+
+    // ── 16-1 (SalesUI — 판매 패널 열리고 1주차 bar 애니메이션 시작, 첫 프로젝트 한정) ──
+    // ⚠️ 다른 스텝과 달리 BeginDimTimeStop/EndDimTimeStop을 쓰지 않는다 — 매출 bar가 계속 오르는 걸
+    // 유저가 실시간으로 지켜보면서 대사가 진행돼야 하므로 시간을 멈추지 않는다. 그 대신 시간이 계속 흐르는
+    // 채로 대사가 진행되는 동안 판매가 먼저 끝나 SalesUI가 자동으로 닫혀버릴 수 있어(SalesUI.OnSalesComplete가
+    // CancelTutorial16_1IfRunning 호출) 코루틴 핸들을 들고 있다가 취소할 수 있게 한다.
+    Coroutine _tutorial16_1Co;
+
+    // SalesUI가 이 메서드로만 16-1을 트리거해야 코루틴 핸들을 잡아 나중에 취소할 수 있다.
+    public void TriggerTutorial16_1()
+    {
+        _tutorial16_1Co = StartCoroutine(PlayTutorial16_1());
+    }
+
+    public IEnumerator PlayTutorial16_1()
+    {
+        EnsureHighlighter();
+        yield return _highlighter.Show();
+        int gen16_1 = _highlighter.CurrentGeneration;
+
+        yield return _highlighter.BeginHighlight(chartBGRect);
+        if (TutorialPanelUI.Instance != null)
+            yield return TutorialPanelUI.Instance.PlayStepGroup(step16_1, step16_1Position);
+
+        yield return _highlighter.Hide(gen16_1);
+        OnboardingState.MarkTutorial16_1Done();
+        _tutorial16_1Co = null;
+    }
+
+    // SalesUI가 자동으로(판매 완료) 닫힐 때 호출 — 16-1이 아직 진행 중(대사/하이라이트 표시 중)이면
+    // 즉시 멈추고 하이라이트를 치운다. 그대로 두면 이미 닫힌 판매 패널의 chartBG를 계속 가리키게 됨.
+    public void CancelTutorial16_1IfRunning()
+    {
+        if (_tutorial16_1Co == null) return;
+        StopCoroutine(_tutorial16_1Co);
+        _tutorial16_1Co = null;
+        if (_highlighter != null) StartCoroutine(_highlighter.Hide(_highlighter.CurrentGeneration));
+        OnboardingState.MarkTutorial16_1Done(); // 중간에 끊겼어도 재접속/재진입 시 다시 뜨지 않도록 완료 처리
     }
 
     // ── dim 동안 시간 정지 (패널 켜는 것과 동일) ──────────────────────────────

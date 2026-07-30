@@ -143,31 +143,42 @@ public class MenuController : MonoBehaviour
             OnTimeStopChanged(!GameTimeManager.Instance.IsRunning);
         }
 
-        // 온보딩 튜토리얼(9단계까지) 진행 중엔 메뉴 버튼 오브젝트 자체를 꺼버린다 — 튜토리얼이 스스로
-        // 강조하는 시점(TutorialHighlighter.Highlight)에만 일시적으로 다시 SetActive(true)로 되살아난다.
-        if (menuButton != null && !OnboardingState.Tutorial10Done)
+        // 온보딩 튜토리얼 진행 중엔 메뉴 버튼 오브젝트 자체를 꺼버린다 — 튜토리얼이 스스로 강조하는
+        // 시점(TutorialHighlighter.Highlight)에만 일시적으로 다시 SetActive(true)로 되살아난다.
+        // "몇 번째 단계가 마지막인지"는 여기서 알 필요가 없다 — TutorialController.IsFullyDone()이
+        // 정의된 모든 단계를 종합해 판단하므로, 앞으로 튜토리얼 단계가 계속 추가돼도(예: 14, 15...)
+        // TutorialController 쪽에만 그 단계를 반영하면 되고 이 파일은 절대 다시 손댈 필요가 없다.
+        if (menuButton != null && !TutorialController.IsFullyDone())
         {
             _tutorialHideActive = true;
             menuButton.gameObject.SetActive(false);
+            _waitOnboardingDoneRoutine = StartCoroutine(WaitOnboardingFullyDone());
         }
-        OnboardingState.OnOnboardingFullyDone += OnOnboardingFullyDone;
     }
 
-    // 튜토리얼(9단계까지) 진행 중엔 true — 이 동안은 아래 OnTimeStopChanged가 menuButton의 SetActive를
-    // 건드리지 않는다(시간 정지/재개가 수시로 오가는 튜토리얼 중에 매번 되살아나 버리는 것 방지).
+    // 튜토리얼 진행 중엔 true — 이 동안은 아래 OnTimeStopChanged가 menuButton의 SetActive를 건드리지
+    // 않는다(시간 정지/재개가 수시로 오가는 튜토리얼 중에 매번 되살아나 버리는 것 방지).
     bool _tutorialHideActive;
+    Coroutine _waitOnboardingDoneRoutine;
+
+    // 특정 단계의 Mark*Done() 호출 지점에 이벤트를 심어두는 대신(단계가 늘어날 때마다 그 지점을 옮겨야
+    // 해서 계속 깜빡했던 방식), 여기서 직접 "전부 끝났는지"를 주기적으로 재확인한다 — 판정 기준은
+    // TutorialController.IsFullyDone() 하나뿐이라 이 파일은 새 단계가 추가돼도 항상 정확하다.
+    IEnumerator WaitOnboardingFullyDone()
+    {
+        var wait = new WaitForSecondsRealtime(0.5f);
+        while (!TutorialController.IsFullyDone()) yield return wait;
+
+        _tutorialHideActive = false;
+        _waitOnboardingDoneRoutine = null;
+        if (menuButton != null) menuButton.gameObject.SetActive(true);
+    }
 
     void OnDestroy()
     {
         if (GameTimeManager.Instance != null)
             GameTimeManager.Instance.OnTimeStopChanged -= OnTimeStopChanged;
-        OnboardingState.OnOnboardingFullyDone -= OnOnboardingFullyDone;
-    }
-
-    void OnOnboardingFullyDone()
-    {
-        _tutorialHideActive = false;
-        if (menuButton != null) menuButton.gameObject.SetActive(true);
+        if (_waitOnboardingDoneRoutine != null) StopCoroutine(_waitOnboardingDoneRoutine);
     }
 
     void OnTimeStopChanged(bool stopped)
