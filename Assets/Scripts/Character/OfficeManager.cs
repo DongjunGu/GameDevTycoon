@@ -11,8 +11,8 @@ public class OfficeManager : MonoBehaviour
     public Transform  spawnPoint;       // 스폰 위치 (문 앞 등)
 
     [Header("Patrol Settings")]
-    [SerializeField] private float patrolCheckInterval = 20f;  // 몇 초마다 patrol 발동 체크
-    [SerializeField] private int   patrolCountPerCycle = 1;    // 한 번에 patrol 보낼 최대 인원
+    [SerializeField] private float patrolCheckInterval = 2f;   // 몇 초마다 "지금 patrol 중인 사람이 있는지" 재확인
+    [SerializeField] private int   patrolCountPerCycle = 1;    // 아무도 patrol 중이 아닐 때 한 번에 내보낼 인원
     [SerializeField] private float patrolStayDuration = 5f;    // 목적지 도착 후 대기 시간
 
     [Header("Secretary (Visual NPC)")]
@@ -430,8 +430,11 @@ public class OfficeManager : MonoBehaviour
         StatTickPopup.ActiveCount = 0;
     }
 
-    // 개발 시작 시 호출 — patrol 포인트 갱신
-    public void StartDevelopmentPatrol()
+    // 개발 중이 아닐 때(대기/완료/판매 등) 배경 patrol 재개 — 개발 시작 시 StopDevelopmentPatrol()이
+    // 꺼둔 스케줄러를 다시 켠다. 호출 지점: 개발 완료 직후(DevelopmentResultUI의
+    // TriggerDevelopmentCompletePatrol 바로 뒤) + 씬 진입/재접속 시(GameSceneInitializer, 현재
+    // CurrentStage가 개발 중이 아닐 때만). EnsurePatrolScheduler가 이미 켜져 있으면 무해한 no-op.
+    public void ResumeIdlePatrol()
     {
         _patrolPoints = FindObjectsByType<PatrolPoint>(FindObjectsSortMode.None);
         _dialogPatrolPoints = FindObjectsByType<DialogPatrolPoint>(FindObjectsSortMode.None);
@@ -569,8 +572,23 @@ public class OfficeManager : MonoBehaviour
     {
         if (_patrolPoints == null || _patrolPoints.Length == 0) return;
 
-        // patrol 가능한 캐릭터 목록 섞기
-        var candidates = new List<OfficeCharacter>(_characters.Values);
+        // "master_desk"(상인/파견/팀장선택 등 여러 시스템이 하드코딩 문자열로 참조하는 유일한 진짜
+        // 예약 지점)만 제외. ⚠️ 처음엔 "pointId가 비어있으면 일반 지점"이라는 클래스 주석을 그대로
+        // 믿고 필터링했는데, 실제 씬엔 p1~p4도 전부 pointId가 채워져 있어(라벨링 목적, 예약 아님)
+        // 그 기준으로 걸렀더니 후보가 0개가 돼 배경 patrol이 전혀 안 나가는 버그가 있었음 — 코드
+        // 전체에서 실제로 매직스트링으로 참조되는 예약 지점은 "master_desk"뿐이라 이걸로 교체.
+        var generalPoints = System.Array.FindAll(_patrolPoints, p => p.pointId != "master_desk");
+        if (generalPoints.Length == 0) return;
+
+        // CEO/비서 제외 — TriggerDevelopmentCompletePatrol과 동일한 가드.
+        string ceoId = EmployeeManager.Instance?.CEO?.id;
+        var candidates = new List<OfficeCharacter>();
+        foreach (var oc in _characters.Values)
+        {
+            if (oc.employeeId == secretaryId) continue;
+            if (!string.IsNullOrEmpty(ceoId) && oc.employeeId == ceoId) continue;
+            candidates.Add(oc);
+        }
         for (int i = candidates.Count - 1; i > 0; i--)
         {
             int j = Random.Range(0, i + 1);
@@ -582,7 +600,7 @@ public class OfficeManager : MonoBehaviour
         {
             if (sent >= count) break;
             if (oc.IsPatrolling) continue;
-            var point = _patrolPoints[Random.Range(0, _patrolPoints.Length)];
+            var point = generalPoints[Random.Range(0, generalPoints.Length)];
             var pointCell = GridManager.Instance.WorldToCell(new Vector3(point.transform.position.x, point.transform.position.y, 0));
             if (!GridManager.Instance.IsWalkable(pointCell))
             {
@@ -609,26 +627,38 @@ public class OfficeManager : MonoBehaviour
     {
         while (true)
         {
-            // patrol 체크 간격도 게임 시간 기준으로 대기
+            // patrol 체크 간격도 게임 시간 기준으로 대기 — IsRunning이 아니라 IsRunningForMovement로
+            // 판단해서, 온보딩 18-4~20처럼 시간은 하드락으로 멈춰있지만 직원은 계속 움직이게 둔
+            // 구간(AllowMovementWhileStopped)에서도 새 배경 patrol이 계속 나가게 한다.
             float elapsed = 0f;
             while (elapsed < patrolCheckInterval)
             {
-                if (GameTimeManager.Instance != null && GameTimeManager.Instance.IsRunning)
+                if (GameTimeManager.Instance != null && GameTimeManager.Instance.IsRunningForMovement)
                     elapsed += Time.deltaTime;
                 yield return null;
             }
 
-            // 자동 random patrol 비활성 — 직원이 자기 데스크 떠나 master_desk 등으로 무작위 이동하는 문제.
-            // 다이얼로그 patrol 과 명시적 ForcePatrolTo (상인 등) 는 그대로 동작.
-            // 다시 켜려면 아래 주석 해제 + CEO/비서 제외 가드 + master_desk 같은 system PatrolPoint 풀 분리 필요.
-            // float devProgress = DevelopmentManager.Instance.developmentDuration > 0
-            //     ? DevelopmentManager.Instance.GetElapsed() / DevelopmentManager.Instance.developmentDuration
-            //     : 0f;
-            // if (_patrolPoints != null && _patrolPoints.Length > 0
-            //     && DevelopmentManager.Instance.CurrentStage != ProjectStage.BugFixing
-            //     && devProgress < 0.7f)
-            //     TriggerPatrolRandom(patrolCountPerCycle);
-            CheckDialogPatrols();
+            // 게임 개발 중(Developing/BugFixing)이 아닐 때만 배경 patrol — 개발이 시작되면
+            // StopDevelopmentPatrol()이 이 스케줄러 자체를 죽이므로 보통은 여기 도달하지 않지만,
+            // stage 전환 타이밍 레이스에 대비해 한 번 더 방어적으로 체크한다. CEO/비서 제외 +
+            // master_desk 같은 이벤트 전용 지점 제외는 TriggerPatrolRandom 내부에서 처리.
+            bool isDeveloping = DevelopmentManager.Instance != null
+                && (DevelopmentManager.Instance.CurrentStage == ProjectStage.Developing
+                    || DevelopmentManager.Instance.CurrentStage == ProjectStage.BugFixing);
+            if (!isDeveloping)
+            {
+                // 무조건 최소 1명은 patrol 상태를 유지 — 지금 patrol 중인 사람이 아무도 없으면
+                // 즉시 새로 내보낸다(한 명이 돌아오자마자 빈 틈 없이 다음 사람이 나가는 효과).
+                bool anyPatrolling = false;
+                foreach (var oc in _characters.Values)
+                {
+                    if (oc.IsPatrolling) { anyPatrolling = true; break; }
+                }
+                if (!anyPatrolling)
+                    TriggerPatrolRandom(patrolCountPerCycle);
+
+                CheckDialogPatrols();
+            }
         }
     }
 

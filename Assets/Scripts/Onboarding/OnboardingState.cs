@@ -62,13 +62,32 @@ public static class OnboardingState
     const string KEY_TUT17_7_SHOP = "onboarding_tutorial17_7_shop_done";
     // 17-8 서브: 아이템을 실제로 사용해 소비/효과가 서버에 커밋된 시점(ItemManager.UseItem).
     const string KEY_TUT17_8_USED = "onboarding_tutorial17_8_used_done";
-    // 튜토리얼 18-1 완료 — 아직 미구현(콘텐츠 없음). EmployeeCardUI 아이템/강화 버튼이 이 플래그가 true가
-    // 될 때까지 잠겨있음(ApplyItemTrainingLock) — 실제 18-1 트리거가 구현되면 그때 MarkTutorial18_1Done 호출부 추가.
-    const string KEY_TUT18_1    = "onboarding_tutorial18_1_done";
+    // 17-8 내부 잠금 해제 신호 — EmployeeCardUI 아이템/강화 버튼이 이 플래그가 true가 될 때까지
+    // 잠겨있음(ApplyItemTrainingLock). ⚠️ 예전엔 "18-1"이라는 이름을 썼지만 실제 18-1(파산 경고 대사)과는
+    // 무관한, 17-8 흐름 내부의 구현 디테일이라 이름 충돌을 피하려고 17_8_UNLOCK으로 개명.
+    const string KEY_TUT17_8_UNLOCK = "onboarding_tutorial17_8_unlock_done";
+    // 튜토리얼 18-1~18-4 완료 — 지출/연봉·사무실비/파산 경고 대사 4개짜리 all-or-nothing 구간
+    // (중간 상태 커밋이 전혀 없으므로, 5-1~6-2/10-1~10-3/17-1~17-6과 동일하게 끊기면 18-1부터 다시 재생).
+    const string KEY_TUT18      = "onboarding_tutorial18_done";
+    // 튜토리얼 19-1 완료 — "이제 혼자 해보라"는 마무리 대사(강조 없음).
+    const string KEY_TUT19      = "onboarding_tutorial19_done";
+    // 튜토리얼 20-1/20-2 완료 — 2번째 프로젝트(2사이클)의 기획팀장 점수에서 강제 burst 연출 후 반응
+    // 대사(강조 없음). ⚠️ 1사이클의 기획팀장점수 튜토리얼(Tutorial7Done)과는 완전히 별개 — 이 단계는
+    // CompletedProjectManager.completedProjects.Count==1(=2번째 프로젝트 진행 중)로 구분해 절대 혼동되지 않는다.
+    const string KEY_TUT20      = "onboarding_tutorial20_done";
 
     // 튜토리얼 dim 이 떠 있는 동안 true (세션 전용, 저장 안 함).
     // 시간 정지 중에도 메뉴 버튼을 숨기지 않도록 MenuController 가 참조.
-    public static bool TutorialActive { get; set; }
+    private static bool _tutorialActiveFlag;
+    public static bool TutorialActive
+    {
+        // 19-1(핸드오프 대사) 완료 ~ 20(2번째 프로젝트 기획팀장점수) 완료 사이엔 dim 없이도 시간이 계속
+        // 멈춰있는 구간이라(GameSceneInitializer가 재접속 시 재조립) 세션 플래그(_tutorialActiveFlag)만으로는
+        // Start() 실행 순서에 따라 타이밍이 어긋날 수 있다 — 그래서 이 구간은 저장된 플래그로 직접 계산해
+        // 순서와 무관하게 항상 정확하게 만든다.
+        get => _tutorialActiveFlag || (Tutorial19Done && !Tutorial20Done);
+        set => _tutorialActiveFlag = value;
+    }
 
     public static bool IntroDone => PlayerPrefs.GetInt(KEY_INTRO, 0) == 1;
     public static void MarkIntroDone()
@@ -320,18 +339,63 @@ public static class OnboardingState
         PlayerPrefs.Save();
     }
 
-    // 튜토리얼 18-1 — 아직 미구현. 실제 콘텐츠가 붙으면 그 트리거에서 이 메서드를 호출할 것.
-    public static bool Tutorial18_1Done => PlayerPrefs.GetInt(KEY_TUT18_1, 0) == 1;
-    public static void MarkTutorial18_1Done()
+    // 17-8 내부 잠금 해제 신호 — 실제 콘텐츠는 17-8 흐름 자체(EmployeeCardUI.ApplyItemTrainingLock 참고).
+    public static bool Tutorial17_8UnlockDone => PlayerPrefs.GetInt(KEY_TUT17_8_UNLOCK, 0) == 1;
+    public static void MarkTutorial17_8UnlockDone()
     {
-        PlayerPrefs.SetInt(KEY_TUT18_1, 1);
+        PlayerPrefs.SetInt(KEY_TUT17_8_UNLOCK, 1);
         PlayerPrefs.Save();
     }
 
-    // 테스트용 — 18-1(아이템/강화 버튼 잠금) Done 플래그만 원복.
-    public static void ResetTutorial18_1()
+    // 테스트용 — 17-8 잠금 해제(아이템/강화 버튼) 플래그만 원복.
+    public static void ResetTutorial17_8Unlock()
     {
-        PlayerPrefs.DeleteKey(KEY_TUT18_1);
+        PlayerPrefs.DeleteKey(KEY_TUT17_8_UNLOCK);
+        PlayerPrefs.Save();
+    }
+
+    // 튜토리얼 18-1~18-4 — 지출/연봉·사무실비/파산 경고 대사, all-or-nothing.
+    public static bool Tutorial18Done => PlayerPrefs.GetInt(KEY_TUT18, 0) == 1;
+    public static void MarkTutorial18Done()
+    {
+        PlayerPrefs.SetInt(KEY_TUT18, 1);
+        PlayerPrefs.Save();
+    }
+
+    // 테스트용 — 18-1~18-4 Done 플래그만 원복.
+    public static void ResetTutorial18()
+    {
+        PlayerPrefs.DeleteKey(KEY_TUT18);
+        PlayerPrefs.Save();
+    }
+
+    // 튜토리얼 19-1 — "이제 혼자 해보라"는 마무리 대사, 강조 없음.
+    public static bool Tutorial19Done => PlayerPrefs.GetInt(KEY_TUT19, 0) == 1;
+    public static void MarkTutorial19Done()
+    {
+        PlayerPrefs.SetInt(KEY_TUT19, 1);
+        PlayerPrefs.Save();
+    }
+
+    // 테스트용 — 19-1 Done 플래그만 원복.
+    public static void ResetTutorial19()
+    {
+        PlayerPrefs.DeleteKey(KEY_TUT19);
+        PlayerPrefs.Save();
+    }
+
+    // 튜토리얼 20-1/20-2 — 2번째 프로젝트 기획팀장점수 강제 burst 반응 대사, 강조 없음.
+    public static bool Tutorial20Done => PlayerPrefs.GetInt(KEY_TUT20, 0) == 1;
+    public static void MarkTutorial20Done()
+    {
+        PlayerPrefs.SetInt(KEY_TUT20, 1);
+        PlayerPrefs.Save();
+    }
+
+    // 테스트용 — 20-1/20-2 Done 플래그만 원복.
+    public static void ResetTutorial20()
+    {
+        PlayerPrefs.DeleteKey(KEY_TUT20);
         PlayerPrefs.Save();
     }
 
@@ -363,7 +427,10 @@ public static class OnboardingState
         PlayerPrefs.DeleteKey(KEY_TUT17_7);
         PlayerPrefs.DeleteKey(KEY_TUT17_7_SHOP);
         PlayerPrefs.DeleteKey(KEY_TUT17_8_USED);
-        PlayerPrefs.DeleteKey(KEY_TUT18_1);
+        PlayerPrefs.DeleteKey(KEY_TUT17_8_UNLOCK);
+        PlayerPrefs.DeleteKey(KEY_TUT18);
+        PlayerPrefs.DeleteKey(KEY_TUT19);
+        PlayerPrefs.DeleteKey(KEY_TUT20);
         PlayerPrefs.Save();
         Debug.Log("[Onboarding] 플래그 리셋 — 다음 진입 시 컷씬+튜토리얼 재노출");
     }

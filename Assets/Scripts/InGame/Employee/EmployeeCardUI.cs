@@ -134,12 +134,12 @@ public class EmployeeCardUI : MonoBehaviour
         OnCardShown?.Invoke(emp.id);
     }
 
-    // 아이템/강화 버튼 — 튜토리얼 18-1 완료 전까지 interactable=false + LockBG 활성.
-    // public — 온보딩 튜토리얼(17-8)이 MarkTutorial18_1Done() 직후 이미 열려있는 카드의 잠금 상태를
-    // 즉시 재적용시킬 때 호출한다(Show()를 다시 타지 않고 잠금 UI만 갱신).
+    // 아이템/강화 버튼 — 튜토리얼 17-8 잠금 해제 신호 전까지 interactable=false + LockBG 활성.
+    // public — 온보딩 튜토리얼(17-8)이 MarkTutorial17_8UnlockDone() 직후 이미 열려있는 카드의 잠금
+    // 상태를 즉시 재적용시킬 때 호출한다(Show()를 다시 타지 않고 잠금 UI만 갱신).
     public void ApplyItemTrainingLock()
     {
-        bool locked = !OnboardingState.Tutorial18_1Done;
+        bool locked = !OnboardingState.Tutorial17_8UnlockDone;
 
         if (itemUseBtn != null) itemUseBtn.interactable = !locked;
         if (itemUseLockBG != null) itemUseLockBG.SetActive(locked);
@@ -394,8 +394,10 @@ public class EmployeeCardUI : MonoBehaviour
         // ② 닫기 판정 — Mouse / Touchscreen 명시적 체크
         // 다이얼로그/랜덤이벤트 선택지/AlertUI 등은 대부분 GameTimeManager.StopTime()으로 열려있는 동안
         // 시간을 멈춘다 — 그 UI들을 조작하는 클릭에 카드가 같이 닫혀버리지 않도록, 시간이 멈춰있는 동안은
-        // 바깥 클릭 닫기 판정 자체를 건너뛴다.
-        if (GameTimeManager.Instance != null && !GameTimeManager.Instance.IsRunning) return;
+        // 바깥 클릭 닫기 판정 자체를 건너뛴다. ⚠️ IsRunning이 아니라 IsRunningForMovement로 판단 —
+        // 온보딩 18-4~20처럼 실제 모달 없이 의도적으로 시간만 멈춰있는 구간(AllowMovementWhileStopped)엔
+        // 바깥 클릭 닫기가 정상 동작해야 한다.
+        if (GameTimeManager.Instance != null && !GameTimeManager.Instance.IsRunningForMovement) return;
 
         // (Pointer.current는 시뮬레이터에서 터치 전환 타이밍에 따라 wasPressedThisFrame을 놓치는 케이스가 있음)
         Vector2 mousePos;

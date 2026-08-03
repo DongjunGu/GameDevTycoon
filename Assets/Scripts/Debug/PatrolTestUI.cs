@@ -41,7 +41,7 @@ public class PatrolTestUI : MonoBehaviour
         "CoupleResignation",
         "LeaderBurnout",
         "LeaderJealousy",
-        "VoluntaryOvertime",
+        // "VoluntaryOvertime", // 야근모드 비활성화 — RandomEvents_Condition.TriggerVoluntaryOvertimeEvent 자체를 주석 처리함
     };
 
     void Start()
@@ -156,10 +156,11 @@ public class PatrolTestUI : MonoBehaviour
                 if (emp1 != null)
                     RandomEvents_Condition.TriggerLeaderJealousyEvent(emp1, null);
                 break;
-            case "VoluntaryOvertime":
-                if (emp1 != null)
-                    RandomEvents_Condition.TriggerVoluntaryOvertimeEvent(emp1);
-                break;
+            // 야근모드 비활성화 — TriggerVoluntaryOvertimeEvent 자체를 주석 처리했으므로 이 케이스도 비활성화.
+            // case "VoluntaryOvertime":
+            //     if (emp1 != null)
+            //         RandomEvents_Condition.TriggerVoluntaryOvertimeEvent(emp1);
+            //     break;
         }
     }
 }

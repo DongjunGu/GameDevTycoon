@@ -1,7 +1,3 @@
 questId,title,description,type,targetValue,rewardGold,isMainQuest,unlockAfter,isVisible
-quest_003,팀 꾸리기,직원을 2명 채용하세요,HireEmployee,2,300,0,,0
-quest_004,든든한 팀,직원을 5명 채용하세요,HireEmployee,5,1000,0,,0
-main_quest_001,1년 버티기,1년 이상 회사를 운영하세요,SurviveYears,1,0,1,,1
-main_quest_002,2년 버티기,2년 이상 회사를 운영하세요,SurviveYears,2,0,1,,0
-main_quest_003,매출 100000G,누적 매출 100000G를 달성하세요,TotalRevenue,100000,0,1,,1
-main_quest_004,매출 200000G,누적 매출 200000G를 달성하세요,TotalRevenue,200000,0,1,main_quest_003,0
+tutorial_quest_001,첫 번째 게임 개발하기,첫 번째 게임을 개발해 판매까지 완료하세요.,CompleteFirstProject,1,0,1,,1
+tutorial_quest_002,스스로 게임 개발하기,이번엔 도움 없이 스스로 게임을 개발해보세요.,CompleteSecondProject,1,0,1,tutorial_quest_001,0

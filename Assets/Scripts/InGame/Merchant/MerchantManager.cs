@@ -179,7 +179,12 @@ public class MerchantManager : MonoBehaviour
 
         if (_visitedYear == y) return; // 이미 이 해에 방문함
         // 온보딩 튜토리얼 진행 중엔 자동 방문을 끄고, 특정 구간에서 TestVisit()으로 수동 호출한다.
-        if (RunStateManager.Instance != null && RunStateManager.Instance.IsTutorial) return;
+        // ⚠️ RunStateManager.IsTutorial이 아니라 TutorialController.IsFullyDone()으로 판단 —
+        // IsTutorial은 1~16단계(스크립트된 첫 런)만 대표하는 값이라 "튜토리얼 완전 해제" 등으로
+        // 먼저 false가 될 수 있는데, 그 뒤에도 17-x(2사이클) 진행 중일 수 있어(실제로 이 가드가
+        // IsTutorial만 봐서 정상 스케줄 방문이 끼어들어 17-7 튜토리얼 훅을 조용히 먼저 소진해버리는
+        // 버그가 있었음) IsFullyDone()이 모든 정의된 단계를 종합한 진짜 "온보딩 진행 중" 판정이다.
+        if (!TutorialController.IsFullyDone()) return;
         if (m == _scheduledMonth && w == _scheduledWeek)
             TriggerVisit();
     }

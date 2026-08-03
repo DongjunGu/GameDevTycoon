@@ -3,6 +3,8 @@ public enum QuestType
     HireEmployee,
     SurviveYears,
     TotalRevenue,
+    CompleteFirstProject,  // 튜토리얼 퀘스트1 — 첫 프로젝트 판매 완료(SalesUI.OnSalesComplete)
+    CompleteSecondProject, // 튜토리얼 퀘스트2 — 완료 조건 미정, 아직 UpdateProgress 호출부 없음(추후 연결)
 }
 
 [System.Serializable]

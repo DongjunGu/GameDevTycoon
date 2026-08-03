@@ -27,6 +27,13 @@ public class GameTimeManager : MonoBehaviour
 
     public bool IsRunning => _isRunning;
 
+    // 게임 시간(주차 진행/만족도 감소 등)은 멈춘 채로 캐릭터 이동/애니메이션만 계속 진행시키고 싶을 때
+    // 켜는 세션 전용 플래그(저장 안 함) — 온보딩 18-4 종료 후처럼 "시간연동 시스템은 계속 멈춰있지만
+    // 사무실은 계속 살아있는 것처럼 보이고 싶은" 경우에 사용. CharacterMover/CharacterAnimatior/
+    // OfficeCharacter의 패트롤 대기 타이머가 IsRunning 대신 이 프로퍼티를 본다.
+    public bool AllowMovementWhileStopped { get; set; }
+    public bool IsRunningForMovement => _isRunning || AllowMovementWhileStopped;
+
     public float secondsPerWeek = 6f;
 
     // DevelopmentManager.developmentDuration(진행도 0~1의 분모, 25/75/95% 마일스톤·틱 스케줄의 기준)
@@ -235,7 +242,7 @@ public class GameTimeManager : MonoBehaviour
     {
         bool prevRunning = _isRunning;
         _stopCount = Mathf.Max(0, _stopCount - 1);
-        if (_stopCount == 0) _isRunning = true;
+        if (_stopCount == 0 && !_hardLocked) _isRunning = true;
         if (!prevRunning && _isRunning) OnTimeStopChanged?.Invoke(false);
     }
     public void StopTime()
@@ -249,8 +256,38 @@ public class GameTimeManager : MonoBehaviour
     {
         bool prevRunning = _isRunning;
         _stopCount = 0;
-        _isRunning = true;
+        if (!_hardLocked) _isRunning = true;
         if (!prevRunning && _isRunning) OnTimeStopChanged?.Invoke(false);
+    }
+
+    // ── 하드락 — StopTime/StartTime 카운터와 별개로 시간 재개 자체를 완전히 봉인 ──────────
+    // 온보딩 18-4~20 같은 "이 구간이 끝날 때까지 무조건 멈춰있어야 하는" 구간 전용. StopTime()의
+    // 카운터 방식은 코드베이스 여기저기 흩어진 ForceStartTime() 호출(대출/새해결제/랜덤이벤트 등,
+    // "ForceStartTime clobber" 로 이미 알려진 패턴) 중 하나가 우리가 걸어둔 레이어까지 통째로
+    // 0으로 날려버릴 수 있어 — 그런 미처 못 찾은 호출부가 있어도 안전하도록, 잠겨있는 동안은
+    // StartTime()/ForceStartTime() 어느 쪽을 불러도 실제 재개(_isRunning=true)가 아예 안 먹힌다.
+    private bool _hardLocked;
+    public bool IsHardLocked => _hardLocked;
+
+    public void LockTime()
+    {
+        _hardLocked = true;
+        if (_isRunning)
+        {
+            _isRunning = false;
+            OnTimeStopChanged?.Invoke(true);
+        }
+    }
+
+    public void UnlockTime()
+    {
+        _hardLocked = false;
+        // StartTime()과 동일한 재개 판정 — 잠금이 풀린 시점에 카운터가 이미 0이면 바로 재개.
+        if (_stopCount == 0 && !_isRunning)
+        {
+            _isRunning = true;
+            OnTimeStopChanged?.Invoke(false);
+        }
     }
 
     // 새 런 시작 — 2000년 1월 1주 + 연관 매니저 상태(임시) 리셋 후 서버 저장

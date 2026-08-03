@@ -198,7 +198,7 @@ public class OfficeCharacter : MonoBehaviour, IPointerClickHandler
         float stayed = 0f;
         while (stayed < stayDuration)
         {
-            if (GameTimeManager.Instance != null && GameTimeManager.Instance.IsRunning)
+            if (GameTimeManager.Instance != null && GameTimeManager.Instance.IsRunningForMovement)
                 stayed += Time.deltaTime;
             yield return null;
         }

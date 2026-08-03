@@ -121,14 +121,20 @@ UpdateProgress 호출 → targetValue 도달
 
 ## 7. 현재 차트 데이터
 
+(2026-08-03) 기존 콘텐츠(quest_003/004, main_quest_001~004) 전부 제거 후 튜토리얼 퀘스트 2개로 새로 시작.
+**백엔드 콘솔의 `Quest` 차트도 로컬 `Quest.csv`와 동일하게 맞춰야** 실제 게임에 반영된다(로컬 CSV
+수정만으로는 `Backend.CDN.Content`가 갱신되지 않음).
+
 ```csv
-questId,title,description,type,targetValue,rewardGold,isMainQuest,unlockAfter
-quest_003,팀 꾸리기,직원을 2명 채용하세요,HireEmployee,2,300,0,
-quest_004,든든한 팀,직원을 5명 채용하세요,HireEmployee,5,1000,0,
-main_quest_001,1년 버티기,1년 이상 회사를 운영하세요,SurviveYears,1,0,1,
-main_quest_002,2년 버티기,2년 이상 회사를 운영하세요,SurviveYears,2,0,1,main_quest_001
-main_quest_003,매출 100000G,누적 매출 100000G를 달성하세요,TotalRevenue,100000,0,1,
-main_quest_004,매출 200000G,누적 매출 200000G를 달성하세요,TotalRevenue,200000,0,1,main_quest_003
+questId,title,description,type,targetValue,rewardGold,isMainQuest,unlockAfter,isVisible
+tutorial_quest_001,첫 번째 게임 개발하기,첫 번째 게임을 개발해 판매까지 완료하세요.,CompleteFirstProject,1,0,1,,1
+tutorial_quest_002,스스로 게임 개발하기,이번엔 도움 없이 스스로 게임을 개발해보세요.,CompleteSecondProject,1,0,1,tutorial_quest_001,0
 ```
 
-> 백엔드 콘솔의 `Quest` 차트에서도 quest_001 / quest_002 row 삭제 필요. (코드에선 QuestType.TryParse 실패로 자동 무시되지만 콘솔에서 청소해두는 게 깔끔.)
+- `tutorial_quest_001`: 온보딩 진입 시점부터 공개(`isVisible=1`). `SalesUI.OnSalesComplete`에서
+  완료된 프로젝트가 정확히 1개가 되는 시점(=첫 판매 종료)에 `QuestManager.UpdateProgress(QuestType.
+  CompleteFirstProject, 1)`로 완료 처리. 메인퀘스트라 완료 즉시 `UnlockChainedMainQuests`가
+  `unlockAfter=tutorial_quest_001`인 퀘스트를 자동 공개한다.
+- `tutorial_quest_002`: 처음엔 숨김(`isVisible=0`), 퀘스트1 완료 시 자동 공개. **완료 조건은 아직
+  미정** — `QuestType.CompleteSecondProject`는 enum에만 존재하고 `UpdateProgress` 호출부가 아직
+  없으므로, 조건이 정해지면 그 시점 코드에 한 줄 추가하면 된다.

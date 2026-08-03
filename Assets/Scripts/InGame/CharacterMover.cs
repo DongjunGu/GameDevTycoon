@@ -79,7 +79,7 @@ public class CharacterMover : MonoBehaviour
                 float remaining = elevatorRideDuration;
                 while (remaining > 0f)
                 {
-                    if (GameTimeManager.Instance != null && !GameTimeManager.Instance.IsRunning)
+                    if (GameTimeManager.Instance != null && !GameTimeManager.Instance.IsRunningForMovement)
                     {
                         yield return null;
                         continue;
@@ -98,7 +98,7 @@ public class CharacterMover : MonoBehaviour
 
             while (Vector3.Distance(transform.position, targetPos) > 0.01f)
             {
-                if (GameTimeManager.Instance != null && !GameTimeManager.Instance.IsRunning)
+                if (GameTimeManager.Instance != null && !GameTimeManager.Instance.IsRunningForMovement)
                 {
                     yield return null;
                     continue;

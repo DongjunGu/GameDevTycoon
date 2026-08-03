@@ -269,34 +269,35 @@ public static class RandomEvents_Condition
         );
     }
 
-    // ── 자발적 야근 ──────────────────────────────────────────────
+    // ── 자발적 야근 (야근모드 비활성화로 전체 주석 처리 — DevelopmentManager의 SetVoluntaryOvertime 등
+    // 관련 필드도 전부 주석 처리됨) ──────────────────────────────────────────────
     // sys: "{직원이름}이 자발적으로 야근합니다. 만족도 하락 없이 야근 모드가 활성화됩니다"
-    public static void TriggerVoluntaryOvertimeEvent(EmployeeData emp)
-    {
-        RandomEventConditionChartRow row = null;
-        Chart?.TryGetValue("VoluntaryOvertime", out row);
-
-        string[] descs = row?.descriptions;
-        string desc   = descs != null && descs.Length > 0 ? descs[Random.Range(0, Mathf.Min(descs.Length, 2))] : "";
-        string sysMsg = (row?.systemMessage ?? "").Replace("{직원이름}", emp.employeeName);
-
-        DevelopmentManager.Instance.SetVoluntaryOvertime(true);
-
-        RandomEventUI.Instance.Show(
-            row?.title ?? "자발적 야근",
-            emp.portraitId,
-            desc,
-            sysMsg,
-            null,
-            () =>
-            {
-                GameTimeManager.Instance?.ForceStartTime();
-                MoneyManager.Instance?.SaveMoney();
-                GameTimeManager.Instance?.SaveGameTime();
-                ProjectSaveManager.Instance?.SaveProject();
-            }
-        );
-    }
+    // public static void TriggerVoluntaryOvertimeEvent(EmployeeData emp)
+    // {
+    //     RandomEventConditionChartRow row = null;
+    //     Chart?.TryGetValue("VoluntaryOvertime", out row);
+    //
+    //     string[] descs = row?.descriptions;
+    //     string desc   = descs != null && descs.Length > 0 ? descs[Random.Range(0, Mathf.Min(descs.Length, 2))] : "";
+    //     string sysMsg = (row?.systemMessage ?? "").Replace("{직원이름}", emp.employeeName);
+    //
+    //     DevelopmentManager.Instance.SetVoluntaryOvertime(true);
+    //
+    //     RandomEventUI.Instance.Show(
+    //         row?.title ?? "자발적 야근",
+    //         emp.portraitId,
+    //         desc,
+    //         sysMsg,
+    //         null,
+    //         () =>
+    //         {
+    //             GameTimeManager.Instance?.ForceStartTime();
+    //             MoneyManager.Instance?.SaveMoney();
+    //             GameTimeManager.Instance?.SaveGameTime();
+    //             ProjectSaveManager.Instance?.SaveProject();
+    //         }
+    //     );
+    // }
 
     // ── 팀장 번아웃 ──────────────────────────────────────────────
     // sys: "{직원이름} 능력치 n주간 -20%"  (1·2단계 5~15주 / 3·4단계 10~20주)

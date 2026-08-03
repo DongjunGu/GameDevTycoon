@@ -672,8 +672,11 @@ public class EmployeeManager : MonoBehaviour
         if (shouldDrop)
         {
             _satisfactionDroppedThisCycle = true;
-            if (DevelopmentManager.Instance != null && DevelopmentManager.Instance.IsVoluntaryOvertimeActive) return;
-            bool globalOvertime = DevelopmentManager.Instance != null && DevelopmentManager.Instance.IsOvertimeMode;
+            // 야근모드 비활성화 — 관련 필드를 DevelopmentManager에서 전부 주석 처리했으므로 항상 일반
+            // 하락량(5)만 적용된다.
+            // if (DevelopmentManager.Instance != null && DevelopmentManager.Instance.IsVoluntaryOvertimeActive) return;
+            // bool globalOvertime = DevelopmentManager.Instance != null && DevelopmentManager.Instance.IsOvertimeMode;
+            bool globalOvertime = false;
 
             // 테크트리 '멘탈 케어 서비스(sat_mental)' — 주기 만족도 하락량 1 감소
             int mentalCare = (TechTreeManager.Instance != null && TechTreeManager.Instance.IsUnlocked("sat_mental")) ? 1 : 0;
