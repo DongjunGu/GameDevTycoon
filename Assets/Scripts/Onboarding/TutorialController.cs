@@ -305,6 +305,61 @@ public class TutorialController : MonoBehaviour
     [Tooltip("SalesUI.chartBG(SalesPanel/chartBG)의 RectTransform — 강조 대상")]
     public RectTransform chartBGRect;
 
+    [Header("17-1 (SalesUI.OnSalesComplete — 첫 판매 완료 직후, 직원 강화 메뉴 유도)")]
+    [Tooltip("TutorialDialog 차트의 stepGroup 값 — 강화 메뉴 유도 대사")]
+    public string step17_1 = "17-1";
+    [Tooltip("TutorialPanel의 RectTransform.anchoredPosition — 17-1 표시 위치")]
+    public Vector2 step17_1Position;
+    [Tooltip("MenuCanvas/SafeAreaPanel/TopMenuUI/EmployeeSubMenu/trainingMenuBtn — 메뉴→직원→강화 순 강조의 마지막 대상")]
+    public Button trainingMenuButton;
+
+    [Header("17-2~17-6 (EmployeeListUI.OpenListForEnhance — 강화 패널 첫 진입, 강화 4회 체험, 첫 판매 한정)")]
+    [Tooltip("TutorialDialog 차트의 stepGroup 값 — 강화하면 능력치+연봉이 함께 오른다는 안내")]
+    public string step17_2 = "17-2";
+    public Vector2 step17_2Position;
+    [Tooltip("EmployeeListUI/EmployeePanel/DetailPanel/TrainingPanel/EmployeeTrainingPanel의 RectTransform — 강조 대상")]
+    public RectTransform employeeTrainingPanelRect;
+    [Tooltip("TutorialDialog 차트의 stepGroup 값 — 4강까지 진행해보자는 유도")]
+    public string step17_3 = "17-3";
+    public Vector2 step17_3Position;
+    [Tooltip("TrainingPanel/EmployeeTrainingPanel/BottomPanel/enhanceBtn — 4회 클릭 내내 강조 유지")]
+    public Button trainingEnhanceButton;
+    [Tooltip("TutorialDialog 차트의 stepGroup 값 — 4연속 성공에 대한 반응")]
+    public string step17_4 = "17-4";
+    public Vector2 step17_4Position;
+    [Tooltip("TrainingPanel/EmployeeTrainingPanel/BadgePanel/enhancementPanel(+N 뱃지)의 RectTransform — 강조 대상")]
+    public RectTransform trainingEnhancementPanelRect;
+    [Tooltip("TutorialDialog 차트의 stepGroup 값 — 오늘 운이 좋다는 마무리 대사")]
+    public string step17_5 = "17-5";
+    public Vector2 step17_5Position;
+    [Tooltip("EmployeeListUI/EmployeePanel/CloseBtn — 17-5 이전엔 비활성화해뒀다가 여기서 다시 활성화 + 강조")]
+    public Button trainingCloseButton;
+    [Tooltip("EmployeeListUI/EmployeePanel/DetailPanel/TrainingPanel/.../backBtn — TrainingPanel 진입 시부터 17-6 끝날 때까지 비활성화")]
+    public Button trainingBackButton;
+    [Tooltip("TutorialDialog 차트의 stepGroup 값 — 강화 패널이 닫힌 직후, 마침 상인이 왔다는 대사(강조 없음)")]
+    public string step17_6 = "17-6";
+    public Vector2 step17_6Position;
+
+    [Header("17-7~17-9-2 (MerchantShopPanelUI.Open — 상인 상점이 처음 열릴 때, 구매/닫기+아이템 사용 체험까지 한 세션)")]
+    [Tooltip("TutorialDialog 차트의 stepGroup 값 — 아이템 구매/사용 유도")]
+    public string step17_7 = "17-7";
+    public Vector2 step17_7Position;
+    [Tooltip("ItemUI/MerchantShopPanel/.../ConfirmBtn — 구매 버튼")]
+    public Button merchantConfirmButton;
+    [Tooltip("ItemUI/MerchantShopPanel/.../CloseBtn — 상점 닫기 버튼")]
+    public Button merchantCloseButton;
+    [Tooltip("TutorialDialog 차트의 stepGroup 값 — 커피를 직원에게 주면 어떻게 되는지 확인해보자는 유도")]
+    public string step17_8 = "17-8";
+    public Vector2 step17_8Position;
+    [Tooltip("ItemUI/ItemPanelBG/ItemPanel/CloseBtn — 아이템 사용 체험 도중 이탈 못 하게 잠깐 비활성화")]
+    public Button itemPanelCloseButton;
+    [Tooltip("TutorialDialog 차트의 stepGroup 값 — 커피 마신 직원 기분 좋아 보인다는 반응(강조 없음)")]
+    public string step17_9_1 = "17-9-1";
+    public Vector2 step17_9_1Position;
+    [Tooltip("TutorialDialog 차트의 stepGroup 값 — 아이템은 위기 탈출용으로 아껴두라는 조언(강조 없음)")]
+    public string step17_9_2 = "17-9-2";
+    public Vector2 step17_9_2Position;
+
     [Header("연출 (TutorialHighlighter 로 전달됨)")]
     [Range(0f, 1f)] public float dimAlpha = 0.8f;
     [Tooltip("dim이 0→dimAlpha로 빠르게 훅 들어오는 시간(초) — 짧을수록 순간 집중 유도")]
@@ -362,10 +417,13 @@ public class TutorialController : MonoBehaviour
         bool needStep14_1 = !OnboardingState.Tutorial14_1Done;
         bool needStep15 = !OnboardingState.Tutorial15Done;
         bool needStep16_1 = !OnboardingState.Tutorial16_1Done;
+        bool needStep17_1 = !OnboardingState.Tutorial17_1Done;
+        bool needStep17_2 = !OnboardingState.Tutorial17_2Done;
+        bool needStep17_7 = !OnboardingState.Tutorial17_7Done;
 
         return !needStep1 && !needStep3 && !needStep5 && !needStep6 && !needStep7 && !needStep8
             && !needStep9 && !needStep10 && !needStep12 && !needStep13 && !needStep13_4 && !needStep13_5
-            && !needStep14_1 && !needStep15 && !needStep16_1;
+            && !needStep14_1 && !needStep15 && !needStep16_1 && !needStep17_1 && !needStep17_2 && !needStep17_7;
     }
 
     void Start()
@@ -422,8 +480,22 @@ public class TutorialController : MonoBehaviour
         // 16-1은 판매 패널이 열릴 때마다(재접속 자연 재오픈 포함) SalesUI.ShowBarsSequentially가 1주차
         // bar 애니메이션 시작 시점에 직접 체크해서 부른다 — pending 불필요.
         bool needStep16_1 = !OnboardingState.Tutorial16_1Done;
+        // 17-1은 판매가 완료될 때마다(재접속 자연 재오픈 포함) SalesUI.OnSalesComplete가 직접 체크해서
+        // 부른다 — pending 불필요.
+        bool needStep17_1 = !OnboardingState.Tutorial17_1Done;
+        // 17-1~17-6은 강화 4연속 체험이 구간 끝(PlayTutorial17_6)에서야 한 번에 서버 저장되는
+        // all-or-nothing 구간(10-1~10-3과 동일 방식) — 도중에 재접속이 끊겨도 서버 상태는 그 이전으로
+        // 남아있으므로, 16-1까지는 끝났는데 이게 아직이면 아래에서 무조건 17-1부터 다시 재생한다.
+        bool needStep17_2 = !OnboardingState.Tutorial17_2Done;
+        // 17-7~17-9는 상점 닫기(구매 커밋)/아이템 사용(소비 커밋) 두 지점이 실제 서버 저장이라, 그
+        // 사이에서 재접속이 끊기면 절대 처음부터 다시 재생하면 안 된다(중복 구매/중복 사용 방지) —
+        // 아래 세 분기가 Tutorial17_7ShopDone/Tutorial17_8UsedDone 조합으로 정확히 그 다음 지점부터
+        // 재개한다. 상점(MerchantShopPanelUI.Open)이 실제로 열릴 때는 그때도 직접 체크해서 부름.
+        bool needStep17_7Shop = !OnboardingState.Tutorial17_7ShopDone;
+        bool needStep17_8Used = !OnboardingState.Tutorial17_8UsedDone;
+        bool needStep17_7 = !OnboardingState.Tutorial17_7Done;
 
-        if (IsFullyDone()) { Destroy(gameObject); return; }
+        // 17~26단계 등 아직 미구현 콘텐츠가 남아있어 IsFullyDone() 기준 자멸 로직은 보류(추후 재논의).
 
         Instance = this;
         if (needStep1) StartCoroutine(Run());
@@ -432,6 +504,15 @@ public class TutorialController : MonoBehaviour
         // 끝났는데 10단계가 아직 안 끝났으면(재접속 등으로 10-1~10-3 도중 끊긴 경우 포함) 여기서 무조건
         // 처음(10-1)부터 다시 재생한다.
         else if (needStep10 && OnboardingState.Tutorial9Done) StartCoroutine(PlayTutorial10_1());
+        // 17-1~17-6도 동일한 all-or-nothing 방식 — 16-1까지는 끝났는데 아직이면 처음(17-1)부터 재생.
+        else if (needStep17_2 && OnboardingState.Tutorial16_1Done) StartCoroutine(PlayTutorial17_1());
+        // 17-6은 끝나 저장까지 됐는데(Tutorial17_2Done) 상점을 아직 안 닫았으면(구매 미커밋 포함) —
+        // 상인 소환부터 처음부터 다시(17-6→17-7Shop).
+        else if (needStep17_7Shop && OnboardingState.Tutorial17_2Done) StartCoroutine(PlayTutorial17_6());
+        // 상점은 닫아 구매까지 커밋됐는데 아이템을 아직 안 썼으면 — 상인/상점은 건너뛰고 17-8부터 재개.
+        else if (needStep17_8Used && OnboardingState.Tutorial17_7ShopDone) StartCoroutine(PlayTutorial17_8Use());
+        // 아이템 사용까지 커밋됐는데 마무리 대사(17-9)가 아직이면 — 그 대사만 재생.
+        else if (needStep17_7 && OnboardingState.Tutorial17_8UsedDone) StartCoroutine(PlayTutorial17_9Wrap());
         // needStep3/needStep6/needStep7/needStep8/needStep9만 남았으면 여기서 아무것도 안 하고 대기 —
         // HiringUI.ShowConfirmDirect가 Instance.PlayTutorial3()을, DispatchPanelUI가 Instance.PlayTutorial6()을,
         // DevelopmentManager가 Instance.PlayTutorial7_1()/PlayTutorial8_1()을 각각 해당 시점에 직접 호출한다.
@@ -1263,6 +1344,263 @@ public class TutorialController : MonoBehaviour
         _tutorial16_1Co = null;
         if (_highlighter != null) StartCoroutine(_highlighter.Hide(_highlighter.CurrentGeneration));
         OnboardingState.MarkTutorial16_1Done(); // 중간에 끊겼어도 재접속/재진입 시 다시 뜨지 않도록 완료 처리
+    }
+
+    // ── 17-1 (SalesUI.OnSalesComplete — 첫 판매가 완전히 끝난 직후, 직원 강화 메뉴 유도) ──
+    public IEnumerator PlayTutorial17_1()
+    {
+        EnsureHighlighter();
+        BeginDimTimeStop(); // 판매 종료로 시간이 이미 흐르는 상태 — 여기서 새로 멈춘다(13-5/14-1/15와 동일 패턴)
+        yield return _highlighter.Show();
+        int gen17_1 = _highlighter.CurrentGeneration;
+
+        if (TutorialPanelUI.Instance != null)
+            yield return TutorialPanelUI.Instance.PlayStepGroup(step17_1, step17_1Position);
+
+        // 메뉴 → 직원(상위) → 강화(하위) 순차 강조 — 1-1/5-2와 동일한 3단 메뉴 진입 패턴.
+        yield return _highlighter.Highlight(menuButton);
+        yield return new WaitForSecondsRealtime(settleDelay); // 상위 메뉴 펼침
+        yield return _highlighter.Highlight(employeeButton);
+        yield return new WaitForSecondsRealtime(settleDelay); // 서브 메뉴 펼침
+        yield return _highlighter.Highlight(trainingMenuButton);
+
+        yield return _highlighter.Hide(gen17_1);
+        EndDimTimeStop();
+        OnboardingState.MarkTutorial17_1Done();
+    }
+
+    // ── 17-2~17-5 (EmployeeListUI.OpenListForEnhance — 강화 패널 첫 진입, 강화 4회 체험) ──
+    // 6-1(DispatchPanelUI)과 동일한 이유로 별도 BeginDimTimeStop을 쓰지 않는다 — OpenListForEnhance가
+    // 이미 GameTimeManager.StopTime()을 호출해 모달 자체가 시간을 정지시키므로, 패널이 실제로 닫힐 때
+    // (EmployeeListUI.OnClickClose의 StartTime())가 정상적인 재개 시점이다.
+    public IEnumerator PlayTutorial17_2()
+    {
+        EnsureHighlighter();
+        yield return _highlighter.Show();
+        int gen17_2 = _highlighter.CurrentGeneration;
+
+        // 17-5 이전엔 닫기 버튼을 숨겨 강화 체험 도중 이탈하지 못하게 한다.
+        if (trainingCloseButton != null) trainingCloseButton.gameObject.SetActive(false);
+        // TrainingPanel 진입 시점부터 17-6이 끝날 때까지 뒤로가기 버튼도 비활성화 — 리스트로
+        // 빠져나가 이 세션(17-2~17-6) 도중에 이탈하지 못하게 한다.
+        if (trainingBackButton != null) trainingBackButton.gameObject.SetActive(false);
+
+        // 17-2 — EmployeeTrainingPanel 강조, 강화하면 능력치+연봉 함께 오른다는 안내.
+        yield return _highlighter.BeginHighlight(employeeTrainingPanelRect);
+        if (TutorialPanelUI.Instance != null)
+            yield return TutorialPanelUI.Instance.PlayStepGroup(step17_2, step17_2Position);
+
+        // 17-3 — 대사를 먼저 보여준 뒤 enhanceBtn을 강조하고 "실제로 클릭할 때까지" 유지한다(고정
+        // 지연으로 먼저 없애버리면 누르기도 전에 사라짐). 클릭되면 Highlight()가 곧장 반환되고 바로
+        // 하이라이트/딤을 치워, 이후 나머지 클릭은 유저가 원래 방식대로 자유롭게 진행한다. 표시 확률
+        // (EmployeeEnhancement.GetRates)은 그대로 진짜 값을 보여주고, ForceSuccessRemaining으로
+        // 실제 롤만 4회(첫 클릭 포함) 강제 성공시킨다(유저 입장에선 그냥 4번 다 성공).
+        if (TutorialPanelUI.Instance != null)
+            yield return TutorialPanelUI.Instance.PlayStepGroup(step17_3, step17_3Position);
+
+        EmployeeEnhancement.ForceSuccessRemaining = 4;
+        yield return _highlighter.Highlight(trainingEnhanceButton); // 클릭 시 자동으로 하이라이트 해제
+        yield return _highlighter.Hide(gen17_2); // 17-4가 뜨기 전까지 딤도 완전히 제거
+
+        while (EmployeeEnhancement.ForceSuccessRemaining > 0)
+            yield return null;
+
+        // 4번째 강화의 결과창(TrainingSuccessPanel)이 닫힐 때까지 대기 — 그 위에 17-4 하이라이트가
+        // 겹쳐 뜨지 않게 한다. OnClickEnhance가 EnhanceOnce 직후 동기적으로 결과창을 띄우므로,
+        // 이 시점엔 이미 활성화돼 있고 유저가 ConfirmBtn을 눌러야 꺼진다.
+        if (TrainingPanelUI.Instance != null && TrainingPanelUI.Instance.trainingResultPanel != null)
+            yield return new WaitUntil(() => !TrainingPanelUI.Instance.trainingResultPanel.activeSelf);
+
+        // 17-4 — +4 뱃지(enhancementPanel) 강조, 4연속 성공에 대한 반응. 새 세션으로 다시 Show().
+        yield return _highlighter.Show();
+        int gen17_4 = _highlighter.CurrentGeneration;
+        yield return _highlighter.BeginHighlight(trainingEnhancementPanelRect);
+        if (TutorialPanelUI.Instance != null)
+            yield return TutorialPanelUI.Instance.PlayStepGroup(step17_4, step17_4Position);
+
+        // 17-5 — 대사를 먼저 출력한 뒤 닫기 버튼을 복구 + 강조(클릭 시 패널이 실제로 닫히며 시간도 재개됨).
+        if (TutorialPanelUI.Instance != null)
+            yield return TutorialPanelUI.Instance.PlayStepGroup(step17_5, step17_5Position);
+        if (trainingCloseButton != null) trainingCloseButton.gameObject.SetActive(true);
+
+        // enhancementPanel 자리에서 슬라이드해오는 기존 흐름은 유지하되, 버튼 자체가 커졌다 작아졌다
+        // 하는 스케일 펄스를 얹어서 멀리 떨어진 작은 CloseBtn도 눈에 잘 띄게 한다.
+        Coroutine closeBtnPulseCo = null;
+        Vector3 closeBtnBaseScale = Vector3.one;
+        if (trainingCloseButton != null)
+        {
+            closeBtnBaseScale = trainingCloseButton.transform.localScale;
+            closeBtnPulseCo = StartCoroutine(PulseScale(trainingCloseButton.transform, closeBtnBaseScale));
+        }
+        yield return _highlighter.Highlight(trainingCloseButton);
+        if (closeBtnPulseCo != null)
+        {
+            StopCoroutine(closeBtnPulseCo);
+            trainingCloseButton.transform.localScale = closeBtnBaseScale;
+        }
+
+        yield return _highlighter.Hide(gen17_4);
+
+        // 17-6과 그 뒤의 저장 flush는 별도 메서드로 분리 — 재접속으로 17-6 이전에 끊긴 경우 Start()가
+        // 17-1부터 재생하고, 17-6까지 실제로 끝나 저장까지 된 뒤(=여기 도달) 상인 방문~상점(17-7)에서
+        // 끊긴 경우엔 Start()가 이 메서드만 다시 불러 재개한다.
+        yield return PlayTutorial17_6();
+    }
+
+    // ── 17-6 (상인 소환 + 대사) — PlayTutorial17_2 끝에서 이어지거나, 재접속 시 Start()가 단독 재생 ──
+    public IEnumerator PlayTutorial17_6()
+    {
+        // 강화 패널이 닫히자마자 곧장 상인을 소환(패널 닫힘으로 시간은 이미 재개된 상태라 걸어들어오는
+        // 게 바로 보임)하고, 1초 뒤에 "마침 상인이 왔다"는 대사(강조 없음)를 재생한다. 튜토리얼 중엔
+        // MerchantManager.OnTimeChanged의 자동 방문을 꺼뒀으므로(RunStateManager.IsTutorial 가드) 여기서
+        // TestVisit()으로 직접 불러온다. 진열 순서 고정 — 커피 → 에너지드링크 → 각성의 물약.
+        MerchantManager.Instance?.TestVisit(new List<string> { "coffee", "energyDrink", "awaken" });
+        yield return new WaitForSecondsRealtime(1f);
+
+        EnsureHighlighter();
+        BeginDimTimeStop();
+        yield return _highlighter.Show();
+        int gen17_6 = _highlighter.CurrentGeneration;
+        var merchant = MerchantManager.Instance != null ? MerchantManager.Instance.ActiveMerchant : null;
+        if (merchant != null)
+            yield return _highlighter.BeginHighlightWorld(merchant.transform);
+        if (TutorialPanelUI.Instance != null)
+            yield return TutorialPanelUI.Instance.PlayStepGroup(step17_6, step17_6Position);
+        yield return _highlighter.Hide(gen17_6);
+        EndDimTimeStop();
+
+        // 17-6이 끝났으니 뒤로가기 버튼 복구 — 다음 번 TrainingPanel 진입(일반 플레이)부터는 정상 동작.
+        if (trainingBackButton != null) trainingBackButton.gameObject.SetActive(true);
+
+        // 17-2~17-6 내내 미뤄뒀던 저장(강화 4회 분 골드+능력치, TrainingPanelUI.OnClickEnhance의
+        // deferSave)을 여기서 한 번에 반영 — 이 지점부터는 재접속해도 17-1로 되돌아가지 않는다.
+        MoneyManager.Instance?.SaveMoney();
+        EmployeeManager.Instance?.SaveAllEmployees();
+        GameTimeManager.Instance?.SaveGameTime();
+        ProjectSaveManager.Instance?.SaveProject();
+
+        OnboardingState.MarkTutorial17_2Done();
+    }
+
+    // ── 17-7~17-9 (MerchantShopPanelUI.Open — 상인 상점이 처음 열릴 때 시작하는 전체 세션) ──
+    // 세 단계(상점/사용/마무리 대사)로 나뉜다 — 상점 닫기(구매 커밋)와 아이템 사용(소비 커밋)이 각각
+    // 실제 서버 저장 지점이라, 재접속 시 이미 커밋된 지점 이전으로는 절대 되돌아가면 안 된다(중복
+    // 구매/중복 사용 방지). Tutorial17_7ShopDone/Tutorial17_8UsedDone 서브 플래그가 그 두 지점을
+    // 각각 기록하고, TutorialController.Start()가 그 조합에 맞는 단계부터 정확히 재개한다.
+    public IEnumerator PlayTutorial17_7()
+    {
+        yield return PlayTutorial17_7Shop();
+        yield return PlayTutorial17_8Use();
+        yield return PlayTutorial17_9Wrap();
+    }
+
+    // ── 17-7 (상점 대사 + 구매 + 닫기) — 자연 진입(MerchantShopPanelUI.Open) 또는 재접속 시 Start() ──
+    // 상점을 열기 전 MerchantManager.ShowPrompt가 이미 GameTimeManager.StopTime()을 호출해뒀으므로
+    // (6-1/17-2와 동일 패턴) 별도 BeginDimTimeStop 없이, 상점이 닫힐 때(OnShopClosed의 StartTime())
+    // 자연스럽게 재개되게 둔다.
+    public IEnumerator PlayTutorial17_7Shop()
+    {
+        EnsureHighlighter();
+        yield return _highlighter.Show();
+        int gen17_7 = _highlighter.CurrentGeneration;
+
+        if (TutorialPanelUI.Instance != null)
+            yield return TutorialPanelUI.Instance.PlayStepGroup(step17_7, step17_7Position);
+
+        yield return _highlighter.Highlight(merchantConfirmButton); // 구매 1회
+        yield return _highlighter.Highlight(merchantCloseButton);   // 상점 닫기 — 이 클릭에서 MerchantManager.OnShopClosed가 구매를 실제로 서버에 저장
+
+        yield return _highlighter.Hide(gen17_7);
+
+        // 닫기 클릭이 이미 처리된 뒤(구매 커밋 완료) — 재접속해도 여기부터는 다시 상인을 부르지 않는다.
+        OnboardingState.MarkTutorial17_7ShopDone();
+    }
+
+    // ── 17-8 (아이템 사용 체험) — PlayTutorial17_7Shop 다음에 이어지거나, 재접속 시 Start()가 단독 재생 ──
+    public IEnumerator PlayTutorial17_8Use()
+    {
+        EnsureHighlighter();
+        // 17-8 — 상점이 닫히며 이미 시간이 재개된 상태(또는 재접속 직후 정상 진행 중) → 여기서 새로
+        // 시간정지 걸고 계속 이어간다.
+        BeginDimTimeStop();
+        yield return _highlighter.Show();
+        int gen17_8 = _highlighter.CurrentGeneration;
+
+        if (TutorialPanelUI.Instance != null)
+            yield return TutorialPanelUI.Instance.PlayStepGroup(step17_8, step17_8Position);
+
+        // desk_01 직원 강조 + 클릭(=카드 오픈) 대기 — 10-1과 동일 패턴, step10_1DeskId 필드 공유.
+        var deskChar = OfficeManager.Instance?.GetCharacterAtDesk(step10_1DeskId);
+        string deskEmpId = deskChar != null ? deskChar.employeeId : null;
+        yield return _highlighter.BeginHighlightWorld(deskChar != null ? deskChar.transform : null);
+
+        bool cardShown = false;
+        System.Action<string> onCardShown = id => { if (id == deskEmpId) cardShown = true; };
+        if (EmployeeCardUI.Instance != null) EmployeeCardUI.Instance.OnCardShown += onCardShown;
+        while (!cardShown) yield return null;
+        if (EmployeeCardUI.Instance != null) EmployeeCardUI.Instance.OnCardShown -= onCardShown;
+
+        // 18-1(아이템/강화 버튼 잠금)이 실제로 가르치는 콘텐츠가 바로 이 17-8/17-9 흐름 — 여기서 해제하고,
+        // 이미 열려있는 카드의 잠금 UI를 Show() 재호출 없이 즉시 재적용한다.
+        OnboardingState.MarkTutorial18_1Done();
+        EmployeeCardUI.Instance?.ApplyItemTrainingLock();
+
+        // itemUseBtn 강조 + 클릭 대기(=EmployeeCardUI.OnClickItemButton → ItemPanel 오픈). ItemPanel이
+        // 열리자마자 CloseBtn으로 바로 나가버리지 못하게 미리 비활성화.
+        if (itemPanelCloseButton != null) itemPanelCloseButton.gameObject.SetActive(false);
+        yield return _highlighter.Highlight(EmployeeCardUI.Instance != null ? EmployeeCardUI.Instance.itemUseBtn : null);
+
+        // ItemPanel이 열린 뒤로는 강조/딤을 완전히 치워서, 유저가 아무 안내 없이 완전히 자유롭게
+        // 아이템(슬롯 선택 → 상세창 → 사용)을 골라 진행하게 둔다.
+        yield return _highlighter.Hide(gen17_8);
+
+        // 사용하면 ItemManager.UseItem이 AlertUI.ShowPortrait를 띄우고(=이 시점에 소비/효과가 이미
+        // 서버에 저장됨), ItemDetailUI가 곧장 ItemPanel을 닫으며 EmployeeCardUI가 콜백으로 다시 열린다
+        // — Alert가 뜨고 닫힐 때까지 기다린 뒤 정리한다.
+        if (AlertUI.Instance != null && AlertUI.Instance.portraitPanel != null)
+        {
+            yield return new WaitUntil(() => AlertUI.Instance.portraitPanel.activeSelf);
+            yield return new WaitUntil(() => !AlertUI.Instance.portraitPanel.activeSelf);
+        }
+
+        EmployeeCardUI.Instance?.Hide(); // 콜백으로 자동 재오픈된 카드 정리
+        if (itemPanelCloseButton != null) itemPanelCloseButton.gameObject.SetActive(true);
+
+        // AlertUI가 이미 닫혔다는 건 UseItem이 실제로 성공해 커밋됐다는 뜻 — 재접속해도 여기부터는
+        // 다시 아이템을 쓰게 만들지 않는다.
+        OnboardingState.MarkTutorial17_8UsedDone();
+    }
+
+    // ── 17-9 (마무리 대사, 강조 없음) — PlayTutorial17_8Use 다음에 이어지거나, 재접속 시 Start()가 단독 재생 ──
+    public IEnumerator PlayTutorial17_9Wrap()
+    {
+        EnsureHighlighter();
+        // 17-8에서 이어지면 이미 시간정지 상태(중복 호출은 무해) — 단독 재생(재접속)이면 여기서 새로 건다.
+        BeginDimTimeStop();
+        yield return _highlighter.Show();
+        int gen17_9 = _highlighter.CurrentGeneration;
+        if (TutorialPanelUI.Instance != null)
+        {
+            yield return TutorialPanelUI.Instance.PlayStepGroup(step17_9_1, step17_9_1Position);
+            yield return TutorialPanelUI.Instance.PlayStepGroup(step17_9_2, step17_9_2Position);
+        }
+
+        yield return _highlighter.Hide(gen17_9);
+        EndDimTimeStop();
+        OnboardingState.MarkTutorial17_7Done();
+    }
+
+    // 대상이 baseScale 기준으로 커졌다 작아졌다를 무한 반복 — 17-5의 CloseBtn처럼 작고 눈에 안 띄는
+    // 버튼을 강조할 때, dim 구멍 펄스만으로는 부족해서 버튼 자체 스케일도 함께 흔든다.
+    IEnumerator PulseScale(Transform target, Vector3 baseScale, float amplitude = 0.12f, float speed = 4f)
+    {
+        float t = 0f;
+        while (true)
+        {
+            t += Time.unscaledDeltaTime * speed;
+            target.localScale = baseScale * (1f + amplitude * Mathf.Sin(t));
+            yield return null;
+        }
     }
 
     // ── dim 동안 시간 정지 (패널 켜는 것과 동일) ──────────────────────────────

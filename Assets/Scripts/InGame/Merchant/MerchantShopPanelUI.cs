@@ -58,6 +58,10 @@ public class MerchantShopPanelUI : MonoBehaviour
         if (panel != null) panel.SetActive(true);
         ModalGate.I.Register(this);
         Refresh();
+
+        // 온보딩 튜토리얼 17-7 — 상인 상점이 처음 열릴 때(재접속 자연 재오픈 포함), 구매+닫기 유도.
+        if (!OnboardingState.Tutorial17_7Done && TutorialController.Instance != null)
+            TutorialController.Instance.StartCoroutine(TutorialController.Instance.PlayTutorial17_7());
     }
 
     void OnClickClose()

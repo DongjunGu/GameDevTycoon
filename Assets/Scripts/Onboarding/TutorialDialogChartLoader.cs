@@ -77,6 +77,46 @@ public static class TutorialDialogChartLoader
             new() { dialogId = "tut_4_2_0", stepGroup = "4-2", order = 1, speakerName = "비서", portraitId = "portrait_secretary", text = "기획자를 뽑았으니 이번에는 [[개발자]]를 뽑아볼게요" },
             new() { dialogId = "tut_4_2_1", stepGroup = "4-2", order = 2, speakerName = "비서", portraitId = "portrait_secretary", text = "두 번째부턴 익숙하시죠? 이번엔 대표님이 직접\n마음에 드는 사람으로 골라보세요" },
         },
+        ["17-1"] = new List<TutorialDialogLine>
+        {
+            new() { dialogId = "tut_17_1_0", stepGroup = "17-1", order = 1, speakerName = "비서", portraitId = "portrait_secretary", text = "돈을 벌었으면 쓸 때는 또 써야죠\n이번에는 [[직원 강화]]를 해볼까요?" },
+        },
+        ["17-2"] = new List<TutorialDialogLine>
+        {
+            new() { dialogId = "tut_17_2_0", stepGroup = "17-2", order = 1, speakerName = "비서", portraitId = "portrait_secretary", text = "[[강화]]하면 능력치가 오르지만, 대신 [[연봉]]도 함께 올라요." },
+        },
+        ["17-3"] = new List<TutorialDialogLine>
+        {
+            new() { dialogId = "tut_17_3_0", stepGroup = "17-3", order = 1, speakerName = "비서", portraitId = "portrait_secretary", text = "4강까지 강화를 진행해볼까요?" },
+        },
+        ["17-4"] = new List<TutorialDialogLine>
+        {
+            new() { dialogId = "tut_17_4_0", stepGroup = "17-4", order = 1, speakerName = "비서", portraitId = "portrait_secretary", text = "4번연속 성공이라니… 대표님은 실력도 운도\n모두 재능이 있으시네요" },
+        },
+        ["17-5"] = new List<TutorialDialogLine>
+        {
+            new() { dialogId = "tut_17_5_0", stepGroup = "17-5", order = 1, speakerName = "비서", portraitId = "portrait_secretary", text = "오늘 정말 수상할정도로 모든게 잘풀리고 있어요!" },
+        },
+        ["17-6"] = new List<TutorialDialogLine>
+        {
+            new() { dialogId = "tut_17_6_0", stepGroup = "17-6", order = 1, speakerName = "비서", portraitId = "portrait_secretary", text = "어? 마침 [[상인]]이 왔어요! 돈이 많을 때 오는게 타이밍이\n귀신 같네요" },
+        },
+        ["17-7"] = new List<TutorialDialogLine>
+        {
+            new() { dialogId = "tut_17_7_0", stepGroup = "17-7", order = 1, speakerName = "비서", portraitId = "portrait_secretary", text = "상인에게서 [[아이템]]을 살 수 있어요.\n아이템을 [[구매]]해서 [[사용]]해볼까요?" },
+        },
+        ["17-8"] = new List<TutorialDialogLine>
+        {
+            new() { dialogId = "tut_17_8_0", stepGroup = "17-8", order = 1, speakerName = "비서", portraitId = "portrait_secretary", text = "커피를 직원에게 주면 어떤일이 일어나는지 확인해볼까요?" },
+        },
+        ["17-9-1"] = new List<TutorialDialogLine>
+        {
+            new() { dialogId = "tut_17_9_1_0", stepGroup = "17-9-1", order = 1, speakerName = "비서", portraitId = "portrait_secretary", text = "커피를 마신 직원의 기분이 상당히 좋아보이네요." },
+        },
+        ["17-9-2"] = new List<TutorialDialogLine>
+        {
+            new() { dialogId = "tut_17_9_2_0", stepGroup = "17-9-2", order = 1, speakerName = "비서", portraitId = "portrait_secretary", text = "아이템은 나중에 [[위기 탈출용]]으로 아껴두면 진가를 발휘해요." },
+        },
     };
 
     static Dictionary<string, List<TutorialDialogLine>> LoadFromServer()

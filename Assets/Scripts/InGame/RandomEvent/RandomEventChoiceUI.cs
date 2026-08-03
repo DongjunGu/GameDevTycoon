@@ -233,9 +233,10 @@ public class RandomEventChoiceUI : MonoBehaviour
         }
 
         // Unregister 시 대기 큐의 다음 모달이 즉시 표시되며 _currentData 가 바뀔 수 있으므로 먼저 캡처.
-        var    onConf = _currentData?.onConfirm;
-        var    chosen = _chosenOption;
-        string sysMsg = _chosenSystemMessage;
+        var    onConf      = _currentData?.onConfirm;
+        var    chosen      = _chosenOption;
+        string sysMsg      = _chosenSystemMessage;
+        string targetEmpId = _currentData?.targetEmployeeId;
 
         eventPanel.SetActive(false);
         ModalGate.I.Unregister(this);
@@ -250,40 +251,60 @@ public class RandomEventChoiceUI : MonoBehaviour
         // 결과 팝업 종류(resultPopupType)가 지정돼 있으면 AlertUI4/5/6 신규 라우팅, 없으면 기존 방식
         // (resultSystemMessage → 일반 AlertUI1) 로 fallback — 기존 이벤트 하위호환.
         if (chosen != null && chosen.resultPopupType > 0)
-            ShowResultPopup(chosen, resume);
+            ShowResultPopup(chosen, targetEmpId, resume);
         else if (!string.IsNullOrEmpty(sysMsg))
-            AlertUI.Instance.Show(sysMsg, resume);
+            AlertUI.Instance.Show(ResolvePlaceholders(sysMsg, targetEmpId), resume);
         else
             resume();
+    }
+
+    // 트리거 측(예: RandomEvents_Condition_Choice.TriggerCoffeeRequestEvent)이 onSetup에서 이미
+    // "{직원이름}"을 치환해두는 게 정상 경로지만, 혹시 그 치환이 누락되거나 타이밍이 어긋나도 화면에
+    // 플레이스홀더가 그대로 노출되는 사고를 막기 위한 최후 안전망 — 표시 직전에 한 번 더 치환한다.
+    // 이미 치환된 문자열은 "{직원이름}"이 없어 그대로 통과(무해).
+    static string ResolvePlaceholders(string text, string employeeId)
+    {
+        if (string.IsNullOrEmpty(text) || !text.Contains("{직원이름}")) return text;
+        string name = EmployeeManager.Instance?.GetEmployee(employeeId)?.employeeName ?? "";
+        return text.Replace("{직원이름}", name);
     }
 
     // 결과 팝업 종류 1=AlertUI4(Title+result1+result2) / 2=AlertUI5(TitleText만) / 3=AlertUI6(Title+Bottom).
     // resultMent1 이 비어있으면(예: 유튜버 선공개 "애매한 반응" 분기 — 원래 팝업 없음) 그냥 넘어간다.
     // 1차 팝업 확인 후 resultPopupType2 가 지정돼 있으면 이어서 2차 팝업(예: 패자 효과)을 띄운다.
-    static void ShowResultPopup(RandomEventChoiceOption choice, System.Action resume)
+    // employeeId: ResolvePlaceholders 안전망용 — "{직원이름}"이 남아있을 때만 사용됨.
+    static void ShowResultPopup(RandomEventChoiceOption choice, string employeeId, System.Action resume)
     {
-        System.Action afterFirst = () => ShowResultPopup2(choice, resume);
+        System.Action afterFirst = () => ShowResultPopup2(choice, employeeId, resume);
 
         if (string.IsNullOrEmpty(choice.resultMent1)) { afterFirst(); return; }
 
+        string ment1 = ResolvePlaceholders(choice.resultMent1, employeeId);
+        string ment2 = ResolvePlaceholders(choice.resultMent2, employeeId);
+        string ment3 = ResolvePlaceholders(choice.resultMent3, employeeId);
+
         switch (choice.resultPopupType)
         {
-            case 1: AlertUI.Instance.ShowResult4(choice.resultMent1, choice.resultMent2, choice.resultMent3, afterFirst); break;
-            case 2: AlertUI.Instance.ShowResult5(choice.resultMent1, afterFirst); break;
-            case 3: AlertUI.Instance.ShowResult6(choice.resultMent1, choice.resultMent2, afterFirst); break;
+            case 1: AlertUI.Instance.ShowResult4(ment1, ment2, ment3, afterFirst); break;
+            case 2: AlertUI.Instance.ShowResult5(ment1, afterFirst); break;
+            case 3: AlertUI.Instance.ShowResult6(ment1, ment2, afterFirst); break;
             default: afterFirst(); break;
         }
     }
 
-    static void ShowResultPopup2(RandomEventChoiceOption choice, System.Action resume)
+    static void ShowResultPopup2(RandomEventChoiceOption choice, string employeeId, System.Action resume)
     {
         if (string.IsNullOrEmpty(choice.resultMent1_2)) { resume(); return; }
 
+        string ment1 = ResolvePlaceholders(choice.resultMent1_2, employeeId);
+        string ment2 = ResolvePlaceholders(choice.resultMent2_2, employeeId);
+        string ment3 = ResolvePlaceholders(choice.resultMent3_2, employeeId);
+
         switch (choice.resultPopupType2)
         {
-            case 1: AlertUI.Instance.ShowResult4(choice.resultMent1_2, choice.resultMent2_2, choice.resultMent3_2, resume); break;
-            case 2: AlertUI.Instance.ShowResult5(choice.resultMent1_2, resume); break;
-            case 3: AlertUI.Instance.ShowResult6(choice.resultMent1_2, choice.resultMent2_2, resume); break;
+            case 1: AlertUI.Instance.ShowResult4(ment1, ment2, ment3, resume); break;
+            case 2: AlertUI.Instance.ShowResult5(ment1, resume); break;
+            case 3: AlertUI.Instance.ShowResult6(ment1, ment2, resume); break;
             default: resume(); break;
         }
     }

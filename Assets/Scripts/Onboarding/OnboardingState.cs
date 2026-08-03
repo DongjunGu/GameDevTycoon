@@ -48,6 +48,20 @@ public static class OnboardingState
     const string KEY_TUT15      = "onboarding_tutorial15_done";
     // 튜토리얼 16-1 완료 — 판매 패널 열리고 1주차 매출 bar가 오르는 동안(시간 정지 없이), 대박 반응.
     const string KEY_TUT16_1    = "onboarding_tutorial16_1_done";
+    // 튜토리얼 17-1 완료 — 첫 판매가 끝난 직후(SalesUI.OnSalesComplete), 직원 강화 메뉴 유도.
+    const string KEY_TUT17_1    = "onboarding_tutorial17_1_done";
+    // 튜토리얼 17-2~17-5 완료 — 강화 패널이 처음 열릴 때(EmployeeListUI.OpenListForEnhance), 강화
+    // 안내 + 4강까지 강제성공 체험 + 마무리 대사까지 한 세션.
+    const string KEY_TUT17_2    = "onboarding_tutorial17_2_done";
+    // 튜토리얼 17-7 완료 — 상인 상점(MerchantShopPanel)이 처음 열릴 때, 구매+닫기 유도 + 17-8/17-9까지
+    // 이어지는 전체 세션 완료. 아래 두 서브 플래그는 그 세션 안에서 실제로 서버에 커밋되는 두 지점
+    // (상점 닫기=구매 확정 / 아이템 사용=소비 확정)을 별도로 기록해, 재접속 시 이미 커밋된 부분을
+    // 중복 실행(재구매/재사용)하지 않고 정확히 그 다음 지점부터 재개하기 위함.
+    const string KEY_TUT17_7    = "onboarding_tutorial17_7_done";
+    // 17-7 서브: 상점을 실제로 닫아 구매가 서버에 커밋된 시점(MerchantManager.OnShopClosed).
+    const string KEY_TUT17_7_SHOP = "onboarding_tutorial17_7_shop_done";
+    // 17-8 서브: 아이템을 실제로 사용해 소비/효과가 서버에 커밋된 시점(ItemManager.UseItem).
+    const string KEY_TUT17_8_USED = "onboarding_tutorial17_8_used_done";
     // 튜토리얼 18-1 완료 — 아직 미구현(콘텐츠 없음). EmployeeCardUI 아이템/강화 버튼이 이 플래그가 true가
     // 될 때까지 잠겨있음(ApplyItemTrainingLock) — 실제 18-1 트리거가 구현되면 그때 MarkTutorial18_1Done 호출부 추가.
     const string KEY_TUT18_1    = "onboarding_tutorial18_1_done";
@@ -235,11 +249,89 @@ public static class OnboardingState
         PlayerPrefs.Save();
     }
 
+    // 테스트용 — 16-1 Done 플래그만 원복(ResetAll처럼 다른 단계까지 통째로 리셋하지 않음). 실제로
+    // 아직 통과 안 한 단계를 테스트 중 임시로 Done 처리했다가 되돌릴 때 사용.
+    public static void ResetTutorial16_1()
+    {
+        PlayerPrefs.DeleteKey(KEY_TUT16_1);
+        PlayerPrefs.Save();
+    }
+
+    // 튜토리얼 17-1 — 첫 판매가 끝난 직후, 직원 강화 메뉴 유도 완료.
+    public static bool Tutorial17_1Done => PlayerPrefs.GetInt(KEY_TUT17_1, 0) == 1;
+    public static void MarkTutorial17_1Done()
+    {
+        PlayerPrefs.SetInt(KEY_TUT17_1, 1);
+        PlayerPrefs.Save();
+    }
+
+    // 테스트용 — 17-1 Done 플래그만 원복.
+    public static void ResetTutorial17_1()
+    {
+        PlayerPrefs.DeleteKey(KEY_TUT17_1);
+        PlayerPrefs.Save();
+    }
+
+    // 튜토리얼 17-2~17-5 — 강화 패널 안내 + 강화 4회 체험 + 마무리 대사 완료.
+    public static bool Tutorial17_2Done => PlayerPrefs.GetInt(KEY_TUT17_2, 0) == 1;
+    public static void MarkTutorial17_2Done()
+    {
+        PlayerPrefs.SetInt(KEY_TUT17_2, 1);
+        PlayerPrefs.Save();
+    }
+
+    // 테스트용 — 17-2~17-5 Done 플래그만 원복(ResetAll처럼 다른 단계까지 통째로 리셋하지 않음).
+    public static void ResetTutorial17_2()
+    {
+        PlayerPrefs.DeleteKey(KEY_TUT17_2);
+        PlayerPrefs.Save();
+    }
+
+    // 튜토리얼 17-7 — 상인 상점이 처음 열릴 때, 구매+닫기 유도 완료.
+    public static bool Tutorial17_7Done => PlayerPrefs.GetInt(KEY_TUT17_7, 0) == 1;
+    public static void MarkTutorial17_7Done()
+    {
+        PlayerPrefs.SetInt(KEY_TUT17_7, 1);
+        PlayerPrefs.Save();
+    }
+
+    // 테스트용 — 17-7~17-9-2 Done 플래그만 원복(서브 플래그 포함 — 전부 처음부터 다시 볼 수 있게).
+    public static void ResetTutorial17_7()
+    {
+        PlayerPrefs.DeleteKey(KEY_TUT17_7);
+        PlayerPrefs.DeleteKey(KEY_TUT17_7_SHOP);
+        PlayerPrefs.DeleteKey(KEY_TUT17_8_USED);
+        PlayerPrefs.Save();
+    }
+
+    // 17-7 서브 — 상점을 실제로 닫아 구매가 서버에 커밋된 시점 완료.
+    public static bool Tutorial17_7ShopDone => PlayerPrefs.GetInt(KEY_TUT17_7_SHOP, 0) == 1;
+    public static void MarkTutorial17_7ShopDone()
+    {
+        PlayerPrefs.SetInt(KEY_TUT17_7_SHOP, 1);
+        PlayerPrefs.Save();
+    }
+
+    // 17-8 서브 — 아이템을 실제로 사용해 소비/효과가 서버에 커밋된 시점 완료.
+    public static bool Tutorial17_8UsedDone => PlayerPrefs.GetInt(KEY_TUT17_8_USED, 0) == 1;
+    public static void MarkTutorial17_8UsedDone()
+    {
+        PlayerPrefs.SetInt(KEY_TUT17_8_USED, 1);
+        PlayerPrefs.Save();
+    }
+
     // 튜토리얼 18-1 — 아직 미구현. 실제 콘텐츠가 붙으면 그 트리거에서 이 메서드를 호출할 것.
     public static bool Tutorial18_1Done => PlayerPrefs.GetInt(KEY_TUT18_1, 0) == 1;
     public static void MarkTutorial18_1Done()
     {
         PlayerPrefs.SetInt(KEY_TUT18_1, 1);
+        PlayerPrefs.Save();
+    }
+
+    // 테스트용 — 18-1(아이템/강화 버튼 잠금) Done 플래그만 원복.
+    public static void ResetTutorial18_1()
+    {
+        PlayerPrefs.DeleteKey(KEY_TUT18_1);
         PlayerPrefs.Save();
     }
 
@@ -266,6 +358,11 @@ public static class OnboardingState
         PlayerPrefs.DeleteKey(KEY_TUT14_1);
         PlayerPrefs.DeleteKey(KEY_TUT15);
         PlayerPrefs.DeleteKey(KEY_TUT16_1);
+        PlayerPrefs.DeleteKey(KEY_TUT17_1);
+        PlayerPrefs.DeleteKey(KEY_TUT17_2);
+        PlayerPrefs.DeleteKey(KEY_TUT17_7);
+        PlayerPrefs.DeleteKey(KEY_TUT17_7_SHOP);
+        PlayerPrefs.DeleteKey(KEY_TUT17_8_USED);
         PlayerPrefs.DeleteKey(KEY_TUT18_1);
         PlayerPrefs.Save();
         Debug.Log("[Onboarding] 플래그 리셋 — 다음 진입 시 컷씬+튜토리얼 재노출");

@@ -808,6 +808,12 @@ public class DevelopmentManager : MonoBehaviour
         const float tickInterval = 3f;
         float elapsed = 0f;
 
+        // 튜토리얼(첫 프로젝트) 한정 — 디버깅이 확률에 막혀 늘어지지 않도록 매 틱 100% 성공 + 정확히
+        // 3틱 안에(각 틱마다 "남은 버그 / 남은 틱수"만큼 균등 제거) 버그가 0이 되도록 보정.
+        bool isTutorialBugFix = CompletedProjectManager.Instance != null
+            && CompletedProjectManager.Instance.completedProjects.Count == 0;
+        int tutorialTicksLeft = 3;
+
         while (DevelopmentPanelUI.Instance.GetBug() > 0f)
         {
             if (!GameTimeManager.Instance.IsRunning)
@@ -847,21 +853,32 @@ public class DevelopmentManager : MonoBehaviour
             if (TechTreeManager.Instance != null && TechTreeManager.Instance.IsUnlocked("money_bugmaster"))
                 bugFixChance += 0.10f;
             bugFixChance = Mathf.Clamp01(bugFixChance);
+            if (isTutorialBugFix) bugFixChance = 1f; // 튜토리얼 — 매 틱 100% 성공
 
             if (UnityEngine.Random.value < bugFixChance)
             {
                 float remainingBug = DevelopmentPanelUI.Instance.GetBug();
+                float fixAmount;
 
-                // 창의성처리보정 = 0.40 + 1.20 × 창의성로그정규화 [0.40~1.60],
-                // 창의성로그정규화 = (ln(창의성) - ln(17.5)) / 3.7240 [0,1]
-                float creLogNorm = Mathf.Clamp01((Mathf.Log(creSafe) - Mathf.Log(17.5f)) / 3.7240f);
-                float creProcMul = 0.40f + 1.20f * creLogNorm;
-                // 감속계수 = (잔여버그 / 초기버그)^0.35 — 버그가 줄수록 해결량 감소
-                float slowFactor = Mathf.Pow(remainingBug / initialBug, 0.35f);
+                if (isTutorialBugFix)
+                {
+                    // 남은 틱 수만큼 균등 분배해서 정확히 3틱 안에 0으로 수렴시킴(마지막 틱은 잔량 전부).
+                    fixAmount = Mathf.Ceil(remainingBug / Mathf.Max(1, tutorialTicksLeft));
+                    tutorialTicksLeft = Mathf.Max(1, tutorialTicksLeft - 1);
+                }
+                else
+                {
+                    // 창의성처리보정 = 0.40 + 1.20 × 창의성로그정규화 [0.40~1.60],
+                    // 창의성로그정규화 = (ln(창의성) - ln(17.5)) / 3.7240 [0,1]
+                    float creLogNorm = Mathf.Clamp01((Mathf.Log(creSafe) - Mathf.Log(17.5f)) / 3.7240f);
+                    float creProcMul = 0.40f + 1.20f * creLogNorm;
+                    // 감속계수 = (잔여버그 / 초기버그)^0.35 — 버그가 줄수록 해결량 감소
+                    float slowFactor = Mathf.Pow(remainingBug / initialBug, 0.35f);
 
-                // 해결량 = max(1, ceil(7.0 × 창의성처리보정 × 감속계수 × Random(0.5~1.5)))
-                float fixAmount = Mathf.Max(1f,
-                    Mathf.Ceil(7.0f * creProcMul * slowFactor * UnityEngine.Random.Range(0.5f, 1.5f)));
+                    // 해결량 = max(1, ceil(7.0 × 창의성처리보정 × 감속계수 × Random(0.5~1.5)))
+                    fixAmount = Mathf.Max(1f,
+                        Mathf.Ceil(7.0f * creProcMul * slowFactor * UnityEngine.Random.Range(0.5f, 1.5f)));
+                }
 
                 DevelopmentPanelUI.Instance.SetBug(Mathf.Max(0f, remainingBug - fixAmount));
 

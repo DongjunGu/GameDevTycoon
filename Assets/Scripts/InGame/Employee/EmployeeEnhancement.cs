@@ -107,13 +107,20 @@ public static class EmployeeEnhancement
     public static int SuccessRate(EmployeeData emp) => Mathf.RoundToInt(GetRates(emp).success);
     public static int FailRate(EmployeeData emp)    => 100 - SuccessRate(emp);
 
+    // 온보딩 튜토리얼 17-3 전용 — 남은 횟수만큼 실제 롤을 무조건 성공으로 우회(GetRates()로 표시되는
+    // 확률 UI는 그대로 진짜 값을 보여주고, EnhanceOnce의 실제 판정만 우회한다).
+    public static int ForceSuccessRemaining = 0;
+
     // 강화 1회 실행 — 비용 차감/저장은 호출자 책임.
     // 레벨/주스탯/부스탯/연봉/만족도를 변경한 뒤 결과(성공/유지/하락)를 반환한다.
     public static EnhanceOutcome EnhanceOnce(EmployeeData emp)
     {
         int level = emp.enhancementLevel;
         var (success, maintain, downgrade) = GetRates(emp);
-        float roll = Random.Range(0f, 100f);
+
+        bool forceSuccess = ForceSuccessRemaining > 0;
+        if (forceSuccess) ForceSuccessRemaining--;
+        float roll = forceSuccess ? -1f : Random.Range(0f, 100f);
 
         if (roll < success)
         {

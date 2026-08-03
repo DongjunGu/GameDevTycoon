@@ -484,6 +484,14 @@ public class SalesUI : MonoBehaviour
             ProjectSaveManager.Instance.SaveProject();
             GameTimeManager.Instance.SaveGameTime();
         }
+
+        // 온보딩 튜토리얼 17-1 — 첫 판매(=완료된 프로젝트 정확히 1개)가 끝난 직후, 직원 강화 메뉴 유도.
+        if (!OnboardingState.Tutorial17_1Done
+            && CompletedProjectManager.Instance != null && CompletedProjectManager.Instance.completedProjects.Count == 1
+            && TutorialController.Instance != null)
+        {
+            TutorialController.Instance.StartCoroutine(TutorialController.Instance.PlayTutorial17_1());
+        }
     }
 
     // 판매 기간 중 도달한 가장 높은(작은 숫자) 순위를 현재 프로젝트에 기록

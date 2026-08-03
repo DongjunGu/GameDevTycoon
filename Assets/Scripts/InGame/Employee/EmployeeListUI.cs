@@ -616,6 +616,11 @@ public class EmployeeListUI : MonoBehaviour
         var emp = _emps.Count > 0 ? _emps[IndexOfSelected()] : null;
         if (emp != null) TrainingPanelUI.Instance?.OnSelectEmployee(emp);
         PlayOpenIntro();
+
+        // 온보딩 튜토리얼 17-2~17-5 — 강화 메뉴(trainingMenuBtn)로 강화 패널이 처음 열릴 때, 강화 안내
+        // + 4강 체험 + 마무리 대사. pending 불필요(6-1과 동일 이유 — 재접속 자연 재오픈 때도 다시 체크됨).
+        if (!OnboardingState.Tutorial17_2Done && TutorialController.Instance != null)
+            TutorialController.Instance.StartCoroutine(TutorialController.Instance.PlayTutorial17_2());
     }
 
     // 외부(EmployeeCardUI 등)에서 특정 직원 강화 — 패널 열고 그 직원 선택 + TrainingPanel 표시

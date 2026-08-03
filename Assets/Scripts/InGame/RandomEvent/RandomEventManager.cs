@@ -262,6 +262,12 @@ public class RandomEventManager : MonoBehaviour
 
         HandleYearlyRecovers();
 
+        // 튜토리얼 런 전체 기간엔 이 아래(야매코드/불안정회사/커피·에너지드링크 요청/커플 결별/
+        // 짝사랑/사직 경고) 자동 이벤트를 전부 스킵 — 지정한 이벤트(AcWar 등)만 별도 진입점으로
+        // 직접 발동시키므로, 여기서 타이머를 그대로 얼려두면(감소도 안 함) 튜토리얼 종료 후 이어서
+        // 정상 작동한다.
+        if (RunStateManager.Instance != null && RunStateManager.Instance.IsTutorial) return;
+
         if (PendingHackyCodePenalty > 0f && !IsEventBusy)
         {
             PendingHackyCodeWeeksLeft--;
@@ -403,11 +409,13 @@ public class RandomEventManager : MonoBehaviour
         _scheduledEvents.Clear();
         _nextScheduledIndex = 0;
 
-        // 튜토리얼(9단계까지) 진행 중엔 차트 기반 랜덤이벤트를 아예 스케줄하지 않는다 — 지정한 이벤트만
-        // 별도 진입점으로 나중에 하나씩 수동 발동시킬 예정이라, 여기서는 완전히 비워둔 채로 리턴.
-        if (!OnboardingState.Tutorial9Done)
+        // 튜토리얼 런 전체 기간 동안 차트 기반 랜덤이벤트를 아예 스케줄하지 않는다 — 지정한 이벤트만
+        // (예: AcWar) TriggerTutorialXxx 같은 별도 진입점으로 직접 발동시킬 예정이라, 여기서는 완전히
+        // 비워둔 채로 리턴. 예전엔 Tutorial9Done까지만 막았는데, 17-x(2사이클) 등 그 이후 구간에서도
+        // 커피 요청 같은 자동 이벤트가 끼어들면 안 되므로 RunStateManager.IsTutorial(런 전체) 기준으로 확장.
+        if (RunStateManager.Instance != null && RunStateManager.Instance.IsTutorial)
         {
-            Debug.Log("[RandomEventManager] 튜토리얼 진행 중 — 랜덤이벤트 스케줄 스킵");
+            Debug.Log("[RandomEventManager] 튜토리얼 런 — 랜덤이벤트 스케줄 스킵");
             return;
         }
 
@@ -762,6 +770,9 @@ public class RandomEventManager : MonoBehaviour
 
     public void ScheduleUnstableCompanyEvent()
     {
+        // 튜토리얼 런 중엔 예약 자체를 걸지 않는다 — OnWeekChanged 가드만으로는 "예약은 됐지만 카운트다운이
+        // 얼어있다가 튜토리얼 끝나자마자 곧장 발동"하는 부자연스러운 결과가 남으므로, 애초에 안 건다.
+        if (RunStateManager.Instance != null && RunStateManager.Instance.IsTutorial) return;
         _unstableCompanyWeeksLeft = UnityEngine.Random.Range(1, 49); // 1~48주 랜덤
         Debug.Log($"[UnstableCompany] {_unstableCompanyWeeksLeft}주 후 발동 예약");
     }
@@ -790,6 +801,9 @@ public class RandomEventManager : MonoBehaviour
 
     public void ScheduleEnergyDrinkRequestEvent()
     {
+        // 튜토리얼 런 중엔 예약 자체를 걸지 않는다 — 정해둔 이벤트(17-x 등)만 명시적으로 트리거하며,
+        // 튜토리얼 끝나자마자 예전에 걸어둔 타이머가 곧장 터지는 부자연스러운 결과도 함께 막는다.
+        if (RunStateManager.Instance != null && RunStateManager.Instance.IsTutorial) return;
         if (_energyDrinkRequestWeeksLeft > 0) return;
         _energyDrinkRequestWeeksLeft = UnityEngine.Random.Range(2, 5);
         Debug.Log($"[EnergyDrinkRequest] {_energyDrinkRequestWeeksLeft}주 후 발동 예약");
@@ -823,6 +837,9 @@ public class RandomEventManager : MonoBehaviour
 
     public void ScheduleCoffeeRequestEvent()
     {
+        // 튜토리얼 런 중엔 예약 자체를 걸지 않는다 — 17-6/17-7에서 상인이 들고 온 커피를 구매해도
+        // 그로 인한 자동 이벤트가 나중에 튀어나오지 않도록(정해둔 이벤트만 명시적으로 트리거).
+        if (RunStateManager.Instance != null && RunStateManager.Instance.IsTutorial) return;
         // 커피 획득마다 1회 예약 (이미 예약 중이면 덮어쓰지 않음)
         if (_coffeeRequestWeeksLeft > 0) return;
         _coffeeRequestWeeksLeft = UnityEngine.Random.Range(2, 5); // 2~4주
@@ -1006,6 +1023,10 @@ public class RandomEventManager : MonoBehaviour
         // 다른 이벤트(모달/대기/사직 큐)가 진행 중이면 이번 주 조건 이벤트는 스킵 — 다음 주 재시도.
         // 한 주 틱에 OnWeekChanged 이벤트 + 조건 이벤트가 겹쳐 StopTime 이 쌓이는 것을 차단.
         if (IsEventBusy) return;
+
+        // 튜토리얼 런 전체 기간엔 자발적 야근/사직/도주/캐릭터 전용 이벤트(오다주웠다 등)도 전부 스킵 —
+        // 지정한 이벤트만 별도 진입점으로 직접 발동시킨다.
+        if (RunStateManager.Instance != null && RunStateManager.Instance.IsTutorial) return;
 
         // 만족도 90이상: 10% 확률로 자발적 야근 (개발 중에만)
         // 야근 모드는 프로젝트 단위(ResetProject 에서 함께 리셋) — 이벤트로 켜진 IsVoluntaryOvertimeActive 뿐 아니라
@@ -1319,6 +1340,20 @@ public class RandomEventManager : MonoBehaviour
                 TriggerEmployeeResignationEvent(emp);
             else
                 TriggerEmployeeRunEvent(emp);
+            return;
+        }
+        // CoffeeRequest/EnergyDrinkRequest는 _eventPool/_choiceEventPool 어디에도 등록되지 않는
+        // 별도 진입점(RandomEvents_Condition_Choice)이라 아래 공용 탐색 로직으로는 못 찾는다 — 여기서
+        // 직접 호출. 두 함수 다 아이템 보유 여부만으로 내부에서 조용히 스킵하므로(생성 안 함), 튜토리얼
+        // 상태와 무관하게 항상 호출해 "아이템 있음/없음" 양쪽 결과를 그대로 테스트할 수 있게 한다.
+        if (type == RandomEventType.CoffeeRequest)
+        {
+            RandomEvents_Condition_Choice.TriggerCoffeeRequestEvent();
+            return;
+        }
+        if (type == RandomEventType.EnergyDrinkRequest)
+        {
+            RandomEvents_Condition_Choice.TriggerEnergyDrinkRequestEvent();
             return;
         }
 

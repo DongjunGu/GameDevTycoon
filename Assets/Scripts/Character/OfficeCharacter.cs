@@ -85,15 +85,8 @@ public class OfficeCharacter : MonoBehaviour, IPointerClickHandler
             return;
         }
 
-        // CEO는 프로젝트 진행 여부와 무관하게 항상 "일하는" 포즈로 고정 — 이 체크가 없으면 스폰 직후
-        // SpawnCEO()가 Working으로 세팅해도, 한 프레임 뒤 OfficeManager.RefreshAnimationsNextFrame이
-        // (프로젝트 미진행 상태면) RefreshAllDeskAnimations→ApplyDeskAnimation을 다시 돌며 Idle로 되돌려서,
-        // 실제 프로젝트가 시작되기 전까지(온보딩 극초반 등) CEO가 계속 서 있는 것처럼 보였다.
-        bool isCEO = EmployeeManager.Instance != null && EmployeeManager.Instance.CEO != null
-                     && EmployeeManager.Instance.CEO.id == employeeId;
-
         var stage = DevelopmentManager.Instance != null ? DevelopmentManager.Instance.CurrentStage : ProjectStage.None;
-        bool isDeveloping = isCEO || stage == ProjectStage.Developing || stage == ProjectStage.BugFixing;
+        bool isDeveloping = stage == ProjectStage.Developing || stage == ProjectStage.BugFixing;
         if (isDeveloping)
         {
             _state = CharacterState.Working;
