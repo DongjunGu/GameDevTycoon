@@ -75,6 +75,12 @@ public class MenuController : MonoBehaviour
     [Tooltip("슬라이드 시간(초)")]
     public float slideDuration = 0.2f;
 
+    [Header("사무실 레벨 잠금 — 파견/테크트리는 사무실 2단계부터 사용 가능 (튜토리얼과 무관)")]
+    public Button dispatchBtn;
+    public GameObject dispatchLockBG;
+    public Button techTreeBtn;
+    public GameObject techTreeLockBG;
+
     // ── 런타임 상태 ──────────────────────────────────────────────────────────
     private bool _topOpen;
     private TopMenu _activeSub;
@@ -145,15 +151,31 @@ public class MenuController : MonoBehaviour
 
         // 온보딩 튜토리얼 진행 중엔 메뉴 버튼 오브젝트 자체를 꺼버린다 — 튜토리얼이 스스로 강조하는
         // 시점(TutorialHighlighter.Highlight)에만 일시적으로 다시 SetActive(true)로 되살아난다.
-        // "몇 번째 단계가 마지막인지"는 여기서 알 필요가 없다 — TutorialController.IsFullyDone()이
-        // 정의된 모든 단계를 종합해 판단하므로, 앞으로 튜토리얼 단계가 계속 추가돼도(예: 14, 15...)
+        // "몇 번째 단계가 마지막인지"는 여기서 알 필요가 없다 — TutorialController.IsMenuUnlockReady()가
+        // 정의된 단계를 종합해 판단하므로, 앞으로 튜토리얼 단계가 계속 추가돼도(예: 14, 15...)
         // TutorialController 쪽에만 그 단계를 반영하면 되고 이 파일은 절대 다시 손댈 필요가 없다.
-        if (menuButton != null && !TutorialController.IsFullyDone())
+        // ⚠️ IsFullyDone()이 아니라 IsMenuUnlockReady() — 20단계처럼 "메뉴가 열려야만 진행되는" 단계까지
+        // 포함해버리면 메뉴가 영원히 안 열리는 순환 잠금이 생긴다(IsMenuUnlockReady 선언부 주석 참고).
+        if (menuButton != null && !TutorialController.IsMenuUnlockReady())
         {
             _tutorialHideActive = true;
             menuButton.gameObject.SetActive(false);
             _waitOnboardingDoneRoutine = StartCoroutine(WaitOnboardingFullyDone());
         }
+
+        RefreshStageLocks();
+    }
+
+    // 파견/테크트리 버튼 — 사무실 StageManager.CurrentStage가 2단계 이상이 되기 전까지 LockBG 활성 +
+    // interactable=false. 튜토리얼 진행 여부와는 완전히 무관한 별도 게이트. 미래에 사무실 레벨업
+    // 시스템이 실제로 CurrentStage를 올리는 지점이 생기면, 그쪽에서 이 메서드를 다시 호출해주면 된다.
+    public void RefreshStageLocks()
+    {
+        bool unlocked = StageManager.Instance != null && StageManager.Instance.CurrentStage >= 2;
+        if (dispatchBtn != null) dispatchBtn.interactable = unlocked;
+        if (dispatchLockBG != null) dispatchLockBG.SetActive(!unlocked);
+        if (techTreeBtn != null) techTreeBtn.interactable = unlocked;
+        if (techTreeLockBG != null) techTreeLockBG.SetActive(!unlocked);
     }
 
     // 튜토리얼 진행 중엔 true — 이 동안은 아래 OnTimeStopChanged가 menuButton의 SetActive를 건드리지
@@ -162,12 +184,12 @@ public class MenuController : MonoBehaviour
     Coroutine _waitOnboardingDoneRoutine;
 
     // 특정 단계의 Mark*Done() 호출 지점에 이벤트를 심어두는 대신(단계가 늘어날 때마다 그 지점을 옮겨야
-    // 해서 계속 깜빡했던 방식), 여기서 직접 "전부 끝났는지"를 주기적으로 재확인한다 — 판정 기준은
-    // TutorialController.IsFullyDone() 하나뿐이라 이 파일은 새 단계가 추가돼도 항상 정확하다.
+    // 해서 계속 깜빡했던 방식), 여기서 직접 "메뉴를 열어도 되는지"를 주기적으로 재확인한다 — 판정 기준은
+    // TutorialController.IsMenuUnlockReady() 하나뿐이라 이 파일은 새 단계가 추가돼도 항상 정확하다.
     IEnumerator WaitOnboardingFullyDone()
     {
         var wait = new WaitForSecondsRealtime(0.5f);
-        while (!TutorialController.IsFullyDone()) yield return wait;
+        while (!TutorialController.IsMenuUnlockReady()) yield return wait;
 
         _tutorialHideActive = false;
         _waitOnboardingDoneRoutine = null;

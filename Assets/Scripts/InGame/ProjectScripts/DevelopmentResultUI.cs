@@ -328,6 +328,8 @@ public class DevelopmentResultUI : MonoBehaviour
                 OfficeManager.Instance?.TriggerDevelopmentCompletePatrol(
                     DevelopmentManager.Instance.developCompletePatrolPointA,
                     DevelopmentManager.Instance.developCompletePatrolPointB);
+                // 개발이 끝나 더 이상 Developing/BugFixing이 아니므로 배경 patrol 스케줄러 재개.
+                OfficeManager.Instance?.ResumeIdlePatrol();
                 MoneyManager.Instance.SaveMoney();
                 ProjectSaveManager.Instance.SaveProject();
                 GameTimeManager.Instance.SaveGameTime();

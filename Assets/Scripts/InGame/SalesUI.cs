@@ -234,6 +234,14 @@ public class SalesUI : MonoBehaviour
 
             if (savedTotalRevenue > 0)
                 totalRevenue = savedTotalRevenue;
+            // 튜토리얼(첫 프로젝트) 한정 — TutorialRankSequence(1/5/11위)와 짝을 맞춰 실제 공식 대신
+            // 총 매출을 12,000G로 고정한다. 주차별 분배(jitter)는 아래 일반 로직 그대로 적용.
+            else if (CompletedProjectManager.Instance != null && CompletedProjectManager.Instance.completedProjects.Count == 0)
+            {
+                totalRevenue = 12000;
+                if (RandomEventManager.Instance != null)
+                    RandomEventManager.Instance.YoutuberSalesBonus = 1.0f; // 적용 안 했지만 다음 판매에 새어나가지 않게 초기화
+            }
             else
             {
                 float rand         = UnityEngine.Random.Range(0.9f, 1.1f);
@@ -369,8 +377,10 @@ public class SalesUI : MonoBehaviour
 
             barImage.sizeDelta = new Vector2(barImage.sizeDelta.x, 0f);
 
-            // 온보딩 튜토리얼 16-1 — 첫 프로젝트 한정, 1주차 bar 애니메이션이 막 시작될 때. 시간을 멈추지
-            // 않고(대사 진행 중에도 bar가 계속 오르는 걸 보여줘야 함) 그냥 병렬로 fire-and-forget 실행.
+            // 온보딩 튜토리얼 16-1 — 첫 프로젝트 한정, 1주차 bar 애니메이션이 막 시작될 때 병렬로
+            // fire-and-forget 실행. TutorialController.PlayTutorial16_1()이 자체적으로 게임 시간을
+            // 멈추므로(BeginDimTimeStop), 아래 루프들의 GameTimeManager.IsRunning 체크 덕분에 대사가
+            // 떠 있는 동안엔 bar 애니메이션/판매 완료가 자동으로 같이 멈춘다.
             if (i == 0 && !OnboardingState.Tutorial16_1Done
                 && CompletedProjectManager.Instance != null && CompletedProjectManager.Instance.completedProjects.Count == 0
                 && TutorialController.Instance != null)
@@ -484,6 +494,11 @@ public class SalesUI : MonoBehaviour
             ProjectSaveManager.Instance.SaveProject();
             GameTimeManager.Instance.SaveGameTime();
         }
+
+        // 튜토리얼 퀘스트1(첫 번째 게임 개발하기) — 첫 판매(=완료된 프로젝트 정확히 1개)가 끝나면 완료
+        // 처리. isMainQuest=1이라 완료 즉시 UnlockChainedMainQuests가 튜토리얼 퀘스트2를 자동 공개한다.
+        if (CompletedProjectManager.Instance != null && CompletedProjectManager.Instance.completedProjects.Count == 1)
+            QuestManager.Instance?.UpdateProgress(QuestType.CompleteFirstProject, 1);
 
         // 온보딩 튜토리얼 17-1 — 첫 판매(=완료된 프로젝트 정확히 1개)가 끝난 직후, 직원 강화 메뉴 유도.
         if (!OnboardingState.Tutorial17_1Done

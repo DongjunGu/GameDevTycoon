@@ -305,13 +305,16 @@ public class CharacterEventTester : MonoBehaviour
         OnboardingState.MarkTutorial14_1Done();
         OnboardingState.MarkTutorial15Done();
         OnboardingState.MarkTutorial16_1Done();
-        // 이전 테스트에서 이미 17-x가 전부(또는 일부) 완료 처리됐을 수 있음 — 그러면 각 자연 트리거의
+        // 이전 테스트에서 이미 17-x/18-x가 전부(또는 일부) 완료 처리됐을 수 있음 — 그러면 각 자연 트리거의
         // !TutorialXDone 체크가 안 걸려서 해당 단계가 다시 안 뜬다. 17-x 이후는 전부 매번 다시 볼 수
-        // 있도록 여기서 통째로 원복해둔다(18-1은 17-8/17-9가 실제로 해제하는 콘텐츠라 함께 원복).
+        // 있도록 여기서 통째로 원복해둔다(17_8_UNLOCK은 17-8/17-9가 실제로 해제하는 내부 신호라 함께 원복).
         OnboardingState.ResetTutorial17_1();
         OnboardingState.ResetTutorial17_2();
         OnboardingState.ResetTutorial17_7();
-        OnboardingState.ResetTutorial18_1();
+        OnboardingState.ResetTutorial17_8Unlock();
+        OnboardingState.ResetTutorial18();
+        OnboardingState.ResetTutorial19();
+        OnboardingState.ResetTutorial20();
 
         if (TutorialController.Instance == null) { Set("TutorialController 인스턴스 없음 (씬에 없거나 이미 파괴됨)"); return; }
 

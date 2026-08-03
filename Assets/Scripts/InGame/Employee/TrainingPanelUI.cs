@@ -200,7 +200,14 @@ public class TrainingPanelUI : MonoBehaviour
         bool deferSave = EmployeeEnhancement.ForceSuccessRemaining > 0;
 
         int cost = EmployeeEnhancement.GetCost(_selected);
-        if (cost < 0 || !MoneyManager.Instance.SpendGold(cost, saveImmediately: !deferSave)) return;
+        if (cost < 0) return;
+        if (!MoneyManager.Instance.SpendGold(cost, saveImmediately: !deferSave))
+        {
+            // TrainingPanelUI 자신이 Open()에서 ModalGate.Register(this)로 게이트를 쥔 채 열려있는 상태라
+            // bypassGate 없이 부르면 패널이 열려있는 동안 안 뜬다(MerchantShopPanelUI와 동일 원인).
+            AlertUI.Instance?.Show("자금이 부족합니다.", null, bypassGate: true);
+            return;
+        }
 
         // 강화 전 수치 스냅샷 (결과 패널 before 표시 + 더미 텍스트 노출 방지)
         int oldLevel = _selected.enhancementLevel;

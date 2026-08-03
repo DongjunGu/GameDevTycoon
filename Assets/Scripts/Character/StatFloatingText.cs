@@ -23,7 +23,7 @@ public class StatFloatingText : MonoBehaviour
 
         while (elapsed < duration)
         {
-            if (GameTimeManager.Instance == null || GameTimeManager.Instance.IsRunning)
+            if (GameTimeManager.Instance == null || GameTimeManager.Instance.IsRunningForMovement)
             {
                 elapsed += Time.deltaTime;
                 float t = elapsed / duration;

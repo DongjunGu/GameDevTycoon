@@ -262,11 +262,12 @@ public class RandomEventManager : MonoBehaviour
 
         HandleYearlyRecovers();
 
-        // 튜토리얼 런 전체 기간엔 이 아래(야매코드/불안정회사/커피·에너지드링크 요청/커플 결별/
-        // 짝사랑/사직 경고) 자동 이벤트를 전부 스킵 — 지정한 이벤트(AcWar 등)만 별도 진입점으로
-        // 직접 발동시키므로, 여기서 타이머를 그대로 얼려두면(감소도 안 함) 튜토리얼 종료 후 이어서
-        // 정상 작동한다.
-        if (RunStateManager.Instance != null && RunStateManager.Instance.IsTutorial) return;
+        // 온보딩 진행 중(1~17-9 전체)엔 이 아래(야매코드/불안정회사/커피·에너지드링크 요청/커플 결별/
+        // 짝사랑/사직 경고) 자동 이벤트를 전부 스킵 — 지정한 이벤트(AcWar 등)만 별도 진입점으로 직접
+        // 발동시키므로, 여기서 타이머를 그대로 얼려두면(감소도 안 함) 온보딩 종료 후 이어서 정상
+        // 작동한다. ⚠️ RunStateManager.IsTutorial(1~16단계만 대표)이 아니라 TutorialController.
+        // IsFullyDone()으로 판단 — IsTutorial이 먼저 false가 돼도 17-x가 아직 진행 중일 수 있다.
+        if (!TutorialController.IsFullyDone()) return;
 
         if (PendingHackyCodePenalty > 0f && !IsEventBusy)
         {
@@ -412,8 +413,9 @@ public class RandomEventManager : MonoBehaviour
         // 튜토리얼 런 전체 기간 동안 차트 기반 랜덤이벤트를 아예 스케줄하지 않는다 — 지정한 이벤트만
         // (예: AcWar) TriggerTutorialXxx 같은 별도 진입점으로 직접 발동시킬 예정이라, 여기서는 완전히
         // 비워둔 채로 리턴. 예전엔 Tutorial9Done까지만 막았는데, 17-x(2사이클) 등 그 이후 구간에서도
-        // 커피 요청 같은 자동 이벤트가 끼어들면 안 되므로 RunStateManager.IsTutorial(런 전체) 기준으로 확장.
-        if (RunStateManager.Instance != null && RunStateManager.Instance.IsTutorial)
+        // 커피 요청 같은 자동 이벤트가 끼어들면 안 되므로 TutorialController.IsFullyDone()(온보딩 전체
+        // 완료 여부) 기준으로 확장 — RunStateManager.IsTutorial은 1~16단계만 대표해 먼저 false가 될 수 있음.
+        if (!TutorialController.IsFullyDone())
         {
             Debug.Log("[RandomEventManager] 튜토리얼 런 — 랜덤이벤트 스케줄 스킵");
             return;
@@ -772,7 +774,7 @@ public class RandomEventManager : MonoBehaviour
     {
         // 튜토리얼 런 중엔 예약 자체를 걸지 않는다 — OnWeekChanged 가드만으로는 "예약은 됐지만 카운트다운이
         // 얼어있다가 튜토리얼 끝나자마자 곧장 발동"하는 부자연스러운 결과가 남으므로, 애초에 안 건다.
-        if (RunStateManager.Instance != null && RunStateManager.Instance.IsTutorial) return;
+        if (!TutorialController.IsFullyDone()) return;
         _unstableCompanyWeeksLeft = UnityEngine.Random.Range(1, 49); // 1~48주 랜덤
         Debug.Log($"[UnstableCompany] {_unstableCompanyWeeksLeft}주 후 발동 예약");
     }
@@ -803,7 +805,7 @@ public class RandomEventManager : MonoBehaviour
     {
         // 튜토리얼 런 중엔 예약 자체를 걸지 않는다 — 정해둔 이벤트(17-x 등)만 명시적으로 트리거하며,
         // 튜토리얼 끝나자마자 예전에 걸어둔 타이머가 곧장 터지는 부자연스러운 결과도 함께 막는다.
-        if (RunStateManager.Instance != null && RunStateManager.Instance.IsTutorial) return;
+        if (!TutorialController.IsFullyDone()) return;
         if (_energyDrinkRequestWeeksLeft > 0) return;
         _energyDrinkRequestWeeksLeft = UnityEngine.Random.Range(2, 5);
         Debug.Log($"[EnergyDrinkRequest] {_energyDrinkRequestWeeksLeft}주 후 발동 예약");
@@ -839,7 +841,7 @@ public class RandomEventManager : MonoBehaviour
     {
         // 튜토리얼 런 중엔 예약 자체를 걸지 않는다 — 17-6/17-7에서 상인이 들고 온 커피를 구매해도
         // 그로 인한 자동 이벤트가 나중에 튀어나오지 않도록(정해둔 이벤트만 명시적으로 트리거).
-        if (RunStateManager.Instance != null && RunStateManager.Instance.IsTutorial) return;
+        if (!TutorialController.IsFullyDone()) return;
         // 커피 획득마다 1회 예약 (이미 예약 중이면 덮어쓰지 않음)
         if (_coffeeRequestWeeksLeft > 0) return;
         _coffeeRequestWeeksLeft = UnityEngine.Random.Range(2, 5); // 2~4주
@@ -1026,26 +1028,25 @@ public class RandomEventManager : MonoBehaviour
 
         // 튜토리얼 런 전체 기간엔 자발적 야근/사직/도주/캐릭터 전용 이벤트(오다주웠다 등)도 전부 스킵 —
         // 지정한 이벤트만 별도 진입점으로 직접 발동시킨다.
-        if (RunStateManager.Instance != null && RunStateManager.Instance.IsTutorial) return;
+        if (!TutorialController.IsFullyDone()) return;
 
-        // 만족도 90이상: 10% 확률로 자발적 야근 (개발 중에만)
-        // 야근 모드는 프로젝트 단위(ResetProject 에서 함께 리셋) — 이벤트로 켜진 IsVoluntaryOvertimeActive 뿐 아니라
-        // 개발 시작 전 OvertimeSelectUI 로 수동 선택한 전역 야근(IsOvertimeMode)도 이미 야근 중이므로 재발동 차단.
-        if (DevelopmentManager.Instance?.CurrentStage == ProjectStage.Developing &&
-            !DevelopmentManager.Instance.IsVoluntaryOvertimeActive &&
-            !DevelopmentManager.Instance.IsOvertimeMode)
-        {
-            var highSatCandidates = new List<EmployeeData>();
-            foreach (var emp in EmployeeManager.Instance.ownedEmployees)
-                if (emp.satisfaction >= 90 && !IsTargetDispatched(emp.id)) highSatCandidates.Add(emp);
-
-            if (highSatCandidates.Count > 0 && UnityEngine.Random.value < 0.1f)
-            {
-                var target = highSatCandidates[UnityEngine.Random.Range(0, highSatCandidates.Count)];
-                RandomEvents_Condition.TriggerVoluntaryOvertimeEvent(target);
-                return;
-            }
-        }
+        // 야근모드 비활성화 — 자발적 야근 자동 발동 전체를 주석 처리(관련 필드도 DevelopmentManager에서
+        // 전부 주석 처리됨). 만족도 90이상: 10% 확률로 자발적 야근 (개발 중에만)
+        // if (DevelopmentManager.Instance?.CurrentStage == ProjectStage.Developing &&
+        //     !DevelopmentManager.Instance.IsVoluntaryOvertimeActive &&
+        //     !DevelopmentManager.Instance.IsOvertimeMode)
+        // {
+        //     var highSatCandidates = new List<EmployeeData>();
+        //     foreach (var emp in EmployeeManager.Instance.ownedEmployees)
+        //         if (emp.satisfaction >= 90 && !IsTargetDispatched(emp.id)) highSatCandidates.Add(emp);
+        //
+        //     if (highSatCandidates.Count > 0 && UnityEngine.Random.value < 0.1f)
+        //     {
+        //         var target = highSatCandidates[UnityEngine.Random.Range(0, highSatCandidates.Count)];
+        //         RandomEvents_Condition.TriggerVoluntaryOvertimeEvent(target);
+        //         return;
+        //     }
+        // }
 
         foreach (var emp in new List<EmployeeData>(EmployeeManager.Instance.ownedEmployees))
         {

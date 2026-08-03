@@ -21,8 +21,9 @@ public class DevelopmentManager : MonoBehaviour
     public static DevelopmentManager Instance { get; private set; }
 
     [Header("Settings")]
-    public bool IsVoluntaryOvertimeActive { get; private set; } = false;
-    public void SetVoluntaryOvertime(bool active) => IsVoluntaryOvertimeActive = active;
+    // 야근모드 비활성화 — 어떤 경로로도 적용되지 않도록 관련 필드/로직 전체를 주석 처리했다.
+    // public bool IsVoluntaryOvertimeActive { get; private set; } = false;
+    // public void SetVoluntaryOvertime(bool active) => IsVoluntaryOvertimeActive = active;
 
 
     public float developmentDuration = 180f;
@@ -177,7 +178,8 @@ public class DevelopmentManager : MonoBehaviour
     public float leaderTickDelay = 0.5f;
 
     [Header("Mode")]
-    public bool IsOvertimeMode = false;
+    // 야근모드 비활성화 — 어떤 경로로도 적용되지 않도록 관련 필드/로직 전체를 주석 처리했다.
+    // public bool IsOvertimeMode = false;
 
     public float BugPenalty { get; private set; } = 0f;
     public float BugEventBonus { get; private set; } = 0f; // 버그 이벤트 (미개발)
@@ -209,7 +211,6 @@ public class DevelopmentManager : MonoBehaviour
     private bool _isRunning;
     private bool _triggered25;
     private bool _triggered75;
-    private bool _patrolStarted;
     private bool _pendingLeaderScore25;
     private bool _pendingLeaderScore75;
     private bool _pendingDevelopmentComplete;
@@ -300,7 +301,6 @@ public class DevelopmentManager : MonoBehaviour
         // → 기간 연장 + 캐릭터 속도 감소 + progress 보정 + 저장/복원(networkSlow 필드)을 기존 기제로 일괄 처리
 
         IsStarted = true;
-        _patrolStarted = false;
         _elapsed = 0f;
         _isRunning = false;
         _triggered25 = false;
@@ -346,10 +346,12 @@ public class DevelopmentManager : MonoBehaviour
 
         void ProceedToOvertimeSelect()
         {
-            if (StageManager.Instance != null && StageManager.Instance.CurrentStage >= 2 && OvertimeSelectUI.Instance != null)
-                OvertimeSelectUI.Instance.Open(ProceedToInvestment);
-            else
-                ProceedToInvestment();
+            // 야근모드 비활성화 — 야근 직원 선택 패널을 아예 열지 않고 곧장 진행한다.
+            // if (StageManager.Instance != null && StageManager.Instance.CurrentStage >= 2 && OvertimeSelectUI.Instance != null)
+            //     OvertimeSelectUI.Instance.Open(ProceedToInvestment);
+            // else
+            //     ProceedToInvestment();
+            ProceedToInvestment();
         }
 
         void BeginSetup()
@@ -420,7 +422,9 @@ public class DevelopmentManager : MonoBehaviour
 
             _tickTimesMap[employee.id] = times;
             _tickIndexMap[employee.id] = 0;
-            bool empOvertime = employee.isOvertimeWorker || IsOvertimeMode || IsVoluntaryOvertimeActive;
+            // 야근모드 비활성화 — 어떤 조건에서도 야근 전용 확률표가 적용되지 않는다.
+            // bool empOvertime = employee.isOvertimeWorker || IsOvertimeMode || IsVoluntaryOvertimeActive;
+            bool empOvertime = false;
             int[] order = BuildTickOrder(tickCount, empOvertime, employee.EffectiveCreativitySkill, rng);
             if (forceCreativityTick && isFirstEmployee)
             {
@@ -472,10 +476,13 @@ public class DevelopmentManager : MonoBehaviour
     {
         // 0:잭팟, 1:성공, 2:창의성, 3:버그, 4:꽝  (stat = 창의성 스탯)
         // 일반: 잭팟 10%, 성공 28.5%, 버그 25%, 창의성 = 0.15 + 0.05×C, 꽝 = 나머지(= 0.365 - 창의성)
-        // 야근: 잭팟 15%, 성공 35%,   버그 25%, 창의성 = 0.15 + 0.05×C, 꽝 = 나머지(= 0.25  - 창의성)
         // C(창의성 계수) = (창의성스탯 - 17.5) / 707.5, [0,1] 클램프
-        float jackpotP = overtime ? 0.15f : 0.10f;
-        float successP = overtime ? 0.35f : 0.285f;
+        // 야근모드 비활성화 — overtime 파라미터는 항상 false로 들어오므로 아래 야근 전용 확률(잭팟 15%,
+        // 성공 35%)은 더 이상 적용되지 않는다.
+        // float jackpotP = overtime ? 0.15f : 0.10f;
+        // float successP = overtime ? 0.35f : 0.285f;
+        float jackpotP = 0.10f;
+        float successP = 0.285f;
         float bugP     = 0.25f;
         float creativityC = Mathf.Clamp01((stat - 17.5f) / 707.5f);
         float creativityP = 0.15f + 0.05f * creativityC;
@@ -515,12 +522,7 @@ public class DevelopmentManager : MonoBehaviour
         CurrentStage = ProjectStage.Developing;
         _isRunning = true;
         OfficeManager.Instance?.SetAllWorking();
-        OfficeManager.Instance?.StopDevelopmentPatrol(); // patrol 중이던 직원 즉시 데스크 복귀
-        if (!_patrolStarted)
-        {
-            _patrolStarted = true;
-            // OfficeManager.Instance?.StartDevelopmentPatrol(); // 개발 중 자동 랜덤 patrol — 일단 비활성
-        }
+        OfficeManager.Instance?.StopDevelopmentPatrol(); // patrol 중이던 직원 즉시 데스크 복귀 — 개발 중엔 배경 patrol 없음
 
         while (_elapsed < developmentDuration)
         {
@@ -1164,6 +1166,14 @@ public class DevelopmentManager : MonoBehaviour
     // 딱 99대(오버플로 직전)로 맞아떨어져 "무려 99라니"/"심장 아프다" 대사와 일치.
     static readonly int[] TutorialFixedRound123U_Dev = { 8, 10, 12 };
 
+    // 온보딩 튜토리얼(20-1/20-2, 2번째 프로젝트 기획팀장) 전용 고정 U — M=1.35 강제 전제.
+    // ds1=11+10×1.35=24.5, ds2=11+12×1.35=27.20, ds3=11+14×1.35=29.90 → cumDs3=81.6.
+    // 4회차는 SelectRound4Aim에서 조준(약/중/강) 무관하게 U=6 고정 → ds4=11+6×1.35=19.10 →
+    // 누적 100.7 > 100, 화면 표시(RoundToInt)는 101 → "어... 101...?" 대사와 정확히 맞아떨어짐.
+    // ⚠️ 1사이클(TutorialFixedRound123U, !Tutorial7Done)과는 완전히 별개 — 이건 completedProjects.Count==1
+    // (=2번째 프로젝트 진행 중)로만 판정해 혼동되지 않는다.
+    static readonly int[] TutorialFixedRound123U_Cycle2 = { 10, 12, 14 };
+
     // ── 테스트 전용 진입점 ──────────────────────────────────────
     // 프로젝트 진행 상태(개발 단계/기여도/저장)에 전혀 영향 없이 팀장점수 연출만 실행해본다.
     // 4회차까지 끝나도 저장이나 DevelopmentPanelUI 반영이 일절 일어나지 않고 그냥 패널만 닫힌다.
@@ -1193,8 +1203,11 @@ public class DevelopmentManager : MonoBehaviour
         // 적용되고 7-1~7-6/9-1~9-3 훅이 그대로 타도록(프로젝트/실제 팀장 배정 없이 내용만 미리 확인 가능).
         bool tutorialFixedRolls    = type == LeaderType.Planner    && !OnboardingState.Tutorial7Done;
         bool tutorialFixedRollsDev = type == LeaderType.Programmer && !OnboardingState.Tutorial9Done;
+        bool tutorialFixedRollsCycle2 = type == LeaderType.Planner
+            && CompletedProjectManager.Instance != null && CompletedProjectManager.Instance.completedProjects.Count == 1
+            && !OnboardingState.Tutorial20Done;
         int stage = RollLeaderStage(employee.enhancementLevel);
-        float M = tutorialFixedRollsDev ? 1.35f : LeaderStageM[stage - 1];
+        float M = (tutorialFixedRollsDev || tutorialFixedRollsCycle2) ? 1.35f : LeaderStageM[stage - 1];
         float K = 0.8738f + 0.026409f * Mathf.Pow(skill, 0.9081f);
         bool lazyGenius = type == LeaderType.Programmer && CharacterTraitApplier.HasLazyGeniusOwned();
         if (lazyGenius) K *= CharacterTraitApplier.LAZY_GENIUS_LEADER_BONUS;
@@ -1214,8 +1227,9 @@ public class DevelopmentManager : MonoBehaviour
 
         for (int r = 0; r < 3; r++)
         {
-            int roll = tutorialFixedRolls    ? TutorialFixedRound123U[r]
-                     : tutorialFixedRollsDev ? TutorialFixedRound123U_Dev[r]
+            int roll = tutorialFixedRolls        ? TutorialFixedRound123U[r]
+                     : tutorialFixedRollsDev     ? TutorialFixedRound123U_Dev[r]
+                     : tutorialFixedRollsCycle2  ? TutorialFixedRound123U_Cycle2[r]
                      : UnityEngine.Random.Range(1, LeaderDsMaxRoll[r] + 1);
             float ds = 11f + roll * M;
             cumDs += ds;
@@ -1263,6 +1277,8 @@ public class DevelopmentManager : MonoBehaviour
                 LeaderScoreUI.Instance.ShowPendingRound4(employee, type, fullRoundScores, roundScores, cumDsAfter, testMode: true);
                 if (tutorialFixedRollsDev && TutorialController.Instance != null)
                     TutorialController.Instance.StartCoroutine(TutorialController.Instance.PlayTutorial9_1());
+                if (tutorialFixedRollsCycle2 && TutorialController.Instance != null)
+                    TutorialController.Instance.StartCoroutine(TutorialController.Instance.PlayTutorial20());
             }
             return;
         }
@@ -1323,10 +1339,17 @@ public class DevelopmentManager : MonoBehaviour
             // enhancementLevel<=8이면 RollLeaderStage가 어차피 결정적으로 1(=1.35)을 반환하지만(신규
             // 미강화 팀장이 실제로도 이 경로), 혹시 모를 강화된 팀장 대비 명시적으로 강제.
             bool tutorialFixedRollsDev = type == LeaderType.Programmer && !OnboardingState.Tutorial9Done;
+            // 온보딩 튜토리얼(20-1/20-2) 전용 — 2번째 프로젝트(completedProjects.Count==1)의 기획팀장
+            // 첫 팀장점수 화면이 아직 안 끝났으면 1~3회차 U를 TutorialFixedRound123U_Cycle2로 고정
+            // + M도 1.35로 강제. 1사이클(tutorialFixedRolls, !Tutorial7Done)과는 completedProjects.Count로
+            // 완전히 구분되므로 서로 혼동되지 않는다.
+            bool tutorialFixedRollsCycle2 = type == LeaderType.Planner
+                && CompletedProjectManager.Instance != null && CompletedProjectManager.Instance.completedProjects.Count == 1
+                && !OnboardingState.Tutorial20Done;
 
             // 강화도(성수) 기반 단계 추첨 → 추천가중치 M
             int stage = RollLeaderStage(employee.enhancementLevel);
-            float M = tutorialFixedRollsDev ? 1.35f : LeaderStageM[stage - 1];
+            float M = (tutorialFixedRollsDev || tutorialFixedRollsCycle2) ? 1.35f : LeaderStageM[stage - 1];
 
             // K(능력치) = 0.8738 + 0.026409 × 주스탯^0.9081
             float K = 0.8738f + 0.026409f * Mathf.Pow(skill, 0.9081f);
@@ -1354,8 +1377,9 @@ public class DevelopmentManager : MonoBehaviour
 
             for (int r = 0; r < 3; r++)
             {
-                int roll = tutorialFixedRolls    ? TutorialFixedRound123U[r]
-                         : tutorialFixedRollsDev ? TutorialFixedRound123U_Dev[r]
+                int roll = tutorialFixedRolls        ? TutorialFixedRound123U[r]
+                         : tutorialFixedRollsDev     ? TutorialFixedRound123U_Dev[r]
+                         : tutorialFixedRollsCycle2  ? TutorialFixedRound123U_Cycle2[r]
                          : UnityEngine.Random.Range(1, LeaderDsMaxRoll[r] + 1); // 1~상한 정수
                 float ds = 11f + roll * M;
                 cumDs += ds;
@@ -1428,6 +1452,11 @@ public class DevelopmentManager : MonoBehaviour
                     // 선택지별 반응을 이어간다). 재접속 재개도 이 경로를 다시 타므로 자연히 커버됨.
                     if (type == LeaderType.Programmer && !OnboardingState.Tutorial9Done && TutorialController.Instance != null)
                         TutorialController.Instance.StartCoroutine(TutorialController.Instance.PlayTutorial9_1());
+                    // 온보딩 튜토리얼 20-1/20-2 — 2번째 프로젝트 기획팀장 한정, 아직 완료 전이면 유저가
+                    // 조준(약/중/강)을 자유롭게 고르게 두고(9단계와 달리 힌트 대사도 없음), SelectRound4Aim이
+                    // U=6으로 강제해 반드시 burst가 나온 뒤 그 결과만 여기서 대기했다가 반응 대사를 띄운다.
+                    if (tutorialFixedRollsCycle2 && TutorialController.Instance != null)
+                        TutorialController.Instance.StartCoroutine(TutorialController.Instance.PlayTutorial20());
                 }
                 return;
             }
@@ -1521,6 +1550,14 @@ public class DevelopmentManager : MonoBehaviour
             // 7-x 전용 — 약/중은 잠겨있어 "강"만 선택 가능. 1~3회차(TutorialFixedRound123U={7,9,11})와
             // 마찬가지로 U를 그 범위 최댓값(16)으로 고정해 4회차까지 완전히 결정적으로 burst 확정.
             U = 16;
+        }
+        else if (ctx.type == LeaderType.Planner && CompletedProjectManager.Instance != null
+                 && CompletedProjectManager.Instance.completedProjects.Count == 1 && !OnboardingState.Tutorial20Done)
+        {
+            // 20-1/20-2 전용 — 7-x와 달리 약/중/강을 잠그지 않고 자유 선택하게 두되, 어떤 걸 고르든
+            // U=6으로 고정(cumDs3=81.6 + ds4=19.10 = 100.7 > 100, 표시값 101)해 항상 burst가 나오게
+            // 한다 — "골랐던 조준과 무관하게 운이 나빴다"는 20-2 대사 및 "어... 101...?"과 정확히 일치.
+            U = 6;
         }
         else
         {
@@ -1634,7 +1671,18 @@ public class DevelopmentManager : MonoBehaviour
             IsPendingLeaderSelect = false; // 저장 직전에 펜딩 해제 (재시작 시 재선택 방지)
             _isRunning = true;
             CurrentStage = ProjectStage.Developing;
+            // 온보딩 18-4에서 걸어둔 하드락 해제 — 이걸 ForceStartTime()보다 먼저 풀어야 실제로 재개된다
+            // (잠겨있는 동안은 ForceStartTime()을 불러도 _isRunning이 안 켜짐).
+            GameTimeManager.Instance.UnlockTime();
             GameTimeManager.Instance.ForceStartTime();
+            // 온보딩 18-4 종료 후 "시간은 멈춰있지만 직원은 계속 움직이게" 걸어뒀던 플래그 — 어차피
+            // ForceStartTime()으로 시간 자체는 정상 재개되지만, 이 세션 전용 플래그는 명시적으로 꺼서
+            // 나중에 진짜 시간정지가 걸릴 때 실수로 계속 이동을 허용해버리는 일이 없게 정리한다.
+            GameTimeManager.Instance.AllowMovementWhileStopped = false;
+            // OnboardingState.TutorialActive의 세션 플래그(_tutorialActiveFlag)도 여기서 꺼야 한다 —
+            // 안 그러면 19-1이 걸어둔 true가 그대로 남아 MenuController.OnTimeStopChanged가 이후 모든
+            // 정상 모달(채용/직원목록 등)의 시간정지에도 메뉴를 계속 숨기지 않게 되는 회귀 버그가 생긴다.
+            OnboardingState.TutorialActive = false;
             Debug.Log("팀장점수완료 저장");
 
             // 게으른 천재: 첫 팀장(기획) 선정 직후 1회 — 기간 +2주 / 캐릭터 감속 4주(연장의 2배)
@@ -2112,7 +2160,9 @@ public class DevelopmentManager : MonoBehaviour
         _tickTimesMap[empId] = times;
         _tickIndexMap[empId] = 0;
         var empData = EmployeeManager.Instance.ownedEmployees.Find(e => e.id == empId);
-        bool empOvertime = (empData?.isOvertimeWorker ?? false) || IsOvertimeMode || IsVoluntaryOvertimeActive;
+        // 야근모드 비활성화 — 어떤 조건에서도 야근 전용 확률표가 적용되지 않는다.
+        // bool empOvertime = (empData?.isOvertimeWorker ?? false) || IsOvertimeMode || IsVoluntaryOvertimeActive;
+        bool empOvertime = false;
         int empCreativity = empData?.EffectiveCreativitySkill ?? 0;
         _tickOrderMap[empId] = BuildTickOrder(tickCount, empOvertime, empCreativity, rng);
     }
@@ -2315,14 +2365,18 @@ public class DevelopmentManager : MonoBehaviour
         _leaderArtBonusTotal      = 0f;
         BugPenalty = 0f;
         BugEventBonus = 0f;
-        _patrolStarted = false;
         _progressVisualOffset = 0f;
         _progressOffsetElapsedAtEvent = 0f;
         _progressOffsetExtension = 0f;
         _characterSlowEndElapsed = 0f;
         if (_characterSlowCoroutine != null) { StopCoroutine(_characterSlowCoroutine); _characterSlowCoroutine = null; }
         OfficeManager.Instance?.SetCharacterSpeedMultiplier(1f);
-        OfficeManager.Instance?.StopDevelopmentPatrol();
+        // ⚠️ 예전엔 여기서 StopDevelopmentPatrol()을 불렀는데, CurrentStage를 바로 위에서 None(=개발
+        // 중 아님)으로 만들면서 정작 배경 patrol 스케줄러를 꺼버리는 모순이 있었다 — 이후 아무도 다시
+        // 켜주지 않아 판매 완료 직후(17-x~20 대기 구간 포함)부터 다음 프로젝트가 시작되기 전까지
+        // 배경 patrol이 계속 죽어있는 버그의 원인이었음. ResetProject는 "개발 중이 아닌 상태로
+        // 되돌리는" 함수이므로 ResumeIdlePatrol()이 맞다.
+        OfficeManager.Instance?.ResumeIdlePatrol();
 
         plannerLeader = null;
         programmerLeader = null;
@@ -2351,8 +2405,9 @@ public class DevelopmentManager : MonoBehaviour
         ProjectSetupUI.SelectedGenre = default;
         ProjectSetupUI.SelectedPlatform = default;
 
-        IsVoluntaryOvertimeActive = false;
-        IsOvertimeMode            = false;
+        // 야근모드 비활성화 — 관련 필드 자체를 주석 처리했으므로 리셋 대상에서도 제외.
+        // IsVoluntaryOvertimeActive = false;
+        // IsOvertimeMode            = false;
         foreach (var emp in EmployeeManager.Instance.ownedEmployees)
             emp.isOvertimeWorker = false;
         // ForceStartTime 은 stopCount 를 0으로 강제해 다른 모달(직원리스트 등)의 StopTime 등록까지
