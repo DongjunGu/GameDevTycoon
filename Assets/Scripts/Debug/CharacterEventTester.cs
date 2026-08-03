@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -43,11 +44,21 @@ public class CharacterEventTester : MonoBehaviour
         ("hunsu_01",     "훈수쟁이 (약점극복)"),
     };
 
+    // MCP 등 외부에서 버튼 클릭 없이 16-1 테스트를 트리거하기 위한 훅 — 인스펙터/스크립트로 true를 찍으면
+    // 다음 프레임에 QuickTest16_1()이 실행되고 자동으로 false로 되돌아간다.
+    public bool debugTrigger16_1 = false;
+
     void Update()
     {
         // New Input System (activeInputHandler=1) — UnityEngine.Input 은 예외 발생하므로 Keyboard.current 사용.
         var kb = UnityEngine.InputSystem.Keyboard.current;
         if (kb != null && kb.f9Key.wasPressedThisFrame) _open = !_open;
+
+        if (debugTrigger16_1)
+        {
+            debugTrigger16_1 = false;
+            QuickTest16_1();
+        }
     }
 
     void OnGUI()
@@ -180,6 +191,8 @@ public class CharacterEventTester : MonoBehaviour
         if (GUILayout.Button("7-1~7-6 지금 바로 테스트 (기획팀장, 아무 직원)")) QuickTestLeaderTutorial(7, LeaderType.Planner);
         if (GUILayout.Button("9-1~9-3 지금 바로 테스트 (개발팀장, 아무 직원)")) QuickTestLeaderTutorial(9, LeaderType.Programmer);
         GUILayout.EndHorizontal();
+        if (GUILayout.Button("16-1만 지금 바로 테스트 (다른 단계 전부 완료 처리 + SalesUI 강제 오픈 + 그래프 애니메이션)")) QuickTest16_1();
+        if (GUILayout.Button("2사이클 시작 (1~16 완료 처리 + 17-1부터)")) JumpToCycle2();
 #endif
 
         GUILayout.Space(6);
@@ -230,6 +243,80 @@ public class CharacterEventTester : MonoBehaviour
         var e = EmployeeManager.Instance?.ownedEmployees.Count > 0 ? EmployeeManager.Instance.ownedEmployees[0] : null;
         if (e != null) DevelopmentManager.Instance?.TestLeaderScore(e, type);
         else Set("보유 직원이 없음");
+    }
+
+    // 16-1 전용 테스트 — 다른 온보딩 단계/진행 상태(이전에 뭘 완료했는지, 완료된 프로젝트가 있는지 등)와
+    // 전혀 무관하게 16-1 대사 + SalesUI 그래프만 강제로 띄운다. SalesUI는 더미 데이터로 직접 오픈하고,
+    // 16-1 대사는 TutorialController.Instance.PlayTutorial16_1()을 우리 쪽 코루틴으로 직접 실행한다
+    // (TriggerTutorial16_1()을 거치지 않으므로 Tutorial16_1Done 여부와 무관하게 항상 재생됨).
+    // ⚠️ 실제 튜토리얼 진행 중(아직 16-1을 실제로 통과 안 한 세이브)일 때 이 테스트가 Done 플래그를
+    // 영구히 찍어버리면 나중에 진짜 16-1이 와야 할 때 스킵되는 사고가 남 — 그래서 대사 재생 "중"에만
+    // 임시로 Done을 켜(SalesUI 내부 자연 트리거와 중복 방지) 두고, 재생이 끝나면 원래 상태였던 게
+    // false였을 경우 다시 false로 원복한다("실제로 완료됐다"는 표시는 나중에 진짜 완료될 때 남긴다).
+    void QuickTest16_1()
+    {
+        if (TutorialController.Instance == null) { Set("TutorialController 인스턴스 없음 (씬에 없거나 이미 파괴됨)"); return; }
+        if (SalesUI.Instance == null) { Set("SalesUI 인스턴스 없음 (인게임에서 실행하세요)"); return; }
+
+        StartCoroutine(RunQuickTest16_1());
+    }
+
+    IEnumerator RunQuickTest16_1()
+    {
+        bool wasDone = OnboardingState.Tutorial16_1Done;
+        OnboardingState.MarkTutorial16_1Done(); // 대사 재생 동안만 임시로 켬 — SalesUI 내부 자연 트리거 중복 방지
+
+        SalesUI.Instance.ShowWithProjectName(
+            qualityScore: 70f, scale: ProjectScale.Small, projectName: "[테스트] 16-1",
+            cachedScale: ProjectScale.Small, cachedGenre: ProjectGenre.RPG, cachedPlatform: ProjectPlatform.PC,
+            planning: 50f, develop: 50f, art: 50f, creativity: 50f, bug: 0f);
+
+        // 실제 개발완료 흐름(DevelopmentResultUI)과 동일하게, 마케팅→판매 직전 랜덤 2인 patrol도 그대로 재현.
+        if (DevelopmentManager.Instance != null)
+        {
+            OfficeManager.Instance?.TriggerDevelopmentCompletePatrol(
+                DevelopmentManager.Instance.developCompletePatrolPointA,
+                DevelopmentManager.Instance.developCompletePatrolPointB);
+        }
+
+        Set("SalesUI 테스트 오픈 + 16-1 튜토리얼 대사 재생 중 + 개발완료 patrol 2인 재현...");
+        yield return StartCoroutine(TutorialController.Instance.PlayTutorial16_1());
+
+        if (!wasDone)
+        {
+            OnboardingState.ResetTutorial16_1();
+            Set("16-1 테스트 종료 — 실제 진행 상황 보존을 위해 Done 플래그 원복함");
+        }
+        else
+        {
+            Set("16-1 테스트 종료");
+        }
+    }
+
+    // 튜토리얼 사이클 구분 테스트용 — 1사이클(1~16)을 전부 완료 처리하고 곧바로 2사이클의 첫 단계인
+    // 17-1을 재생한다. 16-1과 달리 여기서는 완료 처리를 원복하지 않는다 — "1사이클을 끝내고 2사이클로
+    // 넘어간 상태"를 실제로 만드는 게 이 버튼의 목적이라 Done이 영구히 남는 게 맞다.
+    void JumpToCycle2()
+    {
+        JumpToOnboardingStep(13); // 1~12단계 완료 처리
+        OnboardingState.MarkTutorial13Done();
+        OnboardingState.MarkTutorial13_4Done();
+        OnboardingState.MarkTutorial13_5Done();
+        OnboardingState.MarkTutorial14_1Done();
+        OnboardingState.MarkTutorial15Done();
+        OnboardingState.MarkTutorial16_1Done();
+        // 이전 테스트에서 이미 17-x가 전부(또는 일부) 완료 처리됐을 수 있음 — 그러면 각 자연 트리거의
+        // !TutorialXDone 체크가 안 걸려서 해당 단계가 다시 안 뜬다. 17-x 이후는 전부 매번 다시 볼 수
+        // 있도록 여기서 통째로 원복해둔다(18-1은 17-8/17-9가 실제로 해제하는 콘텐츠라 함께 원복).
+        OnboardingState.ResetTutorial17_1();
+        OnboardingState.ResetTutorial17_2();
+        OnboardingState.ResetTutorial17_7();
+        OnboardingState.ResetTutorial18_1();
+
+        if (TutorialController.Instance == null) { Set("TutorialController 인스턴스 없음 (씬에 없거나 이미 파괴됨)"); return; }
+
+        TutorialController.Instance.StartCoroutine(TutorialController.Instance.PlayTutorial17_1());
+        Set("1사이클(1~16) 완료 처리 + 17-1 튜토리얼 대사 강제 재생 (2사이클 시작)");
     }
 
     // ── 채용 ──

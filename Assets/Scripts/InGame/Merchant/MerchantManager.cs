@@ -58,6 +58,7 @@ public class MerchantManager : MonoBehaviour
     public string GetItemsString() => string.Join(",", _scheduledItems);
 
     OfficeCharacter _activeMerchant;
+    public OfficeCharacter ActiveMerchant => _activeMerchant; // 온보딩 튜토리얼(17-6)이 캐릭터 강조에 사용
     Coroutine _arrivalCo;
 
     void Awake()
@@ -146,9 +147,15 @@ public class MerchantManager : MonoBehaviour
     }
 
     // 디버그 강제 트리거 — 스케줄/방문 플래그 무관하게 즉시 방문 시작.
-    public void TestVisit()
+    // forcedItemIds 를 넘기면 RollItems() 대신 그 목록을 순서 그대로 진열한다(튜토리얼 17-6 등).
+    public void TestVisit(List<string> forcedItemIds = null)
     {
         if (_arrivalCo != null) { StopCoroutine(_arrivalCo); _arrivalCo = null; }
+        if (forcedItemIds != null)
+        {
+            _scheduledItems.Clear();
+            _scheduledItems.AddRange(forcedItemIds);
+        }
         TriggerVisit();
     }
 
@@ -171,6 +178,8 @@ public class MerchantManager : MonoBehaviour
         }
 
         if (_visitedYear == y) return; // 이미 이 해에 방문함
+        // 온보딩 튜토리얼 진행 중엔 자동 방문을 끄고, 특정 구간에서 TestVisit()으로 수동 호출한다.
+        if (RunStateManager.Instance != null && RunStateManager.Instance.IsTutorial) return;
         if (m == _scheduledMonth && w == _scheduledWeek)
             TriggerVisit();
     }

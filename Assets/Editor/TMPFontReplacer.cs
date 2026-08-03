@@ -13,6 +13,7 @@ public class TMPFontReplacer : EditorWindow
 
     TMP_FontAsset oldFont;
     TMP_FontAsset newFont;
+    Material newMaterial;
     bool alsoSetDefaultFont = true;
 
     TMP_FontAsset filterTargetFont;
@@ -30,6 +31,7 @@ public class TMPFontReplacer : EditorWindow
 
         oldFont = (TMP_FontAsset)EditorGUILayout.ObjectField("Old Font (바꿀 대상)", oldFont, typeof(TMP_FontAsset), false);
         newFont = (TMP_FontAsset)EditorGUILayout.ObjectField("New Font (바뀔 결과)", newFont, typeof(TMP_FontAsset), false);
+        newMaterial = (Material)EditorGUILayout.ObjectField("New Material (선택, 비우면 머티리얼은 안 건드림)", newMaterial, typeof(Material), false);
         alsoSetDefaultFont = EditorGUILayout.Toggle("TMP Settings 기본 폰트도 변경", alsoSetDefaultFont);
 
         EditorGUILayout.Space();
@@ -37,7 +39,7 @@ public class TMPFontReplacer : EditorWindow
         using (new EditorGUI.DisabledScope(oldFont == null || newFont == null))
         {
             if (GUILayout.Button("교체 실행", GUILayout.Height(30)))
-                Run(oldFont, newFont, alsoSetDefaultFont);
+                Run(oldFont, newFont, newMaterial, alsoSetDefaultFont);
         }
 
         if (oldFont != null && newFont != null && oldFont == newFont)
@@ -75,7 +77,7 @@ public class TMPFontReplacer : EditorWindow
         Debug.Log($"[TMPFont] {font.name} 아틀라스 텍스처 {changed}개 Filter Mode → Point");
     }
 
-    static void Run(TMP_FontAsset oldFont, TMP_FontAsset newFont, bool alsoSetDefaultFont)
+    static void Run(TMP_FontAsset oldFont, TMP_FontAsset newFont, Material newMaterial, bool alsoSetDefaultFont)
     {
         // 현재 열린 씬 먼저 저장 (작업 손실 방지)
         EditorSceneManager.SaveOpenScenes();
@@ -98,7 +100,11 @@ public class TMPFontReplacer : EditorWindow
             bool changed = false;
             foreach (var t in root.GetComponentsInChildren<TMP_Text>(true))
             {
-                if (t.font == oldFont) { t.font = newFont; changed = true; prefabComps++; }
+                if (t.font != oldFont) continue;
+                t.font = newFont;
+                if (newMaterial != null) t.fontSharedMaterial = newMaterial;
+                changed = true;
+                prefabComps++;
             }
             if (changed) { PrefabUtility.SaveAsPrefabAsset(root, path); prefabFiles++; }
             PrefabUtility.UnloadPrefabContents(root);
@@ -123,7 +129,13 @@ public class TMPFontReplacer : EditorWindow
             bool changed = false;
             foreach (var rootGo in scene.GetRootGameObjects())
                 foreach (var t in rootGo.GetComponentsInChildren<TMP_Text>(true))
-                    if (t.font == oldFont) { t.font = newFont; changed = true; sceneComps++; }
+                {
+                    if (t.font != oldFont) continue;
+                    t.font = newFont;
+                    if (newMaterial != null) t.fontSharedMaterial = newMaterial;
+                    changed = true;
+                    sceneComps++;
+                }
 
             if (changed)
             {

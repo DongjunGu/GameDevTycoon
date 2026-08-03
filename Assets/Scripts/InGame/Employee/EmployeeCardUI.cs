@@ -135,7 +135,9 @@ public class EmployeeCardUI : MonoBehaviour
     }
 
     // 아이템/강화 버튼 — 튜토리얼 18-1 완료 전까지 interactable=false + LockBG 활성.
-    void ApplyItemTrainingLock()
+    // public — 온보딩 튜토리얼(17-8)이 MarkTutorial18_1Done() 직후 이미 열려있는 카드의 잠금 상태를
+    // 즉시 재적용시킬 때 호출한다(Show()를 다시 타지 않고 잠금 UI만 갱신).
+    public void ApplyItemTrainingLock()
     {
         bool locked = !OnboardingState.Tutorial18_1Done;
 

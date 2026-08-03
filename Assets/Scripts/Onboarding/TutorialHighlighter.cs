@@ -173,6 +173,11 @@ public class TutorialHighlighter : MonoBehaviour
         }
 
         yield return MoveOrAppear(target.transform as RectTransform);
+        // ⚠️ BeginHighlight() 직후(Hide() 없이) 곧바로 Highlight()를 호출하는 시퀀스(예: 17-4→17-5)에서,
+        // 이전 펄스를 안 멈추고 새 펄스만 시작하면 _pulse 필드가 새 펄스로 덮어써지면서 이전 펄스가
+        // 고아로 남아 그 자리(예: enhancementPanel)에 하이라이트가 영원히 남는 버그가 있었다 — 반드시
+        // 여기서도 BeginHighlight와 동일하게 먼저 멈춰야 한다.
+        StopAnyPulse();
         var myPulse = StartPulse(PulseHole(target.transform as RectTransform));
 
         bool clicked = false;
@@ -224,6 +229,7 @@ public class TutorialHighlighter : MonoBehaviour
         }
 
         yield return MoveOrAppear(visualTarget);
+        StopAnyPulse(); // Highlight()와 동일한 이유 — 직전 BeginHighlight 펄스가 고아로 남지 않도록.
         var myPulse = StartPulse(PulseHole(visualTarget));
 
         bool clicked = false;

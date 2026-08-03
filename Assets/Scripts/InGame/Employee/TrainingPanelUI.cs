@@ -192,8 +192,15 @@ public class TrainingPanelUI : MonoBehaviour
     {
         if (_selected == null || EmployeeEnhancement.IsMax(_selected)) return;
 
+        // 온보딩 튜토리얼 17-2~17-6(강화 4연속 강제성공 체험) 전체는 하나의 원자적 구간 — 이 클릭이
+        // 그 구간에 속하면(ForceSuccessRemaining>0, EnhanceOnce가 곧 이 값을 소비하기 전에 캡처) 서버에
+        // 즉시 반영하지 않고 로컬에만 적용해둔다. 도중에 재접속이 끊겨도 서버 상태가 안 바뀐 채로 남아야
+        // TutorialController가 17-1부터 안전하게 재생할 수 있다(중복 골드 차감/소프트락 방지). 실제 반영은
+        // TutorialController.PlayTutorial17_6이 구간 끝에서 한 번에 몰아 저장한다.
+        bool deferSave = EmployeeEnhancement.ForceSuccessRemaining > 0;
+
         int cost = EmployeeEnhancement.GetCost(_selected);
-        if (cost < 0 || !MoneyManager.Instance.SpendGold(cost)) return;
+        if (cost < 0 || !MoneyManager.Instance.SpendGold(cost, saveImmediately: !deferSave)) return;
 
         // 강화 전 수치 스냅샷 (결과 패널 before 표시 + 더미 텍스트 노출 방지)
         int oldLevel = _selected.enhancementLevel;
@@ -202,9 +209,12 @@ public class TrainingPanelUI : MonoBehaviour
 
         var outcome = EmployeeEnhancement.EnhanceOnce(_selected);
 
-        EmployeeManager.Instance.UpdateEmployee(_selected);
-        GameTimeManager.Instance?.SaveGameTime();
-        ProjectSaveManager.Instance?.SaveProject();
+        if (!deferSave)
+        {
+            EmployeeManager.Instance.UpdateEmployee(_selected);
+            GameTimeManager.Instance?.SaveGameTime();
+            ProjectSaveManager.Instance?.SaveProject();
+        }
 
         RefreshDetail();
 
