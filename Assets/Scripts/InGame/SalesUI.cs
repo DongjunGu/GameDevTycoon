@@ -41,6 +41,8 @@ public class SalesUI : MonoBehaviour
     private bool _newProjectStartedDuringSales = false;
     private float _cachedQualityScore;
     private int _completedBarIndex = 0;
+    // 온보딩 16-1 — 1주차 bar 애니메이션이 실제로 끝났는지(>=1) 튜토리얼 코루틴이 폴링할 수 있도록 공개.
+    public int CompletedBarIndex => _completedBarIndex;
     private int _cachedTotalRevenue = 0;
     private int[] _cachedRevenuePerPeriod = null; // 세션 시작 시 동결, 매 SaveSales 호출에 그대로 전달
     private CompletedProjectData _currentSalesProject = null;
@@ -236,7 +238,7 @@ public class SalesUI : MonoBehaviour
                 totalRevenue = savedTotalRevenue;
             // 튜토리얼(첫 프로젝트) 한정 — TutorialRankSequence(1/5/11위)와 짝을 맞춰 실제 공식 대신
             // 총 매출을 12,000G로 고정한다. 주차별 분배(jitter)는 아래 일반 로직 그대로 적용.
-            else if (CompletedProjectManager.Instance != null && CompletedProjectManager.Instance.completedProjects.Count == 0)
+            else if (IsTutorialFirstSale())
             {
                 totalRevenue = 12000;
                 if (RandomEventManager.Instance != null)
@@ -307,9 +309,10 @@ public class SalesUI : MonoBehaviour
         int maxRevenue = 0;
         foreach (var r in revenuePerPeriod) if (r > maxRevenue) maxRevenue = r;
 
-        int adjustedTotalRevenue = 0;
-        foreach (var r in revenuePerPeriod) adjustedTotalRevenue += r;
-        totalRevenueText.text = $"{adjustedTotalRevenue:N0} G";
+        // ⚠️ 패널이 열리자마자 최종 총 매출을 먼저 찍어버리면 안 됨 — bar가 하나도 안 오른 상태에서
+        // 유저가 결과를 미리 봐버리는 스포일러. 초기엔 비워두고, ShowBarsSequentially가 완료 주차는
+        // 즉시/미완료 주차는 bar가 오르는 만큼 값을 채워나간다(1프레임도 안 지나 정상 갱신됨).
+        totalRevenueText.text = "";
 
         // 폴드 잔재 복원 후 활성화
         panelRT.DOKill();
@@ -382,7 +385,7 @@ public class SalesUI : MonoBehaviour
             // 멈추므로(BeginDimTimeStop), 아래 루프들의 GameTimeManager.IsRunning 체크 덕분에 대사가
             // 떠 있는 동안엔 bar 애니메이션/판매 완료가 자동으로 같이 멈춘다.
             if (i == 0 && !OnboardingState.Tutorial16_1Done
-                && CompletedProjectManager.Instance != null && CompletedProjectManager.Instance.completedProjects.Count == 0
+                && IsTutorialFirstSale()
                 && TutorialController.Instance != null)
             {
                 TutorialController.Instance.TriggerTutorial16_1();
@@ -520,12 +523,24 @@ public class SalesUI : MonoBehaviour
     // 튜토리얼(첫 프로젝트, 소형=3주) 한정 — 실제 매출과 무관하게 1주차→2주차→3주차 순위를 이 값으로 고정.
     static readonly int[] TutorialRankSequence = { 1, 5, 11 };
 
+    // ⚠️ completedProjects.Count==0 을 그대로 쓰면 안 됨 — 이번 판매 자신도
+    // CompletedProjectManager.SaveCompletedProject 의 비동기 Insert 콜백이 도착하는 순간(보통 애니메이션이
+    // 몇 주차 진행되기도 전, 네트워크 왕복 정도의 시간)부터 totalRevenue=0인 채로 이미 completedProjects에
+    // 들어가 있다. 그래서 1주차 총매출(12,000G 고정)은 SaveCompletedProject 호출 직후 같은 프레임에 판정돼
+    // 정상 동작하지만, 순위(GetRank)는 애니메이션 도중(수 초 뒤, 이미 콜백이 도착한 뒤) 판정되면서
+    // Count==0이 깨져 매주 실제 공식(CalcRank)으로 새 버렸다 — "총 매출은 고정되는데 순위는 안 먹힘" 버그.
+    // 실제로 판매까지 끝나 매출이 찍힌(totalRevenue>0) 프로젝트만 세고 진행 중인 자기 자신은 항상 제외한다.
+    bool IsTutorialFirstSale()
+    {
+        return CompletedProjectManager.Instance != null
+            && CompletedProjectManager.Instance.completedProjects.FindAll(p => p.totalRevenue > 0).Count == 0;
+    }
+
     // weekIndex(0-based) 기준 순위 — 튜토리얼이면 실제 매출 무시하고 TutorialRankSequence 그대로,
     // 아니면 기존처럼 CalcRank(weeklyRevenue)로 계산.
     int GetRank(int weeklyRevenue, int weekIndex)
     {
-        if (CompletedProjectManager.Instance != null && CompletedProjectManager.Instance.completedProjects.Count == 0
-            && weekIndex >= 0 && weekIndex < TutorialRankSequence.Length)
+        if (IsTutorialFirstSale() && weekIndex >= 0 && weekIndex < TutorialRankSequence.Length)
             return TutorialRankSequence[weekIndex];
         return CalcRank(weeklyRevenue);
     }

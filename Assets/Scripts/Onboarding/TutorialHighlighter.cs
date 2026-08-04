@@ -5,7 +5,7 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
-// 튜토리얼 강조(dim 스포트라이트) 공용 컴포넌트 — TutorialController/ProjectTutorialController 등
+// 튜토리얼 강조(dim 스포트라이트) 공용 컴포넌트 — TutorialController 등
 // 여러 튜토리얼 컨트롤러가 각자 중복 구현하던 dim 구멍뚫기 로직을 여기 하나로 통합.
 // 새 튜토리얼을 만들 때는 이 컴포넌트를 gameObject.AddComponent 로 붙이고 Show()/Highlight()/Hide()만
 // 순서대로 호출하면 된다 — dim 생성/구멍 계산/펄스/페이드/슬라이드 이동은 전부 여기서 처리.
@@ -34,9 +34,20 @@ public class TutorialHighlighter : MonoBehaviour
     [Tooltip("게임 UI/ModalBlocker 보다 위에 그려지도록 하는 dim Canvas sortingOrder")]
     public int dimSortingOrder = 200;
 
+    [Header("클릭 유도 손 아이콘 (선택적)")]
+    [Tooltip("Highlight/BeginHighlight의 showHand=true일 때 표시할 손 스프라이트")]
+    public Sprite handSprite;
+    [Tooltip("손 아이콘에 재생할 애니메이터 컨트롤러(비워두면 애니메이션 없이 정지 이미지)")]
+    public RuntimeAnimatorController handAnimatorController;
+    [Tooltip("손 아이콘 크기(px)")]
+    public Vector2 handSize = new Vector2(81f, 81f);
+    [Tooltip("대상 오른쪽 가장자리로부터 손 아이콘을 추가로 띄우는 여백(px) — 클수록 대상과 덜 겹치고 더 오른쪽에 위치")]
+    public float handOffsetX = 20f;
+
     Canvas _dimCanvas;
     RectTransform _dimRoot;
     readonly List<Image> _tilePool = new(); // 구멍(1개든 여러 개든) 주변을 덮는 dim 타일 풀 — 필요한 만큼만 활성화
+    Image _handImage; // 클릭 유도 손 아이콘 — 단일 인스턴스, showHand 요청 시에만 활성화
     Coroutine _pulse;
 
     // _pulse는 여러 PlayTutorialX() 코루틴이 겹쳐 돌 때(예: 5-4의 Hide 흐름과 6-1의 Show/Highlight 흐름이
@@ -56,6 +67,7 @@ public class TutorialHighlighter : MonoBehaviour
     {
         if (myPulse != null) StopCoroutine(myPulse);
         if (_pulse == myPulse) _pulse = null;
+        HideHand(); // 이 펄스가 showHand로 띄웠을 수 있는 손 아이콘도 함께 정리
     }
 
     // 지금 _pulse에 뭐가 들어있든(누구 세션이든) 무조건 멈춘다 — Hide()/CollapseAndResetOrigin()처럼
@@ -63,6 +75,7 @@ public class TutorialHighlighter : MonoBehaviour
     void StopAnyPulse()
     {
         if (_pulse != null) { StopCoroutine(_pulse); _pulse = null; }
+        HideHand();
     }
     Rect _currentHoleRect;   // 마지막으로 적용된 단일 구멍 위치 — 다음 단일 강조가 여기서부터 이동해감
     bool _holeInitialized;   // 아직 한 번도 강조 안 했으면(첫 대상) 이동 없이 그냥 나타남
@@ -155,7 +168,7 @@ public class TutorialHighlighter : MonoBehaviour
     // 클릭캐처(_holeCatcher)를 dim 캔버스(sortingOrder=dimSortingOrder, 메뉴보다 항상 위) 소속으로 띄워서
     // 해결 — 패딩 클릭도 캐처가 받아 target.onClick으로 그대로 포워딩하고, 캐처 자신이 메뉴보다 위 캔버스에
     // 있어 MenuController의 "외부 클릭=닫기" 판정도 안 탄다(오버레이가 클릭을 가로챈 것으로 인식됨).
-    public IEnumerator Highlight(Button target, bool hideDimOnConfirmedClick = false)
+    public IEnumerator Highlight(Button target, bool hideDimOnConfirmedClick = false, bool showHand = false)
     {
         if (target == null) { Debug.LogWarning($"[TutorialHighlighter] Highlight 대상이 null — 강조 스킵됨(클릭 대기도 영원히 안 걸림)"); yield break; }
 
@@ -178,7 +191,7 @@ public class TutorialHighlighter : MonoBehaviour
         // 고아로 남아 그 자리(예: enhancementPanel)에 하이라이트가 영원히 남는 버그가 있었다 — 반드시
         // 여기서도 BeginHighlight와 동일하게 먼저 멈춰야 한다.
         StopAnyPulse();
-        var myPulse = StartPulse(PulseHole(target.transform as RectTransform));
+        var myPulse = StartPulse(PulseHole(target.transform as RectTransform, showHand));
 
         bool clicked = false;
         UnityEngine.Events.UnityAction cb = () => clicked = true;
@@ -215,7 +228,7 @@ public class TutorialHighlighter : MonoBehaviour
     // 안 건드림). 예: NextCandidateArrow(투명 히트박스, 150x160)보다 실제 화살표 이미지인
     // NextCandidateArrowImage(54x108)가 훨씬 작아서, 히트박스 전체가 아니라 눈에 보이는 이미지 크기에
     // 딱 맞춰 강조하고 싶을 때.
-    public IEnumerator HighlightWithAction(RectTransform visualTarget, Button actionButton)
+    public IEnumerator HighlightWithAction(RectTransform visualTarget, Button actionButton, bool showHand = false)
     {
         if (visualTarget == null || actionButton == null)
         {
@@ -230,7 +243,7 @@ public class TutorialHighlighter : MonoBehaviour
 
         yield return MoveOrAppear(visualTarget);
         StopAnyPulse(); // Highlight()와 동일한 이유 — 직전 BeginHighlight 펄스가 고아로 남지 않도록.
-        var myPulse = StartPulse(PulseHole(visualTarget));
+        var myPulse = StartPulse(PulseHole(visualTarget, showHand));
 
         bool clicked = false;
         UnityEngine.Events.UnityAction cb = () => clicked = true;
@@ -284,13 +297,13 @@ public class TutorialHighlighter : MonoBehaviour
 
     // target을 강조한 채로 "유지"하고 즉시 반환(클릭/시간 대기 없음) — 호출부가 그동안 TutorialPanel 대사 등
     // 다른 걸 진행하고, 다 끝나면 Hide() 또는 다음 BeginHighlight로 넘어가면 된다. 이전 대상에서 슬라이드 이동.
-    public IEnumerator BeginHighlight(RectTransform target)
+    public IEnumerator BeginHighlight(RectTransform target, bool showHand = false)
     {
         if (target == null) { Debug.LogWarning($"[TutorialHighlighter] BeginHighlight 대상이 null — 강조 스킵됨"); yield break; }
         if (!target.gameObject.activeInHierarchy) { Debug.LogWarning($"[TutorialHighlighter] BeginHighlight 대상 '{target.name}'이 비활성(activeInHierarchy=false) — 강조 스킵됨"); yield break; }
         yield return MoveOrAppear(target);
         StopAnyPulse(); // 이전(어느 세션이든) 펄스는 정지 — 이 펄스는 다음 BeginHighlight/Highlight/Hide/CollapseAndResetOrigin이 정리할 때까지 계속 돎
-        StartPulse(PulseHole(target));
+        StartPulse(PulseHole(target, showHand));
     }
 
     // 여러 대상을 동시에 강조한 채로 clickTarget 클릭을 기다린다(슬라이드 없이 바로 나타남). 3-4처럼
@@ -317,12 +330,12 @@ public class TutorialHighlighter : MonoBehaviour
     // world-space 캐릭터(스프라이트, RectTransform 없음) 전용 BeginHighlight — 클릭 대기는 호출부가 별도로
     // 처리한다(캐릭터는 Button이 아니라 OfficeCharacter.OnPointerClick으로 직접 클릭되므로). 나머지 동작
     // (등장/슬라이드/펄스)은 BeginHighlight(RectTransform)와 동일.
-    public IEnumerator BeginHighlightWorld(Transform target)
+    public IEnumerator BeginHighlightWorld(Transform target, bool showHand = false)
     {
         if (target == null) { Debug.LogWarning($"[TutorialHighlighter] BeginHighlightWorld 대상이 null — 강조 스킵됨"); yield break; }
         yield return MoveOrAppearWorld(target);
         StopAnyPulse();
-        StartPulse(PulseHoleWorld(target));
+        StartPulse(PulseHoleWorld(target, showHand));
     }
 
     // ── 내부 공통 구현 ────────────────────────────────────────────────
@@ -377,7 +390,7 @@ public class TutorialHighlighter : MonoBehaviour
         // 정지시키므로, 그때까지 PulseHole이 계속 타일을 다시 켜지 못하게 계속 억제해야 함.
     }
 
-    IEnumerator PulseHole(RectTransform target)
+    IEnumerator PulseHole(RectTransform target, bool showHand = false)
     {
         _dimHiddenForPress = false; // 새 강조 세션 시작 — 이전 press 상태 잔재 제거
         float t = 0f;
@@ -387,11 +400,13 @@ public class TutorialHighlighter : MonoBehaviour
             float pad = highlightHolePadding + highlightPulseAmplitude * Mathf.Sin(t);
             _currentHoleRect = ComputeHoleRect(target, pad);
             if (!_dimHiddenForPress) ApplyHole(_currentHoleRect);
+            // 손 아이콘은 pulse로 흔들리는 구멍이 아니라 대상 원래 크기 기준 고정 위치를 따라간다(패딩 무관, 흔들림 방지).
+            if (showHand) ShowHand(ComputeHoleRect(target, 0f));
             yield return null;
         }
     }
 
-    IEnumerator PulseHoleWorld(Transform target)
+    IEnumerator PulseHoleWorld(Transform target, bool showHand = false)
     {
         float t = 0f;
         while (true)
@@ -400,6 +415,7 @@ public class TutorialHighlighter : MonoBehaviour
             float pad = highlightHolePadding + highlightPulseAmplitude * Mathf.Sin(t);
             _currentHoleRect = ComputeHoleRectWorld(target, pad);
             ApplyHole(_currentHoleRect);
+            if (showHand) ShowHand(ComputeHoleRectWorld(target, 0f));
             yield return null;
         }
     }
@@ -570,6 +586,48 @@ public class TutorialHighlighter : MonoBehaviour
         var rt = (RectTransform)catcher.transform;
         rt.anchoredPosition = new Vector2(hole.xMin - p.xMin, hole.yMin - p.yMin);
         rt.sizeDelta = new Vector2(hole.width, hole.height);
+    }
+
+    // 클릭 유도 손 아이콘 — 대상 rect를 기준으로 pivot(1, 0.5) 지점(오른쪽 가장자리, 세로 중앙)에 위치시킨다.
+    // 대상 자체는 절대 안 건드리며, dim 타일/holeCatcher와 같은 _dimRoot(캔버스 sortingOrder=dimSortingOrder)
+    // 소속이라 항상 dim보다 위에서 보인다.
+    Image EnsureHandImage()
+    {
+        if (_handImage != null) return _handImage;
+
+        var go = new GameObject("TutorialHandImage", typeof(RectTransform), typeof(Image));
+        go.transform.SetParent(_dimRoot, false);
+
+        var rt = (RectTransform)go.transform;
+        rt.anchorMin = Vector2.zero; rt.anchorMax = Vector2.zero; rt.pivot = new Vector2(1f, 0.5f);
+        rt.sizeDelta = handSize;
+
+        var img = go.GetComponent<Image>();
+        img.sprite = handSprite;
+        img.raycastTarget = false; // 시각 안내 전용 — 클릭을 가로채지 않는다
+        img.preserveAspect = true;
+
+        if (handAnimatorController != null)
+            go.AddComponent<Animator>().runtimeAnimatorController = handAnimatorController;
+
+        _handImage = img;
+        go.SetActive(false);
+        return img;
+    }
+
+    // targetRect의 pivot(1, 0.5) 지점(오른쪽 가장자리, 세로 중앙)에 손 아이콘을 배치 + 활성화.
+    void ShowHand(Rect targetRect)
+    {
+        var img = EnsureHandImage();
+        Rect p = _dimRoot.rect;
+        Vector2 point = new Vector2(targetRect.xMax + handOffsetX, targetRect.y + targetRect.height * 0.5f);
+        img.rectTransform.anchoredPosition = new Vector2(point.x - p.xMin, point.y - p.yMin);
+        if (!img.gameObject.activeSelf) img.gameObject.SetActive(true);
+    }
+
+    void HideHand()
+    {
+        if (_handImage != null) _handImage.gameObject.SetActive(false);
     }
 
     // 구멍 없이 dim 전체를 덮은 상태로 되돌림.

@@ -54,10 +54,18 @@ public class QuestUI : MonoBehaviour
             var item = Instantiate(questItemPrefab, questListContent);
 
             var descText = item.transform.Find("DescText").GetComponent<TextMeshProUGUI>();
-            var progressValue = item.transform.Find("ProgressRow/ProgressValueText").GetComponent<TextMeshProUGUI>();
+            var progressRow = item.transform.Find("ProgressRow");
 
-            descText.text = quest.isMainQuest ? $"{quest.description}" : quest.description;
-            progressValue.text = $"{quest.currentValue:N0} / {quest.targetValue:N0}";
+            descText.text = quest.title;
+
+            // 튜토리얼 퀘스트 2종은 진행도(0/1) 노출 안 함 — 나머지는 그대로 표시.
+            bool hideProgress = quest.questId == "tutorial_quest_001" || quest.questId == "tutorial_quest_002";
+            progressRow.gameObject.SetActive(!hideProgress);
+            if (!hideProgress)
+            {
+                var progressValue = progressRow.Find("ProgressValueText").GetComponent<TextMeshProUGUI>();
+                progressValue.text = $"{quest.currentValue:N0} / {quest.targetValue:N0}";
+            }
 
             // 배경 이미지
             var itemImage = item.GetComponent<Image>();

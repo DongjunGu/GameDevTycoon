@@ -410,6 +410,12 @@ public class TutorialController : MonoBehaviour
     [Tooltip("게임씬 진입 후 DialogManager 준비를 기다리는 최대 시간(초). 준비되면 그 즉시 대사 표시.")]
     public float startupTimeout = 5f;
 
+    [Header("클릭 유도 손 아이콘 (TutorialHighlighter 로 전달됨, showHand=true인 단계에서만 표시)")]
+    public Sprite handSprite;
+    public RuntimeAnimatorController handAnimatorController;
+    public Vector2 handSize = new Vector2(81f, 81f);
+    public float handOffsetX = 72f;
+
     TutorialHighlighter _highlighter;
 
     void EnsureHighlighter()
@@ -423,6 +429,10 @@ public class TutorialController : MonoBehaviour
         _highlighter.holeMoveDuration = holeMoveDuration;
         _highlighter.appearExpandPadding = appearExpandPadding;
         _highlighter.appearDuration = appearDuration;
+        _highlighter.handSprite = handSprite;
+        _highlighter.handAnimatorController = handAnimatorController;
+        _highlighter.handSize = handSize;
+        _highlighter.handOffsetX = handOffsetX;
     }
 
     // 지금까지 정의된 모든 튜토리얼 단계가 전부 끝났는지(=온보딩 완전 종료) — 아래 Start()의 자폭 판정과
@@ -619,13 +629,13 @@ public class TutorialController : MonoBehaviour
         }
 
         // ── 2~4) 버튼 순차 강조 ──
-        yield return _highlighter.Highlight(menuButton);
+        yield return _highlighter.Highlight(menuButton, showHand: true);
         yield return new WaitForSecondsRealtime(settleDelay); // 상위 메뉴 펼침
-        yield return _highlighter.Highlight(employeeButton);
+        yield return _highlighter.Highlight(employeeButton, showHand: true);
         yield return new WaitForSecondsRealtime(settleDelay); // 서브 메뉴 펼침
 
         // 1-3: 채용하기 버튼 강조 (TierPanel 진입)
-        yield return _highlighter.Highlight(hireButton, hideDimOnConfirmedClick: true);
+        yield return _highlighter.Highlight(hireButton, hideDimOnConfirmedClick: true, showHand: true);
         yield return new WaitForSecondsRealtime(settleDelay); // 채용 패널(TierPanel) 펼침 — 블러는 이미 밝은 배경으로 캡처됨
 
         // TierPanel이 열리기 전(메뉴 쪽)과 후(패널 안)는 화면상 완전히 다른 위치라 이어서 슬라이드하면 안
@@ -633,10 +643,10 @@ public class TutorialController : MonoBehaviour
         // 나타나게 하고, hireConfirmButton만 tier1Button에서 이어서 슬라이드하게(같은 패널 안이라 자연스러움).
         _highlighter.CollapseAndResetOrigin();
         // 2-1: TierPanel/tier1 강조 (대사 없음, 하이라이트만)
-        yield return _highlighter.Highlight(tier1Button);
+        yield return _highlighter.Highlight(tier1Button, showHand: true);
         yield return new WaitForSecondsRealtime(settleDelay);
         // 2-2: TierPanel/confirmBtn 강조 (대사 없음, 하이라이트만)
-        yield return _highlighter.Highlight(hireConfirmButton);
+        yield return _highlighter.Highlight(hireConfirmButton, showHand: true);
 
         yield return _highlighter.Hide(gen1);
         EndDimTimeStop();
@@ -680,14 +690,14 @@ public class TutorialController : MonoBehaviour
             yield return TutorialPanelUI.Instance.PlayStepGroup(step3_5, step3_5Position);
 
         // 3-5 강조: confirmBtn 강조, 클릭 대기(실제 채용 확정 버튼). 대사 없음.
-        yield return _highlighter.Highlight(confirmHireButton);
+        yield return _highlighter.Highlight(confirmHireButton, showHand: true);
 
         // 3-6: confirmBtn 클릭 시 HiringUI.OnClickConfirmHire()가 동기적으로 띄우는 ConfirmUI
         // ("OO을(를) 채용하시겠습니까?")의 확인("네") 버튼 강조, 클릭 대기. 대사 없음.
         // ConfirmHirePanel과는 완전히 다른 화면(모달 다이얼로그)이라 슬라이드 없이 새로 나타나야 함.
         _highlighter.CollapseAndResetOrigin();
         if (ConfirmUI.Instance != null)
-            yield return _highlighter.Highlight(ConfirmUI.Instance.confirmButton);
+            yield return _highlighter.Highlight(ConfirmUI.Instance.confirmButton, showHand: true);
 
         yield return _highlighter.Hide(gen3);
 
@@ -717,7 +727,7 @@ public class TutorialController : MonoBehaviour
 
         // 4-2 강조: 눈에 보이는 화살표 이미지(NextCandidateArrowImage) 자리를 강조하되, 실제 클릭 동작은
         // 히트박스(NextCandidateArrow)로 — 대표님이 직접 후보를 넘겨보게. 대사 없음.
-        yield return _highlighter.HighlightWithAction(nextCandidateArrowImageRect, nextCandidateButton);
+        yield return _highlighter.HighlightWithAction(nextCandidateArrowImageRect, nextCandidateButton, showHand: true);
 
         yield return _highlighter.Hide(gen4);
         // ⚠️ 여기서 Destroy 안 함 — 두 번째(진짜) 채용이 아직 확정 전이다. 확정 2초 후 HiringUI.DoHire가
@@ -739,11 +749,11 @@ public class TutorialController : MonoBehaviour
         if (TutorialPanelUI.Instance != null)
             yield return TutorialPanelUI.Instance.PlayStepGroup(step5_2, step5_2Position);
 
-        yield return _highlighter.Highlight(menuButton);
+        yield return _highlighter.Highlight(menuButton, showHand: true);
         yield return new WaitForSecondsRealtime(settleDelay); // 메뉴 펼침
-        yield return _highlighter.Highlight(projectSetupButton);
+        yield return _highlighter.Highlight(projectSetupButton, showHand: true);
         yield return new WaitForSecondsRealtime(settleDelay); // ProjectSetupPanel 펼침
-        yield return _highlighter.Highlight(projectStartButton);
+        yield return _highlighter.Highlight(projectStartButton, showHand: true);
         // projectStartBtn 클릭으로 ProjectSetupUI.OnClickProjectStart()가 이미 동기 실행돼 SummaryPanel이
         // 열렸다 — 그 안부터는 ProjectSetupUI 자신이 StopTime/StartTime을 쥐고 있으므로(모달 자체 시간정지)
         // 우리 쪽 시간정지는 여기서 끝내도 된다(계속 멈춰있음).
@@ -791,7 +801,7 @@ public class TutorialController : MonoBehaviour
             yield return TutorialPanelUI.Instance.PlayStepGroup(step5_4, step5_4Position);
 
         // SummaryPanel/ConfirmBtn 강조, 클릭 대기(실제 개발 시작).
-        yield return _highlighter.Highlight(summaryConfirmButton);
+        yield return _highlighter.Highlight(summaryConfirmButton, showHand: true);
 
         // 5-1에서 숨겨뒀던 CloseBtn 복원 — 개발이 시작돼 SummaryPanel이 어차피 닫히지만, 상태 정합성을
         // 위해 명시적으로 되돌려둔다.
@@ -832,7 +842,7 @@ public class TutorialController : MonoBehaviour
         Debug.Log(secondSlotButton != null
             ? $"[TutorialController] PlayTutorial6: 6-1 강조 대상 resolve됨 — name={secondSlotButton.name}, path={GetPath(secondSlotButton.transform)}, activeInHierarchy={secondSlotButton.gameObject.activeInHierarchy}, interactable={secondSlotButton.interactable}"
             : "[TutorialController] PlayTutorial6: secondSlotButton이 null로 resolve됨");
-        yield return _highlighter.Highlight(secondSlotButton);
+        yield return _highlighter.Highlight(secondSlotButton, showHand: true);
 
         // 6-2: planningPanel 강조를 유지한 채로 대사 표시(같은 패널 안이라 슬롯 자리에서 자연스럽게 슬라이드).
         yield return _highlighter.BeginHighlight(planningPanel);
@@ -843,7 +853,7 @@ public class TutorialController : MonoBehaviour
         // 접어야(CollapseAndResetOrigin) 새 Highlight의 pulse와 겹쳐 구멍이 두 자리에서 흔들리지 않는다
         // (3-4→3-5 전환과 동일한 이유).
         _highlighter.CollapseAndResetOrigin();
-        yield return _highlighter.Highlight(dispatchConfirmButton);
+        yield return _highlighter.Highlight(dispatchConfirmButton, showHand: true);
 
         // ⚠️ 이 클릭이 팀장을 확정시켜 곧장 팀장점수 화면(7-1)의 Show()로 이어질 수 있다 — 세대를
         // 명시적으로 넘겨 레이스 방지(5-4→6-1과 동일한 이유, TutorialHighlighter.Hide 주석 참고).
@@ -914,7 +924,7 @@ public class TutorialController : MonoBehaviour
         // 안 겹친다(3-4→3-5, 6-2→6-3과 동일한 이유). 같은 자리라 슬라이드 없이 그대로 다시 나타남.
         _highlighter.CollapseAndResetOrigin();
         if (aimHighButton != null) aimHighButton.interactable = true;
-        yield return _highlighter.Highlight(aimHighButton); // 클릭 → LeaderScoreAimButtons.Select(High) → SelectRound4Aim
+        yield return _highlighter.Highlight(aimHighButton, showHand: true); // 클릭 → LeaderScoreAimButtons.Select(High) → SelectRound4Aim
 
         yield return _highlighter.Hide(gen73);
 
@@ -1058,13 +1068,18 @@ public class TutorialController : MonoBehaviour
         // desk_01 직원 강조 + 클릭(=EmployeeCardUI가 그 직원 카드로 열림) 대기.
         var deskChar = OfficeManager.Instance?.GetCharacterAtDesk(step10_1DeskId);
         string deskEmpId = deskChar != null ? deskChar.employeeId : null;
-        yield return _highlighter.BeginHighlightWorld(deskChar != null ? deskChar.transform : null);
+        yield return _highlighter.BeginHighlightWorld(deskChar != null ? deskChar.transform : null, showHand: true);
 
         bool cardShown = false;
         System.Action<string> onCardShown = id => { if (id == deskEmpId) cardShown = true; };
         if (EmployeeCardUI.Instance != null) EmployeeCardUI.Instance.OnCardShown += onCardShown;
         while (!cardShown) yield return null;
         if (EmployeeCardUI.Instance != null) EmployeeCardUI.Instance.OnCardShown -= onCardShown;
+
+        // 10-2가 끝나고 EndDimTimeStop으로 시간이 재개되면 desk_01 직원이 master_desk로 걸어가는데,
+        // 그동안(AcWar가 뜨기 전까지) 유저가 다른 곳을 터치하면 카드의 바깥클릭-닫기 판정이 다시
+        // 살아나(IsRunningForMovement=true) 카드가 꺼져버린다 — PlayTutorial10_3에서 풀릴 때까지 잠금.
+        EmployeeCardUI.Instance?.LockClose(true);
 
         // 카드가 열리는 즉시 — AcWar 발동을 위해 desk_01 직원을 master_desk로 강제 이동 시작. 지금은 시간이
         // 멈춰있어(BeginDimTimeStop) 실제로는 안 걷다가, 아래 EndDimTimeStop으로 시간이 풀리는 순간부터
@@ -1094,6 +1109,10 @@ public class TutorialController : MonoBehaviour
     // 닫힌 직후 호출) — 만족도의 의미를 설명. winner: 플레이어가 고른 쪽(만족도가 오른 직원).
     public IEnumerator PlayTutorial10_3(EmployeeData winner)
     {
+        // AcWar가 완전히 끝났으니(선택+결과 AlertUI까지 닫힘) 10-1에서 걸어둔 카드 잠금 해제 —
+        // 이 스텝(ecMiddlePanelRect)은 EmployeeCardUI가 아니라 AcWar 결과 UI를 강조하므로 더 이상 불필요.
+        EmployeeCardUI.Instance?.LockClose(false);
+
         EnsureHighlighter();
         BeginDimTimeStop(); // AcWar 확인 흐름이 이미 시간을 재개했으므로 여기서 직접 다시 정지
         yield return _highlighter.Show();
@@ -1352,11 +1371,14 @@ public class TutorialController : MonoBehaviour
         if (TutorialPanelUI.Instance != null)
             yield return TutorialPanelUI.Instance.PlayStepGroup(step15_1, step15_1Position);
 
-        // 15-2 — LeftPanel 두 번째 슬롯 강조 유지.
+        // 15-2 — LeftPanel 두 번째 슬롯 강조. 대사 끝난 뒤에도 사라지지 않고 실제로 클릭할 때까지 유지.
+        Button marketingSecondSlotButton = marketingSecondSlotRect != null ? marketingSecondSlotRect.GetComponent<Button>() : null;
         if (marketingSecondSlotRect != null)
-            yield return _highlighter.BeginHighlight(marketingSecondSlotRect);
+            yield return _highlighter.BeginHighlight(marketingSecondSlotRect, showHand: true);
         if (TutorialPanelUI.Instance != null)
             yield return TutorialPanelUI.Instance.PlayStepGroup(step15_2, step15_2Position);
+        if (marketingSecondSlotButton != null)
+            yield return _highlighter.Highlight(marketingSecondSlotButton, showHand: true);
 
         yield return _highlighter.Hide(gen15);
         EndDimTimeStop();
@@ -1364,13 +1386,15 @@ public class TutorialController : MonoBehaviour
     }
 
     // ── 16-1 (SalesUI — 판매 패널 열리고 1주차 bar 애니메이션 시작, 첫 프로젝트 한정) ──
-    // TutorialPanel이 떠 있는 동안엔 BeginDimTimeStop()으로 게임 시간을 멈춘다 — SalesUI.ShowBarsSequentially의
-    // bar 애니메이션/주차 전환/완료 대기 루프가 전부 이미 GameTimeManager.IsRunning을 체크해서 진행 여부를
-    // 결정하므로, 이 코루틴 내부는 건드릴 필요 없이 바깥에서 시간만 멈추면 SalesUI 쪽도 자연히 같이
-    // 멈춘다(=bar가 안 오르고, 판매도 완료 처리되지 않아 SalesUI가 사라지지 않는다). ⚠️ 예전엔 시간을
-    // 안 멈추고 대사 진행 중에도 bar가 계속 오르게 뒀었는데, 그러면 대사가 끝나기 전에 판매가 먼저
-    // 끝나버려 SalesUI가 자동으로 닫힐 수 있었고 CancelTutorial16_1IfRunning으로 우회 처리했었음 —
-    // 이제 시간을 멈추므로 그 경합 자체가 발생하지 않는다(아래 메서드는 안전망으로 남겨둠).
+    // 2026-08-04 개편: chartBG 강조는 1주차 시작과 동시에 걸되, TutorialPanel 대사("매출 들어오는 속도
+    // 좀 보세요!")는 1주차 bar 가 실제로 다 오른 뒤에 띄운다 — 그래야 대사와 실제로 유저가 본 장면이
+    // 맞아떨어짐. 그래서 시간정지(BeginDimTimeStop)는 대사가 뜨기 직전으로 미뤄졌고, 그 전(1주차 애니메이션
+    // 도중)엔 시간이 정상적으로 흐른다. TutorialPanel이 떠 있는 동안(=대사 구간)만 BeginDimTimeStop()으로
+    // 멈춰 2주차가 먼저 시작되지 않게 막는다 — SalesUI.ShowBarsSequentially가 GameTimeManager.IsRunning을
+    // 체크해서 진행 여부를 결정하므로 여기서 시간만 멈추면 자연히 같이 멈춘다.
+    // ⚠️ 1주차 애니메이션 도중(아직 시간이 흐르는 구간)에 만에 하나 판매가 끝나버려 SalesUI가 자동으로
+    // 닫히는 경우를 대비해 CancelTutorial16_1IfRunning() 안전망은 계속 유지한다(3주 미만 규모가 생기지
+    // 않는 한 실제로 발동할 일은 없음).
     Coroutine _tutorial16_1Co;
 
     // SalesUI가 이 메서드로만 16-1을 트리거해야 코루틴 핸들을 잡아 나중에 취소할 수 있다.
@@ -1382,11 +1406,18 @@ public class TutorialController : MonoBehaviour
     public IEnumerator PlayTutorial16_1()
     {
         EnsureHighlighter();
-        BeginDimTimeStop();
+        // ⚠️ 시간을 아직 멈추지 않는다 — chartBG를 강조한 채로 1주차 bar가 실제로 오르는 걸 보여줘야
+        // "매출 들어오는 속도 좀 보세요!" 대사가 말이 됨(대사가 뜨기도 전에 시간부터 멈춰버리면 유저는
+        // 오르는 걸 못 보고 완성된 결과만 봄).
         yield return _highlighter.Show();
         int gen16_1 = _highlighter.CurrentGeneration;
 
         yield return _highlighter.BeginHighlight(chartBGRect);
+
+        // 1주차 bar 애니메이션이 실제로 끝날 때까지(완료 주차 1) 대기 — 강조는 유지된 채 시간은 계속 흐름.
+        yield return new WaitUntil(() => SalesUI.Instance != null && SalesUI.Instance.CompletedBarIndex >= 1);
+
+        BeginDimTimeStop(); // 이제부터 대사 읽는 동안 2주차가 먼저 시작되지 않도록 시간 정지
         if (TutorialPanelUI.Instance != null)
             yield return TutorialPanelUI.Instance.PlayStepGroup(step16_1, step16_1Position);
 
@@ -1421,11 +1452,11 @@ public class TutorialController : MonoBehaviour
             yield return TutorialPanelUI.Instance.PlayStepGroup(step17_1, step17_1Position);
 
         // 메뉴 → 직원(상위) → 강화(하위) 순차 강조 — 1-1/5-2와 동일한 3단 메뉴 진입 패턴.
-        yield return _highlighter.Highlight(menuButton);
+        yield return _highlighter.Highlight(menuButton, showHand: true);
         yield return new WaitForSecondsRealtime(settleDelay); // 상위 메뉴 펼침
-        yield return _highlighter.Highlight(employeeButton);
+        yield return _highlighter.Highlight(employeeButton, showHand: true);
         yield return new WaitForSecondsRealtime(settleDelay); // 서브 메뉴 펼침
-        yield return _highlighter.Highlight(trainingMenuButton);
+        yield return _highlighter.Highlight(trainingMenuButton, showHand: true);
 
         yield return _highlighter.Hide(gen17_1);
         EndDimTimeStop();
@@ -1462,7 +1493,7 @@ public class TutorialController : MonoBehaviour
             yield return TutorialPanelUI.Instance.PlayStepGroup(step17_3, step17_3Position);
 
         EmployeeEnhancement.ForceSuccessRemaining = 4;
-        yield return _highlighter.Highlight(trainingEnhanceButton); // 클릭 시 자동으로 하이라이트 해제
+        yield return _highlighter.Highlight(trainingEnhanceButton, showHand: true); // 클릭 시 자동으로 하이라이트 해제
         yield return _highlighter.Hide(gen17_2); // 17-4가 뜨기 전까지 딤도 완전히 제거
 
         while (EmployeeEnhancement.ForceSuccessRemaining > 0)
@@ -1486,21 +1517,9 @@ public class TutorialController : MonoBehaviour
             yield return TutorialPanelUI.Instance.PlayStepGroup(step17_5, step17_5Position);
         if (trainingCloseButton != null) trainingCloseButton.gameObject.SetActive(true);
 
-        // enhancementPanel 자리에서 슬라이드해오는 기존 흐름은 유지하되, 버튼 자체가 커졌다 작아졌다
-        // 하는 스케일 펄스를 얹어서 멀리 떨어진 작은 CloseBtn도 눈에 잘 띄게 한다.
-        Coroutine closeBtnPulseCo = null;
-        Vector3 closeBtnBaseScale = Vector3.one;
-        if (trainingCloseButton != null)
-        {
-            closeBtnBaseScale = trainingCloseButton.transform.localScale;
-            closeBtnPulseCo = StartCoroutine(PulseScale(trainingCloseButton.transform, closeBtnBaseScale));
-        }
-        yield return _highlighter.Highlight(trainingCloseButton);
-        if (closeBtnPulseCo != null)
-        {
-            StopCoroutine(closeBtnPulseCo);
-            trainingCloseButton.transform.localScale = closeBtnBaseScale;
-        }
+        // enhancementPanel 자리에서 슬라이드해오는 기존 흐름은 유지 — 멀리 떨어진 작은 CloseBtn은 버튼
+        // 자체 스케일 펄스 대신 손 아이콘으로 눈에 띄게 한다.
+        yield return _highlighter.Highlight(trainingCloseButton, showHand: true);
 
         yield return _highlighter.Hide(gen17_4);
 
@@ -1578,8 +1597,8 @@ public class TutorialController : MonoBehaviour
         if (TutorialPanelUI.Instance != null)
             yield return TutorialPanelUI.Instance.PlayStepGroup(step17_7, step17_7Position);
 
-        yield return _highlighter.Highlight(merchantConfirmButton); // 구매 1회
-        yield return _highlighter.Highlight(merchantCloseButton);   // 상점 닫기 — 이 클릭에서 MerchantManager.OnShopClosed가 구매를 실제로 서버에 저장
+        yield return _highlighter.Highlight(merchantConfirmButton, showHand: true); // 구매 1회
+        yield return _highlighter.Highlight(merchantCloseButton, showHand: true);   // 상점 닫기 — 이 클릭에서 MerchantManager.OnShopClosed가 구매를 실제로 서버에 저장
 
         yield return _highlighter.Hide(gen17_7);
 
@@ -1603,7 +1622,7 @@ public class TutorialController : MonoBehaviour
         // desk_01 직원 강조 + 클릭(=카드 오픈) 대기 — 10-1과 동일 패턴, step10_1DeskId 필드 공유.
         var deskChar = OfficeManager.Instance?.GetCharacterAtDesk(step10_1DeskId);
         string deskEmpId = deskChar != null ? deskChar.employeeId : null;
-        yield return _highlighter.BeginHighlightWorld(deskChar != null ? deskChar.transform : null);
+        yield return _highlighter.BeginHighlightWorld(deskChar != null ? deskChar.transform : null, showHand: true);
 
         bool cardShown = false;
         System.Action<string> onCardShown = id => { if (id == deskEmpId) cardShown = true; };
@@ -1760,19 +1779,6 @@ public class TutorialController : MonoBehaviour
 
         yield return _highlighter.Hide(gen20);
         OnboardingState.MarkTutorial20Done();
-    }
-
-    // 대상이 baseScale 기준으로 커졌다 작아졌다를 무한 반복 — 17-5의 CloseBtn처럼 작고 눈에 안 띄는
-    // 버튼을 강조할 때, dim 구멍 펄스만으로는 부족해서 버튼 자체 스케일도 함께 흔든다.
-    IEnumerator PulseScale(Transform target, Vector3 baseScale, float amplitude = 0.12f, float speed = 4f)
-    {
-        float t = 0f;
-        while (true)
-        {
-            t += Time.unscaledDeltaTime * speed;
-            target.localScale = baseScale * (1f + amplitude * Mathf.Sin(t));
-            yield return null;
-        }
     }
 
     // ── dim 동안 시간 정지 (패널 켜는 것과 동일) ──────────────────────────────
