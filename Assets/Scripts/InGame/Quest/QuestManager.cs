@@ -196,26 +196,12 @@ public class QuestManager : MonoBehaviour
         {
             quest.isRewarded = true; // 보상 없이 자동 완료 처리
             UnlockChainedMainQuests(quest.questId);
-
-            if (string.IsNullOrEmpty(quest.unlockAfter))
-            {
-                bool allRootCompleted = _quests.TrueForAll(
-                    q => !q.isMainQuest || !q.isVisible || !string.IsNullOrEmpty(q.unlockAfter) || q.isCompleted);
-                if (allRootCompleted)
-                    AlertUI.Instance.Show("메인퀘스트 완료!", null);
-            }
         }
         else
         {
             // 자동 수령: 보상 지급 + isRewarded=true → UI에서 즉시 사라짐 (뒤끝 행은 유지)
             MoneyManager.Instance.AddGold(quest.rewardGold);
             quest.isRewarded = true;
-
-            AlertUI.Instance.ShowMoney(
-                $"퀘스트 완료!\n{quest.title}",
-                quest.rewardGold,
-                () => QuestUI.Instance?.Show()
-            );
         }
     }
 

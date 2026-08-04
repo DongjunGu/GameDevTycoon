@@ -17,6 +17,11 @@ public class DevelopmentResultUI : MonoBehaviour
     public TextMeshProUGUI developText;
     public TextMeshProUGUI artText;
     public TextMeshProUGUI creativityText;
+    [Header("신기록 뱃지 (과거 완료작 최고치 대비 초과 시에만 표시)")]
+    public GameObject planningNewRecordText;
+    public GameObject developNewRecordText;
+    public GameObject artNewRecordText;
+    public GameObject creativityNewRecordText;
     [Header("Project Info")]
     public TextMeshProUGUI scaleResultText;
     public TextMeshProUGUI genreResultText;
@@ -40,6 +45,9 @@ public class DevelopmentResultUI : MonoBehaviour
     [Header("Project Name")]
     public TextMeshProUGUI projectNameText;
     public TMP_InputField projectNameInput;
+    [Tooltip("9글자 제한(characterLimit)에 걸렸을 때만 표시하는 경고 문구 (InputFieldImage/w)")]
+    public GameObject projectNameWarningText;
+    const int ProjectNameMaxLength = 9;
 
     private float _lastPopularityMultiplier;
     private float _lastMarketingMultiplier;
@@ -96,11 +104,29 @@ public class DevelopmentResultUI : MonoBehaviour
         SetResultPanelActive(false);
         editNamePanel.SetActive(false);
         SetContributionDetailShown(false);
+        if (planningNewRecordText   != null) planningNewRecordText.SetActive(false);
+        if (developNewRecordText    != null) developNewRecordText.SetActive(false);
+        if (artNewRecordText        != null) artNewRecordText.SetActive(false);
+        if (creativityNewRecordText != null) creativityNewRecordText.SetActive(false);
         if (contributionCheckBtn != null)
         {
             contributionCheckBtn.onClick.RemoveAllListeners();
             contributionCheckBtn.onClick.AddListener(OnClickContributionCheck);
         }
+
+        if (projectNameInput != null)
+        {
+            projectNameInput.characterLimit = ProjectNameMaxLength; // 영어/한글 모두 1글자=1자로 카운트되므로 동일 기준 적용
+            projectNameInput.onValueChanged.AddListener(OnProjectNameInputChanged);
+        }
+        if (projectNameWarningText != null) projectNameWarningText.SetActive(false);
+    }
+
+    // characterLimit에 걸려 9글자를 못 넘어가는 순간(=입력이 꽉 찬 순간) 경고 문구를 띄운다.
+    void OnProjectNameInputChanged(string value)
+    {
+        if (projectNameWarningText != null)
+            projectNameWarningText.SetActive(value.Length >= ProjectNameMaxLength);
     }
 
     // RightPanel ↔ RightPanelDetail 반대로 토글 + 버튼 라벨 갱신 ("기여도 확인" ↔ "돌아가기")
@@ -174,6 +200,9 @@ public class DevelopmentResultUI : MonoBehaviour
         }
 
         GradeSpriteSet.Apply(row.GetComponent<Image>(), rowBgGradeSet, isCEO, grade);
+
+        // 1~3등이면 등급색 배경 위에 등수 프레임/왕관을 덮어씀(RowRankVisual이 자체적으로 적용 여부 판단).
+        row.GetComponent<RowRankVisual>()?.SetRank(rank);
     }
 
     public void Show(float planning, float develop, float art, float bug, float creativity)
@@ -191,6 +220,24 @@ public class DevelopmentResultUI : MonoBehaviour
         if (developText != null)    developText.text = $"{Mathf.RoundToInt(develop)}";
         if (artText != null)        artText.text = $"{Mathf.RoundToInt(art)}";
         if (creativityText != null) creativityText.text = $"{Mathf.RoundToInt(creativity)}";
+
+        // 신기록 뱃지 — 과거 완료작(이번 프로젝트는 아직 미포함) 중 최고치를 이번 값이 넘으면 표시.
+        // 완료작이 하나도 없으면(첫 프로젝트) 비교 대상 자체가 없어 항상 신기록으로 취급.
+        float bestPlanning = 0f, bestDevelop = 0f, bestArt = 0f, bestCreativity = 0f;
+        if (CompletedProjectManager.Instance != null)
+        {
+            foreach (var proj in CompletedProjectManager.Instance.completedProjects)
+            {
+                if (proj.planning   > bestPlanning)   bestPlanning   = proj.planning;
+                if (proj.develop    > bestDevelop)    bestDevelop    = proj.develop;
+                if (proj.art        > bestArt)        bestArt        = proj.art;
+                if (proj.creativity > bestCreativity) bestCreativity = proj.creativity;
+            }
+        }
+        if (planningNewRecordText   != null) planningNewRecordText.SetActive(planning   > bestPlanning);
+        if (developNewRecordText    != null) developNewRecordText.SetActive(develop    > bestDevelop);
+        if (artNewRecordText        != null) artNewRecordText.SetActive(art        > bestArt);
+        if (creativityNewRecordText != null) creativityNewRecordText.SetActive(creativity > bestCreativity);
 
         // Row1 — 규모/장르/플랫폼을 각 텍스트에 개별 출력
         if (scaleResultText != null)    scaleResultText.text    = $"{GetScaleString(ProjectSetupUI.SelectedScale)}";
@@ -226,6 +273,7 @@ public class DevelopmentResultUI : MonoBehaviour
     {
         // 현재 프로젝트명을 input에 기본값으로 설정
         projectNameInput.text = projectNameText.text;
+        OnProjectNameInputChanged(projectNameInput.text); // 재오픈 시에도 경고 표시 상태를 현재 값 기준으로 동기화
         editNamePanel.SetActive(true);
 
         // 전체 선택된 것처럼 보이게

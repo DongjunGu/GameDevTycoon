@@ -80,6 +80,12 @@ public class EmployeeCardUI : MonoBehaviour
     // 카드가 특정 직원으로 열릴 때마다 발동 — 튜토리얼이 "이 직원의 카드가 열렸는지"를 기다릴 때 사용.
     public event System.Action<string> OnCardShown;
 
+    // 튜토리얼 등에서 "이 구간 동안은 바깥 클릭으로 절대 안 닫히게" 강제 고정할 때 사용(예: 온보딩
+    // 10-1~10-2 — 직원이 master_desk로 걸어가 AcWar가 뜨기 전까지 카드가 열려있어야 함). 시간정지
+    // 여부(IsRunningForMovement)와 완전히 별개라, 잠금 도중 시간이 재개돼도 안전하게 유지된다.
+    private bool _closeLocked;
+    public void LockClose(bool locked) => _closeLocked = locked;
+
     void Awake()
     {
         if (Instance != null) { Destroy(gameObject); return; }
@@ -392,6 +398,10 @@ public class EmployeeCardUI : MonoBehaviour
         }
 
         // ② 닫기 판정 — Mouse / Touchscreen 명시적 체크
+        // _closeLocked면 시간 상태와 무관하게 무조건 안 닫음(LockClose 참고 — 온보딩 10-1~10-2처럼
+        // 시간이 재개된 뒤(직원이 걸어가는 중)에도 계속 열려있어야 하는 구간).
+        if (_closeLocked) return;
+
         // 다이얼로그/랜덤이벤트 선택지/AlertUI 등은 대부분 GameTimeManager.StopTime()으로 열려있는 동안
         // 시간을 멈춘다 — 그 UI들을 조작하는 클릭에 카드가 같이 닫혀버리지 않도록, 시간이 멈춰있는 동안은
         // 바깥 클릭 닫기 판정 자체를 건너뛴다. ⚠️ IsRunning이 아니라 IsRunningForMovement로 판단 —

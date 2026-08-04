@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: 4aa12cc6cfccbb644b5710f8013def61
+guid: ebddb0a314c69754da94aec02ad3cdac
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: -2073713355631674178
-    second: image 301_0
+      213: 3995115812338304970
+    second: ProjectResult_Icon_Crown_Copper 2_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -139,13 +139,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: image 301_0
+      name: ProjectResult_Icon_Crown_Copper 2_0
       rect:
         serializedVersion: 2
-        x: 0
-        y: 22
-        width: 77
-        height: 112
+        x: 1
+        y: 1
+        width: 55
+        height: 49
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -154,8 +154,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: ebc3797a0b0b833e0800000000000000
-      internalID: -2073713355631674178
+      spriteID: ac788fe0aa0817730800000000000000
+      internalID: 3995115812338304970
       vertices: []
       indices: 
       edges: []
@@ -174,7 +174,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      image 301_0: -2073713355631674178
+      ProjectResult_Icon_Crown_Copper 2_0: 3995115812338304970
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

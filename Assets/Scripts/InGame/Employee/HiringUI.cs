@@ -1003,14 +1003,12 @@ public class HiringUI : MonoBehaviour
         if (hireStampImage != null) hireStampImage.gameObject.SetActive(false); // 패널과 같은 시점에 도장도 정리
         UpdateRefreshButton(); // confirmRefreshLockedPanel도 잠금 상태 기준으로 다시 정상 반영
 
-        // 온보딩: 직원 획득 후 채용창 닫히면 바로 프로젝트 튜토리얼 (1회만).
-        // pending=0(실행대기)로 무장 후 즉시 트리거 — ModalGate.WhenFree 가 채용창/다이얼로그 닫힘을 기다렸다 실행.
-        OnboardingState.ArmProjectTutorial(0);
-        ProjectTutorialController.Instance?.TryFire();
-
-        // 온보딩: 튜토리얼 두 번째(진짜) 채용의 5-1(사무실이 좁다는 소감) 재생 트리거는 이제
+        // 온보딩: 튜토리얼 두 번째(진짜) 채용의 5-1(사무실이 좁다는 소감) 재생 트리거는
         // FinishTutorialDualHire(호출부) 쪽에서 "직원들이 자리에 앉고 나서" 재생하도록 직접 처리한다 —
         // ArmTutorial5()도 그쪽에서 같이 호출됨(재접속 시 pending 복원 목적으로 예약 "전"에 동기 호출).
+        // (구 ProjectTutorialController — 직원 획득 1주 뒤 별도 트리거 — 는 이 5-1 흐름에 완전히
+        // 흡수되어 TutorialController.PlayTutorial5_1()의 5-2 스텝이 동일한 메뉴→프로젝트설정→시작
+        // 강조를 그대로 재생하므로 삭제됨.)
 
         DialogManager.Instance.Resume();
     }

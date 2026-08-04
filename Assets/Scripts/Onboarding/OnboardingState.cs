@@ -8,8 +8,6 @@ public static class OnboardingState
     const string KEY_INTRO      = "onboarding_intro_done";      // 컷씬 + 첫 런 진입 완료
     const string KEY_TUTORIAL   = "onboarding_tutorial_done";   // 게임씬 비서 튜토리얼 완료
     const string KEY_FIRST_HIRE = "onboarding_first_hire_done"; // 첫 채용(온보딩) 완료 — 1회만 1주 면접
-    const string KEY_PROJ_TUT   = "onboarding_project_tutorial_done";    // 프로젝트 튜토리얼 완료
-    const string KEY_PROJ_PEND  = "onboarding_project_tutorial_pending"; // 프로젝트 튜토리얼 카운트다운(-1 없음/0 실행대기/>0 남은주차)
     const string KEY_TUT3       = "onboarding_tutorial3_done";  // 튜토리얼 3-1(ConfirmHirePanel 첫 노출) 완료
     const string KEY_TUT5       = "onboarding_tutorial5_done";  // 튜토리얼 5-1~5-4 완료
     // 5-1~5-4 무장(진행 중, 아직 미완료) 여부 — 이 구간은 3-1~4-2와 달리 직원 2명이 이미 서버에 커밋된
@@ -109,29 +107,6 @@ public static class OnboardingState
     {
         PlayerPrefs.SetInt(KEY_FIRST_HIRE, 1);
         PlayerPrefs.Save();
-    }
-
-    // 프로젝트 튜토리얼(온보딩) — 첫 직원 획득 후 1주 뒤 1회. pending: -1 없음 / 0 실행대기 / >0 남은 주차.
-    public static bool ProjectTutorialDone => PlayerPrefs.GetInt(KEY_PROJ_TUT, 0) == 1;
-    public static void MarkProjectTutorialDone()
-    {
-        PlayerPrefs.SetInt(KEY_PROJ_TUT, 1);
-        PlayerPrefs.SetInt(KEY_PROJ_PEND, -1);
-        PlayerPrefs.Save();
-    }
-
-    public static int ProjectTutorialPending => PlayerPrefs.GetInt(KEY_PROJ_PEND, -1);
-    public static void SetProjectTutorialPending(int weeks)
-    {
-        PlayerPrefs.SetInt(KEY_PROJ_PEND, weeks);
-        PlayerPrefs.Save();
-    }
-
-    // 직원 획득 시 호출 — 아직 안 했고 무장 안 됐으면 weeks 주 카운트다운 시작.
-    public static void ArmProjectTutorial(int weeks)
-    {
-        if (ProjectTutorialDone || ProjectTutorialPending >= 0) return;
-        SetProjectTutorialPending(weeks);
     }
 
     // 튜토리얼 3-1 — 첫 ConfirmHirePanel 노출 시 1회. 버튼 강조 없이 TutorialPanel 대사만 재생.
@@ -405,8 +380,6 @@ public static class OnboardingState
         PlayerPrefs.DeleteKey(KEY_INTRO);
         PlayerPrefs.DeleteKey(KEY_TUTORIAL);
         PlayerPrefs.DeleteKey(KEY_FIRST_HIRE);
-        PlayerPrefs.DeleteKey(KEY_PROJ_TUT);
-        PlayerPrefs.DeleteKey(KEY_PROJ_PEND);
         PlayerPrefs.DeleteKey(KEY_TUT3);
         PlayerPrefs.DeleteKey(KEY_TUT5);
         PlayerPrefs.DeleteKey(KEY_TUT5_PEND);
