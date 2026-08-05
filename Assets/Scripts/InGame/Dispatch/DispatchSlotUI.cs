@@ -10,7 +10,7 @@ public class DispatchSlotUI : MonoBehaviour
     public TextMeshProUGUI nameText;
     [Tooltip("CEO(주인공)일 때만 활성화되는 라벨")]
     public GameObject CEOText;
-    static readonly Color CEONameColor = new Color32(0xFF, 0xF1, 0x94, 0xFF);
+    static readonly Color CEONameColor = new Color32(0xFF, 0xFF, 0xFF, 0xFF);
     const string CEODisplayName = "주인공";
     private Color _defaultNameColor = Color.white;
     private bool  _defaultNameColorCached;
@@ -18,17 +18,21 @@ public class DispatchSlotUI : MonoBehaviour
     public Image bgImage;
     public GradeSpriteSet bgGradeSet;
     [Header("Role 아이콘 — roleIcons 는 enum 순서 [Planner, Programmer, Artist] 로 인스펙터에서 할당")]
+    public GameObject roleIconPanel; // roleIcon 의 부모 — CEO 일 때 통째로 비활성화
     public Image roleIcon;
     public Sprite[] roleIcons;
     public TextMeshProUGUI enhancementText;
+    [Header("연속 팀장 횟수 — 팀장 선택 모드(isLeaderMode)에서만 표시, CEO는 항상 숨김")]
+    public GameObject countPanel;
+    public TextMeshProUGUI countText;
     public Button selectButton;
-    public GameObject selectedIndicator; // 선택 하이라이트
+    public GameObject selectedIndicator; // SelectionImage — ImageBlink 컴포넌트로 선택 시 스스로 깜빡임(SetActive만 토글하면 됨)
     public GameObject dispatchedBadge;   // "파견중" badge
 
     private string _empId;
     public string EmployeeId => _empId;
 
-    public void Setup(EmployeeData data, DispatchPanelUI panel, bool dispatched)
+    public void Setup(EmployeeData data, DispatchPanelUI panel, bool dispatched, bool isLeaderMode = false)
     {
         _empId = data.id;
 
@@ -40,12 +44,13 @@ public class DispatchSlotUI : MonoBehaviour
             _defaultNameColorCached = true;
         }
 
-        // CEO는 역할/강화레벨 개념이 없음 — roleIconPanel 자식 Image 비활성화 + 강화텍스트 공백.
+        // CEO는 역할/강화레벨/연속 팀장 횟수 개념이 없음 — roleIconPanel/강화텍스트 비활성화 + CEOText 활성화.
         if (data.isCEO)
         {
-            if (roleIcon != null) roleIcon.gameObject.SetActive(false);
-            if (enhancementText != null) enhancementText.text = "";
+            if (roleIconPanel != null) roleIconPanel.SetActive(false);
+            if (enhancementText != null) enhancementText.gameObject.SetActive(false);
             if (CEOText != null) CEOText.SetActive(true);
+            if (countPanel != null) countPanel.SetActive(false);
             if (nameText != null)
             {
                 nameText.text  = CEODisplayName;
@@ -60,9 +65,9 @@ public class DispatchSlotUI : MonoBehaviour
                 nameText.text  = data.employeeName;
                 nameText.color = _defaultNameColor;
             }
+            if (roleIconPanel != null) roleIconPanel.SetActive(true);
             if (roleIcon != null)
             {
-                roleIcon.gameObject.SetActive(true);
                 if (roleIcons != null && (int)data.role >= 0 && (int)data.role < roleIcons.Length
                     && roleIcons[(int)data.role] != null)
                 {
@@ -70,7 +75,15 @@ public class DispatchSlotUI : MonoBehaviour
                     roleIcon.enabled = true;
                 }
             }
-            if (enhancementText != null) enhancementText.text = $"Lv {data.enhancementLevel}";
+            if (enhancementText != null)
+            {
+                enhancementText.gameObject.SetActive(true);
+                enhancementText.text = $"Lv {data.enhancementLevel}";
+            }
+
+            // 팀장 선택 모드에서만 연속 팀장 횟수(EmployeeData.consecutiveLeaderCount) 표시.
+            if (countPanel != null) countPanel.SetActive(isLeaderMode);
+            if (isLeaderMode && countText != null) countText.text = $"{data.consecutiveLeaderCount}";
         }
 
         if (portraitImage != null)
@@ -95,7 +108,7 @@ public class DispatchSlotUI : MonoBehaviour
 
     public void SetSelected(bool on)
     {
-        // selectedIndicator = SelectionBorder(#DF0F0F 3px 테두리 4바) — 슬롯 루트 자신이면 무시(전체 꺼짐 방어).
+        // selectedIndicator = SelectionImage — 슬롯 루트 자신이면 무시(전체 꺼짐 방어).
         if (selectedIndicator != null && selectedIndicator != gameObject)
             selectedIndicator.SetActive(on);
     }

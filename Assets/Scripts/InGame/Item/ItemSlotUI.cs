@@ -18,7 +18,7 @@ public class ItemSlotUI : MonoBehaviour
     {
         _row = row;
         nameText.text  = row.name;
-        countText.text = $"x{count}";
+        countText.text = $"{count}";
 
         var sprite = Resources.Load<Sprite>($"Items/{row.imageId}");
         if (sprite != null && itemImage != null)

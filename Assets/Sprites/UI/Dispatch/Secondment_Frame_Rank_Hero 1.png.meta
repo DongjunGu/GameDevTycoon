@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: 32b10bba5407f96488383bdc8f44b00e
+guid: d663fecf9d681104a815db62994110c2
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: -3602602082795438680
-    second: Rectangle 156_0
+      213: 8699953583919348707
+    second: Secondment_Frame_Rank_Hero 1_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -139,13 +139,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: Rectangle 156_0
+      name: Secondment_Frame_Rank_Hero 1_0
       rect:
         serializedVersion: 2
         x: 0
         y: 0
-        width: 486
-        height: 95
+        width: 513
+        height: 114
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -154,8 +154,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 8ad35eb3e7cf00ec0800000000000000
-      internalID: -3602602082795438680
+      spriteID: 3eb36e3b0b17cb870800000000000000
+      internalID: 8699953583919348707
       vertices: []
       indices: 
       edges: []
@@ -174,7 +174,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      Rectangle 156_0: -3602602082795438680
+      Secondment_Frame_Rank_Hero 1_0: 8699953583919348707
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

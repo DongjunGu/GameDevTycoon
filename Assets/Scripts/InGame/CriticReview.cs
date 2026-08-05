@@ -16,6 +16,10 @@ public class CriticReviewUI : MonoBehaviour
     public TextMeshProUGUI[] criticScoreTexts;// 점수
     public TextMeshProUGUI[] criticCommentTexts; // 한줄평
 
+    [Header("Score Reaction (criticSlot1 등장 시 점수에 따라 택1 활성화)")]
+    public GameObject lowImage;  // 50점 미만
+    public GameObject highImage; // 50점 이상
+
     [Header("Total Score")]
     public GameObject totalScoreObject;       // 점수 패널 오브젝트 (게임명 + 평점)
     public TextMeshProUGUI nameText;          // "게임명: {게임명}"
@@ -120,6 +124,9 @@ public class CriticReviewUI : MonoBehaviour
         for (int i = 0; i < criticSlots.Length; i++)
             if (criticSlots[i] != null) criticSlots[i].SetActive(false);
 
+        if (lowImage != null)  lowImage.SetActive(false);
+        if (highImage != null) highImage.SetActive(false);
+
         int variation = UnityEngine.Random.Range(-5, 6); // Random(-5 ~ +5)
         int score = Mathf.Clamp(CalcCriticScore(rawScore) + variation, 0, 100);
         LastCriticTotal = score;
@@ -147,6 +154,7 @@ public class CriticReviewUI : MonoBehaviour
         {
             SetSlotText(i, _pendingScore);
             if (criticSlots[i] != null) criticSlots[i].SetActive(true);
+            if (i == 0) SetReactionImage(_pendingScore); // criticSlot1 등장과 동시에 점수 반응 이미지 표시
             yield return new WaitForSeconds(0.5f);
         }
 
@@ -156,6 +164,14 @@ public class CriticReviewUI : MonoBehaviour
         yield return StartCoroutine(ScoreAndStampPunch());
 
         _revealDone = true;
+    }
+
+    // 50점 미만이면 lowImage, 50점 이상이면 highImage 활성화(나머지 하나는 비활성).
+    void SetReactionImage(int score)
+    {
+        bool low = score < 50;
+        if (lowImage != null)  lowImage.SetActive(low);
+        if (highImage != null) highImage.SetActive(!low);
     }
 
     void SetSlotText(int i, int score)
@@ -179,6 +195,7 @@ public class CriticReviewUI : MonoBehaviour
             SetSlotText(i, _pendingScore);
             if (criticSlots[i] != null) criticSlots[i].SetActive(true);
         }
+        SetReactionImage(_pendingScore);
         if (totalScoreText != null)
         {
             totalScoreText.text = $"{_pendingScore}";
