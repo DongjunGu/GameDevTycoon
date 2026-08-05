@@ -78,7 +78,7 @@ public class DispatchSlotUI : MonoBehaviour
             if (enhancementText != null)
             {
                 enhancementText.gameObject.SetActive(true);
-                enhancementText.text = $"Lv {data.enhancementLevel}";
+                enhancementText.text = $"+{data.enhancementLevel}";
             }
 
             // 팀장 선택 모드에서만 연속 팀장 횟수(EmployeeData.consecutiveLeaderCount) 표시.

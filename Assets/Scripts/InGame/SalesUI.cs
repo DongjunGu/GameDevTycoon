@@ -28,6 +28,10 @@ public class SalesUI : MonoBehaviour
     [Header("UI")]
     public TextMeshProUGUI totalRevenueText;
     public TextMeshProUGUI rankText;
+    [Tooltip("RevenuePanel/newrecordText — 과거 완료작(진행중 자기자신 제외) 최고 총매출 초과 시 표시, 기본 비활성")]
+    public GameObject revenueNewRecordText;
+    [Tooltip("RankPanel/newrecordText — 과거 완료작 최고 순위(bestRank, 낮을수록 좋음)보다 앞서면 표시, 기본 비활성")]
+    public GameObject rankNewRecordText;
     private int barCount;
     private ProjectScale _cachedScale;
     private ProjectGenre _cachedGenre;
@@ -313,6 +317,8 @@ public class SalesUI : MonoBehaviour
         // 유저가 결과를 미리 봐버리는 스포일러. 초기엔 비워두고, ShowBarsSequentially가 완료 주차는
         // 즉시/미완료 주차는 bar가 오르는 만큼 값을 채워나간다(1프레임도 안 지나 정상 갱신됨).
         totalRevenueText.text = "";
+        if (revenueNewRecordText != null) revenueNewRecordText.SetActive(false);
+        if (rankNewRecordText != null)    rankNewRecordText.SetActive(false);
 
         // 폴드 잔재 복원 후 활성화
         panelRT.DOKill();
@@ -329,11 +335,17 @@ public class SalesUI : MonoBehaviour
         yield return null; // ← 한 프레임 대기 후 높이 계산
         maxBarHeight = chartArea.rect.height * 0.8f;
 
-        // bar 너비/간격 — Large(9개)는 좁고 촘촘하게, Small/Medium은 넓고 여유있게.
-        bool isLarge = barCount >= 9;
-        float barWidth = isLarge ? 11f : 26f;
+        // bar 너비/간격 — 규모별로 관리(너비는 전부 26, 간격만 개수에 맞춰 좁아짐).
+        float barWidth = 26f;
+        float spacing = _cachedScale switch
+        {
+            ProjectScale.Small  => 95f,
+            ProjectScale.Medium => 50f,
+            ProjectScale.Large  => 28f,
+            _ => 95f
+        };
         var chartLayout = chartArea.GetComponent<HorizontalLayoutGroup>();
-        if (chartLayout != null) chartLayout.spacing = isLarge ? 40f : 95f;
+        if (chartLayout != null) chartLayout.spacing = spacing;
 
         int cumulativeRevenue = 0;
 
@@ -363,7 +375,7 @@ public class SalesUI : MonoBehaviour
             var barImage = barObj.transform.Find("BarImage").GetComponent<RectTransform>();
             
             var periodLabel = barObj.transform.Find("PeriodLabel").GetComponent<TMPro.TextMeshProUGUI>();
-            periodLabel.text = $"{i + 1}주";
+            periodLabel.text = $"{i + 1}";
 
             // 이미 완료된 주차는 즉시 표시 (돈 지급 없음)
             if (i < completedWeeks)
@@ -373,6 +385,7 @@ public class SalesUI : MonoBehaviour
                 cumulativeRevenue = endRevenue;
                 totalRevenueText.text = $"{cumulativeRevenue:N0} G";
                 UpdateBestRank(GetRank(revenuePerPeriod[i], i)); // 복원 시에도 최고순위 누적
+                UpdateRecordBadges(cumulativeRevenue);
                 continue;
             }
 
@@ -422,6 +435,7 @@ public class SalesUI : MonoBehaviour
             if (rankText != null)
                 rankText.text = rank > 0 ? $"{rank}위" : "순위권 밖";
             totalRevenueText.text = $"{endRevenue:N0} G";
+            UpdateRecordBadges(endRevenue);
 
             MoneyManager.Instance.AddGold(weeklyRevenue);
             QuestManager.Instance?.UpdateProgress(QuestType.TotalRevenue, weeklyRevenue);
@@ -518,6 +532,35 @@ public class SalesUI : MonoBehaviour
         if (rank <= 0 || _currentSalesProject == null) return;
         if (_currentSalesProject.bestRank == 0 || rank < _currentSalesProject.bestRank)
             _currentSalesProject.bestRank = rank;
+    }
+
+    // 과거 완료작(진행중인 자기 자신은 totalRevenue=0이라 자동 제외) 대비 신기록 배지 갱신.
+    // 매출은 누적값이 과거 최고 총매출을 넘으면, 순위는 이번 판매에서 도달한 최고순위(bestRank, 낮을수록
+    // 좋음)가 과거 최고 순위보다 앞서면(또는 과거에 순위권 진입 기록 자체가 없으면) 표시 — 한 번 켜지면
+    // 두 값 모두 단조 개선만 되므로 다시 꺼지지 않는다.
+    void UpdateRecordBadges(int cumulativeRevenue)
+    {
+        if (CompletedProjectManager.Instance == null) return;
+
+        if (revenueNewRecordText != null)
+        {
+            int bestPastRevenue = 0;
+            foreach (var p in CompletedProjectManager.Instance.completedProjects)
+                if (p.totalRevenue > bestPastRevenue) bestPastRevenue = p.totalRevenue;
+            revenueNewRecordText.SetActive(cumulativeRevenue > bestPastRevenue);
+        }
+
+        if (rankNewRecordText != null && _currentSalesProject != null && _currentSalesProject.bestRank > 0)
+        {
+            int bestPastRank = 0; // 0 = 비교 대상 없음(과거작 없음/전부 순위권 밖) → 이번이 곧 신기록
+            foreach (var p in CompletedProjectManager.Instance.completedProjects)
+            {
+                if (p.totalRevenue <= 0 || p.bestRank <= 0) continue; // 자기 자신/순위권 밖 기록 제외
+                if (bestPastRank == 0 || p.bestRank < bestPastRank) bestPastRank = p.bestRank;
+            }
+            bool isRecord = bestPastRank == 0 || _currentSalesProject.bestRank < bestPastRank;
+            rankNewRecordText.SetActive(isRecord);
+        }
     }
 
     // 튜토리얼(첫 프로젝트, 소형=3주) 한정 — 실제 매출과 무관하게 1주차→2주차→3주차 순위를 이 값으로 고정.

@@ -36,6 +36,9 @@ public class DispatchPanelUI : MonoBehaviour
     //public Image portraitBGImage;         // 등급 색 배경
     public TextMeshProUGUI traitText;     // "특성 : {}" (클릭 시 AlertUI3 로 설명 표시)
     public TextMeshProUGUI eventText;     // "이벤트 : {}" (클릭 시 AlertUI3 로 설명 표시)
+    [Tooltip("TopPanel/PoritraitPanel/CountSeqPanel — 연속 팀장 횟수 표시, 기본 비활성/횟수(consecutiveLeaderCount)가 있을 때만 활성")]
+    public GameObject countSeqPanel;
+    public TextMeshProUGUI countSeqText;
     public GameObject traitLockedPanel;   // 특성 없음(Epic 미만) 시 표시할 잠금 오버레이
     public GameObject eventLockedPanel;   // 전용 이벤트 없음(Unique 미만) 시 표시할 잠금 오버레이
     public TextMeshProUGUI planningText;  // 기획 수치
@@ -330,6 +333,14 @@ public class DispatchPanelUI : MonoBehaviour
                  CharacterUniqueEvents.GetEventNameAnyGrade(emp),
                  CharacterUniqueEvents.GetEventDescription(emp), "이벤트", emp.portraitId,
                  CharacterUniqueEvents.IsEventUnlocked(emp));
+
+        // 연속 팀장 횟수 — 기본 비활성, 값이 있을 때만 "연속 n회" 표시(CEO 는 항상 0이라 자연히 숨겨짐).
+        if (countSeqPanel != null)
+        {
+            bool hasStreak = emp.consecutiveLeaderCount > 0;
+            countSeqPanel.SetActive(hasStreak);
+            if (hasStreak && countSeqText != null) countSeqText.text = $"연속 {emp.consecutiveLeaderCount}회";
+        }
 
         // 능력치 — 버프/디버프 적용된 실제값 + 색상(EmployeeCardUI 와 동일 규칙: 버프 빨강 / 디버프 파랑 / 무변화 흰색)
         EmployeeCardUI.SetStatColored(planningText,   emp.planningSkill,   emp.EffectivePlanningSkill);
