@@ -221,7 +221,7 @@ public class DispatchPanelUI : MonoBehaviour
             var s    = slot.GetComponent<DispatchSlotUI>();
             if (s == null) continue;
             bool dispatched = DispatchManager.Instance != null && DispatchManager.Instance.IsDispatched(emp.id);
-            s.Setup(emp, this, dispatched);
+            s.Setup(emp, this, dispatched, _mode == PanelMode.Leader);
             _slots.Add(s);
         }
 

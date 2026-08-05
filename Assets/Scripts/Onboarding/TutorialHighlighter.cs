@@ -18,7 +18,7 @@ using UnityEngine.UI;
 public class TutorialHighlighter : MonoBehaviour
 {
     [Header("연출")]
-    [Range(0f, 1f)] public float dimAlpha = 0.8f;
+    [Range(0f, 1f)] public float dimAlpha = 0.9f;
     [Tooltip("dim이 0→dimAlpha로 빠르게 훅 들어오는 시간(초)")]
     public float dimFadeInDuration = 0.12f;
     [Tooltip("하이라이트 시 대상 둘레에서 dim을 걷어낼 기본 여백(px)")]

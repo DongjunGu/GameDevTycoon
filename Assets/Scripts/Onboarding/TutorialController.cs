@@ -289,12 +289,14 @@ public class TutorialController : MonoBehaviour
     public string step15_1 = "15-1";
     [Tooltip("TutorialPanel의 RectTransform.anchoredPosition — 15-1 표시 위치")]
     public Vector2 step15_1Position;
-    [Tooltip("TutorialDialog 차트의 stepGroup 값 — 마케팅비 부족 시 페널티 경고(강조 유지, 1줄)")]
+    [Tooltip("TutorialDialog 차트의 stepGroup 값 — 마케팅비 부족 시 페널티 경고(강조 없음, 1줄, 대사 끝난 뒤 슬롯 강조)")]
     public string step15_2 = "15-2";
     [Tooltip("TutorialPanel의 RectTransform.anchoredPosition — 15-2 표시 위치")]
     public Vector2 step15_2Position;
     [Tooltip("MarketingUI.slotButtons[1] (LeftPanel 두 번째 슬롯 = \"PC방 광고\")의 RectTransform — 강조 대상")]
     public RectTransform marketingSecondSlotRect;
+    [Tooltip("MarketingUI.confirmBtn — 슬롯 클릭 후 강조 이동, 클릭 대기")]
+    public Button marketingConfirmBtn;
 
     [Header("16-1 (SalesUI — 판매 패널 열리고 1주차 bar 애니메이션 시작 시 PlayTutorial16_1() 호출, 첫 프로젝트 한정)")]
     [Tooltip("⚠️ 이 스텝은 시간을 멈추지 않는다(BeginDimTimeStop 미사용) — 매출 bar가 계속 오르는 걸 보여주면서 대사 진행. " +
@@ -1371,14 +1373,16 @@ public class TutorialController : MonoBehaviour
         if (TutorialPanelUI.Instance != null)
             yield return TutorialPanelUI.Instance.PlayStepGroup(step15_1, step15_1Position);
 
-        // 15-2 — LeftPanel 두 번째 슬롯 강조. 대사 끝난 뒤에도 사라지지 않고 실제로 클릭할 때까지 유지.
-        Button marketingSecondSlotButton = marketingSecondSlotRect != null ? marketingSecondSlotRect.GetComponent<Button>() : null;
-        if (marketingSecondSlotRect != null)
-            yield return _highlighter.BeginHighlight(marketingSecondSlotRect, showHand: true);
+        // 15-2 — 강조 없이 대사만 먼저 재생, 끝난 뒤 LeftPanel 두 번째 슬롯 강조 + 클릭 대기.
         if (TutorialPanelUI.Instance != null)
             yield return TutorialPanelUI.Instance.PlayStepGroup(step15_2, step15_2Position);
+        Button marketingSecondSlotButton = marketingSecondSlotRect != null ? marketingSecondSlotRect.GetComponent<Button>() : null;
         if (marketingSecondSlotButton != null)
             yield return _highlighter.Highlight(marketingSecondSlotButton, showHand: true);
+
+        // 슬롯 클릭 후 — MarketingPanel/confirmBtn으로 강조 이동, 클릭 대기.
+        if (marketingConfirmBtn != null)
+            yield return _highlighter.Highlight(marketingConfirmBtn, showHand: true);
 
         yield return _highlighter.Hide(gen15);
         EndDimTimeStop();

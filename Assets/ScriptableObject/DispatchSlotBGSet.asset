@@ -12,9 +12,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: af162aa09994f7647af78317b5a04a8c, type: 3}
   m_Name: DispatchSlotBGSet
   m_EditorClassIdentifier: Assembly-CSharp::GradeSpriteSet
-  normal: {fileID: 21300000, guid: 0c1f0e0b99a0fdb4d8692521f6ceef67, type: 3}
-  rare: {fileID: 21300000, guid: 68fa90a06747f3a41b92860f0caa72a5, type: 3}
-  epic: {fileID: 21300000, guid: f840ecdd843fb4142abf8068591d0441, type: 3}
-  unique: {fileID: 21300000, guid: 4f17747883a23ce4d9c2dd3c1c1bd6c6, type: 3}
-  legendary: {fileID: 21300000, guid: 4f17747883a23ce4d9c2dd3c1c1bd6c6, type: 3}
-  ceo: {fileID: 21300000, guid: bbae1724d04a2094d85e6ce0a3eb19c9, type: 3}
+  normal: {fileID: 21300000, guid: 98e685ff2205b0547a3e3b7acaeff6ba, type: 3}
+  rare: {fileID: 21300000, guid: a9ca517126ad6494683aaa7b44692bb3, type: 3}
+  epic: {fileID: 21300000, guid: 94334976500409b48a0a61919803106f, type: 3}
+  unique: {fileID: 21300000, guid: 7a0f279858c74b0428474ba75347552c, type: 3}
+  legendary: {fileID: 21300000, guid: 7a0f279858c74b0428474ba75347552c, type: 3}
+  ceo: {fileID: 21300000, guid: d663fecf9d681104a815db62994110c2, type: 3}

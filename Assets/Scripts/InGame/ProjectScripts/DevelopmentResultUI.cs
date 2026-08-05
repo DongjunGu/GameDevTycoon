@@ -191,7 +191,7 @@ public class DevelopmentResultUI : MonoBehaviour
         if (nameText != null)   nameText.text   = name;
         if (rateText != null)   rateText.text   = rate;
 
-        var portraitImage = row.transform.Find("portraitPanel/Image")?.GetComponent<Image>();
+        var portraitImage = row.transform.Find("portraitPanel/portraitPanelChild/portraitImage")?.GetComponent<Image>();
         if (portraitImage != null)
         {
             var sprite = !string.IsNullOrEmpty(portraitId) ? Resources.Load<Sprite>($"Portraits/Mini/{portraitId}") : null;
