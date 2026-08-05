@@ -12,6 +12,10 @@ public class ItemSlotUI : MonoBehaviour
     public TextMeshProUGUI countText;
     public Button slotButton;
 
+    static readonly Color VeiledNameColor = new Color32(0x79, 0x79, 0x79, 0xFF);
+    private Color _defaultNameColor = Color.white;
+    private bool  _defaultNameColorCached;
+
     private ItemChartRow _row;
 
     public void Setup(ItemChartRow row, int count, bool usable = true)
@@ -27,6 +31,17 @@ public class ItemSlotUI : MonoBehaviour
         ItemGradeSet.Apply(frameImage, gradeSet, row.grade);
 
         if (veilImage != null) veilImage.gameObject.SetActive(!usable);
+
+        if (nameText != null)
+        {
+            if (!_defaultNameColorCached)
+            {
+                _defaultNameColor = nameText.color;
+                _defaultNameColorCached = true;
+            }
+            nameText.color = usable ? _defaultNameColor : VeiledNameColor;
+        }
+
         slotButton.interactable = usable;
 
         slotButton.onClick.RemoveAllListeners();

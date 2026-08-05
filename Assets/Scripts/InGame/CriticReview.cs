@@ -2,6 +2,7 @@ using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using DG.Tweening;
 
 public class CriticReviewUI : MonoBehaviour
 {
@@ -16,9 +17,23 @@ public class CriticReviewUI : MonoBehaviour
     public TextMeshProUGUI[] criticScoreTexts;// 점수
     public TextMeshProUGUI[] criticCommentTexts; // 한줄평
 
-    [Header("Score Reaction (criticSlot1 등장 시 점수에 따라 택1 활성화)")]
-    public GameObject lowImage;  // 50점 미만
-    public GameObject highImage; // 50점 이상
+    [Header("Score Reaction (총점+도장 \"쾅\" 찍히는 순간 점수에 따라 택1 등장, ScoreAndStampPunch와 동시)")]
+    public GameObject lowImage;  // 50점 미만 — 위에서 가라앉듯 페이드인
+    public GameObject highImage; // 50점 이상 — 확 튀어나오듯 스케일 펀치
+    [Tooltip("lowImage 등장 시 페이드인 시간(초) — 위쪽 오프셋에서 제자리로 서서히 가라앉음")]
+    public float lowRevealDuration = 0.45f;
+    [Tooltip("lowImage가 시작하는 위쪽 오프셋(px) — 이 값에서 제자리(anchoredPosition)로 하강")]
+    public float lowRevealStartOffsetY = 15f;
+    [Tooltip("highImage 등장 스케일 펀치 시간(초)")]
+    public float highRevealDuration = 0.35f;
+    [Tooltip("highImage 펀치 오버슈트(OutBack 진폭) — 클수록 더 크게 튕기고 줄어듦")]
+    public float highRevealOvershoot = 1.3f;
+    [Tooltip("lowImage/highImage 가 등장을 마친 뒤 유지하는 알파값 (0~255 표기)")]
+    public float reactionRestAlpha255 = 65f;
+    float ReactionRestAlpha => Mathf.Clamp01(reactionRestAlpha255 / 255f);
+
+    Vector2 _lowRestPos, _highRestPos;
+    bool _reactionRestPosCached;
 
     [Header("Total Score")]
     public GameObject totalScoreObject;       // 점수 패널 오브젝트 (게임명 + 평점)
@@ -109,6 +124,20 @@ public class CriticReviewUI : MonoBehaviour
 
     public void Show(float rawScore, System.Action onComplete)
     {
+        int variation = UnityEngine.Random.Range(-5, 6); // Random(-5 ~ +5)
+        int score = Mathf.Clamp(CalcCriticScore(rawScore) + variation, 0, 100);
+        ShowInternal(score, onComplete);
+    }
+
+    // 디버그/테스트 전용 — CalcCriticScore 공식+랜덤 변동을 거치지 않고 점수를 직접 지정.
+    // (예: 50점 미만/이상 반응 이미지·멘트풀 분기를 정확한 경계값으로 확인하고 싶을 때)
+    public void ShowWithScore(int score, System.Action onComplete = null)
+    {
+        ShowInternal(Mathf.Clamp(score, 0, 100), onComplete);
+    }
+
+    void ShowInternal(int score, System.Action onComplete)
+    {
         _onComplete = onComplete;
         _revealDone = false;
 
@@ -124,11 +153,8 @@ public class CriticReviewUI : MonoBehaviour
         for (int i = 0; i < criticSlots.Length; i++)
             if (criticSlots[i] != null) criticSlots[i].SetActive(false);
 
-        if (lowImage != null)  lowImage.SetActive(false);
-        if (highImage != null) highImage.SetActive(false);
+        ResetReactionImages();
 
-        int variation = UnityEngine.Random.Range(-5, 6); // Random(-5 ~ +5)
-        int score = Mathf.Clamp(CalcCriticScore(rawScore) + variation, 0, 100);
         LastCriticTotal = score;
         _pendingScore = score;
         _pendingGameName = DevelopmentResultUI.Instance != null
@@ -154,24 +180,96 @@ public class CriticReviewUI : MonoBehaviour
         {
             SetSlotText(i, _pendingScore);
             if (criticSlots[i] != null) criticSlots[i].SetActive(true);
-            if (i == 0) SetReactionImage(_pendingScore); // criticSlot1 등장과 동시에 점수 반응 이미지 표시
             yield return new WaitForSeconds(0.5f);
         }
 
-        // 슬롯이 모두 등장한 뒤 — 총점 + 도장이 동시에 "꽝"
+        // 슬롯이 모두 등장한 뒤 — 총점 + 도장 + 점수 반응 이미지가 동시에 "꽝"
         yield return new WaitForSeconds(stampDelay);
         if (totalScoreText != null) totalScoreText.text = $"{_pendingScore}";
+        PlayReactionReveal(_pendingScore);
         yield return StartCoroutine(ScoreAndStampPunch());
 
         _revealDone = true;
     }
 
-    // 50점 미만이면 lowImage, 50점 이상이면 highImage 활성화(나머지 하나는 비활성).
-    void SetReactionImage(int score)
+    // lowImage/highImage 의 원래 anchoredPosition(디자인타임 위치)을 1회만 캐싱 — 애니메이션 시작/원복 기준값.
+    void EnsureReactionRestPosCached()
     {
+        if (_reactionRestPosCached) return;
+        if (lowImage  != null) _lowRestPos  = ((RectTransform)lowImage.transform).anchoredPosition;
+        if (highImage != null) _highRestPos = ((RectTransform)highImage.transform).anchoredPosition;
+        _reactionRestPosCached = true;
+    }
+
+    // 진행 중이던 트윈을 멎고 스케일/위치/알파를 rest 상태로 되돌린 뒤 active만 지정.
+    void SnapReactionImage(GameObject go, Vector2 restPos, bool active)
+    {
+        if (go == null) return;
+        var rt = (RectTransform)go.transform;
+        rt.DOKill();
+        rt.localScale = Vector3.one;
+        rt.anchoredPosition = restPos;
+        var img = go.GetComponent<Image>();
+        if (img != null)
+        {
+            img.DOKill();
+            var c = img.color; c.a = ReactionRestAlpha; img.color = c;
+        }
+        go.SetActive(active);
+    }
+
+    // Show() 시작 시 — 둘 다 rest 상태로 스냅 + 비활성.
+    void ResetReactionImages()
+    {
+        EnsureReactionRestPosCached();
+        SnapReactionImage(lowImage,  _lowRestPos,  false);
+        SnapReactionImage(highImage, _highRestPos, false);
+    }
+
+    // 스킵(즉시 전체 표시) 경로 — 애니메이션 없이 최종 상태로 바로 스냅.
+    void SetReactionImageInstant(int score)
+    {
+        EnsureReactionRestPosCached();
         bool low = score < 50;
-        if (lowImage != null)  lowImage.SetActive(low);
-        if (highImage != null) highImage.SetActive(!low);
+        SnapReactionImage(lowImage,  _lowRestPos,  low);
+        SnapReactionImage(highImage, _highRestPos, !low);
+    }
+
+    // 50점 미만=lowImage, 이상=highImage — 반대쪽은 확실히 끄고, 대상만 등장 연출과 함께 활성화.
+    // 슬픔(low): 위쪽에서 서서히 가라앉듯 페이드인. 기쁨(high): 작게 시작해 OutBack으로 확 튀어나옴.
+    void PlayReactionReveal(int score)
+    {
+        EnsureReactionRestPosCached();
+        bool low = score < 50;
+        SnapReactionImage(low ? highImage : lowImage, low ? _highRestPos : _lowRestPos, false);
+
+        GameObject target = low ? lowImage : highImage;
+        if (target == null) return;
+        Vector2 restPos = low ? _lowRestPos : _highRestPos;
+
+        var rt = (RectTransform)target.transform;
+        rt.DOKill();
+        var img = target.GetComponent<Image>();
+        img?.DOKill();
+
+        if (low)
+        {
+            rt.localScale = Vector3.one;
+            rt.anchoredPosition = restPos + new Vector2(0f, lowRevealStartOffsetY);
+            if (img != null) { var c = img.color; c.a = 0f; img.color = c; }
+            target.SetActive(true);
+            rt.DOAnchorPos(restPos, lowRevealDuration).SetEase(Ease.OutSine).SetUpdate(true);
+            if (img != null) img.DOFade(ReactionRestAlpha, lowRevealDuration).SetUpdate(true);
+        }
+        else
+        {
+            rt.anchoredPosition = restPos;
+            rt.localScale = Vector3.one * 0.7f;
+            if (img != null) { var c = img.color; c.a = 0f; img.color = c; }
+            target.SetActive(true);
+            rt.DOScale(1f, highRevealDuration).SetEase(Ease.OutBack, highRevealOvershoot).SetUpdate(true);
+            if (img != null) img.DOFade(ReactionRestAlpha, highRevealDuration * 0.7f).SetUpdate(true);
+        }
     }
 
     void SetSlotText(int i, int score)
@@ -195,7 +293,7 @@ public class CriticReviewUI : MonoBehaviour
             SetSlotText(i, _pendingScore);
             if (criticSlots[i] != null) criticSlots[i].SetActive(true);
         }
-        SetReactionImage(_pendingScore);
+        SetReactionImageInstant(_pendingScore);
         if (totalScoreText != null)
         {
             totalScoreText.text = $"{_pendingScore}";

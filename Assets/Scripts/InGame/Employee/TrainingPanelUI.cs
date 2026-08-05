@@ -135,7 +135,7 @@ public class TrainingPanelUI : MonoBehaviour
         ColorStatPanels(emp); // 주스탯 패널만 강조색, 나머지 흰색
 
         // SPLeftPanel — 현재 수치 (raw 스킬 기준)
-        SetText(curEnhanceText,    $"현재 : Lv{emp.enhancementLevel}");
+        SetText(curEnhanceText,    $"현재 Lv{emp.enhancementLevel}");
         SetText(curDevelopText,    $"개발: {emp.developSkill}");
         SetText(curPlanningText,   $"기획: {emp.planningSkill}");
         SetText(curArtText,        $"아트: {emp.artSkill}");
@@ -145,7 +145,7 @@ public class TrainingPanelUI : MonoBehaviour
         if (EmployeeEnhancement.IsMax(emp))
         {
             // 예상수치 — 최대치 (변화 없음)
-            SetText(expEnhanceText,    "현재 : MAX");
+            SetText(expEnhanceText,    "현재 MAX");
             SetText(expDevelopText,    $"개발: {emp.developSkill}");
             SetText(expPlanningText,   $"기획: {emp.planningSkill}");
             SetText(expArtText,        $"아트: {emp.artSkill}");
@@ -166,7 +166,7 @@ public class TrainingPanelUI : MonoBehaviour
         (int min, int max) subGain = (subAvg, subAvg);
 
         // SPRightPanel — 강화 후 예상 (현재 + 증가 범위)
-        SetText(expEnhanceText,    $"강화 후 : Lv{emp.enhancementLevel + 1}");
+        SetText(expEnhanceText,    $"강화 후 Lv{emp.enhancementLevel + 1}");
         SetText(expDevelopText,    ExpStat("개발",   emp.developSkill,    StatIsMain(emp, "develop")  ? mainGain : subGain));
         SetText(expPlanningText,   ExpStat("기획",   emp.planningSkill,   StatIsMain(emp, "planning") ? mainGain : subGain));
         SetText(expArtText,        ExpStat("아트",   emp.artSkill,        StatIsMain(emp, "art")      ? mainGain : subGain));

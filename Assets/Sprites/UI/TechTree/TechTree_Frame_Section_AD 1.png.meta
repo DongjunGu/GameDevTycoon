@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: 1cfecbb53fad0764baed652b223e29f7
+guid: 932d545f59b757b4d8cceb9f74616f96
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: 1749839109566708339
-    second: Rectangle 214_0
+      213: 824272243123268622
+    second: TechTree_Frame_Section_AD 1_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -139,13 +139,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: Rectangle 214_0
+      name: TechTree_Frame_Section_AD 1_0
       rect:
         serializedVersion: 2
         x: 0
         y: 0
-        width: 114
-        height: 62
+        width: 174
+        height: 84
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -154,8 +154,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 37a3fcb266da84810800000000000000
-      internalID: 1749839109566708339
+      spriteID: e0ca399ec37607b00800000000000000
+      internalID: 824272243123268622
       vertices: []
       indices: 
       edges: []
@@ -174,7 +174,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      Rectangle 214_0: 1749839109566708339
+      TechTree_Frame_Section_AD 1_0: 824272243123268622
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

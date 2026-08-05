@@ -57,7 +57,7 @@ public class CharacterEventTester : MonoBehaviour
         if (debugTrigger16_1)
         {
             debugTrigger16_1 = false;
-            QuickTest16_1();
+            QuickTest16_1(ProjectScale.Small);
         }
     }
 
@@ -191,7 +191,17 @@ public class CharacterEventTester : MonoBehaviour
         if (GUILayout.Button("7-1~7-6 지금 바로 테스트 (기획팀장, 아무 직원)")) QuickTestLeaderTutorial(7, LeaderType.Planner);
         if (GUILayout.Button("9-1~9-3 지금 바로 테스트 (개발팀장, 아무 직원)")) QuickTestLeaderTutorial(9, LeaderType.Programmer);
         GUILayout.EndHorizontal();
-        if (GUILayout.Button("16-1만 지금 바로 테스트 (다른 단계 전부 완료 처리 + SalesUI 강제 오픈 + 그래프 애니메이션)")) QuickTest16_1();
+        GUILayout.BeginHorizontal();
+        GUILayout.Label("16-1만 지금 바로 테스트 (SalesUI 강제 오픈 + 그래프 애니메이션):", Rich());
+        if (GUILayout.Button("소형")) QuickTest16_1(ProjectScale.Small);
+        if (GUILayout.Button("중형")) QuickTest16_1(ProjectScale.Medium);
+        if (GUILayout.Button("대형")) QuickTest16_1(ProjectScale.Large);
+        GUILayout.EndHorizontal();
+        GUILayout.BeginHorizontal();
+        GUILayout.Label("평론가UI(CriticReviewUI) 점수 직접 테스트:", Rich());
+        if (GUILayout.Button("45점 (Low 반응)")) QuickTestCriticReview(45);
+        if (GUILayout.Button("80점 (High 반응)")) QuickTestCriticReview(80);
+        GUILayout.EndHorizontal();
         if (GUILayout.Button("2사이클 시작 (1~16 완료 처리 + 17-1부터)")) JumpToCycle2();
 #endif
 
@@ -225,11 +235,39 @@ public class CharacterEventTester : MonoBehaviour
 
     // 온보딩 전체(컷씬 포함)를 완료 처리 + RunState.tutorial=false — 이후 세션은 튜토리얼 훅이 전혀
     // 안 걸리고 일반 플레이만 된다(다른 기능 테스트할 때 튜토리얼이 끼어드는 걸 막는 용도).
+    // ⚠️ JumpToOnboardingStep(13)은 3~12단계까지만 Done 처리함 — 13단계 이후는 여기서 직접 마저 채워야
+    // TutorialController.IsFullyDoneInternal()의 needStep13~19(20) 체크가 전부 풀린다. 이걸 빠뜨리면
+    // IsMenuUnlockReady()가 영원히 false로 남아 MenuController.WaitOnboardingFullyDone()이 menuButton을
+    // 절대 다시 켜주지 않는다(메뉴 자체를 못 열게 되어 다른 메뉴 UI 테스트도 전부 막힘).
     void DisableTutorial()
     {
         OnboardingState.MarkIntroDone();
         OnboardingState.MarkTutorialDone();
-        JumpToOnboardingStep(13); // 3~12단계 전부 완료 처리
+        JumpToOnboardingStep(13); // 3~12단계 완료 처리
+        OnboardingState.MarkTutorial13Done();
+        OnboardingState.MarkTutorial13_4Done();
+        OnboardingState.MarkTutorial13_5Done();
+        OnboardingState.MarkTutorial14_1Done();
+        OnboardingState.MarkTutorial15Done();
+        OnboardingState.MarkTutorial16_1Done();
+        OnboardingState.MarkTutorial17_1Done();
+        OnboardingState.MarkTutorial17_2Done();
+        OnboardingState.MarkTutorial17_7Done();
+        OnboardingState.MarkTutorial18Done();
+        OnboardingState.MarkTutorial19Done();
+        OnboardingState.MarkTutorial20Done(); // 13~20 전부 Done — IsFullyDone/IsMenuUnlockReady 둘 다 통과
+
+        // 19~20 구간이 걸어둔 "시간정지 중에도 캐릭터는 계속 움직임" 오버라이드 + 하드락 정리.
+        // 원래는 DevelopmentManager.StartDeveloping()(2번째 프로젝트 실제 시작)에서만 풀리는데, 여기서
+        // 단계를 강제로 Done 처리해버리면 그 경로를 안 타서 계속 남아있는다 — 방치하면 이후 아무 모달이나
+        // 열어서 StopTime()을 불러도 캐릭터가 patrol을 멈추지 않는 버그로 이어진다.
+        if (GameTimeManager.Instance != null)
+        {
+            GameTimeManager.Instance.AllowMovementWhileStopped = false;
+            GameTimeManager.Instance.UnlockTime();
+        }
+        OnboardingState.TutorialActive = false;
+
         if (RunStateManager.Instance != null)
             RunStateManager.Instance.SetTutorial(false, success => Set(success ? "튜토리얼 완전 해제 완료 (RunState.tutorial=false)" : "온보딩 플래그는 껐지만 RunState 저장 실패"));
         else
@@ -253,22 +291,22 @@ public class CharacterEventTester : MonoBehaviour
     // 영구히 찍어버리면 나중에 진짜 16-1이 와야 할 때 스킵되는 사고가 남 — 그래서 대사 재생 "중"에만
     // 임시로 Done을 켜(SalesUI 내부 자연 트리거와 중복 방지) 두고, 재생이 끝나면 원래 상태였던 게
     // false였을 경우 다시 false로 원복한다("실제로 완료됐다"는 표시는 나중에 진짜 완료될 때 남긴다).
-    void QuickTest16_1()
+    void QuickTest16_1(ProjectScale scale)
     {
         if (TutorialController.Instance == null) { Set("TutorialController 인스턴스 없음 (씬에 없거나 이미 파괴됨)"); return; }
         if (SalesUI.Instance == null) { Set("SalesUI 인스턴스 없음 (인게임에서 실행하세요)"); return; }
 
-        StartCoroutine(RunQuickTest16_1());
+        StartCoroutine(RunQuickTest16_1(scale));
     }
 
-    IEnumerator RunQuickTest16_1()
+    IEnumerator RunQuickTest16_1(ProjectScale scale)
     {
         bool wasDone = OnboardingState.Tutorial16_1Done;
         OnboardingState.MarkTutorial16_1Done(); // 대사 재생 동안만 임시로 켬 — SalesUI 내부 자연 트리거 중복 방지
 
         SalesUI.Instance.ShowWithProjectName(
-            qualityScore: 70f, scale: ProjectScale.Small, projectName: "[테스트] 16-1",
-            cachedScale: ProjectScale.Small, cachedGenre: ProjectGenre.RPG, cachedPlatform: ProjectPlatform.PC,
+            qualityScore: 70f, scale: scale, projectName: $"[테스트] 16-1 ({scale})",
+            cachedScale: scale, cachedGenre: ProjectGenre.RPG, cachedPlatform: ProjectPlatform.PC,
             planning: 50f, develop: 50f, art: 50f, creativity: 50f, bug: 0f);
 
         // 실제 개발완료 흐름(DevelopmentResultUI)과 동일하게, 마케팅→판매 직전 랜덤 2인 patrol도 그대로 재현.
@@ -291,6 +329,15 @@ public class CharacterEventTester : MonoBehaviour
         {
             Set("16-1 테스트 종료");
         }
+    }
+
+    // 평론가UI(CriticReviewUI) 점수 직접 테스트 — CalcCriticScore 공식/랜덤 변동(-5~5)을 거치지 않고
+    // 지정한 점수를 그대로 띄운다. 50점 경계로 low/high 반응 이미지·멘트풀 분기를 정확히 확인할 목적.
+    void QuickTestCriticReview(int score)
+    {
+        if (CriticReviewUI.Instance == null) { Set("CriticReviewUI 인스턴스 없음 (인게임에서 실행하세요)"); return; }
+        CriticReviewUI.Instance.ShowWithScore(score, () => Set($"평론가UI {score}점 테스트 종료"));
+        Set($"평론가UI {score}점 테스트 오픈");
     }
 
     // 튜토리얼 사이클 구분 테스트용 — 1사이클(1~16)을 전부 완료 처리하고 곧바로 2사이클의 첫 단계인
