@@ -82,6 +82,12 @@ public class TechTreeManager : MonoBehaviour
         if (node == null || node.isUnlocked) return false;
         if (MoneyManager.Instance == null || !MoneyManager.Instance.CanAffordPoint(node.requiredPoints)) return false;
 
+        return IsPrerequisiteUnlocked(node);
+    }
+
+    // 포인트 부족과 별개로 "선행 노드 미해금" 여부만 따로 확인 — UI에서 두 사유를 구분해 보여주는 데 사용.
+    public bool IsPrerequisiteUnlocked(TechNodeData node)
+    {
         var prereq = FindPrerequisite(node);
         return prereq == null || prereq.isUnlocked;
     }

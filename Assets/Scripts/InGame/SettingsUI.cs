@@ -12,6 +12,12 @@ public class SettingsUI : MonoBehaviour
     public Slider bgmSlider;   // 배경음
     public Slider sfxSlider;   // 효과음
 
+    [Header("사운드 아이콘 — 값 0이면 mute 아이콘으로 교체, 아니면 원상복구")]
+    public Image bgmImage;
+    public Image sfxImage;
+    public Sprite soundOnSprite;  // SoundSet_Icon_Sound_O
+    public Sprite soundOffSprite; // SoundSet_Icon_Sound_X
+
     [Header("버튼")]
     public Button closeButton; // 닫기 (OnClick 자동 연결)
 
@@ -47,8 +53,13 @@ public class SettingsUI : MonoBehaviour
 
         // 현재 저장된 볼륨으로 슬라이더 표시값 동기화 (리스너는 Awake 에서 이미 연결됨)
         var sm = SoundManager.Instance;
-        if (bgmSlider != null) bgmSlider.SetValueWithoutNotify(sm != null ? sm.BgmVolume : 1f);
-        if (sfxSlider != null) sfxSlider.SetValueWithoutNotify(sm != null ? sm.SfxVolume : 1f);
+        float bgmVolume = sm != null ? sm.BgmVolume : 1f;
+        float sfxVolume = sm != null ? sm.SfxVolume : 1f;
+        if (bgmSlider != null) bgmSlider.SetValueWithoutNotify(bgmVolume);
+        if (sfxSlider != null) sfxSlider.SetValueWithoutNotify(sfxVolume);
+        // SetValueWithoutNotify 는 onValueChanged 를 안 태우므로 아이콘은 직접 동기화.
+        UpdateSoundIcon(bgmImage, bgmVolume);
+        UpdateSoundIcon(sfxImage, sfxVolume);
     }
 
     public void SettingClose()
@@ -58,8 +69,25 @@ public class SettingsUI : MonoBehaviour
         ModalGate.I.Unregister(this);
     }
 
-    void OnBgmVolumeChanged(float v) => SoundManager.Instance?.SetBgmVolume(v);
-    void OnSfxVolumeChanged(float v) => SoundManager.Instance?.SetSfxVolume(v);
+    void OnBgmVolumeChanged(float v)
+    {
+        SoundManager.Instance?.SetBgmVolume(v);
+        UpdateSoundIcon(bgmImage, v);
+    }
+
+    void OnSfxVolumeChanged(float v)
+    {
+        SoundManager.Instance?.SetSfxVolume(v);
+        UpdateSoundIcon(sfxImage, v);
+    }
+
+    // 값이 0이면 mute 아이콘, 아니면(0이 아니면) 원래 아이콘으로 복구.
+    void UpdateSoundIcon(Image img, float value)
+    {
+        if (img == null) return;
+        var target = value <= 0f ? soundOffSprite : soundOnSprite;
+        if (target != null) img.sprite = target;
+    }
 
     // ── 메인메뉴 ──────────────────────────────
     // "메인메뉴" 버튼 OnClick 에 연결.
