@@ -21,7 +21,8 @@
       "WebFetch(domain:docs.thebackend.io)",
       "WebFetch(domain:docs.backnd.com)",
       "WebFetch(domain:community.thebackend.io)",
-      "WebFetch(domain:developer.thebackend.io)"
+      "WebFetch(domain:developer.thebackend.io)",
+      "Artifact"
     ],
     "ask": [
       "Bash(rm:*)",

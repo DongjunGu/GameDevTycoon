@@ -8,6 +8,7 @@ public class CompletedProjectsUI : MonoBehaviour
     public static CompletedProjectsUI Instance { get; private set; }
 
     [Header("Panels")]
+    public GameObject completedProjectPanel; // 리스트+디테일 전체를 담는 최상위 래퍼(ModalLayer 부착) — Open에서 켜고 Close에서 끔
     public GameObject listPanel;
     public GameObject detailPanel;
 
@@ -22,7 +23,28 @@ public class CompletedProjectsUI : MonoBehaviour
     public TextMeshProUGUI detailPlatformText;
     public TextMeshProUGUI detailRevenueText;
     public TextMeshProUGUI detailCriticTotalText;   // 평점 (점수 박스 안의 큰 숫자, 라벨은 별도 정적 텍스트)
-    public TextMeshProUGUI detailBestRankText;      // 최고 순위
+    public TextMeshProUGUI detailBestRankText;      // 최고 순위 (DPBestScoreText2) — 1위면 숨기고 rank1stBadge로 대체
+    public GameObject      rank1stBadge;            // 최고 순위 1위 전용 뱃지 (1stRank) — 평소엔 비활성
+
+    [Header("Detail — 세부 점수 (기획/개발/아트/창의성)")]
+    public TextMeshProUGUI detailPlanningScoreText;
+    public TextMeshProUGUI detailDevScoreText;
+    public TextMeshProUGUI detailArtScoreText;
+    public TextMeshProUGUI detailCreativityScoreText;
+
+    [Header("Detail — 세부 점수 신기록 뱃지 (자기 자신 제외 다른 완료작들의 최고치보다 높으면 표시)")]
+    public GameObject planningNewRecordText;
+    public GameObject devNewRecordText;
+    public GameObject artNewRecordText;
+    public GameObject creativityNewRecordText;
+
+    [Header("Detail — 규모/장르/플랫폼 아이콘 (현재 전용 에셋 없어 임시 플레이스홀더 사용, 추후 교체)")]
+    public Image detailScaleIcon;
+    public Image detailGenreIcon;
+    public Image detailPlatformIcon;
+    public Sprite[] scaleIcons;    // ProjectScale(Small,Medium,Large) 순서
+    public Sprite[] genreIcons;    // ProjectGenre 순서
+    public Sprite[] platformIcons; // ProjectPlatform 순서
 
     void Awake()
     {
@@ -37,6 +59,7 @@ public class CompletedProjectsUI : MonoBehaviour
         GameTimeManager.Instance?.StopTime();
         ModalGate.I.Register(this);
         gameObject.SetActive(true);
+        if (completedProjectPanel != null) completedProjectPanel.SetActive(true);
         detailPanel.SetActive(false);
         ShowList();
     }
@@ -83,17 +106,61 @@ public class CompletedProjectsUI : MonoBehaviour
     void ShowDetail(CompletedProjectData data)
     {
         detailNameText.text = data.projectName;
-        detailScaleText.text = $"규모: {ScaleToString((ProjectScale)data.scale)}";
-        detailGenreText.text = $"장르: {GenreToString((ProjectGenre)data.genre)}";
-        detailPlatformText.text = $"플랫폼: {PlatformToString((ProjectPlatform)data.platform)}";
-        detailRevenueText.text = $"매출: {data.totalRevenue:N0} G";
+        detailScaleText.text = ScaleToString((ProjectScale)data.scale);
+        detailGenreText.text = GenreToString((ProjectGenre)data.genre);
+        detailPlatformText.text = PlatformToString((ProjectPlatform)data.platform);
+        detailRevenueText.text = $"{data.totalRevenue:N0} G";
         if (detailCriticTotalText != null)
-            detailCriticTotalText.text = $"{data.criticTotalScore}";
-        if (detailBestRankText != null)
-            detailBestRankText.text = data.bestRank > 0 ? $"최고 순위: {data.bestRank}위" : "최고 순위: 순위권 밖";
+            detailCriticTotalText.text = $"{data.criticTotalScore}점";
 
-        listPanel.SetActive(false);
+        if (detailPlanningScoreText   != null) detailPlanningScoreText.text   = $"{data.planning:N0}";
+        if (detailDevScoreText        != null) detailDevScoreText.text        = $"{data.develop:N0}";
+        if (detailArtScoreText        != null) detailArtScoreText.text        = $"{data.art:N0}";
+        if (detailCreativityScoreText != null) detailCreativityScoreText.text = $"{data.creativity:N0}";
+
+        // 신기록 뱃지 — 자기 자신을 뺀 다른 완료작들 중 최고치를 이 프로젝트 값이 넘었으면 표시.
+        // (DevelopmentResultUI/SalesUI 의 "완료 시점 신기록" 판정과 동일한 방식 — 여기선 완료작 목록에
+        // 이미 포함된 프로젝트를 조회하는 것이므로 data 자신만 비교 대상에서 제외한다.)
+        if (CompletedProjectManager.Instance != null)
+        {
+            float bestPlanning = 0f, bestDevelop = 0f, bestArt = 0f, bestCreativity = 0f;
+            foreach (var proj in CompletedProjectManager.Instance.completedProjects)
+            {
+                if (proj == data) continue;
+                if (proj.planning   > bestPlanning)   bestPlanning   = proj.planning;
+                if (proj.develop    > bestDevelop)    bestDevelop    = proj.develop;
+                if (proj.art        > bestArt)        bestArt        = proj.art;
+                if (proj.creativity > bestCreativity) bestCreativity = proj.creativity;
+            }
+            if (planningNewRecordText   != null) planningNewRecordText.SetActive(data.planning   > bestPlanning);
+            if (devNewRecordText        != null) devNewRecordText.SetActive(data.develop    > bestDevelop);
+            if (artNewRecordText        != null) artNewRecordText.SetActive(data.art        > bestArt);
+            if (creativityNewRecordText != null) creativityNewRecordText.SetActive(data.creativity > bestCreativity);
+        }
+
+        SetIcon(detailScaleIcon,    scaleIcons,    data.scale);
+        SetIcon(detailGenreIcon,    genreIcons,    data.genre);
+        SetIcon(detailPlatformIcon, platformIcons, data.platform);
+
+        // 최고 순위 1위면 전용 뱃지(rank1stBadge)로 대체 — 평소 텍스트(detailBestRankText)는 숨김.
+        bool isFirstRank = data.bestRank == 1;
+        if (rank1stBadge != null) rank1stBadge.SetActive(isFirstRank);
+        if (detailBestRankText != null)
+        {
+            detailBestRankText.gameObject.SetActive(!isFirstRank);
+            detailBestRankText.text = data.bestRank > 0 ? $"{data.bestRank}위" : "순위권 밖";
+        }
+
+        // completedProjectPanel(래퍼)과 listPanel(CompletedLeftPanel)은 건드리지 않고 계속 활성 상태 유지
+        // — CompletedProjectPanel 이 HorizontalLayoutGroup 으로 리스트/디테일을 나란히 배치하는 구조라,
+        // 리스트는 계속 보이게 두고 detailPanel 만 추가로 활성화한다.
         detailPanel.SetActive(true);
+    }
+
+    static void SetIcon(Image img, Sprite[] icons, int index)
+    {
+        if (img == null || icons == null || index < 0 || index >= icons.Length) return;
+        if (icons[index] != null) img.sprite = icons[index];
     }
 
     public void OnClickBack()
@@ -107,6 +174,7 @@ public class CompletedProjectsUI : MonoBehaviour
         GameTimeManager.Instance?.StartTime();
         ModalGate.I.Unregister(this);
         listPanel.SetActive(false);
+        if (completedProjectPanel != null) completedProjectPanel.SetActive(false);
     }
 
     string ScaleToString(ProjectScale scale) => scale switch

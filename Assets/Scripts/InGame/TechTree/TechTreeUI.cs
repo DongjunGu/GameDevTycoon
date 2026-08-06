@@ -36,9 +36,15 @@ public class TechTreeUI : MonoBehaviour
     public TextMeshProUGUI   techDescriptionText;
     public TextMeshProUGUI   techCostText;
     public Button            techUnlockBtn;   // 미해금 — "해금" 버튼
+    [Tooltip("선행 노드 미해금 상태일 때 techUnlockBtn에 씌우는 비활성 스프라이트")]
+    public Sprite            techUnlockBtnLockedSprite;
     public TextMeshProUGUI   techUnlockText;
     public GameObject        techLockIcon;
     public GameObject        techUnlockedBtn; // 해금 완료 — techUnlockBtn 과 자리 대체(둘이 반대로 토글)
+    public GameObject        warningTextPanel; // 미해금 상태 안내 — TechTreeDetailPanel/TechDescriptionPanel/WarningTextPanel
+
+    private Sprite _techUnlockBtnDefaultSprite;
+    private bool   _techUnlockBtnDefaultSpriteCached;
 
     // TechNodeChildPanel1~5 의 카테고리 배정 순서 (사용자 지정: 광고/채용/만족도/돈/창의성)
     private static readonly TechCategory[] PanelCategoryOrder =
@@ -201,8 +207,8 @@ public class TechTreeUI : MonoBehaviour
         {
             if (nodeLockedSprite != null) img.sprite = nodeLockedSprite;
             img.color = TechTreeManager.Instance.CanUnlock(node)
-                ? new Color(0.93f, 0.93f, 0.99f)       // 해금 가능 — 보라 틴트
-                : new Color(0.85f, 0.85f, 0.85f, 0.5f); // 포인트 부족/선행 미해금 — 회색 틴트
+                ? new Color(0.93f, 0.93f, 0.99f)  // 해금 가능 — 보라 틴트
+                : new Color(0.85f, 0.85f, 0.85f); // 포인트 부족/선행 미해금 — 회색 틴트
         }
     }
 
@@ -222,23 +228,49 @@ public class TechTreeUI : MonoBehaviour
         if (techNodeNameText     != null) techNodeNameText.text     = node.name;
         if (techDetailCategoryText != null) techDetailCategoryText.text = GetCategoryLabel(node.category);
         if (techDescriptionText  != null) techDescriptionText.text  = node.description;
-        if (techCostText         != null) techCostText.text         = $"{node.requiredPoints} P";
+        if (techCostText         != null) techCostText.text         = node.isUnlocked ? "" : $"필요포인트: {node.requiredPoints}P";
 
         // 해금 완료 노드는 techUnlockBtn 대신 techUnlockedBtn을 보여준다(서로 반대로 토글).
-        if (techUnlockBtn    != null) techUnlockBtn.gameObject.SetActive(!node.isUnlocked);
+        // GlobalButtonClickBounce가 클릭된 버튼을 __ClickBounceWrapper로 감싸 부모를 바꾸므로,
+        // 버튼 자신만 SetActive(false)하면 래퍼가 활성 상태로 남아 레이아웃 여백을 차지한다 — 래퍼째로 꺼야 함.
+        SetButtonSlotActive(techUnlockBtn, !node.isUnlocked);
         if (techUnlockedBtn  != null) techUnlockedBtn.SetActive(node.isUnlocked);
+
+        // 미해금 상태 2종류 구분: "해금할 차례"(선행 충족, 포인트만 부족할 수 있음) vs "차례 아님"(선행 미해금).
+        // 차례여도 아니어도 node.isUnlocked=false 는 동일하므로 WarningTextPanel/버튼 스프라이트는
+        // 선행 충족 여부(prereqUnlocked)로만 판단한다 — node.isUnlocked 단독으로는 구분 못 함.
+        bool prereqUnlocked = node.isUnlocked
+            || (TechTreeManager.Instance != null && TechTreeManager.Instance.IsPrerequisiteUnlocked(node));
+        if (warningTextPanel != null) warningTextPanel.SetActive(!node.isUnlocked && !prereqUnlocked);
 
         if (!node.isUnlocked)
         {
             if (techLockIcon   != null) techLockIcon.SetActive(true);
             if (techUnlockText != null) techUnlockText.text = "해금";
-            // 포인트 부족이어도 버튼은 눌리게 두고(interactable 고정 true), 클릭 시 OnClickUnlock에서 부족 안내.
-            if (techUnlockBtn  != null) techUnlockBtn.interactable = true;
+
+            // 선행 노드 미해금(차례 아님)이면 아예 못 누르게 잠금 스프라이트 + interactable=false.
+            // 차례가 됐는데 포인트만 부족한 경우엔 기존대로 눌리게 두고 OnClickUnlock에서 부족 안내.
+            if (techUnlockBtn != null)
+            {
+                techUnlockBtn.interactable = prereqUnlocked;
+
+                var img = techUnlockBtn.GetComponent<Image>();
+                if (img != null)
+                {
+                    if (!_techUnlockBtnDefaultSpriteCached)
+                    {
+                        _techUnlockBtnDefaultSprite = img.sprite;
+                        _techUnlockBtnDefaultSpriteCached = true;
+                    }
+                    img.sprite = prereqUnlocked ? _techUnlockBtnDefaultSprite : techUnlockBtnLockedSprite;
+                }
+            }
         }
     }
 
     // TechTreeDetailPanel/TechBottomPanel/TechUnlockBtn 에 연결 — 공용 ConfirmUI로 확인 후 해금.
-    // 해금 불가(포인트 부족 등) 상태에서도 버튼은 눌리므로, 그 경우 안내만 띄우고 리턴.
+    // 선행 미해금 상태는 ShowDetail에서 이미 버튼을 interactable=false로 막아뒀으므로 여기까지 안 옴 —
+    // 여기 남는 CanUnlock 실패 사유는 포인트 부족뿐.
     void OnClickUnlock()
     {
         if (_selectedNode == null || _selectedNode.isUnlocked) return;
@@ -255,7 +287,7 @@ public class TechTreeUI : MonoBehaviour
         if (ConfirmUI.Instance == null) { TechTreeManager.Instance.Unlock(node); return; }
 
         ConfirmUI.Instance.Show(
-            $"{node.name}을(를) 해금하시겠습니까?\n(-{node.requiredPoints}P)",
+            $"{node.name}을(를) 해금하시겠습니까?\n<align=center><size=35><color=#FFAC21>필요포인트: {node.requiredPoints}P</color></size></align>",
             onConfirm: () =>
             {
                 if (TechTreeManager.Instance.CanUnlock(node)) // 팝업 떠있는 동안 포인트/선행 변화 대비 재확인
@@ -264,7 +296,7 @@ public class TechTreeUI : MonoBehaviour
             },
             onCancel: () => { },
             confirmText: "해금",
-            cancelText:  "취소"
+            cancelText:  "닫기"
         );
     }
 
