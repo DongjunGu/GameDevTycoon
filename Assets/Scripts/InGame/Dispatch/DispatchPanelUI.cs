@@ -334,10 +334,10 @@ public class DispatchPanelUI : MonoBehaviour
                  CharacterUniqueEvents.GetEventDescription(emp), "이벤트", emp.portraitId,
                  CharacterUniqueEvents.IsEventUnlocked(emp));
 
-        // 연속 팀장 횟수 — 기본 비활성, 값이 있을 때만 "연속 n회" 표시(CEO 는 항상 0이라 자연히 숨겨짐).
+        // 연속 팀장 횟수 — 팀장 선택 모드에서만, 값이 있을 때만 "연속 n회" 표시(파견 모드는 항상 숨김, CEO 는 항상 0이라 자연히 숨겨짐).
         if (countSeqPanel != null)
         {
-            bool hasStreak = emp.consecutiveLeaderCount > 0;
+            bool hasStreak = _mode == PanelMode.Leader && emp.consecutiveLeaderCount > 0;
             countSeqPanel.SetActive(hasStreak);
             if (hasStreak && countSeqText != null) countSeqText.text = $"연속 {emp.consecutiveLeaderCount}회";
         }

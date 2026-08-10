@@ -5,6 +5,9 @@ public class RandomEventChoiceOption
 {
     public string buttonLabel;
 
+    // 비어있지 않으면 버튼의 ConditionPanel/ConditionText에 표시(예: "자금 -300,000 G"). null/빈 문자열이면 ConditionPanel 비활성.
+    public string conditionText;
+
     // true면 버튼을 표시하되 비활성(회색) 상태로 렌더 — onChoose는 호출되지 않음
     public bool disabled = false;
 

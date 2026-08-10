@@ -283,7 +283,9 @@ public class RandomEventManager : MonoBehaviour
                 RandomEventUI.Instance.Show(
                     "야매 코드 문제 발생",
                     portraitId,
-                    $"임시 처리 해둔 코드가 문제가 생겼습니다!\n개발 점수 -{Mathf.RoundToInt(penalty)}"
+                    $"임시 처리 해둔 코드가 문제가 생겼습니다!\n개발 점수 -{Mathf.RoundToInt(penalty)}",
+                    onConfirm: null,
+                    titleType: 0
                 );
             }
         }
@@ -1200,7 +1202,7 @@ public class RandomEventManager : MonoBehaviour
         EmployeeManager.Instance.FireEmployee(emp);
 
         // 즉시 대사 표시 — 제목 없음, 직원 portrait, 랜덤 도망 메시지
-        RandomEventUI.Instance.Show("", emp.portraitId, RandomEvents_Condition.GetRunAwayMessage());
+        RandomEventUI.Instance.Show("", emp.portraitId, RandomEvents_Condition.GetRunAwayMessage(), onConfirm: null, titleType: 0);
 
         // 2주 후 AlertUI 예약
         RandomEventConditionChartRow runRow = null;

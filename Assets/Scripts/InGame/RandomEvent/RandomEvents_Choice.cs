@@ -64,12 +64,11 @@ public static class RandomEvents_Choice
                     birthdayEvt.targetEmployeeId = birthdayEmp.id;
 
                     int cost = Mathf.Max(1, (int)(EmployeeManager.Instance.GetTotalSalary() * 0.03f));
-                    // 괄호까지 색상 태그 안에 포함 — "(-3000G)" 형태로 괄호도 같이 보이면서 색이 입혀지게.
-                    string costTag = $"<color=#F3C01D>(-{cost} G)</color>";
-                    // 결과 팝업 전용 — 코인 아이콘 인라인은 버튼 라벨에는 안 붙임.
-                    string costTagResult = $"<sprite=\"CoinSpriteAsset\" name=\"coin\"> {costTag}";
+                    // 결과 팝업 전용(코인 아이콘 인라인 + 노란색) — 버튼 라벨에는 안 붙임, 대신 ConditionText로.
+                    string costTagResult = $"<sprite=\"CoinSpriteAsset\" name=\"coin\"> <color=#F3C01D>(-{cost} G)</color>";
                     birthdayEvt.choices[1].buttonLabel =
-                        birthdayEvt.choices[1].buttonLabel?.Replace("(-{N}G)", costTag);
+                        birthdayEvt.choices[1].buttonLabel?.Replace("\n(-{N}G)", "").Replace("(-{N}G)", "");
+                    birthdayEvt.choices[1].conditionText = $"자금 -{cost:N0} G";
 
                     var c0 = birthdayEvt.choices[0];
                     c0.reply1     = c0.reply1?.Replace("{해당직원이름}", birthdayEmp.employeeName);
@@ -180,13 +179,12 @@ public static class RandomEvents_Choice
                     : equipDescDefaultTemplate;
 
                 equipCostSnapshot = Mathf.Max(1, (int)(EmployeeManager.Instance.GetTotalSalary() * 0.03f));
-                // 괄호까지 색상 태그 안에 포함 — "(-3000G)" 형태로 괄호도 같이 노란색(#F3C01D)으로.
-                string costTag = $"<color=#F3C01D>(-{equipCostSnapshot} G)</color>";
-                // 결과 팝업 전용 — 코인 아이콘 인라인은 버튼 라벨에는 안 붙임.
-                string costTagResult = $"<sprite=\"CoinSpriteAsset\" name=\"coin\"> {costTag}";
+                // 결과 팝업 전용(코인 아이콘 인라인 + 노란색) — 버튼 라벨에는 안 붙임, 대신 ConditionText로.
+                string costTagResult = $"<sprite=\"CoinSpriteAsset\" name=\"coin\"> <color=#F3C01D>(-{equipCostSnapshot} G)</color>";
 
                 equipEvt.choices[0].buttonLabel =
-                    equipLabel0Template.Replace("(-{N}G)", costTag);
+                    equipLabel0Template.Replace("\n(-{N}G)", "").Replace("(-{N}G)", "");
+                equipEvt.choices[0].conditionText = $"자금 -{equipCostSnapshot:N0} G";
                 equipEvt.choices[0].reply1 = (isArtist && !string.IsNullOrEmpty(equipReplyArtistTemplate))
                     ? equipReplyArtistTemplate
                     : equipReplyDefaultTemplate;
@@ -302,8 +300,10 @@ public static class RandomEvents_Choice
                 dinnerCost5  = Mathf.Max(1, (int)(total * 0.05f));
                 dinnerCost10 = Mathf.Max(1, (int)(total * 0.10f));
 
-                dinnerEvt.choices[1].buttonLabel = dinnerLabel1Template.Replace("(-{N}G)", $"<color=#F3C01D>(-{dinnerCost5} G)</color>");
-                dinnerEvt.choices[2].buttonLabel = dinnerLabel2Template.Replace("(-{N}G)", $"<color=#F3C01D>(-{dinnerCost10} G)</color>");
+                dinnerEvt.choices[1].buttonLabel = dinnerLabel1Template.Replace("\n(-{N}G)", "").Replace("(-{N}G)", "");
+                dinnerEvt.choices[2].buttonLabel = dinnerLabel2Template.Replace("\n(-{N}G)", "").Replace("(-{N}G)", "");
+                dinnerEvt.choices[1].conditionText = $"자금 -{dinnerCost5:N0} G";
+                dinnerEvt.choices[2].conditionText = $"자금 -{dinnerCost10:N0} G";
                 dinnerEvt.choices[1].resultDescriptions.Clear();
                 if (!string.IsNullOrEmpty(dinnerDesc2Happy)) dinnerEvt.choices[1].resultDescriptions.Add(dinnerDesc2Happy);
                 if (!string.IsNullOrEmpty(dinnerDesc2Meh))   dinnerEvt.choices[1].resultDescriptions.Add(dinnerDesc2Meh);

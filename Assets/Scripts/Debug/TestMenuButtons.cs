@@ -54,7 +54,10 @@ public class TestMenuButtons : MonoBehaviour
         // 새 사무실 타일맵으로 GridManager 참조 교체 — 안 하면 IsWalkable/WorldToCell이 계속 옛 타일맵을 봐서
         // 새 구역은 전부 walkable=false로 나와 경로탐색이 실패한다.
         if (GridManager.Instance != null && newGroundTilemap != null)
+        {
             GridManager.Instance.SetTilemaps(newGroundTilemap, newObstacleTilemap, newStairTilemap, newElevatorTilemap);
+            GridManager.Instance.SetOfficeLevel(4); // 이 테스트 버튼은 Level1 → Level4 전환 전용
+        }
 
         // [테스트] 새 사무실 자리로 순간이동(걷지 않고 위치만 교체) — 타일/데스크 재배치 테스트용.
         // desk_01~04 → desk_05~08. 이동된 인원 중 랜덤 1명을 p3/p4 중 한 곳으로 patrol.
