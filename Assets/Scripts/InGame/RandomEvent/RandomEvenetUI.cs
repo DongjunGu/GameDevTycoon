@@ -20,15 +20,23 @@ public class RandomEventUI : MonoBehaviour
     [Header("Panel")]
     public GameObject eventPanel;
 
+    [Tooltip("사무실 레벨(GridManager.CurrentOfficeLevel)에 따라 바뀌는 배경 — Resources/Dialog/BG_Office_Lv{N}")]
+    public Image backgroundImage;
+
     [Header("Portrait / Dialog")]
     public Image portraitImage;
     public RectTransform dialogTextBG;       // 대사 배경 (슬라이드 대상)
     public GameObject namePanel;             // 이름 없을 때 숨김
+    public Image namePanelImage;             // NamePanel 자체 이미지 — 캐릭터(portraitId)별로 교체
+    public CharacterNamePanelSet namePanelSpriteSet;
     public TextMeshProUGUI nameText;
     public TextMeshProUGUI descriptionText;  // 대사 (DialogText) — 타이핑
 
     [Header("Title / Result (RightUpPanel)")]
     public RectTransform titleBG;            // 제목 배경 (슬라이드 대상)
+    public Image titleBGImage;               // TitleBG 자체 이미지 — titleType(0=부정/1=중립/2=긍정)에 따라 교체
+    public Sprite titleBGBadSprite;          // titleType == 0
+    public Sprite titleBGNormalSprite;       // titleType == 1 또는 2 (중립/긍정 공용)
     public TextMeshProUGUI titleText;
     public RectTransform resultBG;           // 결과 배경 (슬라이드 대상)
     public TextMeshProUGUI resultText;       // 결과 (systemMessage)
@@ -37,6 +45,21 @@ public class RandomEventUI : MonoBehaviour
 
     [Header("Click")]
     public Button clickButton;               // 전체화면 진행/닫기 (IndicatorBtn)
+    // DialogTextBG 안의 별도 자식(DialogTextClickCatcher, SkipButton 바로 뒤 형제) — SkipButton 영역
+    // 제외하고 나머지 클릭을 clickButton과 동일하게 처리. DialogTextBG 자신에는 절대 Button을 달지
+    // 말 것 — GlobalButtonClickBounce가 첫 클릭 시 그 RectTransform의 anchor/anchoredPosition을
+    // 풀스트레치로 덮어써서, 이 스크립트가 슬라이드에 쓰는 좌표계 자체가 깨져 두 번째 이벤트부터
+    // 위치가 틀어진다(경험담) — 그래서 애니메이션 대상과 무관한 자식에 Button을 분리해 붙인다.
+    public Button dialogTextClickButton;
+
+    [Header("진행 인디케이터 — 대사 타이핑 완료 시 등장 + 위아래 호버 연출")]
+    public RectTransform indicatorImage;
+    public float indicatorHoverAmplitude = 8f;
+    public float indicatorHoverSpeed = 4f;
+
+    [Header("스킵 버튼 — 3배속 타이핑 + 결과 확인 후 자동 닫기(이번 이벤트 1회만 유지)")]
+    public Button skipButton;
+    public float skipSpeedMultiplier = 3f;
 
     [Header("Slide")]
     public float portraitDelay  = 0.5f;      // 초상 표시 후 대사/제목 슬라이드까지 대기
@@ -54,6 +77,7 @@ public class RandomEventUI : MonoBehaviour
     private Step _step = Step.Idle;
 
     private RandomEventData _currentEvent;
+    private int _currentTitleType = 1; // 0=부정/1=중립/2=긍정 — BeginDisplay 에서 TitleBG 스프라이트에 반영
     private bool   _simpleMode;
     private System.Action _simpleOnConfirm;
 
@@ -71,10 +95,21 @@ public class RandomEventUI : MonoBehaviour
     private bool _posCached;
     private Vector2 _dialogShown, _titleShown, _resultShown, _resultShown2;
 
+    private bool _skipMode;             // 이번 이벤트 표시 동안만 유지 — Close()/BeginDisplay 에서 리셋
+    private Vector2 _indicatorBasePos;  // 인디케이터 호버 연출 기준 위치
+
     void Awake()
     {
         if (Instance != null) { Destroy(gameObject); return; }
         Instance = this;
+
+        if (indicatorImage != null) _indicatorBasePos = indicatorImage.anchoredPosition;
+
+        if (skipButton != null)
+        {
+            skipButton.onClick.RemoveListener(OnSkipClicked);
+            skipButton.onClick.AddListener(OnSkipClicked);
+        }
 
         if (clickButton != null)
         {
@@ -82,7 +117,31 @@ public class RandomEventUI : MonoBehaviour
             clickButton.onClick.AddListener(OnScreenClick);
         }
 
+        if (dialogTextClickButton != null)
+        {
+            dialogTextClickButton.onClick.RemoveListener(OnScreenClick);
+            dialogTextClickButton.onClick.AddListener(OnScreenClick);
+        }
+
         if (eventPanel != null) eventPanel.SetActive(false);
+    }
+
+    void Update()
+    {
+        // 인디케이터 호버 연출 — 활성화(타이핑 완료 시) 동안만 위아래로 부드럽게 왕복.
+        if (indicatorImage != null && indicatorImage.gameObject.activeSelf)
+        {
+            float y = _indicatorBasePos.y + Mathf.Sin(Time.unscaledTime * indicatorHoverSpeed) * indicatorHoverAmplitude;
+            indicatorImage.anchoredPosition = new Vector2(_indicatorBasePos.x, y);
+        }
+    }
+
+    // 스킵 버튼 — 이번 이벤트만 타이핑 3배속 + 결과까지 자동 진행. 이미 결과가 떠서 닫기만 남은
+    // 상태(Step.Result)에서 누르면 그 마지막 클릭도 대신 처리해 바로 닫는다.
+    void OnSkipClicked()
+    {
+        _skipMode = true;
+        if (_step == Step.Result) Close();
     }
 
     // ── 진입점 ────────────────────────────────────────────────
@@ -93,15 +152,16 @@ public class RandomEventUI : MonoBehaviour
     }
 
     // EventUI 호환 오버로드 — 대사만 타이핑, 효과/저장/재개는 onConfirm 담당.
-    public void Show(string title, string portraitId, string message, System.Action onConfirm = null)
+    // titleType: 0=부정/1=중립/2=긍정 (기본 1=중립) — TitleBG 스프라이트 선택에만 쓰임.
+    public void Show(string title, string portraitId, string message, System.Action onConfirm = null, int titleType = 1)
     {
-        ModalGate.I.WhenFree(() => DisplaySimple(title, portraitId, message, null, null, onConfirm));
+        ModalGate.I.WhenFree(() => DisplaySimple(title, portraitId, message, null, null, onConfirm, titleType));
     }
 
     // systemMessage/systemMessage2 포함 오버로드 — 조건 이벤트 등 결과 텍스트가 있는 경우.
-    public void Show(string title, string portraitId, string message, string systemMsg, string systemMsg2, System.Action onConfirm = null)
+    public void Show(string title, string portraitId, string message, string systemMsg, string systemMsg2, System.Action onConfirm = null, int titleType = 1)
     {
-        ModalGate.I.WhenFree(() => DisplaySimple(title, portraitId, message, systemMsg, systemMsg2, onConfirm));
+        ModalGate.I.WhenFree(() => DisplaySimple(title, portraitId, message, systemMsg, systemMsg2, onConfirm, titleType));
     }
 
     void DisplayData(RandomEventData evt)
@@ -116,18 +176,19 @@ public class RandomEventUI : MonoBehaviour
         _hasResult2     = false;
         _resumeDev     = evt.type != RandomEventType.EmployeeRun
                       && evt.type != RandomEventType.EmployeeFight
-                      && evt.type != RandomEventType.BadCompany
                       && evt.type != RandomEventType.Recruit;
+        _currentTitleType = evt.titleType;
 
         string speaker = ResolveSpeakerName(evt);
         BeginDisplay(speaker, evt.portraitId, evt.title, evt.description);
     }
 
-    void DisplaySimple(string title, string portraitId, string message, string systemMsg, string systemMsg2, System.Action onConfirm)
+    void DisplaySimple(string title, string portraitId, string message, string systemMsg, string systemMsg2, System.Action onConfirm, int titleType = 1)
     {
         _currentEvent    = null;
         _simpleMode      = true;
         _simpleOnConfirm = onConfirm;
+        _currentTitleType = titleType;
 
         _resultMessage  = systemMsg  ?? "";
         _resultMessage2 = systemMsg2 ?? "";
@@ -154,6 +215,8 @@ public class RandomEventUI : MonoBehaviour
         if (titleText  != null) titleText.text = "";
         if (resultText  != null) resultText.text  = "";
         if (resultText2 != null) resultText2.text = "";
+        if (indicatorImage != null) indicatorImage.gameObject.SetActive(false);
+        _skipMode = false; // 스킵은 이번 이벤트 표시 한정 — 새 이벤트마다 초기화
 
         // 캐시돼 있으면 활성화 전에 BG 를 숨김 위치로 미리 이동 (활성 첫 프레임 잔상 방지).
         if (_posCached)
@@ -167,9 +230,15 @@ public class RandomEventUI : MonoBehaviour
         // 이름
         if (nameText  != null) nameText.text = speaker ?? "";
         if (namePanel != null) namePanel.SetActive(!string.IsNullOrEmpty(speaker));
+        CharacterNamePanelSet.Apply(namePanelImage, namePanelSpriteSet, portraitId);
 
-        // 제목
+        // 제목 + TitleBG 이미지(titleType: 0=부정 전용 이미지 / 1·2=중립·긍정 공용 이미지)
         if (titleText != null) titleText.text = title ?? "";
+        if (titleBGImage != null)
+        {
+            Sprite s = _currentTitleType == 0 ? titleBGBadSprite : titleBGNormalSprite;
+            if (s != null) titleBGImage.sprite = s;
+        }
 
         // 결과 (미리 채워두되 ResultBG 가 숨겨져 있어 보이지 않음)
         if (resultText  != null) resultText.text  = _resultMessage  ?? "";
@@ -183,6 +252,9 @@ public class RandomEventUI : MonoBehaviour
             portraitImage.sprite = portrait;
             portraitImage.gameObject.SetActive(portrait != null);
         }
+
+        // 배경 — 사무실 레벨에 따라 교체(현재 기준). 나중에 상황별 배경이 추가되면 이 자리에서 분기 추가.
+        if (backgroundImage != null) backgroundImage.sprite = GridManager.LoadDialogBackgroundSprite();
 
         eventPanel.SetActive(true);
         ModalGate.I.Register(this);
@@ -296,7 +368,9 @@ public class RandomEventUI : MonoBehaviour
         for (int i = 0; i <= total; i++)
         {
             descriptionText.maxVisibleCharacters = i;
-            if (typeInterval > 0f) yield return new WaitForSecondsRealtime(typeInterval);
+            // 스킵 모드면 매 글자마다 다시 체크해 이미 타이핑 도중에 눌러도 그 지점부터 즉시 3배속 적용.
+            float interval = _skipMode ? typeInterval / Mathf.Max(0.01f, skipSpeedMultiplier) : typeInterval;
+            if (interval > 0f) yield return new WaitForSecondsRealtime(interval);
             else yield return null;
         }
 
@@ -343,6 +417,9 @@ public class RandomEventUI : MonoBehaviour
         if (_step != Step.Typing) return;
         _step = Step.Result;
 
+        // 타이핑이 끝났으니 "클릭해서 계속" 인디케이터 등장(호버 연출은 Update 에서).
+        if (indicatorImage != null) indicatorImage.gameObject.SetActive(true);
+
         // 결과 BG 슬라이드 인 (메시지가 있는 경우 — 데이터 모드/호환 모드 공통)
         if (_hasResult  && resultBG  != null)
             StartCoroutine(SlideTo(resultBG,  _resultShown,  slideDuration));
@@ -354,6 +431,15 @@ public class RandomEventUI : MonoBehaviour
 
         // 호환 모드이고 결과 메시지가 없으면 한 번 더 클릭 시 Close — 있으면 동일하게 Result step 유지.
         if (_simpleMode && !_hasResult && !_hasResult2) { /* Close는 다음 클릭에서 */ }
+
+        // 스킵 모드면 결과 슬라이드가 화면에 다 나온 뒤(사용자가 그 짧은 순간이라도 보게) 곧바로 닫기까지 자동 처리.
+        if (_skipMode) StartCoroutine(AutoCloseAfterResult());
+    }
+
+    IEnumerator AutoCloseAfterResult()
+    {
+        yield return new WaitForSecondsRealtime(slideDuration);
+        if (_step == Step.Result) Close();
     }
 
     // ── 닫기 ──────────────────────────────────────────────────
@@ -371,6 +457,8 @@ public class RandomEventUI : MonoBehaviour
         _step = Step.Idle;
         _simpleOnConfirm = null;
         _currentEvent = null;
+        _skipMode = false;
+        if (indicatorImage != null) indicatorImage.gameObject.SetActive(false);
 
         if (eventPanel != null) eventPanel.SetActive(false);
         ModalGate.I.Unregister(this);

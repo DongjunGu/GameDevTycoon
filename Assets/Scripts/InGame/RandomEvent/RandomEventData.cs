@@ -17,14 +17,10 @@ public enum RandomEventType
     EmployeeRun,
     EmployeeResignation,
     EmployeeFight,
-    BadCompany,
     UnstableCompany,    // 불안한 회사 wrapper (연간 퇴직 2명 이상 시 발생)
     BadRumor,           // 안좋은 소문
     AnxietyInducing,    // 불안감 조성
     CompanyBadReview,   // 회사 평점 1점 (퇴사 이벤트 후 30% 확률 연계)
-    CompetitorRelease,
-    PerfectTiming,
-    AlgorithmChoice,
 
     // ── 개발 중 랜덤 이벤트 (신규) ────────────────────────────
     NetworkIssue,           // 네트워크 끊김          1~74%

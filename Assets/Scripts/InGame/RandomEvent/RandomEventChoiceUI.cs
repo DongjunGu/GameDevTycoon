@@ -2,7 +2,6 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
-using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
 using TMPro;
 
@@ -12,6 +11,9 @@ public class RandomEventChoiceUI : MonoBehaviour
 
     [Header("Panel")]
     public GameObject eventPanel;
+
+    [Tooltip("사무실 레벨(GridManager.CurrentOfficeLevel)에 따라 바뀌는 배경 — Resources/Dialog/BG_Office_Lv{N}")]
+    public Image backgroundImage;
 
     [Header("UI")]
     public Image portraitImage;
@@ -25,8 +27,6 @@ public class RandomEventChoiceUI : MonoBehaviour
     public Transform choiceButtonContainer;
     public GameObject choiceButtonPrefab;
     public Button confirmButton;
-    [Tooltip("선택지 클릭 시 RandomEventChoiceBtn 이미지로 교체할 스프라이트")]
-    public Sprite choiceSelectedSprite;
 
     [Header("타이핑 속도 (초/글자)")]
     [SerializeField] private float _typingSpeed = 0.05f;
@@ -42,6 +42,31 @@ public class RandomEventChoiceUI : MonoBehaviour
     [Tooltip("DialogBoxImage2 자식 — portrait2 의 이름/대사")]
     public TextMeshProUGUI nameText2;
     public TextMeshProUGUI descriptionText2;
+
+    [Header("NamePanel 이미지 — 캐릭터(portraitId)별로 교체 (RandomEventUI와 동일 SO)")]
+    public Image namePanelImage1;
+    public Image namePanelImage2;
+    public CharacterNamePanelSet namePanelSpriteSet;
+
+    [Header("진행 인디케이터 — 대사 타이핑 완료 시 등장 + 위아래 호버 연출 (박스별)")]
+    public RectTransform indicatorImage1;
+    public RectTransform indicatorImage2;
+    public float indicatorHoverAmplitude = 8f;
+    public float indicatorHoverSpeed = 4f;
+
+    [Tooltip("돈이 드는 선택지가 있을 때만 활성화 — ConfirmPanelMoneyElevator 부착된 트리거 오브젝트(MoneyPanel을 다이얼로그 위로 끌어올림)")]
+    public GameObject moneyElevatorTrigger;
+
+    [Tooltip("선택지 표시 중 배경 딤 — 선택지 뜰 때 활성화, 패널 닫힐 때 비활성화")]
+    public GameObject choiceDim;
+
+    // 스킵 버튼 자신에는 Button을 달아도 안전 — DialogBoxImage1/2는 코드가 anchoredPosition을 직접
+    // 애니메이션시키는 대상이 아니라 SetActive만 토글하므로, GlobalButtonClickBounce의 wrapper 삽입이
+    // 좌표계를 깨뜨릴 걱정이 없다([[feedback_global_click_bounce_pitfalls]] 6번 항목과 다른 케이스).
+    [Header("스킵 버튼 — 3배속 타이핑 + 클릭 대기 단계 자동 진행(선택지/확인은 유저가 직접). 이번 이벤트 1회만 유지")]
+    public Button skipButton1;
+    public Button skipButton2;
+    public float skipSpeedMultiplier = 3f;
     [Tooltip("말하지 않는 초상화의 scale (화자는 1 고정)")]
     [SerializeField] private float _nonSpeakerScale = 0.85f;
     [Tooltip("말하지 않는 초상화의 색 (RGB+alpha 통합). 화자는 흰색/255")]
@@ -77,12 +102,81 @@ public class RandomEventChoiceUI : MonoBehaviour
     // ModalGate 큐를 타고 같은 프레임에 이 패널을 띄우면서 그대로 스킵/선택 입력으로 새어들어오는 것을 방지.
     private int _shownFrame = -1;
 
+    private bool   _skipMode; // 이번 이벤트 표시 동안만 유지 — DisplayInternal 에서 리셋
+    private Vector2 _indicatorBasePos1, _indicatorBasePos2; // 인디케이터 호버 연출 기준 위치
+
     // ── 초기화 ──────────────────────────────────────────────────
     void Awake()
     {
         if (Instance != null) { Destroy(gameObject); return; }
         Instance = this;
         eventPanel.SetActive(false);
+        if (moneyElevatorTrigger != null) moneyElevatorTrigger.SetActive(false);
+        if (choiceDim != null) choiceDim.SetActive(false);
+
+        if (indicatorImage1 != null) _indicatorBasePos1 = indicatorImage1.anchoredPosition;
+        if (indicatorImage2 != null) _indicatorBasePos2 = indicatorImage2.anchoredPosition;
+
+        if (skipButton1 != null)
+        {
+            skipButton1.onClick.RemoveListener(OnSkipClicked);
+            skipButton1.onClick.AddListener(OnSkipClicked);
+        }
+        if (skipButton2 != null)
+        {
+            skipButton2.onClick.RemoveListener(OnSkipClicked);
+            skipButton2.onClick.AddListener(OnSkipClicked);
+        }
+    }
+
+    // 스킵 버튼 — 이번 이벤트만 타이핑 3배속 + "클릭해야 진행되는" 대기 단계를 자동으로 통과.
+    // 실제 선택지 고르기/확인 버튼 자체는 유저 결정이 필요한 지점이라 자동 클릭하지 않음 — 단,
+    // 선택지 "공개"(_awaitingChoiceReveal)나 정보성 이벤트의 확인 버튼처럼 순수 "다음"류 대기는 넘겨준다.
+    void OnSkipClicked()
+    {
+        _skipMode = true;
+        if (!_isTypingDone) return; // 타이핑 가속 자체는 TypeText 루프가 매 글자 체크해서 처리
+
+        if (_awaitingChoiceReveal)
+        {
+            _awaitingChoiceReveal = false;
+            var choices = _pendingChoices;
+            _pendingChoices = null;
+            SpawnChoiceButtons(choices);
+        }
+        else if (confirmButton != null && confirmButton.gameObject.activeSelf && confirmButton.interactable)
+        {
+            OnClickConfirm();
+        }
+    }
+
+    // 현재 화자 쪽 인디케이터. 박스 미배선 시 null.
+    RectTransform ActiveIndicator()
+    {
+        int s = _twoPerson
+            ? _speakerSide
+            : (portraitImage2 != null && portraitImage2.gameObject.activeSelf ? 2 : 1);
+        return (s == 2) ? indicatorImage2 : indicatorImage1;
+    }
+
+    void ShowActiveIndicator()
+    {
+        var ind = ActiveIndicator();
+        if (ind != null) ind.gameObject.SetActive(true);
+    }
+
+    void HideIndicators()
+    {
+        if (indicatorImage1 != null) indicatorImage1.gameObject.SetActive(false);
+        if (indicatorImage2 != null) indicatorImage2.gameObject.SetActive(false);
+    }
+
+    // 활성화된 인디케이터만 위아래로 부드럽게 왕복.
+    void BobIndicator(RectTransform ind, Vector2 basePos)
+    {
+        if (ind == null || !ind.gameObject.activeSelf) return;
+        float y = basePos.y + Mathf.Sin(Time.unscaledTime * indicatorHoverSpeed) * indicatorHoverAmplitude;
+        ind.anchoredPosition = new Vector2(basePos.x, y);
     }
 
     // ── 공개 API ─────────────────────────────────────────────────
@@ -100,9 +194,14 @@ public class RandomEventChoiceUI : MonoBehaviour
         _inSecondaryPhase     = false;
         _awaitingChoiceReveal = false;
         _pendingChoices       = null;
+        _skipMode             = false; // 스킵은 이번 이벤트 표시 한정 — 새 이벤트마다 초기화
+        HideIndicators();
 
         SetPortrait(data.portraitId);
         SetPortrait2(data.portraitId2);
+
+        // 배경 — 사무실 레벨에 따라 교체(현재 기준). 나중에 상황별 배경이 추가되면 이 자리에서 분기 추가.
+        if (backgroundImage != null) backgroundImage.sprite = GridManager.LoadDialogBackgroundSprite();
 
         // 초상화 2개 모두 활성(두 명)이면 말하는 주체 강조 — 처음엔 portrait1 이 화자.
         InitSpeakerEmphasis(initialSpeaker: 1);
@@ -145,13 +244,19 @@ public class RandomEventChoiceUI : MonoBehaviour
 
         if (data.choices != null && data.choices.Count > 0)
         {
-            _pendingChoices       = data.choices;
-            _awaitingChoiceReveal = true; // 클릭 대기 — Update 에서 클릭 시 SpawnChoiceButtons
+            if (_skipMode)
+            {
+                SpawnChoiceButtons(data.choices); // 스킵 모드면 "클릭해야 공개" 대기 없이 바로 표시
+            }
+            else
+            {
+                _pendingChoices       = data.choices;
+                _awaitingChoiceReveal = true; // 클릭 대기 — Update 에서 클릭 시 SpawnChoiceButtons
+            }
         }
         else
         {
-            confirmButton.gameObject.SetActive(true);
-            confirmButton.interactable = true;
+            EnableConfirm();
         }
     }
 
@@ -159,6 +264,9 @@ public class RandomEventChoiceUI : MonoBehaviour
     // 타이핑 완료 후에는 무동작(선택지/확인 버튼이 진행 담당).
     void Update()
     {
+        BobIndicator(indicatorImage1, _indicatorBasePos1);
+        BobIndicator(indicatorImage2, _indicatorBasePos2);
+
         if (eventPanel == null || !eventPanel.activeSelf) return;
         if (Time.frameCount == _shownFrame) return; // 표시된 첫 프레임의 클릭(직전 모달 닫은 클릭)은 무시
 
@@ -224,11 +332,7 @@ public class RandomEventChoiceUI : MonoBehaviour
             }
             string secDesc = _chosenOption.secondaryDescriptions[
                 UnityEngine.Random.Range(0, _chosenOption.secondaryDescriptions.Count)];
-            StartTyping(secDesc, onComplete: () =>
-            {
-                confirmButton.gameObject.SetActive(true);
-                confirmButton.interactable = true;
-            });
+            StartTyping(secDesc, onComplete: EnableConfirm);
             return;
         }
 
@@ -239,6 +343,8 @@ public class RandomEventChoiceUI : MonoBehaviour
         string targetEmpId = _currentData?.targetEmployeeId;
 
         eventPanel.SetActive(false);
+        if (moneyElevatorTrigger != null) moneyElevatorTrigger.SetActive(false);
+        if (choiceDim != null) choiceDim.SetActive(false);
         ModalGate.I.Unregister(this);
 
         MoneyManager.Instance.SaveMoney();
@@ -324,16 +430,34 @@ public class RandomEventChoiceUI : MonoBehaviour
         if (dialogBoxImage1 != null) dialogBoxImage1.SetActive(false);
         if (dialogBoxImage2 != null) dialogBoxImage2.SetActive(false);
 
+        // 돈이 드는 선택지가 하나라도 있으면 MoneyPanel을 다이얼로그 위로 끌어올려 잔액을 보여준다.
+        if (moneyElevatorTrigger != null)
+            moneyElevatorTrigger.SetActive(choices.Exists(c => !string.IsNullOrEmpty(c.conditionText)));
+
+        // 선택지가 뜨는 동안 배경 딤 — 확인/닫힘 시점에 비활성화.
+        if (choiceDim != null) choiceDim.SetActive(true);
+
         foreach (var choice in choices)
         {
             var go  = Instantiate(choiceButtonPrefab, choiceButtonContainer);
             var lbl = go.GetComponentInChildren<TextMeshProUGUI>();
             if (lbl != null) { lbl.text = choice.buttonLabel; lbl.raycastTarget = false; } // 글자 영역 클릭도 selectBtn 으로 통과
 
-            var rootImg    = go.GetComponent<Image>();   // 비주얼(스프라이트 전환) 대상 = 루트 RandomEventChoiceBtn
+            var conditionPanel = go.transform.Find("ConditionPanel");
+            if (conditionPanel != null)
+            {
+                bool hasCondition = !string.IsNullOrEmpty(choice.conditionText);
+                conditionPanel.gameObject.SetActive(hasCondition);
+                if (hasCondition)
+                {
+                    var condText = conditionPanel.GetComponentInChildren<TextMeshProUGUI>();
+                    if (condText != null) condText.text = choice.conditionText;
+                }
+            }
+
+            var rootImg    = go.GetComponent<Image>();   // 비주얼(ColorTint) 대상 = 루트 RandomEventChoiceBtn
             var btn        = GetSelectButton(go);          // 실제 클릭 = 자식 selectBtn 의 Button
             var captured   = choice;
-            var capturedGo = go;
             if (btn != null)
             {
                 // selectBtn 이 버튼(937×104) 전체를 덮도록 stretch-fill → 가장자리까지 클릭됨.
@@ -349,21 +473,12 @@ public class RandomEventChoiceUI : MonoBehaviour
                 srcImg.color = new Color(1f, 1f, 1f, 0f); // 투명 — 비주얼은 루트, 클릭만 받음
                 srcImg.raycastTarget = true;
 
-                // SpriteSwap 전환(눌림/하이라이트/비활성)이 루트 이미지에 적용되도록 targetGraphic 을 루트로.
+                // ColorTint 전환(눌림/하이라이트/비활성)이 루트 이미지에 적용되도록 targetGraphic 을 루트로.
                 if (rootImg != null) btn.targetGraphic = rootImg;
                 btn.interactable = !choice.disabled;
                 if (!choice.disabled)
                 {
-                    // 누르는 동안 글씨 검정, 떼면 하양 — EventTrigger 는 클릭 대상(selectBtn)에 부착, 글씨는 루트 라벨.
-                    var et   = btn.gameObject.GetComponent<EventTrigger>() ?? btn.gameObject.AddComponent<EventTrigger>();
-                    var down = new EventTrigger.Entry { eventID = EventTriggerType.PointerDown };
-                    down.callback.AddListener(_ => SetLabelColor(capturedGo, Color.black));
-                    et.triggers.Add(down);
-                    var up = new EventTrigger.Entry { eventID = EventTriggerType.PointerUp };
-                    up.callback.AddListener(_ => SetLabelColor(capturedGo, Color.white));
-                    et.triggers.Add(up);
-
-                    btn.onClick.AddListener(() => OnChoiceClicked(captured, capturedGo));
+                    btn.onClick.AddListener(() => OnChoiceClicked(captured));
                 }
             }
 
@@ -380,40 +495,23 @@ public class RandomEventChoiceUI : MonoBehaviour
         return go.GetComponentInChildren<Button>(true);
     }
 
-    // 선택지 클릭 → 글씨 검정으로 바꾸고 0.3초 유지한 뒤 실제 선택 처리.
-    void OnChoiceClicked(RandomEventChoiceOption choice, GameObject go)
+    // 선택지 클릭 → 0.3초 유지한 뒤 실제 선택 처리.
+    void OnChoiceClicked(RandomEventChoiceOption choice)
     {
-
-        // 0.3초 동안 중복 클릭 방지 — 각 선택지의 selectBtn 비활성화
+        // 0.3초 동안 중복 클릭 방지 — 각 선택지의 selectBtn 비활성화(ColorTint가 자동으로 Disabled 색 적용)
         foreach (var b in _spawnedButtons)
         {
             var bt = GetSelectButton(b);
             if (bt != null) bt.interactable = false;
         }
 
-        // 선택한 버튼: 글씨 검정 + 루트 RandomEventChoiceBtn 이미지를 지정 스프라이트로 고정 (0.3초 유지)
-        if (go != null)
-        {
-            var btn = GetSelectButton(go);
-            var img = go.GetComponent<Image>();      // 비주얼 = 루트 이미지
-            if (btn != null) btn.enabled = false;    // SpriteSwap transition 정지 → 코드 스프라이트 유지
-            if (img != null && choiceSelectedSprite != null) img.sprite = choiceSelectedSprite;
-            SetLabelColor(go, Color.black);
-        }
         StartCoroutine(SelectAfterDelay(choice));
     }
 
     IEnumerator SelectAfterDelay(RandomEventChoiceOption choice)
     {
-        yield return new WaitForSecondsRealtime(0.3f);   // 검정 글씨 + pressed 이미지 유지 시간
+        yield return new WaitForSecondsRealtime(0.3f);   // pressed 이미지(ColorTint) 유지 시간
         OnChoiceSelected(choice);
-    }
-
-    void SetLabelColor(GameObject go, Color color)
-    {
-        if (go == null) return;
-        var lbl = go.GetComponentInChildren<TextMeshProUGUI>();
-        if (lbl != null) lbl.color = color;
     }
 
     void OnChoiceSelected(RandomEventChoiceOption choice)
@@ -482,6 +580,7 @@ public class RandomEventChoiceUI : MonoBehaviour
     {
         confirmButton.gameObject.SetActive(true);
         confirmButton.interactable = true;
+        if (_skipMode) OnClickConfirm(); // 스킵 모드면 확인 버튼 대기 없이 바로 진행
     }
 
     void ClearChoiceButtons()
@@ -493,6 +592,7 @@ public class RandomEventChoiceUI : MonoBehaviour
     // ── 타이핑 ──────────────────────────────────────────────────
     void StartTyping(string text, System.Action onComplete = null)
     {
+        HideIndicators();
         if (_typingCoroutine != null) StopCoroutine(_typingCoroutine);
         _currentFullText  = text;
         _typingOnComplete = onComplete;
@@ -518,11 +618,13 @@ public class RandomEventChoiceUI : MonoBehaviour
         foreach (char c in text)
         {
             if (tgt != null) tgt.text += c;
-            yield return new WaitForSeconds(_typingSpeed);
+            float interval = _skipMode ? _typingSpeed / Mathf.Max(0.01f, skipSpeedMultiplier) : _typingSpeed;
+            yield return new WaitForSeconds(interval);
         }
 
         _isTypingDone     = true;
         _typingOnComplete = null;
+        ShowActiveIndicator();
         onComplete?.Invoke();
     }
 
@@ -531,6 +633,7 @@ public class RandomEventChoiceUI : MonoBehaviour
         if (_typingCoroutine != null) StopCoroutine(_typingCoroutine);
         if (_typingTarget != null) _typingTarget.text = _currentFullText;
         _isTypingDone = true;
+        ShowActiveIndicator();
 
         var cb            = _typingOnComplete;
         _typingOnComplete = null;
@@ -548,6 +651,7 @@ public class RandomEventChoiceUI : MonoBehaviour
         portraitImage.gameObject.SetActive(portrait != null);
         _leftName = ResolveCharName(portrait != null ? portraitId : null);
         if (nameText1 != null) nameText1.text = _leftName;   // box1 이름
+        CharacterNamePanelSet.Apply(namePanelImage1, namePanelSpriteSet, portraitId);
         RefreshNamePanels();
     }
 
@@ -561,6 +665,7 @@ public class RandomEventChoiceUI : MonoBehaviour
         portraitImage2.gameObject.SetActive(portrait != null);
         _rightName = ResolveCharName(portrait != null ? portraitId : null);
         if (nameText2 != null) nameText2.text = _rightName;   // box2 이름
+        CharacterNamePanelSet.Apply(namePanelImage2, namePanelSpriteSet, portraitId);
         RefreshNamePanels();
     }
 

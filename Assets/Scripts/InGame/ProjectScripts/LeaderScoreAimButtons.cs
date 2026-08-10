@@ -13,10 +13,15 @@ public class LeaderScoreAimButtons : MonoBehaviour
     public Button midButton;
     public Button highButton;
 
-    [Header("라벨 (비워두면 버튼 자식의 TextMeshProUGUI를 자동으로 찾아서 씀)")]
+    [Header("라벨 (UText — 명칭만 표시, 비워두면 버튼 자식의 TextMeshProUGUI를 자동으로 찾아서 씀)")]
     public TextMeshProUGUI lowLabel;
     public TextMeshProUGUI midLabel;
     public TextMeshProUGUI highLabel;
+
+    [Header("구간 라벨 (UInterval — \"(min~max)\" 형식)")]
+    public TextMeshProUGUI lowIntervalLabel;
+    public TextMeshProUGUI midIntervalLabel;
+    public TextMeshProUGUI highIntervalLabel;
 
     void Start()
     {
@@ -40,19 +45,27 @@ public class LeaderScoreAimButtons : MonoBehaviour
 
     void RefreshLabels()
     {
-        SetLabel(lowButton, ref lowLabel, "약", LeaderScoreAim.Low);
-        SetLabel(midButton, ref midLabel, "중", LeaderScoreAim.Mid);
-        SetLabel(highButton, ref highLabel, "강", LeaderScoreAim.High);
+        SetLabel(lowLabel, "약");
+        SetLabel(midLabel, "중");
+        SetLabel(highLabel, "강");
+        SetIntervalLabel(lowIntervalLabel, LeaderScoreAim.Low);
+        SetIntervalLabel(midIntervalLabel, LeaderScoreAim.Mid);
+        SetIntervalLabel(highIntervalLabel, LeaderScoreAim.High);
     }
 
-    // 이 조준을 고르면 스트레스(ds)가 얼마나 오를지 범위(반올림 정수)를 표시 — DevelopmentManager.GetAimDsRange가 단일 소스.
-    void SetLabel(Button btn, ref TextMeshProUGUI label, string name, LeaderScoreAim aim)
+    void SetLabel(TextMeshProUGUI label, string name)
     {
-        if (label == null && btn != null) label = btn.GetComponentInChildren<TextMeshProUGUI>();
-        if (label == null || DevelopmentManager.Instance == null) return;
+        if (label != null) label.text = name;
+    }
+
+    // 이 조준을 고르면 스트레스(ds)가 얼마나 오를지 범위(반올림 정수)를 UInterval에 "(min~max)" 형식으로
+    // 표시 — DevelopmentManager.GetAimDsRange가 단일 소스.
+    void SetIntervalLabel(TextMeshProUGUI intervalLabel, LeaderScoreAim aim)
+    {
+        if (intervalLabel == null || DevelopmentManager.Instance == null) return;
 
         var (min, max) = DevelopmentManager.Instance.GetAimDsRange(aim);
-        label.text = $"{name} ({min}~{max})";
+        intervalLabel.text = $"({min}~{max})";
     }
 
     void HideButtons()

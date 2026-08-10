@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
@@ -23,6 +24,14 @@ public class LeaderScoreUI : MonoBehaviour
     public TextMeshProUGUI totalText;         // 팀장 점수 총합
     public Button confirmButton;
 
+    [Header("회차 강조 (ScorePanel/Score1~4, 1~4회차 순서대로) — 진행 중인 회차만 높이/글씨 확대, 아니면 원상복구")]
+    public RectTransform[] scoreRows;
+    public float scoreRowActiveFontSize = 40f;
+    public float scoreRowActiveHeightGrow = 25f;
+
+    private readonly Dictionary<TextMeshProUGUI, float> _scoreRowBaseFontSize = new();
+    private readonly Dictionary<RectTransform, Vector2> _scoreRowBaseSizeDelta = new();
+
     [Header("스트레스 슬라이더 눈금 (90/95/99% 보너스 임계선 — 위치는 직접 배치, 평소엔 비활성 상태로 둘 것)")]
     public RectTransform tick90Mark;
     public RectTransform tick95Mark;
@@ -34,10 +43,19 @@ public class LeaderScoreUI : MonoBehaviour
     [Tooltip("\"스트레스 폭발까지 n\" — 3회차 끝난 시점 누적ds 기준으로 갱신")]
     public TextMeshProUGUI burstText;
 
-    [Header("스트레스 경고 (LeaderScoreEntirePanel)")]
-    public Image stressWarningImage;          // LeaderScoreEntirePanel의 Image — 기본 alpha 0
+    [Header("스트레스 경고 (LeaderScoreEmergencyImage — MenuCanvas 직속 풀스크린, SafeArea 밖)")]
+    public Image stressWarningImage;          // LeaderScoreEmergencyImage의 Image — 기본 비활성+alpha 0, InitPanel~OnClickConfirm 구간에만 활성
     public float stressBlinkInterval = 0.3f;  // sin파 반 주기(초) — 값↔값 왕복 한 방향 시간
     private float _currentDs = 0f;
+
+    [Tooltip("LeaderScoreLastSpurtImage — MenuCanvas 직속 풀스크린(블러 배경용). 3회차 연출 끝난 직후 켰다가 " +
+             "fly-in/hold/fly-out 연출이 다 끝나면 끄고, 그 다음 aimButtonsRoot(조준 버튼)가 뜬다.")]
+    public GameObject lastSpurtImage;
+    [Tooltip("lastSpurtImage 자식(Text (TMP)) — 화면 왼쪽 밖에서 빠르게 날아들어와 중앙에서 대기했다가 오른쪽 밖으로 빠르게 날아나감")]
+    public RectTransform lastSpurtContent;
+    public float lastSpurtFlyDuration = 0.25f; // 좌→중앙 / 중앙→우 각 구간 소요 시간(빠르게)
+    public float lastSpurtHoldDuration = 1f;   // 중앙에 머무는 시간
+    public float lastSpurtFlyDistance = 2200f; // 화면 밖으로 확실히 벗어나는 X 오프셋(중앙 기준)
 
     [Header("좌우 커튼 (팀장점수 진행 중 alpha 왕복)")]
     public Image leftCurtain;
@@ -128,7 +146,7 @@ public class LeaderScoreUI : MonoBehaviour
     {
         if (burstText == null) return;
         int remain = Mathf.RoundToInt(100f - _pendingPrevCumDs);
-        burstText.text = $"스트레스 폭발까지 {remain}";
+        burstText.text = $"스트레스 폭발까지 <color=#E63356>{remain}</color>";
     }
 
     void HideThresholdTicks()
@@ -154,7 +172,7 @@ public class LeaderScoreUI : MonoBehaviour
 
         var (min, max) = DevelopmentManager.Instance.GetLeaderBonusPotentialRange(thresholdIndex);
         float sample = Random.Range(min, max); // 범위 텍스트 대신 그 범위 안에서 임의로 하나 찍어 정수로 표시
-        text.text = $"+{Mathf.RoundToInt(sample)}";
+        text.text = $"보너스 +{Mathf.RoundToInt(sample)}";
     }
 
     // 4회차까지 끝난 뒤(정산 시점) — 실제로 획득한 보너스 금액으로 교체. DevelopmentManager.GetLeaderBonusAmount가 단일 소스.
@@ -171,7 +189,7 @@ public class LeaderScoreUI : MonoBehaviour
         if (text == null || DevelopmentManager.Instance == null) return;
 
         float amount = DevelopmentManager.Instance.GetLeaderBonusAmount(thresholdIndex);
-        text.text = $"+{Mathf.RoundToInt(amount)}";
+        text.text = $"보너스 +{Mathf.RoundToInt(amount)}";
     }
 
     // fullRoundScores: 차감 전 회차 점수 / roundScores: 차감 반영 최종 회차 점수
@@ -269,18 +287,25 @@ public class LeaderScoreUI : MonoBehaviour
         if (roundScoreTexts != null)
             foreach (var t in roundScoreTexts) if (t) t.text = "0";
         if (dsText) dsText.text = "0";
-        if (dsSlider) { dsSlider.minValue = 0f; dsSlider.maxValue = 100f; dsSlider.value = 0f; }
+        if (dsSlider) { dsSlider.minValue = 0f; dsSlider.maxValue = 100f; }
+        SetDsSlider(0f);
         if (totalText) totalText.text = "0";
         _currentDs = 0f;
         _pendingDisplayedTotal = 0f;
         _pendingPrevCumDs = 0f;
         HideThresholdTicks(); // 90/95/99 눈금은 3회차 끝날 때 다시 켬 (ShowThresholdTicks)
+        SetActiveScoreRow(-1);
         if (stressWarningImage != null)
         {
+            // LeaderScorePanel 밖(MenuCanvas 직속 풀스크린)에 있는 오브젝트라 leaderscorePanel처럼 부모를 따라
+            // 자동으로 켜지지 않음 — 팀장점수 연출 동안에만 직접 켜고, 확정 시(OnClickConfirm) 직접 끈다.
+            stressWarningImage.gameObject.SetActive(true);
             var swc = stressWarningImage.color;
             swc.a = 0f;
             stressWarningImage.color = swc;
         }
+        if (lastSpurtImage != null) lastSpurtImage.SetActive(false);
+        if (lastSpurtContent != null) lastSpurtContent.anchoredPosition3D = Vector3.zero;
 
         // confirmBtn은 화면 전체를 덮는 투명 레이캐스트 버튼(anchor 풀스트레치) — interactable=false만으로는
         // 레이캐스트 차단이 안 풀려서(Button.interactable은 클릭 반응만 막지 raycastTarget은 그대로) 4회차
@@ -310,6 +335,7 @@ public class LeaderScoreUI : MonoBehaviour
 
         for (int r = fromRound; r < toRoundExclusive; r++)
         {
+            SetActiveScoreRow(r);
             bool isOverflow = (overflowRound == r);
             float targetDs    = cumDsAfter[r];
             float targetRound = isOverflow ? 0f : fullRoundScores[r]; // 오버플로 회차는 0점
@@ -325,18 +351,14 @@ public class LeaderScoreUI : MonoBehaviour
                 float t = Mathf.Clamp01(elapsed / dur);
                 float ds = Mathf.Lerp(prevCumDs, targetDs, t);
                 if (dsText) dsText.text = Mathf.RoundToInt(ds).ToString();
-                if (dsSlider) dsSlider.value = Mathf.Clamp(ds, 0f, 100f);
+                SetDsSlider(ds);
                 _currentDs = ds;
                 yield return null;
             }
             if (dsText) dsText.text = Mathf.RoundToInt(targetDs).ToString();
-            if (dsSlider) dsSlider.value = Mathf.Clamp(targetDs, 0f, 100f);
+            SetDsSlider(targetDs);
             _currentDs = targetDs;
             prevCumDs = targetDs;
-
-            // 4회차 결과가 확정되는 시점(성공/오버플로 무관) — 3회차 끝나고 떠있던 미리보기(눈금/BurstText)는
-            // 이제 실제 결과가 나오는 참이니 걷어낸다.
-            if (r == 3) HideThresholdTicks();
 
             if (isOverflow)
             {
@@ -365,6 +387,7 @@ public class LeaderScoreUI : MonoBehaviour
 
         _pendingDisplayedTotal = displayedTotal;
         _pendingPrevCumDs = prevCumDs;
+        SetActiveScoreRow(-1); // 회차 연출 종료 — 다음 대기든 최종 정산이든 더 이상 "차례"인 회차 없음
 
         if (!reachedEnd)
         {
@@ -372,11 +395,22 @@ public class LeaderScoreUI : MonoBehaviour
             // announceRound4Wait=false(튜토리얼 1회차 단독 재생)면 아직 3회차 전이므로 이 상태로 안 넘어간다.
             if (announceRound4Wait)
             {
+                // 라스트 스퍼트 연출(좌→중앙 fly-in, 대기, 중앙→우 fly-out) — 이 동안은 IsWaitingForRound4Aim
+                // 이 아직 false라 LeaderScoreAimButtons(폴링)가 aimButtonsRoot 를 켜지 않는다. 끝나야 조준 버튼 등장.
+                if (lastSpurtImage != null)
+                {
+                    lastSpurtImage.SetActive(true);
+                    yield return StartCoroutine(PlayLastSpurtCoroutine());
+                    lastSpurtImage.SetActive(false);
+                }
                 IsWaitingForRound4Aim = true;
                 ShowThresholdTicks();
             }
             yield break;
         }
+
+        // 90/95/99 눈금은 ShowThresholdTicks 로 한 번 뜨면(3회차 끝) 그 뒤로는 절대 안 숨긴다 —
+        // 4회차 진행/오버플로(burst) 등 무엇이 일어나도 이번 팀장점수 연출이 끝날 때까지 계속 유지.
 
         // 4회차까지 끝났으면 미리보기(범위) 대신 실제 획득액으로 교체
         RefreshBonusActualTexts();
@@ -430,10 +464,115 @@ public class LeaderScoreUI : MonoBehaviour
             SetRoundText(k, roundScores[k]);
     }
 
+    // dsSlider(0~100)를 실제 채움 비율로 반영한다. UnityEngine.UI.Slider의 기본 채움은 값에 선형 비례하지만,
+    // 90/95/99 눈금(tick90~99Mark)이 균등 간격이 아니라 위로 갈수록 확 벌어지는 계단식 배치라서(위치조정
+    // 참고) 슬라이더가 값을 세팅하며 자동으로 덮어쓴 fillRect.anchorMax.y를 MapDsToFillFraction 결과로
+    // 다시 덮어써야 눈금과 실제 채워지는 높이가 일치한다.
+    void SetDsSlider(float ds)
+    {
+        if (dsSlider == null) return;
+        ds = Mathf.Clamp(ds, 0f, 100f);
+        dsSlider.value = ds;
+        if (dsSlider.fillRect != null)
+        {
+            var anchorMax = dsSlider.fillRect.anchorMax;
+            anchorMax.y = MapDsToFillFraction(ds);
+            dsSlider.fillRect.anchorMax = anchorMax;
+        }
+    }
+
+    // ds(0~100) → 채움 비율(0~1). dsSlider 자체 높이 기준 432 안에서 0→0, 90→269, 95→336, 99→403, 100→432
+    // 위치에 해당하는 4구간 꺾은선 — 90 밑에서는 완만하게, 90 이상부터는 구간별로 기울기가 점점 가팔라지며
+    // 급격히 오른다. 90/95/99Image의 localPosition.y(offset -216, dsSlider 자체 프레임 기준)와 반드시
+    // 같은 기준값(432)을 공유해야 눈금과 실제 채움 위치가 어긋나지 않는다.
+    static float MapDsToFillFraction(float ds)
+    {
+        const float total = 432f;
+        float h;
+        if (ds <= 90f)      h = Mathf.Lerp(0f,   269f, ds / 90f);
+        else if (ds <= 95f) h = Mathf.Lerp(269f, 336f, (ds - 90f) / 5f);
+        else if (ds <= 99f) h = Mathf.Lerp(336f, 403f, (ds - 95f) / 4f);
+        else                h = Mathf.Lerp(403f, 432f, (ds - 99f) / 1f);
+        return h / total;
+    }
+
     void SetRoundText(int index, float value)
     {
         if (roundScoreTexts != null && index >= 0 && index < roundScoreTexts.Length && roundScoreTexts[index])
             roundScoreTexts[index].text = Mathf.RoundToInt(value).ToString();
+    }
+
+    // scoreRows[i]의 원래 높이/폰트크기를 최초 1회 캐싱해두고, activeIndex번째 행만 높이가
+    // scoreRowActiveHeightGrow만큼 커지고 자식 텍스트(numText/scoreText) 폰트크기를 키운다.
+    // (Y축 이동 방식은 ScorePanel의 HorizontalLayoutGroup이 매 리빌드마다 위치를 되돌려버려서
+    // 높이 확대 방식으로 교체함 — sizeDelta는 childControlHeight=false라 레이아웃이 안 건드림.)
+    // 나머지 행(및 activeIndex=-1이면 전부)은 캐싱된 원래 값으로 되돌린다.
+    void SetActiveScoreRow(int activeIndex)
+    {
+        if (scoreRows == null) return;
+        for (int i = 0; i < scoreRows.Length; i++)
+        {
+            var row = scoreRows[i];
+            if (row == null) continue;
+
+            bool active = i == activeIndex;
+
+            if (!_scoreRowBaseSizeDelta.TryGetValue(row, out Vector2 baseSizeDelta))
+            {
+                baseSizeDelta = row.sizeDelta;
+                _scoreRowBaseSizeDelta[row] = baseSizeDelta;
+            }
+            row.sizeDelta = new Vector2(baseSizeDelta.x, baseSizeDelta.y + (active ? scoreRowActiveHeightGrow : 0f));
+
+            foreach (var t in row.GetComponentsInChildren<TextMeshProUGUI>(true))
+            {
+                if (!_scoreRowBaseFontSize.TryGetValue(t, out float baseSize))
+                {
+                    baseSize = t.fontSize;
+                    _scoreRowBaseFontSize[t] = baseSize;
+                }
+                t.fontSize = active ? scoreRowActiveFontSize : baseSize;
+            }
+        }
+    }
+
+    // lastSpurtContent를 화면 왼쪽 밖에서 중앙(원래 위치)까지 빠르게 날아들어오게(ease-out) 한 뒤,
+    // lastSpurtHoldDuration만큼 대기했다가 다시 오른쪽 밖으로 빠르게 날아나가게(ease-in) 한다.
+    IEnumerator PlayLastSpurtCoroutine()
+    {
+        if (lastSpurtContent == null) yield break;
+
+        Vector3 restPos  = lastSpurtContent.anchoredPosition3D;
+        Vector3 fromLeft = restPos + new Vector3(-lastSpurtFlyDistance, 0f, 0f);
+        Vector3 toRight  = restPos + new Vector3(lastSpurtFlyDistance, 0f, 0f);
+        float dur = Mathf.Max(0.01f, lastSpurtFlyDuration);
+
+        // 좌 → 중앙 (ease-out: 빠르게 튀어나왔다가 감속하며 안착)
+        lastSpurtContent.anchoredPosition3D = fromLeft;
+        float elapsed = 0f;
+        while (elapsed < dur)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / dur);
+            float eased = 1f - (1f - t) * (1f - t) * (1f - t);
+            lastSpurtContent.anchoredPosition3D = Vector3.LerpUnclamped(fromLeft, restPos, eased);
+            yield return null;
+        }
+        lastSpurtContent.anchoredPosition3D = restPos;
+
+        yield return new WaitForSeconds(lastSpurtHoldDuration);
+
+        // 중앙 → 우 (ease-in: 느리게 시작해 빠르게 화면 밖으로 빠져나감)
+        elapsed = 0f;
+        while (elapsed < dur)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / dur);
+            float eased = t * t * t;
+            lastSpurtContent.anchoredPosition3D = Vector3.LerpUnclamped(restPos, toRight, eased);
+            yield return null;
+        }
+        lastSpurtContent.anchoredPosition3D = toRight;
     }
 
     // count개의 iconPrefab을 popcornPoint에서 팝콘처럼 펑 터뜨린 뒤, categoryIcon 위치로 빨려들어가게 하면서
@@ -803,6 +942,7 @@ public class LeaderScoreUI : MonoBehaviour
         ClearCharacterPreview();
         leaderscorePanel.SetActive(false);
         LeaderSelectUI.Instance.entireLeaderPanel.gameObject.SetActive(false);
+        if (stressWarningImage != null) stressWarningImage.gameObject.SetActive(false);
         GameTimeManager.Instance?.StartTime();
         ModalGate.I.Unregister(this);
         _onComplete?.Invoke();
