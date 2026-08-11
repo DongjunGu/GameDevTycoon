@@ -98,11 +98,20 @@ public class RandomEventUI : MonoBehaviour
     private bool _skipMode;             // 이번 이벤트 표시 동안만 유지 — Close()/BeginDisplay 에서 리셋
     private Vector2 _indicatorBasePos;  // 인디케이터 호버 연출 기준 위치
 
+    // IndicatorBtn(clickButton)을 DialogTextBG/텍스트 등 모달 내 다른 UI보다 항상 위로, SkipButton은
+    // 그보다 한 단계 더 위로 — sortingOrder만으로 강제해 어디를 눌러도(텍스트 위 포함) 클릭이 확실히
+    // 먹히게 한다. ModalLayer가 매기는 기준 order는 모달 스택 상황에 따라 바뀌므로 매 프레임 따라간다
+    // (바뀐 경우에만 실제로 적용 — 매 프레임 AddComponent 호출 방지).
+    private ModalLayer _modalLayer;
+    private Canvas _clickButtonCanvas, _skipButtonCanvas;
+    private int _lastSyncedBaseOrder = int.MinValue;
+
     void Awake()
     {
         if (Instance != null) { Destroy(gameObject); return; }
         Instance = this;
 
+        if (eventPanel != null) _modalLayer = eventPanel.GetComponent<ModalLayer>();
         if (indicatorImage != null) _indicatorBasePos = indicatorImage.anchoredPosition;
 
         if (skipButton != null)
@@ -134,6 +143,33 @@ public class RandomEventUI : MonoBehaviour
             float y = _indicatorBasePos.y + Mathf.Sin(Time.unscaledTime * indicatorHoverSpeed) * indicatorHoverAmplitude;
             indicatorImage.anchoredPosition = new Vector2(_indicatorBasePos.x, y);
         }
+
+        if (eventPanel != null && eventPanel.activeInHierarchy) SyncTopmostOrdering();
+    }
+
+    // clickButton(IndicatorBtn)에 override-sorting Canvas를 달아 이 모달 안의 모든 UI(대사 텍스트 포함)
+    // 보다 위로 올리고, skipButton은 그보다 한 단계 더 위로 — 이제 대사 박스 어디를 눌러도 텍스트 유무와
+    // 무관하게 IndicatorBtn이 클릭을 받는다(DialogTextClickCatcher가 하던 역할을 대체).
+    void SyncTopmostOrdering()
+    {
+        if (_modalLayer == null || clickButton == null) return;
+        int baseOrder = _modalLayer.AssignedOrder;
+        if (baseOrder == _lastSyncedBaseOrder) return;
+        _lastSyncedBaseOrder = baseOrder;
+
+        _clickButtonCanvas = EnsureOverrideCanvas(clickButton.transform, _clickButtonCanvas, baseOrder + 1);
+        if (skipButton != null)
+            _skipButtonCanvas = EnsureOverrideCanvas(skipButton.transform, _skipButtonCanvas, baseOrder + 2);
+    }
+
+    static Canvas EnsureOverrideCanvas(Transform t, Canvas cached, int order)
+    {
+        var canvas = cached != null ? cached : t.GetComponent<Canvas>();
+        if (canvas == null) canvas = t.gameObject.AddComponent<Canvas>();
+        canvas.overrideSorting = true;
+        canvas.sortingOrder    = order;
+        if (t.GetComponent<GraphicRaycaster>() == null) t.gameObject.AddComponent<GraphicRaycaster>();
+        return canvas;
     }
 
     // 스킵 버튼 — 이번 이벤트만 타이핑 3배속 + 결과까지 자동 진행. 이미 결과가 떠서 닫기만 남은

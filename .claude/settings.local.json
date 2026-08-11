@@ -22,7 +22,8 @@
       "WebFetch(domain:docs.backnd.com)",
       "WebFetch(domain:community.thebackend.io)",
       "WebFetch(domain:developer.thebackend.io)",
-      "Artifact"
+      "Artifact",
+      "Bash(claude mcp *)"
     ],
     "ask": [
       "Bash(rm:*)",

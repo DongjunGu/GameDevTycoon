@@ -4980,10 +4980,13 @@ MonoBehaviour:
   totalCountDuration: 3
   holdAfter: 0.5
   blankDuration: 1.5
+  enterOvershootHeight: 0.6
+  enterDuration: 0.45
+  enterVibrato: 6
+  enterElasticity: 0.6
   countUpDuration: 1
   holdBeforeSuck: 1
   suckDuration: 0.7
-  suckArcHeight: 1
   nudgeDistance: 0.5
   nudgeDuration: 0.05
 --- !u!1 &9060483275998535742

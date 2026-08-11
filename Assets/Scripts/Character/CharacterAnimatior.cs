@@ -13,13 +13,18 @@ public class CharacterAnimator : MonoBehaviour
     private static readonly int IsWorking = Animator.StringToHash("isWorking");
     
     private float _targetSpeed = 0f; // 실제로 원하는 speed (IsRunning 무관)
+    private float? _speedMultiplierOverride; // 잭팟 등 연출 중 전역 배속(OfficeManager.CharacterSpeedMultiplier) 무시하고 강제 지정. null이면 평소대로.
 
     void Update()
     {
         bool isRunning = GameTimeManager.Instance == null || GameTimeManager.Instance.IsRunningForMovement;
-        float multiplier = OfficeManager.Instance != null ? OfficeManager.Instance.CharacterSpeedMultiplier : 1f;
+        float multiplier = _speedMultiplierOverride
+            ?? (OfficeManager.Instance != null ? OfficeManager.Instance.CharacterSpeedMultiplier : 1f);
         animator.speed = isRunning ? _targetSpeed * multiplier : 0f;
     }
+
+    // 잭팟 연출 등 개별 캐릭터만 배속을 다르게 줘야 할 때 사용. null 전달 시 전역 배속으로 복귀.
+    public void SetSpeedMultiplierOverride(float? multiplier) => _speedMultiplierOverride = multiplier;
 
     public bool GetCurrentIsFront()
     => animator.GetBool(IsFront);
