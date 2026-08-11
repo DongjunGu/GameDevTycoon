@@ -742,8 +742,8 @@ public class HiringUI : MonoBehaviour
         }
     }
 
-    // 도장(StampImage) "쾅!" 연출 — 확대된 상태(3.8배, 기울어짐)에서 순간적으로 내려찍히듯 축소+정렬되며
-    // 알파도 그 찰나에 확 켜지고(페이드 아님), 이후 튕겨나오듯 최종 스케일(1)에 안착. 총 1초.
+    // 도장(StampImage) "쾅!" 연출 — 확대된 상태(3.8배)에서 순간적으로 내려찍히듯 스쿼시(가로로 퍼지고 세로로 눌림)되며
+    // 알파도 그 찰나에 확 켜지고(페이드 아님), 동시에 패널이 살짝 흔들린 뒤, 튕겨나오듯 최종 스케일(1)에 안착. 총 1.2초.
     void PlayHireStamp()
     {
         if (hireStampImage == null) return;
@@ -753,23 +753,36 @@ public class HiringUI : MonoBehaviour
         rt.DOKill();
         hireStampImage.DOKill();
 
-        const float startScale  = 3.8f;   // 원래 세팅값 — 여기서 시작해 내려찍힌다
-        const float impactScale = 0.55f;  // 찍히는 순간 살짝 눌리는 임팩트 스케일
-        const float finalScale  = 1f;
+        const float startScale     = 3.8f;   // 원래 세팅값 — 여기서 시작해 내려찍힌다
+        const float squashScaleX   = 1.25f;  // 찍히는 순간 옆으로 퍼지는 스쿼시 스케일
+        const float squashScaleY   = 0.35f;  // 찍히는 순간 위아래로 눌리는 스쿼시 스케일
+        const float finalScale     = 1f;
         const float impactDuration = 0.12f;  // "쾅" — 아주 짧고 빠르게
         const float settleDuration = 0.35f;  // 튕겨나오며 최종 크기로 안착
         const float totalDuration  = 1.2f;
+
+        const float shakeStrength = 14f;     // 임팩트 순간 패널 흔들림 세기(px)
+        const float shakeDuration = 0.3f;
+        const int   shakeVibrato  = 14;
 
         rt.localScale = Vector3.one * startScale;
         //rt.localRotation = Quaternion.Euler(0f, 0f, -12f);
         var c = hireStampImage.color; c.a = 0f; hireStampImage.color = c;
 
+        var panelRt = confirmPanel != null ? confirmPanel.transform as RectTransform : null;
+        panelRt?.DOKill();
+
         var seq = DOTween.Sequence().SetUpdate(true).SetTarget(hireStampImage);
         seq.Append(hireStampImage.DOFade(1f, impactDuration));               // 찍히는 순간 알파 확 등장
-        seq.Join(rt.DOScale(impactScale, impactDuration).SetEase(Ease.InQuad));
+        seq.Join(rt.DOScale(new Vector3(squashScaleX, squashScaleY, 1f), impactDuration).SetEase(Ease.InQuad)); // 눌려 퍼지는 스쿼시
         seq.Join(rt.DOLocalRotate(Vector3.zero, impactDuration).SetEase(Ease.InQuad));
-        seq.Append(rt.DOScale(finalScale, settleDuration).SetEase(Ease.OutElastic, 1.1f, 0.6f)); // 임팩트 후 튕겨나오며 안착
-        seq.AppendInterval(totalDuration - impactDuration - settleDuration); // 총 1초를 채움
+        seq.AppendCallback(() =>                                             // 임팩트 순간 패널 흔들림
+        {
+            if (panelRt != null)
+                panelRt.DOShakeAnchorPos(shakeDuration, shakeStrength, shakeVibrato, 90f, false, true).SetUpdate(true);
+        });
+        seq.Append(rt.DOScale(Vector3.one * finalScale, settleDuration).SetEase(Ease.OutElastic, 1.1f, 0.6f)); // 임팩트 후 튕겨나오며 안착
+        seq.AppendInterval(totalDuration - impactDuration - settleDuration); // 총 1.2초를 채움
         // 비활성화는 여기서 타이머로 하지 않는다 — ConfirmHirePanel 이 실제로 꺼지는 DoHire() 시점에 함께 꺼야
         // "패널이 닫히기 전에 도장이 먼저 사라지는" 부자연스러움이 없다.
     }

@@ -28,6 +28,7 @@ public class OfficeCharacter : MonoBehaviour, IPointerClickHandler
     public event System.Action<Transform> OnBlockPopupSpawned;
     public Transform statPopupAnchor; // 머리 위 위치 (Inspector에서 설정)
     public Vector2 statTickPopupOffset = new Vector2(1.2f, 0.7f); // StatTickPopup 위치 (캐릭터 기준 오프셋)
+    public GameObject fireImage; // 잭팟 시 직원 위에서 타오르는 연출(Character 프리팹의 FireImage 자식) — StatTickPopup이 아닌 직원 쪽에서 발동
 
     [SerializeField] private CharacterState _state = CharacterState.Idle;
     public CharacterState State => _state;
@@ -332,6 +333,8 @@ public class OfficeCharacter : MonoBehaviour, IPointerClickHandler
                 OnPopupFinished();
                 return;
             }
+            if (fireImage != null) fireImage.SetActive(req.isJackpot); // 잭팟 연출은 직원 쪽에서 재생
+            if (req.isJackpot) _animator?.SetSpeedMultiplierOverride(1f); // 잭팟 중엔 work 애니메이션 1배속
             p.Show(req.stat, req.statKey, req.amount, req.color, req.isJackpot, OnPopupFinished);
         }
     }
@@ -339,6 +342,8 @@ public class OfficeCharacter : MonoBehaviour, IPointerClickHandler
     void OnPopupFinished()
     {
         _popupActive = false;
+        if (fireImage != null) fireImage.SetActive(false);
+        _animator?.SetSpeedMultiplierOverride(null);
         StatTickPopup.ActiveCount = Mathf.Max(0, StatTickPopup.ActiveCount - 1);
         if (_popupQueue.Count > 0)
             SpawnPopup(_popupQueue.Dequeue());
@@ -358,5 +363,7 @@ public class OfficeCharacter : MonoBehaviour, IPointerClickHandler
     {
         _popupQueue.Clear();
         _popupActive = false;
+        if (fireImage != null) fireImage.SetActive(false);
+        _animator?.SetSpeedMultiplierOverride(null);
     }
 }

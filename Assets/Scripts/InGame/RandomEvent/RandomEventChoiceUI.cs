@@ -4,6 +4,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.InputSystem;
 using TMPro;
+using DG.Tweening;
 
 public class RandomEventChoiceUI : MonoBehaviour
 {
@@ -83,6 +84,7 @@ public class RandomEventChoiceUI : MonoBehaviour
     // ── 내부 상태 ────────────────────────────────────────────────
     private RandomEventChoiceData _currentData;
     private readonly List<GameObject> _spawnedButtons = new List<GameObject>();
+    private Coroutine _choiceFadeInCoroutine; // 선택지 버튼 순차 페이드인(위→아래)
 
     private Coroutine       _typingCoroutine;
     private bool            _isTypingDone;
@@ -420,8 +422,8 @@ public class RandomEventChoiceUI : MonoBehaviour
     {
         ClearChoiceButtons();
 
-        // 질문(QuestionText)은 선택지가 실제로 뜨는 이 시점에만 활성화.
-        if (questionText != null) questionText.gameObject.SetActive(true);
+        // 질문(QuestionText)은 선택지가 실제로 뜨는 이 시점에만 활성화 — 알파 0→1 페이드인.
+        ShowQuestionText();
 
         // 선택지 표시 시: 화자 강조 해제 — 두 초상 모두 원상복구(scale 1 / 흰색) + 두 대사 박스 비활성화.
         if (_speakerAnimCo != null) { StopCoroutine(_speakerAnimCo); _speakerAnimCo = null; }
@@ -441,7 +443,7 @@ public class RandomEventChoiceUI : MonoBehaviour
         {
             var go  = Instantiate(choiceButtonPrefab, choiceButtonContainer);
             var lbl = go.GetComponentInChildren<TextMeshProUGUI>();
-            if (lbl != null) { lbl.text = choice.buttonLabel; lbl.raycastTarget = false; } // 글자 영역 클릭도 selectBtn 으로 통과
+            if (lbl != null) { lbl.text = choice.buttonLabel; lbl.raycastTarget = false; } // 글자 영역 클릭도 루트 버튼으로 통과
 
             var conditionPanel = go.transform.Find("ConditionPanel");
             if (conditionPanel != null)
@@ -455,26 +457,13 @@ public class RandomEventChoiceUI : MonoBehaviour
                 }
             }
 
-            var rootImg    = go.GetComponent<Image>();   // 비주얼(ColorTint) 대상 = 루트 RandomEventChoiceBtn
-            var btn        = GetSelectButton(go);          // 실제 클릭 = 자식 selectBtn 의 Button
-            var captured   = choice;
+            // selectBtn 자식 없이 루트(RandomEventChoiceBtn) 자신의 Button/Image 로 클릭+ColorTint 모두 처리.
+            // targetGraphic 은 프리팹에서 이미 자기 자신(루트 Image)으로 배선돼 있음 — GlobalButtonClickBounce 가
+            // 이 Button 을 직접 감싸 눌림 시 루트(= 보이는 그래픽 전체)가 축소되므로 펀치 연출도 실제로 보인다.
+            var btn      = go.GetComponent<Button>();
+            var captured = choice;
             if (btn != null)
             {
-                // selectBtn 이 버튼(937×104) 전체를 덮도록 stretch-fill → 가장자리까지 클릭됨.
-                var srt = btn.GetComponent<RectTransform>();
-                if (srt != null)
-                {
-                    srt.anchorMin = Vector2.zero; srt.anchorMax = Vector2.one;
-                    srt.offsetMin = Vector2.zero; srt.offsetMax = Vector2.zero;
-                }
-                // selectBtn 자체가 raycast 를 받도록 Image(투명이어도) 보장.
-                var srcImg = btn.GetComponent<Image>();
-                if (srcImg == null) srcImg = btn.gameObject.AddComponent<Image>();
-                srcImg.color = new Color(1f, 1f, 1f, 0f); // 투명 — 비주얼은 루트, 클릭만 받음
-                srcImg.raycastTarget = true;
-
-                // ColorTint 전환(눌림/하이라이트/비활성)이 루트 이미지에 적용되도록 targetGraphic 을 루트로.
-                if (rootImg != null) btn.targetGraphic = rootImg;
                 btn.interactable = !choice.disabled;
                 if (!choice.disabled)
                 {
@@ -482,26 +471,74 @@ public class RandomEventChoiceUI : MonoBehaviour
                 }
             }
 
+            // 순차 페이드인 전까지 숨김 — CanvasGroup 으로 버튼 전체(아이콘/텍스트/ConditionPanel 포함) 알파 일괄 제어.
+            var cg = go.GetComponent<CanvasGroup>();
+            if (cg == null) cg = go.AddComponent<CanvasGroup>();
+            cg.alpha = 0f;
+
             _spawnedButtons.Add(go);
         }
+
+        // 질문(QuestionText)이 먼저 보이고, 0.5초 뒤 버튼들이 위에 있는 자식부터 순서대로 알파 0→1 페이드인.
+        _choiceFadeInCoroutine = StartCoroutine(FadeInChoiceButtonsSequentially());
     }
 
-    // 선택지 클릭 버튼 — 프리팹 자식 "selectBtn" 의 Button (없으면 자식에서 첫 Button 폴백).
-    Button GetSelectButton(GameObject go)
+    // 질문 텍스트 활성화 + 알파 0→1 페이드인.
+    void ShowQuestionText()
     {
-        if (go == null) return null;
-        var t = go.transform.Find("selectBtn");
-        if (t != null) { var b = t.GetComponent<Button>(); if (b != null) return b; }
-        return go.GetComponentInChildren<Button>(true);
+        if (questionText == null) return;
+        questionText.gameObject.SetActive(true);
+        questionText.DOKill();
+        var c = questionText.color; c.a = 0f; questionText.color = c;
+        questionText.DOFade(1f, 0.3f).SetUpdate(true);
+    }
+
+    IEnumerator FadeInChoiceButtonsSequentially()
+    {
+        const float preDelay = 0.5f;  // QuestionText 등장 후 버튼 등장까지 대기
+        const float stagger  = 0.08f; // 버튼 간 페이드 시작 간격
+        const float duration = 0.25f; // 버튼 1개당 페이드인 시간
+
+        yield return new WaitForSecondsRealtime(preDelay);
+
+        foreach (var go in _spawnedButtons)
+        {
+            if (go == null) continue;
+            var cg = go.GetComponent<CanvasGroup>();
+            if (cg != null) cg.DOFade(1f, duration).SetUpdate(true);
+            yield return new WaitForSecondsRealtime(stagger);
+        }
+        _choiceFadeInCoroutine = null;
+    }
+
+    // 선택 확정 시 버튼들을 동시에 투명해지며 사라지게 함 — 페이드인이 아직 진행 중이었으면 이어서 페이드아웃.
+    void FadeOutChoiceButtons()
+    {
+        const float duration = 0.2f;
+
+        if (_choiceFadeInCoroutine != null) { StopCoroutine(_choiceFadeInCoroutine); _choiceFadeInCoroutine = null; }
+
+        foreach (var go in _spawnedButtons)
+        {
+            if (go == null) continue;
+            var cg = go.GetComponent<CanvasGroup>();
+            if (cg == null) cg = go.AddComponent<CanvasGroup>();
+            cg.DOKill();
+            var target = go; // 클로저 캡처
+            cg.DOFade(0f, duration).SetUpdate(true).OnComplete(() =>
+            {
+                if (target != null) target.SetActive(false);
+            });
+        }
     }
 
     // 선택지 클릭 → 0.3초 유지한 뒤 실제 선택 처리.
     void OnChoiceClicked(RandomEventChoiceOption choice)
     {
-        // 0.3초 동안 중복 클릭 방지 — 각 선택지의 selectBtn 비활성화(ColorTint가 자동으로 Disabled 색 적용)
+        // 0.3초 동안 중복 클릭 방지 — 각 선택지 루트의 Button 비활성화(ColorTint가 자동으로 Disabled 색 적용)
         foreach (var b in _spawnedButtons)
         {
-            var bt = GetSelectButton(b);
+            var bt = b.GetComponent<Button>();
             if (bt != null) bt.interactable = false;
         }
 
@@ -519,9 +556,8 @@ public class RandomEventChoiceUI : MonoBehaviour
         _chosenOption     = choice;
         _inSecondaryPhase = false;
 
-        // 선택지 버튼 모두 숨김 (질문 텍스트도 함께 숨김 — 선택지 뜰 때만 활성)
-        foreach (var go in _spawnedButtons)
-            go.SetActive(false);
+        // 선택지 버튼 모두 투명해지며 사라짐 (질문 텍스트는 즉시 숨김 — 선택지 뜰 때만 활성)
+        FadeOutChoiceButtons();
         if (questionText != null) questionText.gameObject.SetActive(false);
 
         // 1차 결과: 두 명이면 둘 다 유지하고 말하는 주체만 전환(resultPortraitId2면 portrait2 화자).
@@ -585,7 +621,17 @@ public class RandomEventChoiceUI : MonoBehaviour
 
     void ClearChoiceButtons()
     {
-        foreach (var go in _spawnedButtons) Destroy(go);
+        if (_choiceFadeInCoroutine != null) { StopCoroutine(_choiceFadeInCoroutine); _choiceFadeInCoroutine = null; }
+        foreach (var go in _spawnedButtons)
+        {
+            if (go == null) continue;
+            // GlobalButtonClickBounce 가 클릭 시 버튼을 "__ClickBounceWrapper" 로 감싸 그 부모 자리에 끼워 넣는다
+            // (버튼은 래퍼의 자식으로 이동됨) — 버튼(go)만 지우면 빈 래퍼가 choiceButtonContainer 밑에 남으므로,
+            // 래핑된 상태면(부모가 choiceButtonContainer 가 아니면) 래퍼째로 지운다.
+            var parent = go.transform.parent;
+            bool wrapped = parent != null && parent != choiceButtonContainer;
+            Destroy(wrapped ? parent.gameObject : go);
+        }
         _spawnedButtons.Clear();
     }
 

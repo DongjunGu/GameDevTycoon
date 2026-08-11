@@ -1,6 +1,7 @@
 using System.Collections;
 using TMPro;
 using UnityEngine;
+using DG.Tweening;
 
 // 상시 개발틱 팝업: [statIcon] +N
 // - 위로 안 떠오르고 제자리에서 카운트업 (총 totalCountDuration 초)
@@ -22,13 +23,18 @@ public class StatTickPopup : MonoBehaviour
     public float holdAfter          = 0.3f; // (구버전)
     public float blankDuration      = 1f;   // 꽝 제자리 표시 시간
 
+    [Header("등장 연출 (정한 위치보다 위로 튀어올랐다가 스프링으로 복귀)")]
+    public float enterOvershootHeight = 0.6f; // 정한 위치보다 위로 튀어오르는 높이(월드 단위)
+    public float enterDuration        = 0.45f; // 튀어올랐다가 정한 위치로 안착하기까지 걸리는 시간
+    public int   enterVibrato         = 6;    // 안착까지 되튕기는 진동 횟수
+    [Range(0f, 1f)] public float enterElasticity = 0.6f; // 되튕김 탄성(0=감쇠만, 1=강하게 튕김)
+
     [Header("카운트업")]
     public float countUpDuration = 1f;   // 0 → target 까지 고르게 올라가는 시간
 
     [Header("흡입 연출")]
     public float holdBeforeSuck = 0.3f;  // 카운트업 종료 후 흡입 시작까지 유지 시간
     public float suckDuration   = 0.4f;  // 타겟으로 빨려드는 시간
-    public float suckArcHeight  = 1.5f;  // 포물선 정점 높이(월드 단위, 양수=위로 솟음)
     public float nudgeDistance  = 0.5f;  // 흡입 직전 우측으로 살짝 빼는 거리(월드 단위)
     public float nudgeDuration  = 0.15f; // 우측 이동 시간
 
@@ -63,6 +69,11 @@ public class StatTickPopup : MonoBehaviour
         }
 
         _onFinish = onFinish;
+
+        // 등장 순간 정한 위치(=현재 transform.position, 풀에서 스폰 시 이미 세팅됨) 위로 튀어올랐다가
+        // 스프링으로 되튕기며 그 위치로 안착 — 카운트업(NumberLabel)과 동시에 진행되어 "밀리는" 느낌.
+        transform.DOKill();
+        transform.DOPunchPosition(Vector3.up * enterOvershootHeight, enterDuration, enterVibrato, enterElasticity).SetUpdate(true);
 
         StopAllCoroutines();
         StartCoroutine(Animate(target));
@@ -174,9 +185,8 @@ public class StatTickPopup : MonoBehaviour
             Vector3 worldTarget = cam.ScreenToWorldPoint(new Vector3(screen.x, screen.y, zDist));
             worldTarget.z = start.z;
 
-            // 가로 진행은 가속(ease), 세로는 대칭 포물선 호(t=0,1 에서 0, 중간에서 최대)
+            // 가속(ease-in)만 적용한 직선 이동 — 포물선 호 없이 타겟으로 곧장 빨려듦
             Vector3 pos = Vector3.LerpUnclamped(start, worldTarget, ease);
-            pos.y += Mathf.Sin(t * Mathf.PI) * suckArcHeight;
             transform.position = pos;
             yield return null;
         }
