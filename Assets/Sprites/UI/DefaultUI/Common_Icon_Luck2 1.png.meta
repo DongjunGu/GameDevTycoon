@@ -1,13 +1,10 @@
 fileFormatVersion: 2
-guid: 10c882145510fae4b958c0cc39a76f07
+guid: 35da1f3e60b3adf44a43256a5ed4f499
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: -256628627614229509
-    second: Dialogue_Frame_EventTitle_Bad 2_0
-  - first:
-      213: -2434523550309054145
-    second: Dialogue_Frame_EventTitle_Bad 2_1
+      213: -8054573636237613715
+    second: Common_Icon_Luck2 1_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -142,13 +139,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: Dialogue_Frame_EventTitle_Bad 2_0
+      name: Common_Icon_Luck2 1_0
       rect:
         serializedVersion: 2
-        x: 7
+        x: 0
         y: 0
-        width: 1058
-        height: 129
+        width: 65
+        height: 65
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -157,30 +154,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: bfb9bd37f95407cf0800000000000000
-      internalID: -256628627614229509
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: Dialogue_Frame_EventTitle_Bad 2_1
-      rect:
-        serializedVersion: 2
-        x: 13
-        y: 38
-        width: 8
-        height: 6
-      alignment: 0
-      pivot: {x: 0, y: 0}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: -1
-      bones: []
-      spriteID: f39818acab5d63ed0800000000000000
-      internalID: -2434523550309054145
+      spriteID: d65a4dae3f7683090800000000000000
+      internalID: -8054573636237613715
       vertices: []
       indices: 
       edges: []
@@ -199,8 +174,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      Dialogue_Frame_EventTitle_Bad 2_0: -256628627614229509
-      Dialogue_Frame_EventTitle_Bad 2_1: -2434523550309054145
+      Common_Icon_Luck2 1_0: -8054573636237613715
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

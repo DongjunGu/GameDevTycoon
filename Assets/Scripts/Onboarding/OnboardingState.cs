@@ -73,17 +73,43 @@ public static class OnboardingState
     // 대사(강조 없음). ⚠️ 1사이클의 기획팀장점수 튜토리얼(Tutorial7Done)과는 완전히 별개 — 이 단계는
     // CompletedProjectManager.completedProjects.Count==1(=2번째 프로젝트 진행 중)로 구분해 절대 혼동되지 않는다.
     const string KEY_TUT20      = "onboarding_tutorial20_done";
+    // 튜토리얼 21 완료 — 20 종료 직후 자동으로 이어지는 Tut2Event(표절 논란) 랜덤이벤트 체험(대사/TutorialPanel
+    // 없이 이벤트만 즉시 표시). RandomEventChoiceUI 확인까지 끝나야 완료 처리.
+    const string KEY_TUT21      = "onboarding_tutorial21_done";
+    // 21 서브: Tut2Event가 실제로 확정되어 골드/직원 디버프가 서버에 커밋된 시점(RandomEventChoiceUI.
+    // OnClickConfirm). 17-7Shop/17-8Used와 동일한 부분 커밋 기록 — 이게 true면 재접속해도 21-2(반응 대사)
+    // 부터만 재개하고 Tut2Event를 다시 발동시키지 않는다(이중 발동/이중 차감 방지).
+    const string KEY_TUT21_1    = "onboarding_tutorial21_1_done";
+    // 튜토리얼 22 완료 — 21 종료 직후 자동으로 이어지는 Tut3Event(나를 피하는 직원, desk_02 직원 만족도
+    // -20) 체험. TutorialPanel 대사 없이 이벤트만 표시하며, RandomEventUI 확인까지 끝나야 완료 처리.
+    const string KEY_TUT22      = "onboarding_tutorial22_done";
+    // 22 서브: Tut3Event가 실제로 확정되어 직원 만족도 디버프가 서버에 커밋된 시점(RandomEventUI.Close의
+    // onApply). 21_1과 동일한 부분 커밋 기록 — 이게 true면 재접속해도 Tut3Event를 다시 발동시키지 않는다
+    // (이중 발동/이중 차감 방지).
+    const string KEY_TUT22_1    = "onboarding_tutorial22_1_done";
+    // 튜토리얼 23 완료 — 22 종료 직후 자동으로 이어지는 실제 사직서 이벤트(EmployeeResignation, desk_02
+    // 직원 대상). Tut 접두사 이벤트가 아니라 프로덕션 이벤트를 그대로 재사용(수치/텍스트 변경 없음).
+    const string KEY_TUT23      = "onboarding_tutorial23_done";
+    // 23 서브: 사직서 이벤트가 실제로 확정 커밋된 시점. 21_1/22_1과 동일한 부분 커밋 기록.
+    const string KEY_TUT23_1    = "onboarding_tutorial23_1_done";
+    // 튜토리얼 24 완료 — 23 종료 직후 자동으로 이어지는 대사(24-1, 2줄) 재생 후 곧바로 파산 화면
+    // (GameTimeManager.TriggerBankruptcy)을 띄우는 마지막 단계.
+    const string KEY_TUT24      = "onboarding_tutorial24_done";
 
     // 튜토리얼 dim 이 떠 있는 동안 true (세션 전용, 저장 안 함).
     // 시간 정지 중에도 메뉴 버튼을 숨기지 않도록 MenuController 가 참조.
     private static bool _tutorialActiveFlag;
     public static bool TutorialActive
     {
-        // 19-1(핸드오프 대사) 완료 ~ 20(2번째 프로젝트 기획팀장점수) 완료 사이엔 dim 없이도 시간이 계속
-        // 멈춰있는 구간이라(GameSceneInitializer가 재접속 시 재조립) 세션 플래그(_tutorialActiveFlag)만으로는
-        // Start() 실행 순서에 따라 타이밍이 어긋날 수 있다 — 그래서 이 구간은 저장된 플래그로 직접 계산해
-        // 순서와 무관하게 항상 정확하게 만든다.
-        get => _tutorialActiveFlag || (Tutorial19Done && !Tutorial20Done);
+        // 19-1(핸드오프 대사) 완료 ~ 20(2번째 프로젝트 기획팀장점수) 완료 사이, 20 완료 ~ 21(표절 논란
+        // 이벤트) 완료 사이, 21 완료 ~ 22(나를 피하는 직원) 완료 사이, 22 완료 ~ 23(사직서 이벤트) 완료
+        // 사이, 23 완료 ~ 24(파산 화면) 완료 사이엔 dim 없이도 시간이 계속 멈춰있는 구간이라
+        // (GameSceneInitializer가 재접속 시 재조립) 세션 플래그(_tutorialActiveFlag)만으로는 Start() 실행
+        // 순서에 따라 타이밍이 어긋날 수 있다 — 그래서 이 구간들은 저장된 플래그로 직접 계산해 순서와
+        // 무관하게 항상 정확하게 만든다.
+        get => _tutorialActiveFlag || (Tutorial19Done && !Tutorial20Done) || (Tutorial20Done && !Tutorial21Done)
+            || (Tutorial21Done && !Tutorial22Done) || (Tutorial22Done && !Tutorial23Done)
+            || (Tutorial23Done && !Tutorial24Done);
         set => _tutorialActiveFlag = value;
     }
 
@@ -374,6 +400,93 @@ public static class OnboardingState
         PlayerPrefs.Save();
     }
 
+    // 튜토리얼 21 — 20 종료 직후 자동 발동되는 Tut2Event(표절 논란), 대사/강조 없음.
+    public static bool Tutorial21Done => PlayerPrefs.GetInt(KEY_TUT21, 0) == 1;
+    public static void MarkTutorial21Done()
+    {
+        PlayerPrefs.SetInt(KEY_TUT21, 1);
+        PlayerPrefs.Save();
+    }
+
+    // 21 서브 — Tut2Event 확정 커밋(골드/직원 디버프 서버 반영) 완료 여부.
+    public static bool Tutorial21_1Done => PlayerPrefs.GetInt(KEY_TUT21_1, 0) == 1;
+    public static void MarkTutorial21_1Done()
+    {
+        PlayerPrefs.SetInt(KEY_TUT21_1, 1);
+        PlayerPrefs.Save();
+    }
+
+    // 테스트용 — 21(서브 포함) Done 플래그 원복.
+    public static void ResetTutorial21()
+    {
+        PlayerPrefs.DeleteKey(KEY_TUT21);
+        PlayerPrefs.DeleteKey(KEY_TUT21_1);
+        PlayerPrefs.Save();
+    }
+
+    // 튜토리얼 22 — 21 종료 직후 자동 발동되는 Tut3Event(나를 피하는 직원), 대사/강조 없음.
+    public static bool Tutorial22Done => PlayerPrefs.GetInt(KEY_TUT22, 0) == 1;
+    public static void MarkTutorial22Done()
+    {
+        PlayerPrefs.SetInt(KEY_TUT22, 1);
+        PlayerPrefs.Save();
+    }
+
+    // 22 서브 — Tut3Event 확정 커밋(직원 만족도 디버프 서버 반영) 완료 여부.
+    public static bool Tutorial22_1Done => PlayerPrefs.GetInt(KEY_TUT22_1, 0) == 1;
+    public static void MarkTutorial22_1Done()
+    {
+        PlayerPrefs.SetInt(KEY_TUT22_1, 1);
+        PlayerPrefs.Save();
+    }
+
+    // 테스트용 — 22(서브 포함) Done 플래그 원복.
+    public static void ResetTutorial22()
+    {
+        PlayerPrefs.DeleteKey(KEY_TUT22);
+        PlayerPrefs.DeleteKey(KEY_TUT22_1);
+        PlayerPrefs.Save();
+    }
+
+    // 튜토리얼 23 — 22 종료 직후 자동 발동되는 실제 사직서 이벤트(EmployeeResignation), 대사/강조 없음.
+    public static bool Tutorial23Done => PlayerPrefs.GetInt(KEY_TUT23, 0) == 1;
+    public static void MarkTutorial23Done()
+    {
+        PlayerPrefs.SetInt(KEY_TUT23, 1);
+        PlayerPrefs.Save();
+    }
+
+    // 23 서브 — 사직서 이벤트 확정 커밋 완료 여부.
+    public static bool Tutorial23_1Done => PlayerPrefs.GetInt(KEY_TUT23_1, 0) == 1;
+    public static void MarkTutorial23_1Done()
+    {
+        PlayerPrefs.SetInt(KEY_TUT23_1, 1);
+        PlayerPrefs.Save();
+    }
+
+    // 테스트용 — 23(서브 포함) Done 플래그 원복.
+    public static void ResetTutorial23()
+    {
+        PlayerPrefs.DeleteKey(KEY_TUT23);
+        PlayerPrefs.DeleteKey(KEY_TUT23_1);
+        PlayerPrefs.Save();
+    }
+
+    // 튜토리얼 24 — 23 종료 직후 자동 발동되는 대사(24-1) + 파산 화면, 이 시나리오의 마지막 단계.
+    public static bool Tutorial24Done => PlayerPrefs.GetInt(KEY_TUT24, 0) == 1;
+    public static void MarkTutorial24Done()
+    {
+        PlayerPrefs.SetInt(KEY_TUT24, 1);
+        PlayerPrefs.Save();
+    }
+
+    // 테스트용 — 24 Done 플래그만 원복.
+    public static void ResetTutorial24()
+    {
+        PlayerPrefs.DeleteKey(KEY_TUT24);
+        PlayerPrefs.Save();
+    }
+
     // 테스트용 — 온보딩 재노출 (TestResetBtn 등에서 빌드에서도 호출 가능하도록 UNITY_EDITOR 가드 제거)
     public static void ResetAll()
     {
@@ -404,6 +517,13 @@ public static class OnboardingState
         PlayerPrefs.DeleteKey(KEY_TUT18);
         PlayerPrefs.DeleteKey(KEY_TUT19);
         PlayerPrefs.DeleteKey(KEY_TUT20);
+        PlayerPrefs.DeleteKey(KEY_TUT21);
+        PlayerPrefs.DeleteKey(KEY_TUT21_1);
+        PlayerPrefs.DeleteKey(KEY_TUT22);
+        PlayerPrefs.DeleteKey(KEY_TUT22_1);
+        PlayerPrefs.DeleteKey(KEY_TUT23);
+        PlayerPrefs.DeleteKey(KEY_TUT23_1);
+        PlayerPrefs.DeleteKey(KEY_TUT24);
         PlayerPrefs.Save();
         Debug.Log("[Onboarding] 플래그 리셋 — 다음 진입 시 컷씬+튜토리얼 재노출");
     }

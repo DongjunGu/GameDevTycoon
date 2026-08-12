@@ -203,6 +203,7 @@ public class CharacterEventTester : MonoBehaviour
         if (GUILayout.Button("80점 (High 반응)")) QuickTestCriticReview(80);
         GUILayout.EndHorizontal();
         if (GUILayout.Button("2사이클 시작 (1~16 완료 처리 + 17-1부터)")) JumpToCycle2();
+        if (GUILayout.Button("19부터 (1~18 완료 처리 + 19-1 강제 재생)")) JumpToTutorial19();
 #endif
 
         GUILayout.Space(6);
@@ -222,6 +223,11 @@ public class CharacterEventTester : MonoBehaviour
     // 않으므로, step을 10 미만으로 잡아도(예: 6부터) 10까지 전부 아직 false라 안전하게 유지됨.
     void JumpToOnboardingStep(int step)
     {
+        // needStep1(=!OnboardingState.TutorialDone && IsTutorial)이 여기서 안 풀리면 이후 3~19단계를
+        // 전부 완료 처리해도 IsFullyDoneInternal()의 baseDone이 영원히 false로 남아 메뉴가 절대 안 풀린다
+        // (실제로 겪은 버그 — "17-1부터"/"19부터"를 눌러도 메뉴 버튼이 안 나타나던 원인).
+        OnboardingState.MarkIntroDone();
+        OnboardingState.MarkTutorialDone();
         if (step > 3) OnboardingState.MarkTutorial3Done();
         if (step > 5) OnboardingState.MarkTutorial5Done();
         if (step > 6) OnboardingState.MarkTutorial6Done(); // Tutorial5Pending도 여기서 같이 해제됨
@@ -236,7 +242,7 @@ public class CharacterEventTester : MonoBehaviour
     // 온보딩 전체(컷씬 포함)를 완료 처리 + RunState.tutorial=false — 이후 세션은 튜토리얼 훅이 전혀
     // 안 걸리고 일반 플레이만 된다(다른 기능 테스트할 때 튜토리얼이 끼어드는 걸 막는 용도).
     // ⚠️ JumpToOnboardingStep(13)은 3~12단계까지만 Done 처리함 — 13단계 이후는 여기서 직접 마저 채워야
-    // TutorialController.IsFullyDoneInternal()의 needStep13~19(20) 체크가 전부 풀린다. 이걸 빠뜨리면
+    // TutorialController.IsFullyDoneInternal()의 needStep13~19(20,21,22,23,24) 체크가 전부 풀린다. 이걸 빠뜨리면
     // IsMenuUnlockReady()가 영원히 false로 남아 MenuController.WaitOnboardingFullyDone()이 menuButton을
     // 절대 다시 켜주지 않는다(메뉴 자체를 못 열게 되어 다른 메뉴 UI 테스트도 전부 막힘).
     void DisableTutorial()
@@ -255,7 +261,13 @@ public class CharacterEventTester : MonoBehaviour
         OnboardingState.MarkTutorial17_7Done();
         OnboardingState.MarkTutorial18Done();
         OnboardingState.MarkTutorial19Done();
-        OnboardingState.MarkTutorial20Done(); // 13~20 전부 Done — IsFullyDone/IsMenuUnlockReady 둘 다 통과
+        OnboardingState.MarkTutorial20Done();
+        OnboardingState.MarkTutorial21Done();
+        OnboardingState.MarkTutorial22Done();
+        OnboardingState.MarkTutorial23Done();
+        OnboardingState.MarkTutorial24Done(); // 13~24 전부 Done — IsFullyDone/IsMenuUnlockReady 둘 다 통과
+        // ⚠️ MarkTutorial24Done()은 플래그만 세울 뿐 PlayTutorial24() 코루틴을 타지 않으므로
+        // GameTimeManager.TriggerBankruptcy()가 호출되지 않는다(디버그 버튼이 실제로 런을 끝내버리면 안 됨).
 
         // 19~20 구간이 걸어둔 "시간정지 중에도 캐릭터는 계속 움직임" 오버라이드 + 하드락 정리.
         // 원래는 DevelopmentManager.StartDeveloping()(2번째 프로젝트 실제 시작)에서만 풀리는데, 여기서
@@ -363,10 +375,79 @@ public class CharacterEventTester : MonoBehaviour
         OnboardingState.ResetTutorial19();
         OnboardingState.ResetTutorial20();
 
+        // 20단계(2번째 프로젝트 기획팀장) 트리거는 completedProjects.Count==1 로 판별되는데(JumpToTutorial19
+        // 주석 참고), 17-1부터 자연 진행해서 18→19→20까지 도달해도 실제 1번째 프로젝트를 완주한 적이
+        // 없어 카운트가 0으로 남는다 — 서버 Insert 없이 메모리에만 더미 1건을 채워 조건을 맞춰준다.
+        if (CompletedProjectManager.Instance != null && CompletedProjectManager.Instance.completedProjects.Count == 0)
+        {
+            CompletedProjectManager.Instance.completedProjects.Add(new CompletedProjectData
+            {
+                projectName = "(디버그) 1사이클 완료작",
+                scale = 1, genre = 0, platform = 0,
+                planning = 100, develop = 100, art = 100, creativity = 100, bug = 0,
+                totalRevenue = 1,
+                year = GameTimeManager.Instance != null ? GameTimeManager.Instance.Year : 1, month = 1, week = 1,
+                qualityScore = 100, criticTotalScore = 100, bestRank = 1,
+            });
+        }
+
         if (TutorialController.Instance == null) { Set("TutorialController 인스턴스 없음 (씬에 없거나 이미 파괴됨)"); return; }
 
-        TutorialController.Instance.StartCoroutine(TutorialController.Instance.PlayTutorial17_1());
+        // ForceResetAndStart — 다른 PlayTutorialX()가 이미 진행 중이었어도(예: 스킵 버튼을 연달아 누른 경우)
+        // dim/시간정지/메뉴숨김을 전부 강제로 정리한 뒤에 17-1을 새로 시작해서, 스킵이 항상 확실하게 먹히게 한다.
+        TutorialController.Instance.ForceResetAndStart(TutorialController.Instance.PlayTutorial17_1());
         Set("1사이클(1~16) 완료 처리 + 17-1 튜토리얼 대사 강제 재생 (2사이클 시작)");
+    }
+
+    // 19단계(마무리 핸드오프 대사)부터 바로 보고 싶을 때 — 1~18단계를 전부 완료 처리하고 19-1을 강제
+    // 재생한다. 패널을 열어서 자연 트리거할 방법이 없어 JumpToCycle2와 동일하게 코루틴을 직접
+    // 시작시켜야 한다. 19-1은 대사 후 메뉴→프로젝트→게임개발 강조가 이어지므로(17-1과 동일하게)
+    // 실제로 그 3단계를 클릭해줘야 완료된다. 이전 테스트에서 19~21이 이미 완료 처리돼 있을 수 있어 먼저 원복.
+    void JumpToTutorial19()
+    {
+        JumpToOnboardingStep(13); // 1~12단계 완료 처리
+        OnboardingState.MarkTutorial13Done();
+        OnboardingState.MarkTutorial13_4Done();
+        OnboardingState.MarkTutorial13_5Done();
+        OnboardingState.MarkTutorial14_1Done();
+        OnboardingState.MarkTutorial15Done();
+        OnboardingState.MarkTutorial16_1Done();
+        OnboardingState.MarkTutorial17_1Done();
+        OnboardingState.MarkTutorial17_2Done();
+        OnboardingState.MarkTutorial17_7Done();
+        OnboardingState.MarkTutorial18Done();
+        OnboardingState.ResetTutorial19();
+        OnboardingState.ResetTutorial20();
+        OnboardingState.ResetTutorial21();
+        OnboardingState.ResetTutorial22();
+        OnboardingState.ResetTutorial23();
+        OnboardingState.ResetTutorial24();
+
+        // 20단계(2번째 프로젝트 기획팀장) 트리거는 DevelopmentManager가
+        // CompletedProjectManager.Instance.completedProjects.Count==1 인지로 "1사이클 완료 후 2번째
+        // 프로젝트"를 판별한다(DevelopmentManager.cs BuildAndShowLeaderScore 계열 tutorialFixedRollsCycle2).
+        // 디버그 점프는 실제 1번째 프로젝트를 완주하지 않으므로 이 카운트가 계속 0으로 남아 20단계가
+        // 영영 안 뜨는 문제가 있었다 — 서버에 실제 Insert하는 SaveCompletedProject 대신 메모리 리스트에만
+        // 더미 1건을 채워 카운트 조건만 맞춰준다.
+        if (CompletedProjectManager.Instance != null && CompletedProjectManager.Instance.completedProjects.Count == 0)
+        {
+            CompletedProjectManager.Instance.completedProjects.Add(new CompletedProjectData
+            {
+                projectName = "(디버그) 1사이클 완료작",
+                scale = 1, genre = 0, platform = 0,
+                planning = 100, develop = 100, art = 100, creativity = 100, bug = 0,
+                totalRevenue = 1,
+                year = GameTimeManager.Instance != null ? GameTimeManager.Instance.Year : 1, month = 1, week = 1,
+                qualityScore = 100, criticTotalScore = 100, bestRank = 1,
+            });
+        }
+
+        if (TutorialController.Instance == null) { Set("TutorialController 인스턴스 없음 (씬에 없거나 이미 파괴됨)"); return; }
+
+        // ForceResetAndStart — 17-1 스킵 도중 곧바로 19부터를 눌러도(또는 그 반대) 이전 코루틴이 걸어둔
+        // dim/시간정지/메뉴숨김이 고아로 남지 않고 확실히 정리된 뒤 19-1이 새로 시작된다.
+        TutorialController.Instance.ForceResetAndStart(TutorialController.Instance.PlayTutorial19());
+        Set("1~18단계 완료 처리 + 19-1 튜토리얼 대사 강제 재생");
     }
 
     // ── 채용 ──

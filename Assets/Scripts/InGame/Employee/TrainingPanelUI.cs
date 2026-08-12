@@ -345,7 +345,7 @@ public class TrainingPanelUI : MonoBehaviour
     public float sprinkleAlphaMax = 1f;
 
     bool _resultResolved;
-    GameObject _successRoot, _failRoot, _ellipse;
+    GameObject _successRoot, _failRoot, _ellipse, _shinePanel;
     Image[] _shineEffects;
     readonly List<Tween> _shineTweens = new();
     Image[] _sprinkles;
@@ -376,11 +376,14 @@ public class TrainingPanelUI : MonoBehaviour
         _portraitEllipseRT  = portraitEllipseT as RectTransform;
         _portraitEllipseImg = portraitEllipseT != null ? portraitEllipseT.GetComponent<Image>() : null;
 
-        // EllipseImage 자식 중 "ShineEffect"로 시작하는 것 전부 수집(개수 가변 — ShineEffect, ShineEffect (1)...).
-        if (_portraitEllipseRT != null)
+        // ShineEffect(들)은 이제 EllipseImage 자식이 아니라 별도 ShinePanel 아래에 있음 — ShinePanel을
+        // 찾아 그 자식 중 "ShineEffect"로 시작하는 것 전부 수집(개수 가변 — ShineEffect, ShineEffect (1)...).
+        // ShinePanel은 더 이상 EllipseImage의 자식이 아니므로 활성화도 EllipseImage와 별도로 맞춰줘야 한다.
+        _shinePanel = FindDeep(root, "ShinePanel")?.gameObject;
+        if (_shinePanel != null)
         {
             var shines = new List<Image>();
-            foreach (Transform child in _portraitEllipseRT)
+            foreach (Transform child in _shinePanel.transform)
             {
                 if (!child.name.StartsWith("ShineEffect")) continue;
                 var img = child.GetComponent<Image>();
@@ -469,8 +472,9 @@ public class TrainingPanelUI : MonoBehaviour
         }
         else
         {
-            // 실패: EllipseImage 숨김 + 캐릭터 이름 삽입 + TouchText 깜빡임 + sprinkle 반짝임/맥동
+            // 실패: EllipseImage(+ShinePanel) 숨김 + 캐릭터 이름 삽입 + TouchText 깜빡임 + sprinkle 반짝임/맥동
             SetActiveSafe(_ellipse, false);
+            SetActiveSafe(_shinePanel, false);
             string empName = _selected != null ? _selected.employeeName : "";
             SetText(_failDetailText, $"'{empName}' 강화에 성공하지 못했습니다");
             SetConfirmInteractable(true);
@@ -500,6 +504,7 @@ public class TrainingPanelUI : MonoBehaviour
 
         // 초기 상태
         SetActiveSafe(_ellipse, false);
+        SetActiveSafe(_shinePanel, false);
         SetActiveSafe(successPortraitImage?.gameObject, false);
         if (_resultImageRT != null) { _resultImageRT.gameObject.SetActive(true); SetScaleY(_resultImageRT, 0f); }
         if (_portraitEllipseRT != null) { _portraitEllipseRT.gameObject.SetActive(false); _portraitEllipseRT.localScale = Vector3.zero; }
@@ -528,6 +533,7 @@ public class TrainingPanelUI : MonoBehaviour
         _animSeq.AppendCallback(() =>
         {
             SetActiveSafe(_ellipse, true);
+            SetActiveSafe(_shinePanel, true);
             if (_portraitEllipseRT != null) _portraitEllipseRT.gameObject.SetActive(true);
         });
         if (_portraitEllipseRT != null)
@@ -658,7 +664,7 @@ public class TrainingPanelUI : MonoBehaviour
             }
     }
 
-    // EllipseImage 자식 ShineEffect들 — 각자 랜덤 간격으로 알파 0→1→0을 반복(서로 안 겹치는 자연스러운 반짝임).
+    // ShinePanel 자식 ShineEffect들 — 각자 랜덤 간격으로 알파 0→1→0을 반복(서로 안 겹치는 자연스러운 반짝임).
     void StartShineEffects()
     {
         StopShineEffects();

@@ -371,7 +371,7 @@ public class HiringUI : MonoBehaviour
         // 딜레이만) 바로 후보 공개로 이어간다. 아니면(실서비스) 그냥 시간만 재개 — 실제 INTERVIEW_WEEKS 주 경과 후
         // OnWeekPassed 가 RevealHiring 을 호출한다.
         // (이 StartTime 을 빼면 OpenHiring 의 StopTime 이 안 풀려 채용 후 시간이 영영 멈춤)
-        ShowSecretaryEvent("면접 확정 후 알려드리겠습니다.", () =>
+        ShowSecretaryEvent("면접 일정 잡히면 바로 알려드릴게요", () =>
         {
             GameTimeManager.Instance?.StartTime();
             if (InstantInterview)
@@ -402,7 +402,7 @@ public class HiringUI : MonoBehaviour
             GameTimeManager.Instance?.SaveGameTime(); // 리스트 영속화 (pending 은 유지)
         }
 
-        ShowSecretaryEvent("최종 리스트 전달드리겠습니다.", () => OpenCandidateList(tierIndex));
+        ShowSecretaryEvent("최종 리스트 바로 전달드릴게요", () => OpenCandidateList(tierIndex));
     }
 
     // 채용 공개 흐름 시작 — 시간 정지 + "흐름 중 외부가 시간을 재개하면 즉시 재정지" 가드 구독.
@@ -485,6 +485,7 @@ public class HiringUI : MonoBehaviour
         {
             type                    = RandomEventType.Recruit,
             title                   = "직원 채용",
+            titleType               = 1,      // 중립
             description             = description,
             portraitId              = "portrait_secretary",
             systemMessage           = "",     // 공백이지만

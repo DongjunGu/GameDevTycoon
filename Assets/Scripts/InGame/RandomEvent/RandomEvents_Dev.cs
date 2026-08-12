@@ -291,4 +291,39 @@ public static class RandomEvents_Dev
         RandomEventChartLoader.Apply(evt, chart);
         pool.Add(evt);
     }
+
+    // ── 튜토리얼 전용 — 나를 피하는 직원 (Tut3Event) ──────────────────
+    // [CDN fallback — RandomEvent_Chart.csv 의 Tut3Event 행]
+    // title/description은 AvoidingEmployee와 완전히 동일, systemMessage만 "{0} 만족도 -20"으로 강화
+    // (원래 AvoidingEmployee는 -10). 대상 직원은 랜덤이 아니라 targetEmp로 강제 지정(desk_02 등).
+    // 일반 랜덤 풀에는 등록하지 않음(Register의 pool.Add 없음) — RandomEventManager.TriggerTutorial3Event가
+    // 결정적으로만 발동시킨다.
+    public static RandomEventData CreateTut3Event(
+        System.Collections.Generic.Dictionary<string, RandomEventChartRow> chart, EmployeeData targetEmp)
+    {
+        RandomEventData evt = null;
+        evt = new RandomEventData
+        {
+            type = RandomEventType.Tut3Event,
+            onApply = () =>
+            {
+                var emp = EmployeeManager.Instance.GetEmployee(evt.targetEmployeeId);
+                if (emp == null) return;
+                emp.ChangeSatisfaction(-20);
+                OfficeManager.Instance?.ShowStatPopup(emp.id, "만족도 -20", new Color(0.4f, 0.6f, 1f));
+            }
+        };
+        RandomEventChartLoader.Apply(evt, chart);
+
+        // [CDN fallback] "{0} 만족도 -20"
+        string systemMessageTemplate = evt.systemMessage ?? "";
+
+        evt.onSetup = () =>
+        {
+            evt.portraitId       = targetEmp.portraitId;
+            evt.targetEmployeeId = targetEmp.id;
+            evt.systemMessage    = string.Format(systemMessageTemplate, targetEmp.employeeName);
+        };
+        return evt;
+    }
 }

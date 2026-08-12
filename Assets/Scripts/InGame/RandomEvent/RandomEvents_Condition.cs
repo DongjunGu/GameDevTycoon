@@ -35,6 +35,12 @@ public static class RandomEvents_Condition
     // ── 불안한 회사 (wrapper) ─────────────────────────────────────
     public static bool CheckUnstableCompanyOnNewYear(RandomEventManager mgr, int newYear)
     {
+        // CheckConditionEvents()의 자발적 사직/도주 스킵(!TutorialController.IsFullyDone())과 동일한 이유 —
+        // 튜토리얼 중 스크립트된 퇴사 이벤트로 YearlyExitCount가 우연히 2 이상 쌓이면 이 새해 체크가
+        // 튜토리얼과 무관하게 "안좋은 소문"/"불안감 조성"을 확률적으로 터뜨려버렸다. 튜토리얼이 완전히
+        // 끝난 뒤부터만 정상 동작하도록 막는다.
+        if (!TutorialController.IsFullyDone()) return false;
+
         if (mgr.HiringPenaltyEndYear >= 0 && newYear >= mgr.HiringPenaltyEndYear)
         {
             mgr.HiringPenalty        = 0;

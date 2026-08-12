@@ -2,7 +2,8 @@ using UnityEngine;
 using UnityEngine.UI;
 
 // 기여도 순위 RowPanel(DevelopmentResultUI.rowPrefab)에 부착 — 1~3등이면 등수별 프레임/왕관을 보여주고,
-// 4등 이하는 그대로(등급색 배경 유지 + 왕관 없음) 둔다. DevelopmentResultUI.SetContributionRow가
+// 4등 이하는 defaultFrame이 있으면 그걸로 교체, 없으면 그대로(등급색 배경 유지) 둔다(왕관은 항상 없음).
+// DevelopmentResultUI.SetContributionRow가
 // GradeSpriteSet.Apply(등급색 배경) 적용 직후 SetRank()를 호출 — 1~3등이면 이 프레임이 등급색을 덮어쓴다.
 // frameImage/crownImage는 인스펙터 배선 없이 Awake에서 자동으로 찾는다(같은 프리팹 내부 참조라 자동 탐색이 더 안전).
 public class RowRankVisual : MonoBehaviour
@@ -11,6 +12,8 @@ public class RowRankVisual : MonoBehaviour
     public Sprite goldFrame;
     public Sprite silverFrame;
     public Sprite copperFrame;
+    [Tooltip("4등 이하(1~3등이 아닐 때) 적용할 프레임. 비워두면 기존처럼 등급색 배경을 그대로 둔다.")]
+    public Sprite defaultFrame;
 
     [Header("등수별 왕관 스프라이트")]
     public Sprite goldCrown;
@@ -32,7 +35,7 @@ public class RowRankVisual : MonoBehaviour
     public void SetRank(int rank)
     {
         if (_frameImage == null) _frameImage = GetComponent<Image>();
-        Sprite frame = rank switch { 1 => goldFrame, 2 => silverFrame, 3 => copperFrame, _ => null };
+        Sprite frame = rank switch { 1 => goldFrame, 2 => silverFrame, 3 => copperFrame, _ => defaultFrame };
         Sprite crown = rank switch { 1 => goldCrown, 2 => silverCrown, 3 => copperCrown, _ => null };
 
         if (_frameImage != null && frame != null) _frameImage.sprite = frame;

@@ -81,6 +81,12 @@ public class MenuController : MonoBehaviour
     public Button techTreeBtn;
     public GameObject techTreeLockBG;
 
+    [Header("튜토리얼 잠금 — 관리 > 메인 메뉴로 나가기는 튜토리얼(IsFullyDone)이 끝나야 사용 가능")]
+    [Tooltip("TopMenuUI/ManageSubMenu/mainMenuBtn")]
+    public Button mainMenuButton;
+    [Tooltip("TopMenuUI/ManageSubMenu/mainMenuBtn/LockPanel")]
+    public GameObject mainMenuLockPanel;
+
     // ── 런타임 상태 ──────────────────────────────────────────────────────────
     private bool _topOpen;
     private TopMenu _activeSub;
@@ -160,8 +166,14 @@ public class MenuController : MonoBehaviour
         {
             _tutorialHideActive = true;
             menuButton.gameObject.SetActive(false);
-            _waitOnboardingDoneRoutine = StartCoroutine(WaitOnboardingFullyDone());
         }
+
+        // mainMenuButton 잠금은 IsFullyDone() 기준이라 menuButton의 IsMenuUnlockReady()보다 늦게 풀린다 —
+        // 그래서 같은 코루틴(WaitOnboardingFullyDone)이 둘 다 맡되, 폴링 종료 조건은 더 늦는 쪽인
+        // IsFullyDone()으로 잡는다(자세한 이유는 그 메서드 주석 참고).
+        RefreshMainMenuLock();
+        if (!TutorialController.IsFullyDone())
+            _waitOnboardingDoneRoutine = StartCoroutine(WaitOnboardingFullyDone());
 
         RefreshStageLocks();
     }
@@ -178,22 +190,74 @@ public class MenuController : MonoBehaviour
         if (techTreeLockBG != null) techTreeLockBG.SetActive(!unlocked);
     }
 
+    // "관리 > 메인 메뉴로" — 튜토리얼 도중 아웃게임으로 나가버리면 안 되므로 IsFullyDone()(20~24 포함)
+    // 전까지 interactable=false + LockPanel 노출. menuButton 자체를 푸는 IsMenuUnlockReady()보다
+    // 조건이 더 엄격해서(20단계 이후까지 포함) 항상 더 늦게(또는 같이) 풀린다.
+    void RefreshMainMenuLock()
+    {
+        bool done = TutorialController.IsFullyDone();
+        if (mainMenuButton != null) mainMenuButton.interactable = done;
+        if (mainMenuLockPanel != null) mainMenuLockPanel.SetActive(!done);
+    }
+
     // 튜토리얼 진행 중엔 true — 이 동안은 아래 OnTimeStopChanged가 menuButton의 SetActive를 건드리지
     // 않는다(시간 정지/재개가 수시로 오가는 튜토리얼 중에 매번 되살아나 버리는 것 방지).
     bool _tutorialHideActive;
     Coroutine _waitOnboardingDoneRoutine;
 
     // 특정 단계의 Mark*Done() 호출 지점에 이벤트를 심어두는 대신(단계가 늘어날 때마다 그 지점을 옮겨야
-    // 해서 계속 깜빡했던 방식), 여기서 직접 "메뉴를 열어도 되는지"를 주기적으로 재확인한다 — 판정 기준은
-    // TutorialController.IsMenuUnlockReady() 하나뿐이라 이 파일은 새 단계가 추가돼도 항상 정확하다.
+    // 해서 계속 깜빡했던 방식), 여기서 직접 "메뉴를 열어도 되는지"를 주기적으로 재확인한다. menuButton은
+    // IsMenuUnlockReady() 시점에 곧바로 풀리고, mainMenuButton(메인 메뉴로 나가기)은 그보다 늦은
+    // IsFullyDone() 시점까지 매 틱 RefreshMainMenuLock()으로 갱신하다가, 그게 true가 되면 폴링을 끝낸다.
     IEnumerator WaitOnboardingFullyDone()
     {
         var wait = new WaitForSecondsRealtime(0.5f);
-        while (!TutorialController.IsMenuUnlockReady()) yield return wait;
+        while (!TutorialController.IsFullyDone())
+        {
+            if (_tutorialHideActive && TutorialController.IsMenuUnlockReady())
+            {
+                _tutorialHideActive = false;
+                if (menuButton != null) menuButton.gameObject.SetActive(true);
+            }
+            RefreshMainMenuLock();
+            yield return wait;
+        }
 
-        _tutorialHideActive = false;
+        RefreshMainMenuLock();
         _waitOnboardingDoneRoutine = null;
-        if (menuButton != null) menuButton.gameObject.SetActive(true);
+    }
+
+    // 디버그 점프(테스트용 "N부터" 버튼) 전용 — 온보딩 플래그가 코루틴 없이 런타임에 갑자기 바뀌면
+    // _tutorialHideActive/폴링 코루틴이 그 변화를 못 따라잡고 낡은 상태로 남을 수 있다(예: 이미 폴링이
+    // 끝나 잠들어있는데 플래그를 다시 "미완료"로 되돌린 경우 — 이후 진짜로 완료돼도 아무도 다시 안 켜줌).
+    // 지금 이 순간 기준으로 IsMenuUnlockReady()/IsFullyDone()을 강제 재평가해 메뉴 버튼·메인메뉴 잠금·
+    // 폴링 코루틴을 동기화한다.
+    public void RefreshMenuLockState()
+    {
+        if (menuButton != null)
+        {
+            if (TutorialController.IsMenuUnlockReady())
+            {
+                _tutorialHideActive = false;
+                menuButton.gameObject.SetActive(true);
+            }
+            else
+            {
+                _tutorialHideActive = true;
+                menuButton.gameObject.SetActive(false);
+            }
+        }
+
+        RefreshMainMenuLock();
+
+        if (TutorialController.IsFullyDone())
+        {
+            if (_waitOnboardingDoneRoutine != null) { StopCoroutine(_waitOnboardingDoneRoutine); _waitOnboardingDoneRoutine = null; }
+        }
+        else if (_waitOnboardingDoneRoutine == null)
+        {
+            _waitOnboardingDoneRoutine = StartCoroutine(WaitOnboardingFullyDone());
+        }
     }
 
     void OnDestroy()

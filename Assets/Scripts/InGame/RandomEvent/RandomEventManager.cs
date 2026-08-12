@@ -175,6 +175,7 @@ public class RandomEventManager : MonoBehaviour
         _eventInProgress = false;
         _resignationQueue.Clear();
         _resignationModalActive = false;
+        _resignationResolvedCallbacks.Clear();
 
         HiringPenalty        = 0;
         HiringPenaltyEndYear = -1;
@@ -368,11 +369,12 @@ public class RandomEventManager : MonoBehaviour
             if (alert.weeksLeft <= 0)
             {
                 _pendingRunAlerts.RemoveAt(i);
-                EmployeeManager.Instance.ReduceAllSatisfaction(10);
+                EmployeeManager.Instance.ReduceAllSatisfaction(5);
                 string capturedMsg = alert.alertMessage;
                 AlertUI.Instance.Show(capturedMsg, () =>
                 {
-                    if (UnityEngine.Random.value < 0.3f)
+                    // 튜토리얼 중엔 회사 평점 1점 후속 이벤트가 확률적으로 끼어들지 않게 막는다.
+                    if (TutorialController.IsFullyDone() && UnityEngine.Random.value < 0.3f)
                         RandomEvents_Condition.TriggerCompanyBadReviewEvent(this, GameTimeManager.Instance?.Year ?? 2000);
                 });
             }
@@ -1064,7 +1066,7 @@ public class RandomEventManager : MonoBehaviour
             if (triggerChance <= 0f || UnityEngine.Random.value >= triggerChance) continue;
 
             var captured = emp;
-            if (UnityEngine.Random.value < 0.7f)
+            if (UnityEngine.Random.value < 0.8f)
                 TriggerEmployeeResignationEvent(captured);
             else
                 TriggerEmployeeRunEvent(captured);
@@ -1103,10 +1105,14 @@ public class RandomEventManager : MonoBehaviour
     // 같은 주 여러 직원이 동시에 사직 트리거되어도 순차로 모달 표시. 큐가 빌 때만 시간 재개.
     private readonly Queue<string> _resignationQueue = new Queue<string>();
     private bool _resignationModalActive = false;
+    // empId별 1회성 완료 콜백 — 튜토리얼(TriggerTutorial4Event 등) 처럼 "이 직원의 사직 이벤트가 정말
+    // 끝난 시점"을 알아야 하는 호출자용. 일반 자동 발동(주간 체크)은 안 씀(onResolved=null).
+    private readonly Dictionary<string, System.Action> _resignationResolvedCallbacks = new();
 
-    public void TriggerEmployeeResignationEvent(EmployeeData emp)
+    public void TriggerEmployeeResignationEvent(EmployeeData emp, System.Action onResolved = null)
     {
         if (emp == null) return;
+        if (onResolved != null) _resignationResolvedCallbacks[emp.id] = onResolved;
         _resignationQueue.Enqueue(emp.id);
         TryShowNextResignation();
     }
@@ -1147,8 +1153,10 @@ public class RandomEventManager : MonoBehaviour
                     onChoose = () =>
                     {
                         EmployeeManager.Instance.FireEmployee(captured);
-                        EmployeeManager.Instance.ReduceAllSatisfactionExcept(10, captured);
-                        fireBadReview[0] = UnityEngine.Random.value < 0.3f;
+                        EmployeeManager.Instance.ReduceAllSatisfactionExcept(5, captured);
+                        // 튜토리얼 23(사직서 이벤트)도 이 경로를 그대로 타므로, 튜토리얼 중엔 회사 평점 1점
+                        // 후속 이벤트가 확률적으로 끼어들지 않게 막는다(BadRumor/AnxietyInducing과 동일 이유).
+                        fireBadReview[0] = TutorialController.IsFullyDone() && UnityEngine.Random.value < 0.3f;
                     }
                 },
                 // ── 선택지 2: 최면술사의 시계 사용 (보유 시에만 활성) ──
@@ -1187,6 +1195,12 @@ public class RandomEventManager : MonoBehaviour
                 RandomEvents_Condition.TriggerCompanyBadReviewEvent(
                     this, GameTimeManager.Instance?.Year ?? 2000);
 
+            if (_resignationResolvedCallbacks.TryGetValue(captured.id, out var resolvedCb))
+            {
+                _resignationResolvedCallbacks.Remove(captured.id);
+                resolvedCb?.Invoke();
+            }
+
             // 큐에 더 있으면 시간 재개하지 않고 다음 모달 바로 표시
             if (_resignationQueue.Count > 0)
                 TryShowNextResignation();
@@ -1201,34 +1215,33 @@ public class RandomEventManager : MonoBehaviour
     {
         EmployeeManager.Instance.FireEmployee(emp);
 
-        // 즉시 대사 표시 — 제목 없음, 직원 portrait, 랜덤 도망 메시지
-        RandomEventUI.Instance.Show("", emp.portraitId, RandomEvents_Condition.GetRunAwayMessage(), onConfirm: null, titleType: 0);
+        // 즉시 대사 표시 — 직원 portrait, 랜덤 도망 메시지. 나쁜 이벤트라 titleType=0(부정)으로 TitleBG에
+        // 반영되도록, 제목도 빈 문자열 대신 실제 텍스트("직원 도주")를 채운다(차트에 title이 있으면 그걸 우선).
+        RandomEventUI.Instance.Show(
+            RandomEvents_Condition.GetTitle("EmployeeRun") ?? "직원 도주",
+            emp.portraitId, RandomEvents_Condition.GetRunAwayMessage(), onConfirm: null, titleType: 0);
 
         // 2주 후 AlertUI 예약
         RandomEventConditionChartRow runRow = null;
         RandomEventConditionChartLoader.Cache?.TryGetValue("EmployeeRun", out runRow);
         string alertMsg = !string.IsNullOrEmpty(runRow?.systemMessage)
             ? runRow.systemMessage.Replace("{해당직원이름}", emp.employeeName)
-            : $"{emp.employeeName}이 도망쳤습니다!\n남은 팀원들의 만족도가 10 하락합니다.";
+            : $"{emp.employeeName}이 도망쳤습니다!\n남은 팀원들의 만족도가 5 하락합니다.";
 
         _pendingRunAlerts.Add(new RunEventPayload { alertMessage = alertMsg, weeksLeft = 2 });
     }
 
-    // ── 튜토리얼 10단계 전용 — AcWar(에어컨 전쟁) 결정적 발동 ──────────
-    // deskEmployeeId(예: desk_01 직원)를 emp1(패트롤 대상)로 강제 고정하고, 서로 다른 역할의 다른 보유
-    // 직원 1명을 emp2로 골라 즉시 master_desk로 강제 이동시킨다 — 도착하면 평소와 동일하게
-    // OnPatrolArrived → ShowChoiceEventAfterDelay 로 이어져 RandomEventChoiceUI가 자연스럽게 뜬다.
-    // onResolved: 선택지 확인(OnClickConfirm) 후 결과 AlertUI까지 전부 닫혀 정말로 이벤트가 끝난 시점에
-    // 1회 호출 — 플레이어가 고른 쪽(만족도가 오른 "승자") EmployeeData를 넘겨준다. 튜토리얼 10-3이 이걸로
-    // "누구의 만족도가 올랐는지" 대사에 이름을 채워 넣는다.
-    public void TriggerTutorialAcWar(string deskEmployeeId, System.Action<EmployeeData> onResolved = null)
+    // ── 튜토리얼 전용 — Tut1Event(주말 출근) 결정적 발동 ──────────
+    // employeeId 직원을 master_desk 로 강제 이동시키고, 도착하면 평소와 동일하게 OnPatrolArrived →
+    // ShowChoiceEventAfterDelay 로 이어져 RandomEventChoiceUI가 자연스럽게 뜬다(TriggerTutorialAcWar와 동일 패턴).
+    // 어느 선택지를 골라도 결과는 동일(대상 직원 만족도 +25) — CreateTut1Event 참고.
+    // onResolved: 선택지 확인(OnClickConfirm) 후 결과 팝업까지 전부 닫혀 정말로 이벤트가 끝난 시점에 1회 호출
+    // — 대상 직원(EmployeeData)을 넘겨준다(TriggerTutorialAcWar의 winner 콜백과 동일 형태라 호출부에서
+    // PlayTutorial10_3(EmployeeData winner) 등 기존 콜백을 그대로 재사용할 수 있다).
+    public void TriggerTutorial1Event(string employeeId, System.Action<EmployeeData> onResolved = null)
     {
-        var emp1 = EmployeeManager.Instance?.GetEmployee(deskEmployeeId);
-        if (emp1 == null) { Debug.LogWarning($"[Tutorial] AcWar 발동 실패 — {deskEmployeeId} 직원을 찾을 수 없음"); return; }
-
-        var emp2 = EmployeeManager.Instance.ownedEmployees
-            .Find(e => e.id != emp1.id && e.role != emp1.role && !IsTargetDispatched(e.id));
-        if (emp2 == null) { Debug.LogWarning("[Tutorial] AcWar 발동 실패 — 다른 역할의 (파견 제외) 직원이 없음"); return; }
+        var emp = EmployeeManager.Instance?.GetEmployee(employeeId);
+        if (emp == null) { Debug.LogWarning($"[Tutorial] Tut1Event 발동 실패 — {employeeId} 직원을 찾을 수 없음"); return; }
 
         if (_choiceEventPool.Count == 0)
         {
@@ -1236,29 +1249,85 @@ public class RandomEventManager : MonoBehaviour
             RandomEvents_Choice.Register(_choiceEventPool, this, RandomEventChoiceChartLoader.Cache);
         }
 
-        var data = RandomEvents_Choice.CreateTwoEmpFightEvent(
-            RandomEventType.AcWar, RandomEventChoiceChartLoader.Cache, emp1, emp2);
+        var data = RandomEvents_Choice.CreateTut1Event(RandomEventChoiceChartLoader.Cache, emp);
         data.cancelled = false;
         data.onSetup?.Invoke();
         if (data.cancelled) return;
 
-        if (onResolved != null && data.choices != null && data.choices.Count >= 2)
+        if (onResolved != null)
         {
-            EmployeeData winner = null;
-            var origOnChoose0 = data.choices[0].onChoose;
-            data.choices[0].onChoose = () => { origOnChoose0?.Invoke(); winner = emp1; };
-            var origOnChoose1 = data.choices[1].onChoose;
-            data.choices[1].onChoose = () => { origOnChoose1?.Invoke(); winner = emp2; };
-
             data.onConfirm = () =>
             {
                 DevelopmentManager.Instance.ResumeFromEvent();
-                onResolved(winner);
+                onResolved(emp);
             };
         }
 
         _pendingChoiceEvent = data;
-        OfficeManager.Instance?.ForceCharacterToPatrolPoint(emp1.id, "master_desk", stayDuration: 1f);
+        OfficeManager.Instance?.ForceCharacterToPatrolPoint(emp.id, "master_desk", stayDuration: 1f);
+    }
+
+    // ── 튜토리얼 전용 — Tut2Event(표절 논란) 결정적 발동 ──────────
+    // 특정 직원에게 patrol 이동을 요구하지 않고(비서가 즉시 보고) 곧바로 RandomEventChoiceUI를 띄운다 —
+    // Birthday/BossGossip과 동일한 즉시-표시 경로(requiresPatrol=false, 대상 직원은 CreateTut2Event의
+    // onSetup에서 랜덤 선정).
+    // onResolved: 선택지 확인 후 결과 팝업까지 전부 닫힌(=이벤트 완전 종료) 시점에 1회 호출.
+    public void TriggerTutorial2Event(System.Action onResolved = null)
+    {
+        if (_choiceEventPool.Count == 0)
+        {
+            RandomEvents_Dev.Register(_eventPool, this, RandomEventChartLoader.Cache);
+            RandomEvents_Choice.Register(_choiceEventPool, this, RandomEventChoiceChartLoader.Cache);
+        }
+
+        var data = RandomEvents_Choice.CreateTut2Event(RandomEventChoiceChartLoader.Cache);
+        data.cancelled = false;
+        data.onSetup?.Invoke();
+        if (data.cancelled) { onResolved?.Invoke(); return; }
+
+        if (onResolved != null)
+        {
+            data.onConfirm = () =>
+            {
+                DevelopmentManager.Instance.ResumeFromEvent();
+                onResolved();
+            };
+        }
+
+        _eventInProgress = true;
+        DevelopmentManager.Instance.PauseForEvent();
+        RandomEventChoiceUI.Instance.Show(data);
+    }
+
+    // ── 튜토리얼 전용 — Tut3Event(나를 피하는 직원) 결정적 발동 ──────────
+    // employeeId(예: desk_02 직원)를 master_desk로 강제 이동시키고, 도착하면 평소와 동일하게
+    // OnPatrolArrived → ShowEventAfterDelay로 이어져 RandomEventUI(선택지 없는 데이터 모드)가
+    // 자연스럽게 뜬다(Tut1Event/TriggerTutorialAcWar와 동일 patrol 패턴, 선택지만 없는 버전).
+    // onResolved: 효과 적용(RandomEventUI.Close의 onApply 호출 시점=결과 확인 직후) 시 1회 호출.
+    public void TriggerTutorial3Event(string employeeId, System.Action onResolved = null)
+    {
+        var emp = EmployeeManager.Instance?.GetEmployee(employeeId);
+        if (emp == null) { Debug.LogWarning($"[Tutorial] Tut3Event 발동 실패 — {employeeId} 직원을 찾을 수 없음"); return; }
+
+        if (_eventPool.Count == 0)
+        {
+            RandomEvents_Dev.Register(_eventPool, this, RandomEventChartLoader.Cache);
+            RandomEvents_Choice.Register(_choiceEventPool, this, RandomEventChoiceChartLoader.Cache);
+        }
+
+        var data = RandomEvents_Dev.CreateTut3Event(RandomEventChartLoader.Cache, emp);
+        data.cancelled = false;
+        data.onSetup?.Invoke();
+        if (data.cancelled) { onResolved?.Invoke(); return; }
+
+        if (onResolved != null)
+        {
+            var originalOnApply = data.onApply;
+            data.onApply = () => { originalOnApply?.Invoke(); onResolved(); };
+        }
+
+        _pendingEvent = data;
+        OfficeManager.Instance?.ForceCharacterToPatrolPoint(emp.id, "master_desk", stayDuration: 1f);
     }
 
     // ── 테스트용 즉시 발동 ────────────────────────────────────

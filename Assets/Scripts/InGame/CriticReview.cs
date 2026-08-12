@@ -40,11 +40,22 @@ public class CriticReviewUI : MonoBehaviour
     public TextMeshProUGUI nameText;          // "게임명: {게임명}"
     public TextMeshProUGUI totalScoreText;    // "유저 평점: {점수}"
 
-    [Header("Stamp")]
+    [Header("Stamp — HiringUI.PlayHireStamp와 동일 연출(스쿼시+흔들림+탄성 안착)")]
     public GameObject stampImage;             // 평점 뒤 "쾅" 찍히는 도장
     public float stampDelay = 0.3f;           // 평점 출력 후 도장까지 대기
-    public float stampPunchDuration = 0.12f;  // 도장 축소 연출 시간
+    public float stampPunchDuration = 0.12f;  // "쾅" 임팩트(스쿼시+알파 등장) 시간 — 아주 짧고 빠르게
     public float stampStartScale = 2.5f;      // 도장 시작 배율 (크게 → 1배)
+    [Tooltip("찍히는 순간 옆으로 퍼지는 스쿼시 스케일(X)")]
+    public float stampSquashScaleX = 1.25f;
+    [Tooltip("찍히는 순간 위아래로 눌리는 스쿼시 스케일(Y)")]
+    public float stampSquashScaleY = 0.35f;
+    [Tooltip("임팩트 후 튕겨나오며 최종 크기(1배)로 안착하는 시간(초)")]
+    public float stampSettleDuration = 0.35f;
+    [Tooltip("임팩트 순간 흔들릴 패널 — 비우면 totalScoreObject 사용")]
+    public RectTransform stampShakeTarget;
+    public float stampShakeStrength = 14f;    // 임팩트 순간 패널 흔들림 세기(px)
+    public float stampShakeDuration = 0.3f;
+    public int   stampShakeVibrato  = 14;
 
     [Header("Settings")]
     public float criticRevealDelay = 1.5f; // 평론가 등장 간격
@@ -301,39 +312,76 @@ public class CriticReviewUI : MonoBehaviour
         }
         if (stampImage != null)
         {
+            stampImage.transform.DOKill();
             stampImage.SetActive(true);
             stampImage.transform.localScale = Vector3.one;
+            // 애니메이션 도중 스킵되면 알파가 0으로 남아있을 수 있어 명시적으로 복원.
+            var stampImg = stampImage.GetComponent<Image>();
+            if (stampImg != null)
+            {
+                stampImg.DOKill();
+                var c = stampImg.color; c.a = 1f; stampImg.color = c;
+            }
         }
+        var shakeTarget = stampShakeTarget != null
+            ? stampShakeTarget
+            : (totalScoreObject != null ? totalScoreObject.transform as RectTransform : null);
+        shakeTarget?.DOKill();
 
         _revealDone = true;
     }
 
-    // 총점 텍스트 + 도장 이미지가 동시에 확대 상태에서 축소되며 "쾅" 박히는 연출.
+    // 총점 텍스트는 기존처럼 단순 축소, 도장 이미지는 HiringUI.PlayHireStamp와 동일하게 "쾅" 찍히는
+    // 스쿼시(가로로 퍼지고 세로로 눌림) + 알파 확 등장 + 패널 흔들림 → 튕겨나오듯 최종 스케일 안착.
     IEnumerator ScoreAndStampPunch()
     {
-        Transform stampT = stampImage    != null ? stampImage.transform    : null;
         Transform scoreT = totalScoreText != null ? totalScoreText.transform : null;
-        if (stampT == null && scoreT == null) yield break;
+        RectTransform stampRt = stampImage != null ? stampImage.transform as RectTransform : null;
+        if (stampRt == null && scoreT == null) yield break;
 
         Vector3 from = Vector3.one * stampStartScale;
         Vector3 to   = Vector3.one;
 
-        if (stampT != null) { stampT.localScale = from; stampImage.SetActive(true); }
         if (scoreT != null) scoreT.localScale = from;
 
+        Image stampImg = null;
+        if (stampRt != null)
+        {
+            stampImage.SetActive(true);
+            stampImg = stampImage.GetComponent<Image>();
+            stampRt.DOKill();
+            if (stampImg != null) stampImg.DOKill();
+            stampRt.localScale = from;
+            if (stampImg != null) { var c = stampImg.color; c.a = 0f; stampImg.color = c; }
+
+            var shakeTarget = stampShakeTarget != null
+                ? stampShakeTarget
+                : (totalScoreObject != null ? totalScoreObject.transform as RectTransform : null);
+            shakeTarget?.DOKill();
+
+            float impactDur = Mathf.Max(0.01f, stampPunchDuration);
+            var seq = DOTween.Sequence().SetUpdate(true).SetTarget(stampImage);
+            if (stampImg != null) seq.Join(stampImg.DOFade(1f, impactDur));                                     // 찍히는 순간 알파 확 등장
+            seq.Join(stampRt.DOScale(new Vector3(stampSquashScaleX, stampSquashScaleY, 1f), impactDur).SetEase(Ease.InQuad)); // 눌려 퍼지는 스쿼시
+            seq.AppendCallback(() =>                                                                             // 임팩트 순간 패널 흔들림
+            {
+                if (shakeTarget != null)
+                    shakeTarget.DOShakeAnchorPos(stampShakeDuration, stampShakeStrength, stampShakeVibrato, 90f, false, true).SetUpdate(true);
+            });
+            seq.Append(stampRt.DOScale(Vector3.one, stampSettleDuration).SetEase(Ease.OutElastic, 1.1f, 0.6f)); // 임팩트 후 튕겨나오며 안착
+        }
+
+        // 총점 텍스트는 기존과 동일하게 단순 ease-out 축소 (도장과 같은 임팩트 시간 동안 동시 진행)
         float dur = Mathf.Max(0.01f, stampPunchDuration);
         float el = 0f;
         while (el < dur)
         {
             el += Time.deltaTime;
             float k = Mathf.Clamp01(el / dur);
-            // ease-out — 빠르게 줄어들며 "쾅" 찍히는 느낌
             float eased = 1f - (1f - k) * (1f - k);
-            if (stampT != null) stampT.localScale = Vector3.LerpUnclamped(from, to, eased);
             if (scoreT != null) scoreT.localScale = Vector3.LerpUnclamped(from, to, eased);
             yield return null;
         }
-        if (stampT != null) stampT.localScale = to;
         if (scoreT != null) scoreT.localScale = to;
     }
 

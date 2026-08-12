@@ -100,6 +100,10 @@ public class RandomEventChoiceUI : MonoBehaviour
     private bool _awaitingChoiceReveal;
     private List<RandomEventChoiceOption> _pendingChoices;
 
+    // 답변1(reply1) 타이핑이 끝난 뒤 "클릭해야" 답변2(reply2) 타이핑이 시작되도록 하는 대기 상태.
+    private bool _awaitingReply2;
+    private RandomEventChoiceOption _pendingReply2Choice;
+
     // 패널이 활성화된 바로 그 프레임의 클릭은 무시 — 직전에 다른 모달(채용 완료 버튼 등)을 닫은 클릭이
     // ModalGate 큐를 타고 같은 프레임에 이 패널을 띄우면서 그대로 스킵/선택 입력으로 새어들어오는 것을 방지.
     private int _shownFrame = -1;
@@ -145,6 +149,13 @@ public class RandomEventChoiceUI : MonoBehaviour
             var choices = _pendingChoices;
             _pendingChoices = null;
             SpawnChoiceButtons(choices);
+        }
+        else if (_awaitingReply2)
+        {
+            _awaitingReply2 = false;
+            var choice = _pendingReply2Choice;
+            _pendingReply2Choice = null;
+            StartTyping(choice.reply2, onComplete: EnableConfirm);
         }
         else if (confirmButton != null && confirmButton.gameObject.activeSelf && confirmButton.interactable)
         {
@@ -196,6 +207,8 @@ public class RandomEventChoiceUI : MonoBehaviour
         _inSecondaryPhase     = false;
         _awaitingChoiceReveal = false;
         _pendingChoices       = null;
+        _awaitingReply2       = false;
+        _pendingReply2Choice  = null;
         _skipMode             = false; // 스킵은 이번 이벤트 표시 한정 — 새 이벤트마다 초기화
         HideIndicators();
 
@@ -285,6 +298,16 @@ public class RandomEventChoiceUI : MonoBehaviour
             _awaitingChoiceReveal = false;
             SpawnChoiceButtons(_pendingChoices);
             _pendingChoices = null;
+            return;
+        }
+
+        // 답변1 타이핑 완료 후: 답변2 대기 중이면 클릭해야 답변2 타이핑 시작.
+        if (_awaitingReply2 && ClickedThisFrame())
+        {
+            _awaitingReply2 = false;
+            var choice = _pendingReply2Choice;
+            _pendingReply2Choice = null;
+            StartTyping(choice.reply2, onComplete: EnableConfirm);
         }
     }
 
@@ -587,7 +610,7 @@ public class RandomEventChoiceUI : MonoBehaviour
         // 답변1(reply1)이 있으면 신규 방식(답변1→답변2 순차 타이핑) 우선, 없으면 기존 랜덤배리언트 방식으로 fallback.
         if (!string.IsNullOrEmpty(choice.reply1))
         {
-            StartTyping(choice.reply1, onComplete: () => TypeReply2ThenEnableConfirm(choice));
+            StartTyping(choice.reply1, onComplete: () => OnReply1TypingDone(choice));
             return;
         }
 
@@ -603,13 +626,25 @@ public class RandomEventChoiceUI : MonoBehaviour
         StartTyping(resultDesc, onComplete: EnableConfirm);
     }
 
-    // 답변2(reply2) 가 있으면 이어서 타이핑(같은 화자 박스에 이어 출력), 없으면 바로 confirm 활성화.
-    void TypeReply2ThenEnableConfirm(RandomEventChoiceOption choice)
+    // 답변1(reply1) 타이핑 완료 직후 — 답변2(reply2)가 있으면 곧바로 넘어가지 않고 "클릭해야" 시작되도록
+    // 대기 상태로 전환(선택지 공개 대기 _awaitingChoiceReveal과 동일 패턴), 없으면 바로 confirm 활성화.
+    // 스킵 모드면 대기 없이 바로 답변2 타이핑을 시작한다.
+    void OnReply1TypingDone(RandomEventChoiceOption choice)
     {
-        if (!string.IsNullOrEmpty(choice.reply2))
-            StartTyping(choice.reply2, onComplete: EnableConfirm);
-        else
+        if (string.IsNullOrEmpty(choice.reply2))
+        {
             EnableConfirm();
+            return;
+        }
+
+        if (_skipMode)
+        {
+            StartTyping(choice.reply2, onComplete: EnableConfirm);
+            return;
+        }
+
+        _pendingReply2Choice = choice;
+        _awaitingReply2       = true; // 클릭 대기 — Update 에서 클릭 시 답변2 타이핑 시작
     }
 
     void EnableConfirm()

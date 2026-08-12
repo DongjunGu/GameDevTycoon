@@ -95,6 +95,22 @@ public class TutorialHighlighter : MonoBehaviour
     // Show() 호출 직후 호출부가 캡처해서 대응되는 Hide()에 넘겨야 하는 세대값.
     public int CurrentGeneration => _generation;
 
+    // 디버그 점프("N부터" 등) 전용 — 진행 중이던 Show()/Hide()/Highlight()/BeginHighlight() 코루틴이
+    // 뭐든 간에 전부 무시하고 즉시(페이드 없이) dim/구멍/캐처/손 아이콘을 전부 끈다. 세대도 올려서
+    // 아직 살아있는 stale Hide()가 나중에 도착해도 아무것도 안 건드리게 만든다. 정상 흐름에서는 절대
+    // 쓰지 말 것 — Show()/Hide() 페어를 그대로 쓸 것.
+    public void ForceHideImmediate()
+    {
+        StopAllCoroutines();
+        _pulse = null;
+        _dimHiddenForPress = false;
+        if (_holeCatcher != null) _holeCatcher.gameObject.SetActive(false);
+        HideHand();
+        if (_dimCanvas != null) _dimCanvas.enabled = false;
+        _holeInitialized = false;
+        _generation++;
+    }
+
     // ── 공개 API ──────────────────────────────────────────────────────
     // dim 준비 + 구멍 없이 전체 덮은 상태로 훅 페이드인. 강조 시퀀스 시작 시 1회 호출.
     // 리턴하는 세대값을 호출부가 들고 있다가 Hide(그 값)로 넘겨야 레이스가 안전하다.

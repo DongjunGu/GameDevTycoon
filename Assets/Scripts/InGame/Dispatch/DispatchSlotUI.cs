@@ -81,9 +81,11 @@ public class DispatchSlotUI : MonoBehaviour
                 enhancementText.text = $"+{data.enhancementLevel}";
             }
 
-            // 팀장 선택 모드에서만 연속 팀장 횟수(EmployeeData.consecutiveLeaderCount) 표시.
-            if (countPanel != null) countPanel.SetActive(isLeaderMode);
-            if (isLeaderMode && countText != null) countText.text = $"{data.consecutiveLeaderCount}";
+            // 팀장 선택 모드 + 연속 팀장 횟수(EmployeeData.consecutiveLeaderCount)가 있을 때만 표시
+            // (DispatchPanelUI.countSeqPanel과 동일한 hasStreak 판정).
+            bool hasStreak = isLeaderMode && data.consecutiveLeaderCount > 0;
+            if (countPanel != null) countPanel.SetActive(hasStreak);
+            if (hasStreak && countText != null) countText.text = $"{data.consecutiveLeaderCount}회";
         }
 
         if (portraitImage != null)
