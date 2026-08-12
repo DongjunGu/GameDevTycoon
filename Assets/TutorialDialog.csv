@@ -1,15 +1,15 @@
 dialogId,stepGroup,order,speakerName,portraitId,text
-tut_1_1_0,1-1,1,비서,portrait_secretary,현재 우리 회사의 직원은… [[대표님 한 명]]이네요.
+tut_1_1_0,1-1,1,비서,portrait_secretary,현재 우리 회사의 직원은... [[대표님 한 명]]이네요.
 tut_1_1_1,1-1,2,나,ceo_001,너는 누구지 그럼?
 tut_1_1_2,1-1,3,비서,portrait_secretary,저요? 저는 직원이 아니라 대표님의 [[만능 비서]]잖아요!\n아직 잠이 덜깨신건가?
 tut_1_2_0,1-2,1,비서,portrait_secretary,[[채용]]을 눌러 첫 직원을 뽑아볼까요?
-tut_3_1_0,3-1,1,비서,portrait_secretary,지원자들이 왔어요! 이렇게 반지하까지 와주다니…\n다들 사연이 있어 보이네요.
+tut_3_1_0,3-1,1,비서,portrait_secretary,지원자들이 왔어요! 이렇게 반지하까지 와주다니...\n다들 사연이 있어 보이네요.
 tut_3_2_0,3-2,1,비서,portrait_secretary,지원서에서는 직업을 확인할 수 있어요.
 tut_3_2_1,3-2,2,비서,portrait_secretary,"<sprite=""PlanIconSpriteAsset"" name=""plan""> [[기획]], <sprite=""DevIconSpriteAsset"" name=""dev""> [[개발]], <sprite=""ArtIconSpriteAsset"" name=""art""> [[아트]] 이렇게 3가지 직업으로\n이루어져 있으니 골고루 뽑아보세요"
 tut_3_3_0,3-3,1,비서,portrait_secretary,여기서는 [[잠재력]]을 확인할 수 있어요
 tut_3_3_1,3-3,2,비서,portrait_secretary,잠재력이 높을수록 나중에 [[강화했을 때]]\n크게 성장하니 꼭 참고하세요
 tut_3_4_0,3-4,1,비서,portrait_secretary,직업과 동일한 능력치가 높은 직원을 뽑는게 중요하니까\n유심히 살펴보세요
-tut_3_5_0,3-5,1,비서,portrait_secretary,"잠깐만요 이 지원자… 스펙이 엄청난데요?\n이런 분은 얼른 저희 회사로 데려가버리죠"
+tut_3_5_0,3-5,1,비서,portrait_secretary,"잠깐만요 이 지원자... 스펙이 엄청난데요?\n이런 분은 얼른 저희 회사로 데려가버리죠"
 tut_4_1_0,4-1,1,비서,portrait_secretary,이제 책임져야 할 직원이 한 명 늘었네요.\n어때요 대표님이 된 게 실감 나시나요?
 tut_4_2_0,4-2,1,비서,portrait_secretary,기획자를 뽑았으니 이번에는 [[개발자]]를 뽑아볼게요
 tut_4_2_1,4-2,2,비서,portrait_secretary,두 번째부턴 익숙하시죠? 이번엔 대표님이 직접\n마음에 드는 사람으로 골라보세요
@@ -46,10 +46,10 @@ tut_10_2_1,10-2,2,비서,portrait_secretary,만족도는 [[정말 중요]]해요
 tut_10_2_2,10-2,3,비서,portrait_secretary,어? 잠깐만요. 직원이 이쪽으로 걸어오는데요?\n[[할 말이 있나 봐요!]]
 tut_10_3_0,10-3,1,비서,portrait_secretary,대표님 진짜 대표 처음 맞아요?\n최고의 선택이라서 {직원이름}의 만족도가 [[올랐어요]]!
 tut_10_3_1,10-3,2,비서,portrait_secretary,만족도가 80보다 높으면 능력치에 [[버프]]\n낮으면 [[너프]]가 붙어요
-tut_10_3_2,10-3,3,비서,portrait_secretary,그리고… 만족도가 바닥나면 직원이 [[도망]]갈 수도 있어요
+tut_10_3_2,10-3,3,비서,portrait_secretary,그리고... 만족도가 바닥나면 직원이 [[도망]]갈 수도 있어요
 tut_10_3_3,10-3,4,비서,portrait_secretary,만족도는 시간이 지날수록 하락하지만 게임을 출시하면\n일부 회복하니 계속 게임을 개발해주세요!
-tut_12_1_0,12-1,1,비서,portrait_secretary,이제 아트 차례인데… 직원이 없으니\n[[대표님이 직접]] 하셔야 해요.
-tut_12_1_1,12-1,2,비서,portrait_secretary,학창시절에 미술 잘하셨죠?\n…왜 대답이 없으세요?
+tut_12_1_0,12-1,1,비서,portrait_secretary,이제 아트 차례인데... 직원이 없으니\n[[대표님이 직접]] 하셔야 해요.
+tut_12_1_1,12-1,2,비서,portrait_secretary,학창시절에 미술 잘하셨죠?\n...왜 대답이 없으세요?
 tut_12_1_2,12-1,3,나,ceo_001,....
 tut_13_1_0,13-1,1,나,ceo_001,어라? 근데 왜 이 점수는 안올라가고 0점인거야?
 tut_13_1_1,13-1,2,비서,portrait_secretary,여기는 창의성 점수에요.
@@ -66,12 +66,12 @@ tut_14_1_0,14-1,1,비서,portrait_secretary,드디어 첫 게임 [[완성]]!
 tut_14_1_1,14-1,2,비서,portrait_secretary,기여도를 확인해서 어떤 직원이 잘하고 있나 확인해볼 수 있어요
 tut_15_1_0,15-1,1,비서,portrait_secretary,게임은 [[만드는 것]]도 중요하지만\n[[알리는 것]]도 엄청 중요해요.
 tut_15_2_0,15-2,1,비서,portrait_secretary,마케팅에 너무 돈을 쓰지 않으면 게임을 잘 만들어도\n잘 팔리지 않을 수 있어요
-tut_16_1_0,16-1,1,비서,portrait_secretary,순.. 순위가… [[대박이에요!!]] 매출 들어오는 속도 좀 보세요!
+tut_16_1_0,16-1,1,비서,portrait_secretary,순.. 순위가... [[대박이에요!!]] 매출 들어오는 속도 좀 보세요!
 tut_16_1_1,16-1,2,비서,portrait_secretary,"대표님, 진짜 처음 맞으세요? 솔직히 말해봐요\n어디서 기업 경영하다 오신 거 아니죠?"
 tut_17_1_0,17-1,1,비서,portrait_secretary,돈을 벌었으면 쓸 때는 또 써야죠\n이번에는 [[직원 강화]]를 해볼까요?
 tut_17_2_0,17-2,1,비서,portrait_secretary,"[[강화]]하면 능력치가 오르지만, 대신 [[연봉]]도 함께 올라요."
 tut_17_3_0,17-3,1,비서,portrait_secretary,4강까지 강화를 진행해볼까요?
-tut_17_4_0,17-4,1,비서,portrait_secretary,4번연속 성공이라니… 대표님은 실력도 운도\n모두 재능이 있으시네요
+tut_17_4_0,17-4,1,비서,portrait_secretary,4번연속 성공이라니... 대표님은 실력도 운도\n모두 재능이 있으시네요
 tut_17_5_0,17-5,1,비서,portrait_secretary,오늘 정말 수상할정도로 모든게 잘풀리고 있어요!
 tut_17_6_0,17-6,1,비서,portrait_secretary,어? 마침 [[상인]]이 왔어요! 돈이 많을 때 오는게 타이밍이\n귀신 같네요
 tut_17_7_0,17-7,1,비서,portrait_secretary,상인에게서 [[아이템]]을 살 수 있어요.\n아이템을 [[구매]]해서 [[사용]]해볼까요?
@@ -80,8 +80,12 @@ tut_17_9_1_0,17-9-1,1,비서,portrait_secretary,커피를 마신 직원의 기�
 tut_17_9_2_0,17-9-2,1,비서,portrait_secretary,아이템은 나중에 [[위기 탈출용]]으로 아껴두면 진가를 발휘해요.
 tut_18_1_0,18-1,1,비서,portrait_secretary,오늘 [[돈을 많이]] 쓰셨군요. 이제 다시 열심히\n벌어야겠어요.
 tut_18_2_0,18-2,1,비서,portrait_secretary,"매년 [[1월에 직원 연봉]]이, [[7월에 사무실비]]가 빠져나가요.\n반지하도 공짜가 아니더라고요..."
-tut_18_3_0,18-3,1,비서,portrait_secretary,그리고 통장이 [[0]]이 되면… [[파산]]이 되버리니까\n조심하세요...!
+tut_18_3_0,18-3,1,비서,portrait_secretary,그리고 통장이 [[0]]이 되면... [[파산]]이 되버리니까\n조심하세요...!
 tut_18_4_0,18-4,1,비서,portrait_secretary,파산하면 어떻게 되냐고요? 그런 끔찍한 상상은 하지도 마세요.
 tut_19_1_0,19-1,1,비서,portrait_secretary,자 이번에는 [[혼자서 할 수 있겠죠?]] 기대하고 있을게요!
 tut_20_1_0,20-1,1,비서,portrait_secretary,어... 101...?
 tut_20_2_0,20-2,1,비서,portrait_secretary,"이런 날도 있는 거죠. 방금 건 그냥\n억까당했다고 치고 넘어가볼까요...?"
+tut_21_2_0,21-2,1,비서,portrait_secretary,이건 조금 안좋은 선택이었네요... 돈이 부족해지면서\n 직원들이 불안에 떨고 있어요
+tut_23_1_0,23-1,1,비서,portrait_secretary,직원이 말도 안 하고 도망까지... 최악의 일은 원래\n이렇게 한꺼번에 오는 건가요?
+tut_24_1_0,24-1,1,비서,portrait_secretary,직원이 도망가서 새로 직원을 뽑아야 하는데 돈은 없고...
+tut_24_1_1,24-1,2,비서,portrait_secretary,심지어 오늘이 [[사무실비]] 지급일이에요. 잔고가...

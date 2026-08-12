@@ -8,8 +8,8 @@ using TMPro;
 // 이벤트 다이얼로그 (EventPanel2 / DialogBackgroundPanel) — InfoUI 식 슬라이드 연출.
 // 흐름:
 //   1) 패널 활성 → PortraitImage 표시 (DialogTextBG/TitleBG/ResultBG 는 화면 밖에 숨김)
-//   2) portraitDelay(0.5s) 후 → DialogTextBG + TitleBG 슬라이드 인, nameText/titleText 표시, 대사 타이핑
-//   3) 타이핑 완료(자동) 또는 클릭(스킵) → 효과 적용 + ResultBG 슬라이드 인 (결과는 ResultText 에 출력, AlertUI 안 띄움)
+//   2) portraitDelay(0.5s) 후 → DialogTextBG + TitleBG + ResultBG(메시지 있으면) 동시 슬라이드 인, nameText/titleText/resultText 표시, 대사 타이핑
+//   3) 타이핑 완료(자동) 또는 클릭(스킵) → 인디케이터 등장, 효과는 닫을 때 적용 (AlertUI 안 띄움)
 //   4) 다시 클릭(IndicatorBtn 전체화면) → 닫기 + 개발 재개
 // 호환 모드 Show(title, portraitId, message, onConfirm) 는 동일 연출을 타되, 결과/저장/재개는 onConfirm 이 담당
 // (onConfirm 안의 AlertUI → ResultText 전환은 후속 작업).
@@ -38,6 +38,10 @@ public class RandomEventUI : MonoBehaviour
     public Sprite titleBGBadSprite;          // titleType == 0
     public Sprite titleBGNormalSprite;       // titleType == 1 또는 2 (중립/긍정 공용)
     public TextMeshProUGUI titleText;
+    [Tooltip("TitleBG/Panel/emergencyImagePanel/emergencyImage — titleBGImage와 동일하게 titleType에 따라 교체")]
+    public Image emergencyImage;             // titleType(0=부정/1=중립/2=긍정)에 따라 교체
+    public Sprite emergencyImageBadSprite;   // titleType == 0
+    public Sprite emergencyImageNormalSprite; // titleType == 1 또는 2 (중립/긍정 공용)
     public RectTransform resultBG;           // 결과 배경 (슬라이드 대상)
     public TextMeshProUGUI resultText;       // 결과 (systemMessage)
     public RectTransform resultBG2;          // 결과2 배경 (슬라이드 대상)
@@ -275,6 +279,12 @@ public class RandomEventUI : MonoBehaviour
             Sprite s = _currentTitleType == 0 ? titleBGBadSprite : titleBGNormalSprite;
             if (s != null) titleBGImage.sprite = s;
         }
+        // emergencyImage — titleBGImage와 동일한 titleType 분기.
+        if (emergencyImage != null)
+        {
+            Sprite s = _currentTitleType == 0 ? emergencyImageBadSprite : emergencyImageNormalSprite;
+            if (s != null) emergencyImage.sprite = s;
+        }
 
         // 결과 (미리 채워두되 ResultBG 가 숨겨져 있어 보이지 않음)
         if (resultText  != null) resultText.text  = _resultMessage  ?? "";
@@ -375,8 +385,14 @@ public class RandomEventUI : MonoBehaviour
         // 초상만 보인 채 잠시 대기
         if (portraitDelay > 0f) yield return new WaitForSecondsRealtime(portraitDelay);
 
-        // 대사/제목 BG 동시 슬라이드 인
+        // 대사/제목/결과 BG 동시 슬라이드 인 (결과는 메시지가 있는 경우만)
         if (dialogTextBG) StartCoroutine(SlideTo(dialogTextBG, _dialogShown, slideDuration));
+        if (_hasResult && resultBG) StartCoroutine(SlideTo(resultBG, _resultShown, slideDuration));
+        if (_hasResult2 && resultBG2)
+        {
+            resultBG2.gameObject.SetActive(true);
+            StartCoroutine(SlideTo(resultBG2, _resultShown2, slideDuration));
+        }
         if (titleBG)      yield return SlideTo(titleBG, _titleShown, slideDuration);
         else if (dialogTextBG) yield return new WaitForSecondsRealtime(slideDuration);
 
@@ -445,7 +461,7 @@ public class RandomEventUI : MonoBehaviour
         }
     }
 
-    // 타이핑 완료 직후 — 결과(systemMessage)만 ResultBG 로 표시.
+    // 타이핑 완료 직후 — ResultBG 는 이미 IntroRoutine 에서 TitleBG 와 함께 슬라이드 인 되어 있음.
     // 효과 적용/저장/onApply 는 닫을 때(Close) 처리 — onApply 가 채용 후보 리스트처럼
     // "다음 UI" 를 띄우는 경우 다이얼로그가 닫힌 뒤에 떠야 하기 때문.
     void OnTypingDone()
@@ -456,26 +472,11 @@ public class RandomEventUI : MonoBehaviour
         // 타이핑이 끝났으니 "클릭해서 계속" 인디케이터 등장(호버 연출은 Update 에서).
         if (indicatorImage != null) indicatorImage.gameObject.SetActive(true);
 
-        // 결과 BG 슬라이드 인 (메시지가 있는 경우 — 데이터 모드/호환 모드 공통)
-        if (_hasResult  && resultBG  != null)
-            StartCoroutine(SlideTo(resultBG,  _resultShown,  slideDuration));
-        if (_hasResult2 && resultBG2 != null)
-        {
-            resultBG2.gameObject.SetActive(true);
-            StartCoroutine(SlideTo(resultBG2, _resultShown2, slideDuration));
-        }
-
         // 호환 모드이고 결과 메시지가 없으면 한 번 더 클릭 시 Close — 있으면 동일하게 Result step 유지.
         if (_simpleMode && !_hasResult && !_hasResult2) { /* Close는 다음 클릭에서 */ }
 
-        // 스킵 모드면 결과 슬라이드가 화면에 다 나온 뒤(사용자가 그 짧은 순간이라도 보게) 곧바로 닫기까지 자동 처리.
-        if (_skipMode) StartCoroutine(AutoCloseAfterResult());
-    }
-
-    IEnumerator AutoCloseAfterResult()
-    {
-        yield return new WaitForSecondsRealtime(slideDuration);
-        if (_step == Step.Result) Close();
+        // 스킵 모드면 (결과는 이미 떠 있으므로) 곧바로 닫기.
+        if (_skipMode) Close();
     }
 
     // ── 닫기 ──────────────────────────────────────────────────

@@ -1088,7 +1088,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: a5950e903bc38f746ba7088778c54fa9, type: 3}
+  m_Sprite: {fileID: 3129101366604274875, guid: 71e769d55043f7643891cc4a39a02bc2, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -1159,6 +1159,7 @@ MonoBehaviour:
   goldFrame: {fileID: 21300000, guid: a5950e903bc38f746ba7088778c54fa9, type: 3}
   silverFrame: {fileID: 21300000, guid: c4abd8e1367d52c4d8dff6f2a40234bd, type: 3}
   copperFrame: {fileID: 21300000, guid: 67c50d978738d11499a322253b5ccfb2, type: 3}
+  defaultFrame: {fileID: 3129101366604274875, guid: 71e769d55043f7643891cc4a39a02bc2, type: 3}
   goldCrown: {fileID: 21300000, guid: c9273cfcd642c9f4ca2d0e7ad378e1d0, type: 3}
   silverCrown: {fileID: 21300000, guid: f556edff9a4b389469c457c55f76298e, type: 3}
   copperCrown: {fileID: 21300000, guid: ebddb0a314c69754da94aec02ad3cdac, type: 3}

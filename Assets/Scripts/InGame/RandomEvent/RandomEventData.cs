@@ -52,6 +52,11 @@ public enum RandomEventType
 
     // ── 안내 전용 (시간 강제 재개 X) ─────────────────────────
     Recruit,                // 채용 면접 진행/완료 안내 (RandomEventUI 표시, ResumeFromEvent 스킵)
+
+    // ── 튜토리얼 전용 (일반 랜덤 풀에는 등록 안 함, RandomEventManager.TriggerTutorialNEvent로만 발동) ──
+    Tut1Event,               // 주말 출근 — 어떤 선택을 해도 대상 직원 만족도 +25
+    Tut2Event,               // 표절 논란 — 어떤 선택을 해도 대상 직원 능력치 4주간 -10%
+    Tut3Event,               // 나를 피하는 직원 — AvoidingEmployee와 동일 대사, 대상 직원 만족도 -20(원래 -10)
 }
 
 [Serializable]

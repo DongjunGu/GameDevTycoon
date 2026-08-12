@@ -230,7 +230,7 @@ public class TutorialController : MonoBehaviour
     [Tooltip("TutorialPanel의 RectTransform.anchoredPosition — 10-2 표시 위치")]
     public Vector2 step10_2Position;
 
-    [Header("10-3 (AcWar 이벤트 완전히 종료 후 — RandomEventManager.TriggerTutorialAcWar의 onResolved 호출)")]
+    [Header("10-3 (Tut1Event 이벤트 완전히 종료 후 — RandomEventManager.TriggerTutorial1Event의 onResolved 호출)")]
     [Tooltip("EmployeeCardUI/EmployeeCardPanel/ECMiddlePanel — 만족도 변화의 의미 설명(강조 유지, 4줄)")]
     public RectTransform ecMiddlePanelRect;
     [Tooltip("TutorialDialog 차트의 stepGroup 값 — 만족도 의미 설명(강조 유지, 4줄). 1번째 줄 텍스트에 {직원이름} 플레이스홀더 사용")]
@@ -380,7 +380,7 @@ public class TutorialController : MonoBehaviour
     public string step18_4 = "18-4";
     public Vector2 step18_4Position;
 
-    [Header("19-1 (18-4 종료 직후 자동 연결, 또는 재접속 시 Start()가 단독 재생 — 강조 없음)")]
+    [Header("19-1 (18-4 종료 직후 자동 연결, 또는 재접속 시 Start()가 단독 재생 — 대사 후 메뉴→프로젝트→게임개발 순 강조)")]
     [Tooltip("TutorialDialog 차트의 stepGroup 값 — 이제 혼자 해보라는 마무리 대사")]
     public string step19_1 = "19-1";
     public Vector2 step19_1Position;
@@ -392,6 +392,29 @@ public class TutorialController : MonoBehaviour
     [Tooltip("TutorialDialog 차트의 stepGroup 값 — 운이 나빴을 뿐이라고 넘어가는 대사")]
     public string step20_2 = "20-2";
     public Vector2 step20_2Position;
+
+    [Header("21-2 (Tut2Event 선택+결과 AlertUI까지 전부 닫힌 직후 — PlayTutorial21이 직접 이어감, 강조 없음)")]
+    [Tooltip("TutorialDialog 차트의 stepGroup 값 — 좋지 않은 선택이었다는 반응 대사")]
+    public string step21_2 = "21-2";
+    public Vector2 step21_2Position;
+
+    [Header("22 (21 종료 직후 자동 연결 — Tut3Event, 대사/TutorialPanel 없음)")]
+    [Tooltip("Tut3Event(나를 피하는 직원) 발동 대상 — 이 자리에 앉은 직원이 강제로 master_desk로 이동해 이벤트를 겪는다")]
+    public string step22DeskId = "desk_02";
+
+    [Header("23 (22 종료 직후 자동 연결 — 실제 사직서 이벤트, 대사/TutorialPanel 없음)")]
+    [Tooltip("사직서 이벤트(EmployeeResignation) 발동 대상 — RandomEventManager.TriggerEmployeeResignationEvent를 그대로 재사용")]
+    public string step23DeskId = "desk_02";
+
+    [Header("23-1 (사직서 이벤트 확인까지 전부 닫힌 직후 — PlayTutorial23이 직접 이어감, 강조 없음)")]
+    [Tooltip("TutorialDialog 차트의 stepGroup 값 — 최악의 일이 한꺼번에 온다는 반응 대사")]
+    public string step23_1 = "23-1";
+    public Vector2 step23_1Position;
+
+    [Header("24-1 (23 종료 직후 자동 연결 — 대사 2줄 후 파산 화면, 강조 없음)")]
+    [Tooltip("TutorialDialog 차트의 stepGroup 값 — 새 직원 뽑을 돈도 없는데 사무실비까지 나가는 상황 대사(2줄)")]
+    public string step24_1 = "24-1";
+    public Vector2 step24_1Position;
 
     [Header("연출 (TutorialHighlighter 로 전달됨)")]
     [Range(0f, 1f)] public float dimAlpha = 0.8f;
@@ -475,13 +498,19 @@ public class TutorialController : MonoBehaviour
         bool needStep18 = !OnboardingState.Tutorial18Done;
         bool needStep19 = !OnboardingState.Tutorial19Done;
         bool needStep20 = !OnboardingState.Tutorial20Done;
+        bool needStep21 = !OnboardingState.Tutorial21Done;
+        bool needStep22 = !OnboardingState.Tutorial22Done;
+        bool needStep23 = !OnboardingState.Tutorial23Done;
+        bool needStep24 = !OnboardingState.Tutorial24Done;
 
         bool baseDone = !needStep1 && !needStep3 && !needStep5 && !needStep6 && !needStep7 && !needStep8
             && !needStep9 && !needStep10 && !needStep12 && !needStep13 && !needStep13_4 && !needStep13_5
             && !needStep14_1 && !needStep15 && !needStep16_1 && !needStep17_1 && !needStep17_2 && !needStep17_7
             && !needStep18 && !needStep19;
 
-        return includeStep20 ? (baseDone && !needStep20) : baseDone;
+        return includeStep20
+            ? (baseDone && !needStep20 && !needStep21 && !needStep22 && !needStep23 && !needStep24)
+            : baseDone;
     }
 
     void Start()
@@ -555,9 +584,28 @@ public class TutorialController : MonoBehaviour
         // 18-1~18-4는 17-9 종료 직후 자동으로 이어지는 순수 대사 구간(커밋 지점 없음) — 17-7~17-9
         // 전체(Tutorial17_7Done)가 끝났는데 이게 아직이면 처음(18-1)부터 다시 재생한다.
         bool needStep18 = !OnboardingState.Tutorial18Done;
-        // 19-1은 18-1~18-4 종료 직후 자동으로 이어지는 순수 대사(강조 없음) — 18이 끝났는데 이게 아직이면
-        // 처음(19-1)부터 다시 재생한다.
+        // 19-1은 18-1~18-4 종료 직후 자동으로 이어지는 대사 + 메뉴→프로젝트→게임개발 강조 — 18이
+        // 끝났는데 이게 아직이면 처음(19-1)부터 다시 재생한다. 20(2번째 프로젝트 기획팀장점수 burst)이
+        // 시작되기 전까지는 all-or-nothing 구간(5-1~6-2와 동일 이유 — SummaryPanel 등 진행 상태가
+        // 세션 전용이라 재접속하면 이미 다 날아가 있음)이라, Tutorial19Done이 이미 true여도 20이 아직
+        // 이면(예: 19의 강조를 다 클릭해 SummaryPanel까지 열어놓고 실제 개발 시작 전에 종료한 경우)
+        // 여기서 무조건 다시 19-1부터 재생한다 — 아래 Start() 디스패치에서는 needStep19 대신
+        // !Tutorial20Done && Tutorial18Done 을 게이트로 쓴다.
         bool needStep19 = !OnboardingState.Tutorial19Done;
+        // 21은 20(2번째 프로젝트 기획팀장점수 burst 반응) 종료 직후 자동으로 이어지는 Tut2Event(표절 논란)
+        // 랜덤이벤트 — 20은 자기 자신 트리거(BuildAndShowLeaderScore의 tutorialFixedRollsCycle2)가 있지만
+        // Tutorial20Done이 이미 true면 그 트리거 조건 자체가 다시 안 걸리므로, 21만 남은 경우(예: 이벤트
+        // 확인 도중 재접속)를 위한 재진입점이 별도로 필요하다.
+        bool needStep21 = !OnboardingState.Tutorial21Done;
+        // 22는 21(Tut2Event) 종료 직후 자동으로 이어지는 Tut3Event(나를 피하는 직원) — 21과 동일한 이유로
+        // 재진입점이 별도로 필요하다.
+        bool needStep22 = !OnboardingState.Tutorial22Done;
+        // 23은 22(Tut3Event) 종료 직후 자동으로 이어지는 실제 사직서 이벤트(EmployeeResignation) — 21/22와
+        // 동일한 이유로 재진입점이 별도로 필요하다.
+        bool needStep23 = !OnboardingState.Tutorial23Done;
+        // 24는 23(사직서 이벤트) 종료 직후 자동으로 이어지는 대사(24-1) + 파산 화면 — 21/22/23과 동일한
+        // 이유로 재진입점이 별도로 필요하다.
+        bool needStep24 = !OnboardingState.Tutorial24Done;
 
         // 17~26단계 등 아직 미구현 콘텐츠가 남아있어 IsFullyDone() 기준 자멸 로직은 보류(추후 재논의).
 
@@ -579,8 +627,24 @@ public class TutorialController : MonoBehaviour
         else if (needStep17_7 && OnboardingState.Tutorial17_8UsedDone) StartCoroutine(PlayTutorial17_9Wrap());
         // 17-7~17-9 전부 끝났는데 18-1~18-4(지출/파산 경고 대사)가 아직이면 — 처음(18-1)부터 다시 재생.
         else if (needStep18 && OnboardingState.Tutorial17_7Done) StartCoroutine(PlayTutorial18());
-        // 18-1~18-4까지 끝났는데 19-1(마무리 핸드오프 대사)이 아직이면 — 그 대사만 재생.
-        else if (needStep19 && OnboardingState.Tutorial18Done) StartCoroutine(PlayTutorial19());
+        // 18-1~18-4까지 끝났는데 20(2번째 프로젝트 기획팀장점수 burst)이 아직 시작 전이면 — 19 전체를
+        // all-or-nothing으로 처음(19-1)부터 다시 재생한다. Tutorial19Done만 보면 안 되는 이유: 19의
+        // 메뉴→프로젝트→게임개발 강조를 다 클릭해 SummaryPanel까지 열어놓고(그 시점에 이미
+        // MarkTutorial19Done 커밋됨) 실제 개발을 시작하기 전에 종료하면, needStep19는 이미 false인데
+        // 20으로 이어질 방법이 없어 재접속 시 아무 것도 재생되지 않는 문제가 있었다(실제로 겪은 버그).
+        else if (!OnboardingState.Tutorial20Done && OnboardingState.Tutorial18Done) StartCoroutine(PlayTutorial19());
+        // 20까지 끝났는데 21(Tut2Event)이 아직이면 — 20의 자연 재트리거(BuildAndShowLeaderScore)는 이제
+        // 안 걸리므로 여기서 직접 재개.
+        else if (needStep21 && OnboardingState.Tutorial20Done) StartCoroutine(PlayTutorial21());
+        // 21까지 끝났는데 22(Tut3Event)가 아직이면 — 21의 자연 재트리거는 PlayTutorial21 자신뿐이므로
+        // 여기서 직접 재개.
+        else if (needStep22 && OnboardingState.Tutorial21Done) StartCoroutine(PlayTutorial22());
+        // 22까지 끝났는데 23(사직서 이벤트)이 아직이면 — 22의 자연 재트리거는 PlayTutorial22 자신뿐이므로
+        // 여기서 직접 재개.
+        else if (needStep23 && OnboardingState.Tutorial22Done) StartCoroutine(PlayTutorial23());
+        // 23까지 끝났는데 24(대사+파산 화면)가 아직이면 — 23의 자연 재트리거는 PlayTutorial23 자신뿐이므로
+        // 여기서 직접 재개.
+        else if (needStep24 && OnboardingState.Tutorial23Done) StartCoroutine(PlayTutorial24());
         // needStep3/needStep6/needStep7/needStep8/needStep9만 남았으면 여기서 아무것도 안 하고 대기 —
         // HiringUI.ShowConfirmDirect가 Instance.PlayTutorial3()을, DispatchPanelUI가 Instance.PlayTutorial6()을,
         // DevelopmentManager가 Instance.PlayTutorial7_1()/PlayTutorial8_1()을 각각 해당 시점에 직접 호출한다.
@@ -1083,12 +1147,13 @@ public class TutorialController : MonoBehaviour
         // 살아나(IsRunningForMovement=true) 카드가 꺼져버린다 — PlayTutorial10_3에서 풀릴 때까지 잠금.
         EmployeeCardUI.Instance?.LockClose(true);
 
-        // 카드가 열리는 즉시 — AcWar 발동을 위해 desk_01 직원을 master_desk로 강제 이동 시작. 지금은 시간이
-        // 멈춰있어(BeginDimTimeStop) 실제로는 안 걷다가, 아래 EndDimTimeStop으로 시간이 풀리는 순간부터
-        // 실제로 걸어가기 시작한다(CharacterMover가 GameTimeManager.IsRunning을 체크하므로).
+        // 카드가 열리는 즉시 — Tut1Event(주말 출근) 발동을 위해 desk_01 직원을 master_desk로 강제 이동 시작.
+        // 지금은 시간이 멈춰있어(BeginDimTimeStop) 실제로는 안 걷다가, 아래 EndDimTimeStop으로 시간이 풀리는
+        // 순간부터 실제로 걸어가기 시작한다(CharacterMover가 GameTimeManager.IsRunning을 체크하므로).
         // onResolved: 선택지 확인 + 결과 AlertUI까지 전부 닫힌 뒤(=진짜 이벤트 종료 시점)에만 10-3으로 이어감.
+        // (예전엔 AcWar를 썼으나 Tut1Event로 교체 — 어느 선택지를 골라도 desk_01 직원 만족도 +25로 동일.)
         if (!string.IsNullOrEmpty(deskEmpId))
-            RandomEventManager.Instance?.TriggerTutorialAcWar(deskEmpId,
+            RandomEventManager.Instance?.TriggerTutorial1Event(deskEmpId,
                 winner => StartCoroutine(PlayTutorial10_3(winner)));
 
         // 10-2: 만족도 슬라이더로 강조 이동(슬라이드) + 대사 3줄
@@ -1102,13 +1167,13 @@ public class TutorialController : MonoBehaviour
         yield return _highlighter.Hide(gen10);
         EndDimTimeStop();
         // 여기서부터 desk_01 직원이 실제로 master_desk로 걸어가고, 도착하면 RandomEventManager.OnPatrolArrived가
-        // 평소와 동일하게 RandomEventChoiceUI(AcWar)를 자연히 띄운다 — 선택→결과 AlertUI까지 전부 기존
-        // 프로덕션 로직 그대로 진행되며, 그게 완전히 끝나면 TriggerTutorialAcWar의 onResolved 콜백이
+        // 평소와 동일하게 RandomEventChoiceUI(Tut1Event)를 자연히 띄운다 — 선택→결과 AlertUI까지 전부 기존
+        // 프로덕션 로직 그대로 진행되며, 그게 완전히 끝나면 TriggerTutorial1Event의 onResolved 콜백이
         // PlayTutorial10_3()을 이어서 호출한다(바로 위 참고).
     }
 
-    // ── 10-3 (RandomEventManager.TriggerTutorialAcWar의 onResolved — AcWar 선택+결과 AlertUI까지 전부
-    // 닫힌 직후 호출) — 만족도의 의미를 설명. winner: 플레이어가 고른 쪽(만족도가 오른 직원).
+    // ── 10-3 (RandomEventManager.TriggerTutorial1Event의 onResolved — Tut1Event 선택+결과 AlertUI까지 전부
+    // 닫힌 직후 호출) — 만족도의 의미를 설명. winner: desk_01 직원(Tut1Event는 선택지와 무관하게 항상 동일 대상).
     public IEnumerator PlayTutorial10_3(EmployeeData winner)
     {
         // AcWar가 완전히 끝났으니(선택+결과 AlertUI까지 닫힘) 10-1에서 걸어둔 카드 잠금 해제 —
@@ -1728,9 +1793,12 @@ public class TutorialController : MonoBehaviour
     }
 
     // ── 19-1 (마무리 대사 — "이제 혼자 해보라") — PlayTutorial18 다음에 자동으로 이어지거나, 재접속
-    // 시 Start()가 단독 재생. 강조 없음. ⚠️ 19-1이 끝나도 시간은 재개하지 않는다(사용자 지시 — 다음
-    // 단계가 정해지면 그때 알려줄 예정) — 18-4 종료 시점부터 이어져온 "시간은 멈춰있지만 직원은 계속
-    // 움직이는" 상태(AllowMovementWhileStopped)를 그대로 유지한 채 마무리한다.
+    // 시 Start()가 단독 재생. 대사 뒤 메뉴→프로젝트→게임개발 순으로 강조(5-2와 동일한 대상 재사용) —
+    // 플레이어가 실제로 클릭해서 2번째 프로젝트 설정 화면(SummaryPanel)까지 들어가야 이 코루틴이 끝난다.
+    // ⚠️ 19-1이 끝나도 시간은 재개하지 않는다(사용자 지시 — 다음 단계가 정해지면 그때 알려줄 예정) —
+    // 18-4 종료 시점부터 이어져온 "시간은 멈춰있지만 직원은 계속 움직이는" 상태(AllowMovementWhileStopped)를
+    // 그대로 유지한 채 마무리한다(5-2와 달리 EndDimTimeStop을 쓰지 않음 — LockTime은 20이 진짜 끝날 때
+    // DevelopmentManager.StartDeveloping에서 풀린다).
     public IEnumerator PlayTutorial19()
     {
         EnsureHighlighter();
@@ -1743,6 +1811,22 @@ public class TutorialController : MonoBehaviour
         int gen19 = _highlighter.CurrentGeneration;
         if (TutorialPanelUI.Instance != null)
             yield return TutorialPanelUI.Instance.PlayStepGroup(step19_1, step19_1Position);
+
+        // 메뉴 → 프로젝트(상위) → 게임 개발(하위) 순차 강조 — 5-2/17-1과 동일한 3단 메뉴 진입 패턴.
+        yield return _highlighter.Highlight(menuButton, showHand: true);
+        yield return new WaitForSecondsRealtime(settleDelay); // 상위 메뉴 펼침
+        yield return _highlighter.Highlight(projectSetupButton, showHand: true);
+        yield return new WaitForSecondsRealtime(settleDelay); // 서브 메뉴 펼침
+        yield return _highlighter.Highlight(projectStartButton, showHand: true);
+        // projectStartBtn 클릭으로 ProjectSetupUI.OnClickProjectStart()가 이미 동기 실행돼 SummaryPanel이
+        // 열렸다 — 그 안부터는 ProjectSetupUI 자신이 StopTime/StartTime을 쥐고 있으므로(모달 자체 시간정지)
+        // 우리 쪽 강조만 정리하면 된다(시간정지/하드락은 위 주석대로 그대로 유지).
+
+        // SummaryPanel/CloseBtn — 5-1과 동일한 이유로 비활성화. 닫으면 장르/플랫폼 선택이 초기화되고
+        // 2번째 프로젝트 설정 자체가 취소돼버리므로, 여기서 숨기고 PlayTutorial20 시작 시점(=이미 개발이
+        // 시작돼 SummaryPanel이 닫힌 뒤)에 되돌린다.
+        if (ProjectSetupUI.Instance != null && ProjectSetupUI.Instance.closeButton != null)
+            ProjectSetupUI.Instance.closeButton.gameObject.SetActive(false);
 
         yield return _highlighter.Hide(gen19);
 
@@ -1766,6 +1850,11 @@ public class TutorialController : MonoBehaviour
     // GameTimeManager.StopTime()을 걸어둔 상태라 별도 BeginDimTimeStop 불필요(7-6과 동일 패턴).
     public IEnumerator PlayTutorial20()
     {
+        // 19에서 숨겨뒀던 SummaryPanel/CloseBtn 복원 — 이 시점엔 이미 개발이 시작돼 SummaryPanel 자체가
+        // 닫힌 뒤지만, 다음 프로젝트 설정부터는 정상적으로 닫기 버튼이 보여야 하므로 상태를 되돌려둔다.
+        if (ProjectSetupUI.Instance != null && ProjectSetupUI.Instance.closeButton != null)
+            ProjectSetupUI.Instance.closeButton.gameObject.SetActive(true);
+
         bool roundsDone = false;
         System.Action onRoundsDone = () => roundsDone = true;
         if (LeaderScoreUI.Instance != null) LeaderScoreUI.Instance.OnRoundsVisualComplete += onRoundsDone;
@@ -1783,6 +1872,187 @@ public class TutorialController : MonoBehaviour
 
         yield return _highlighter.Hide(gen20);
         OnboardingState.MarkTutorial20Done();
+
+        yield return PlayTutorial21();
+    }
+
+    // ── 21 (20 종료 직후 자동 연결, 또는 재접속 시 Start()가 단독 재생) ──────────────
+    // 21-1: 별도의 TutorialPanel 대사/강조 없이 Tut2Event(표절 논란) 랜덤이벤트를 곧바로 띄운다 —
+    // RandomEventManager.TriggerTutorial2Event가 PauseForEvent()로 시간을 직접 멈추므로
+    // BeginDimTimeStop/하이라이터가 전혀 필요 없다. 선택→결과 팝업까지 전부 닫히면(=RandomEventChoiceUI.
+    // OnClickConfirm이 이미 골드/직원 디버프를 서버에 커밋한 시점) Tutorial21_1Done을 기록해두고 21-2로
+    // 이어간다 — 이 플래그가 이미 true면(재접속 등으로 21-2 도중 끊긴 경우) 이벤트를 다시 발동시키지
+    // 않고 21-2부터 재개해 이중 발동/이중 차감을 막는다(17-7Shop/17-8Used와 동일한 부분 커밋 패턴).
+    public IEnumerator PlayTutorial21()
+    {
+        if (!OnboardingState.Tutorial21_1Done)
+        {
+            bool done = false;
+            RandomEventManager.Instance?.TriggerTutorial2Event(() => done = true);
+            while (!done) yield return null;
+
+            OnboardingState.MarkTutorial21_1Done();
+        }
+
+        // 21-2: Tut2Event 확정 흐름(TriggerTutorial2Event의 onConfirm)이 이미 ResumeFromEvent()로 시간을
+        // 재개해둔 상태이므로, 여기서 직접 다시 정지하고(10-3과 동일 패턴) 짧은 반응 대사만 보여준다(강조 없음).
+        EnsureHighlighter();
+        BeginDimTimeStop();
+        yield return _highlighter.Show();
+        int gen21_2 = _highlighter.CurrentGeneration;
+        if (TutorialPanelUI.Instance != null)
+            yield return TutorialPanelUI.Instance.PlayStepGroup(step21_2, step21_2Position);
+        yield return _highlighter.Hide(gen21_2);
+        EndDimTimeStop();
+
+        OnboardingState.MarkTutorial21Done();
+
+        yield return PlayTutorial22();
+    }
+
+    // ── 22 (21 종료 직후 자동 연결, 또는 재접속 시 Start()가 단독 재생) ──────────────
+    // TutorialPanel 대사/강조 없이 Tut3Event(나를 피하는 직원)를 곧바로 띄운다 — AvoidingEmployee와
+    // 대사는 동일하지만 대상이 랜덤이 아니라 desk_02 직원으로 고정되고, 만족도 페널티도 -20으로
+    // 강화된다(원래 -10). RandomEventManager.TriggerTutorial3Event가 PauseForEvent()로 시간을 직접
+    // 멈추므로 BeginDimTimeStop/하이라이터가 필요 없다.
+    // Tutorial22_1Done — Tut3Event가 실제로 확정되어 만족도 디버프가 서버에 커밋된 시점을 별도로 기록
+    // (21_1과 동일한 부분 커밋 패턴). 이게 이미 true면(재접속 등으로 끊긴 경우) 이벤트를 다시 발동시키지
+    // 않고 바로 22를 완료 처리해 이중 발동/이중 차감을 막는다.
+    public IEnumerator PlayTutorial22()
+    {
+        if (!OnboardingState.Tutorial22_1Done)
+        {
+            var deskChar = OfficeManager.Instance?.GetCharacterAtDesk(step22DeskId);
+            string deskEmpId = deskChar != null ? deskChar.employeeId : null;
+            if (string.IsNullOrEmpty(deskEmpId))
+            {
+                Debug.LogWarning($"[TutorialController] PlayTutorial22: {step22DeskId} 자리에 직원이 없음 — 스킵");
+            }
+            else
+            {
+                bool done = false;
+                RandomEventManager.Instance?.TriggerTutorial3Event(deskEmpId, () => done = true);
+                while (!done) yield return null;
+            }
+
+            OnboardingState.MarkTutorial22_1Done();
+        }
+
+        OnboardingState.MarkTutorial22Done();
+
+        yield return new WaitForSecondsRealtime(4f); // 22 종료 직후 바로 23(사직서 이벤트)이 뜨면 너무 급작스러워 4초 텀을 둔다.
+        yield return PlayTutorial23();
+    }
+
+    // ── 23 (22 종료 직후 자동 연결, 또는 재접속 시 Start()가 단독 재생) ──────────────
+    // 이벤트 자체는 TutorialPanel 대사/강조 없이 실제 프로덕션 사직서 이벤트(EmployeeResignation)를
+    // desk_02 직원 대상으로 그대로 띄운다 — Tut 접두사 이벤트와 달리 텍스트/수치를 전혀 바꾸지 않고
+    // RandomEventManager.TriggerEmployeeResignationEvent를 직접 재사용한다(requiresPatrol=false라 즉시 표시).
+    // OnboardingState.Tutorial23_1Done — 사직서 이벤트가 실제로 확정 커밋된 시점을 기록하는 부분 커밋
+    // 플래그(21_1/22_1과 동일 패턴, 이중 발동 방지용) — 아래 step23_1(TutorialDialog stepGroup "23-1")과는
+    // 이름만 우연히 겹칠 뿐 서로 다른 개념이니 혼동 주의.
+    public IEnumerator PlayTutorial23()
+    {
+        if (!OnboardingState.Tutorial23_1Done)
+        {
+            var deskChar = OfficeManager.Instance?.GetCharacterAtDesk(step23DeskId);
+            string deskEmpId = deskChar != null ? deskChar.employeeId : null;
+            var emp = !string.IsNullOrEmpty(deskEmpId) ? EmployeeManager.Instance?.GetEmployee(deskEmpId) : null;
+            if (emp == null)
+            {
+                Debug.LogWarning($"[TutorialController] PlayTutorial23: {step23DeskId} 자리에 직원이 없음 — 스킵");
+            }
+            else
+            {
+                bool done = false;
+                RandomEventManager.Instance?.TriggerEmployeeResignationEvent(emp, () => done = true);
+                while (!done) yield return null;
+            }
+
+            OnboardingState.MarkTutorial23_1Done();
+        }
+
+        // 23-1: 사직서 이벤트 확정 흐름(TriggerEmployeeResignationEvent의 onConfirm)이 이미 ResumeFromEvent()로
+        // 시간을 재개해둔 상태이므로, 여기서 직접 다시 정지하고(21-2와 동일 패턴) 짧은 반응 대사만 보여준다(강조 없음).
+        EnsureHighlighter();
+        BeginDimTimeStop();
+        yield return _highlighter.Show();
+        int gen23_1 = _highlighter.CurrentGeneration;
+        if (TutorialPanelUI.Instance != null)
+            yield return TutorialPanelUI.Instance.PlayStepGroup(step23_1, step23_1Position);
+        yield return _highlighter.Hide(gen23_1);
+        EndDimTimeStop();
+
+        OnboardingState.MarkTutorial23Done();
+
+        yield return PlayTutorial24();
+    }
+
+    // ── 24 (23 종료 직후 자동 연결, 또는 재접속 시 Start()가 단독 재생) ──────────────
+    // 대사 24-1(2줄) 재생 후 곧바로 파산 화면을 띄운다 — 이 튜토리얼 시나리오의 마지막 단계.
+    // GameTimeManager.TriggerBankruptcy()(AlertUI 확인 즉시 OutGameScene 직행)는 안 쓰고, LoanManager/
+    // SettingsUI가 실제 파산·메인메뉴 종료 때 쓰는 것과 동일한 패턴으로 EndingCanvas/EndingPanel
+    // (EndingPanelUI.Show())을 씬 안에서 그대로 띄운다 — 확인 버튼을 눌러야 OutGameScene으로 넘어간다.
+    public IEnumerator PlayTutorial24()
+    {
+        EnsureHighlighter();
+        BeginDimTimeStop();
+        yield return _highlighter.Show();
+        int gen24 = _highlighter.CurrentGeneration;
+        if (TutorialPanelUI.Instance != null)
+            yield return TutorialPanelUI.Instance.PlayStepGroup(step24_1, step24_1Position);
+        yield return _highlighter.Hide(gen24);
+        EndDimTimeStop();
+
+        OnboardingState.MarkTutorial24Done();
+        ShowBankruptcyEnding();
+    }
+
+    void ShowBankruptcyEnding()
+    {
+        AlertUI.Instance.Show("자본이 부족합니다.\n파산합니다.", EndRunThenShowEnding);
+    }
+
+    // LoanManager.EndRunAndLoad / SettingsUI.GoToMainMenu와 동일한 "저장 성공 시 EndingPanel 표시,
+    // 실패 시 재시도(확인 대사는 다시 안 띄우고 EndRun만 재시도)" 패턴.
+    void EndRunThenShowEnding()
+    {
+        if (RunStateManager.Instance == null) { EndingPanelUI.Instance?.Show(); return; }
+
+        RunStateManager.Instance.EndRun(success =>
+        {
+            if (success)
+            {
+                EndingPanelUI.Instance?.Show();
+                return;
+            }
+            AlertUI.Instance?.Show(
+                "진행 상태 저장에 실패했습니다.\n인터넷 상태 확인 후 다시 시도해주세요.",
+                EndRunThenShowEnding);
+        });
+    }
+
+    // 디버그 점프(테스트용 "N부터" 버튼) 전용 — 이미 다른 PlayTutorialX() 코루틴이 돌고 있는 도중에
+    // 점프 버튼을 눌러도(예: 17-1 진행 중에 19부터 다시 누름) dim/시간정지/메뉴숨김이 고아 상태로
+    // 남지 않도록, 진행 중이던 걸 전부 강제로 정리한 뒤에 nextRoutine을 새로 시작한다.
+    // ⚠️ 정상 플레이 흐름(자연 진행/재접속 재개)에서는 절대 호출하지 말 것 — 순수 디버그 전용.
+    public void ForceResetAndStart(IEnumerator nextRoutine)
+    {
+        StopAllCoroutines(); // 진행 중이던 PlayTutorialX() 전부 중단(그 안의 BeginDimTimeStop 등도 함께 죽음)
+
+        EnsureHighlighter();
+        _highlighter.ForceHideImmediate(); // dim/구멍/캐처/손 아이콘 즉시 정리
+
+        // _timeStopped는 방금 죽인 코루틴이 걸어뒀을 수 있는 상태라 신뢰 불가 — 무조건 풀어서 재개.
+        _timeStopped = false;
+        OnboardingState.TutorialActive = false;
+        GameTimeManager.Instance?.UnlockTime();      // 혹시 걸려있던 하드락(LockTime)까지 확실히 해제
+        GameTimeManager.Instance?.ForceStartTime();
+
+        // 메뉴 버튼 상태를 지금 이 순간 기준으로 재평가 — 폴링 코루틴이 이미 끝나 잠들어있었다면 다시 깨움.
+        FindObjectOfType<MenuController>()?.RefreshMenuLockState();
+
+        StartCoroutine(nextRoutine);
     }
 
     // ── dim 동안 시간 정지 (패널 켜는 것과 동일) ──────────────────────────────

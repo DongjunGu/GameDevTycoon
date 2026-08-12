@@ -17,16 +17,16 @@ MonoBehaviour:
   - portraitId: portrait_secretary
     sprite: {fileID: 21300000, guid: 0a0bac10effe5f946ac91d15834aa72a, type: 3}
   - portraitId: portrait_genius_01
-    sprite: {fileID: 0}
+    sprite: {fileID: 21300000, guid: a7a4106779690264cb1208fc2721b46b, type: 3}
   - portraitId: portrait_goldspoon_01
-    sprite: {fileID: 0}
+    sprite: {fileID: 21300000, guid: 0e8edb41e2759e54fbb516e6d798647f, type: 3}
   - portraitId: portrait_hunsu_01
-    sprite: {fileID: 0}
+    sprite: {fileID: 21300000, guid: 4fa693b03cd2c6e418aaf8d84238628f, type: 3}
   - portraitId: portrait_kim_01
-    sprite: {fileID: 0}
+    sprite: {fileID: 21300000, guid: bef21997f92ccab4b9a24d13535a80af, type: 3}
   - portraitId: portrait_otaku_01
-    sprite: {fileID: 0}
+    sprite: {fileID: 21300000, guid: d26ef912a1bc7eb4bb30866538720d19, type: 3}
   - portraitId: portrait_ugi_01
-    sprite: {fileID: 0}
+    sprite: {fileID: 21300000, guid: d2a067994d9e3bd4986e94323e1ba085, type: 3}
   - portraitId: ceo_001
-    sprite: {fileID: 0}
+    sprite: {fileID: 21300000, guid: e2d17aaf028c60c49a2f30fdd7d09fff, type: 3}

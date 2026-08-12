@@ -340,6 +340,16 @@ public class DevelopmentPanelUI : MonoBehaviour
         // Update()가 _bugDisplay를 따라잡음
     }
 
+    // 표시값(Display)이 공개값(Reveal)까지 전부 따라잡았는지 — GameTimeManager.StopTime() 전에 이게
+    // true가 될 때까지 기다려야 한다. Update()는 !GameTimeManager.IsRunning이면 MoveDisplay를 아예 안
+    // 돌리므로, 카운트업 도중(fillDuration 최대 1초) 시간을 멈추면 숫자가 목표에 못 미친 채 얼어붙는다.
+    public bool IsDisplayCaughtUp() =>
+        Mathf.Approximately(_planningDisplay, _planningReveal)
+        && Mathf.Approximately(_developDisplay, _developReveal)
+        && Mathf.Approximately(_artDisplay, _artReveal)
+        && Mathf.Approximately(_bugDisplay, _bugReveal)
+        && Mathf.Approximately(_creativityDisplay, _creativityReveal);
+
     public void MultiplyValues(float multiplier)
     {
         _planning *= multiplier;

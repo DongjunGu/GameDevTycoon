@@ -721,6 +721,158 @@ public static class RandomEvents_Choice
         return highTier ? UnityEngine.Random.Range(10, 21) : UnityEngine.Random.Range(5, 16);
     }
 
+    // ── 튜토리얼 전용 — 주말 출근 (Tut1Event) ──────────────────────
+    // [CDN fallback — RandomEventChoice_Chart.csv 의 Tut1Event 행]
+    // title: "Tut1Event" / desc: "사장님, 시키신 일이 많아서 다 못끝냈는데.. 주말에도 출근해서 끝내야겠죠?"
+    // question: "직원의 주말 출근... 어떻게할까?"
+    // choice1: label="그 일은 너밖에 못하는거라… 부탁할게"
+    //          reply1="하긴, 이건 제가 아니면 못 하는 일이긴 하죠. … 믿을만한 사람은 또 저밖에 없네요!"
+    //          popupType=1, ment1="{직원이름} 만족도 +25"
+    // choice2: label="그래도 주말엔 쉬어야지 노트북 두고 가"
+    //          reply1="네? 진짜 가도 돼요..? 저 월요일에 두 배로 할게요. 진짜로요."
+    //          popupType=1, ment1="{직원이름} 만족도 +25" (어느 쪽을 골라도 결과는 동일하게 만족도 +25)
+    // 일반 랜덤 풀에는 등록하지 않음(Register의 pool.Add 없음) — RandomEventManager.TriggerTutorial1Event가
+    // 특정 직원을 지정해 결정적으로만 발동시킨다.
+    public static RandomEventChoiceData CreateTut1Event(
+        Dictionary<string, RandomEventChoiceChartRow> chart, EmployeeData targetEmp)
+    {
+        RandomEventChoiceData evt = null;
+        evt = new RandomEventChoiceData
+        {
+            type        = RandomEventType.Tut1Event,
+            weight      = 1f,
+            categoryMin = 1,
+            categoryMax = 4,
+            requiresPatrol        = true,
+            requiredPatrolPointId = "master_desk",
+            choices = new List<RandomEventChoiceOption>
+            {
+                // ── 선택지 1: 부탁하기 ───────────────────────
+                new RandomEventChoiceOption
+                {
+                    onChoose = () =>
+                    {
+                        var emp = EmployeeManager.Instance.GetEmployee(evt.targetEmployeeId);
+                        if (emp == null) return;
+                        emp.ChangeSatisfaction(25);
+                        OfficeManager.Instance?.ShowStatPopup(emp.id, "만족도 +25", new Color(1f, 0.4f, 0.4f));
+                    }
+                },
+                // ── 선택지 2: 쉬게 해주기 ─────────────────────
+                new RandomEventChoiceOption
+                {
+                    onChoose = () =>
+                    {
+                        var emp = EmployeeManager.Instance.GetEmployee(evt.targetEmployeeId);
+                        if (emp == null) return;
+                        emp.ChangeSatisfaction(25);
+                        OfficeManager.Instance?.ShowStatPopup(emp.id, "만족도 +25", new Color(1f, 0.4f, 0.4f));
+                    }
+                }
+            }
+        };
+        Apply(evt, chart);
+
+        // [CDN fallback] "{직원이름} 만족도 +25" (둘 다 동일 템플릿)
+        string ment1_0Template = evt.choices[0].resultMent1 ?? "";
+        string ment1_1Template = evt.choices[1].resultMent1 ?? "";
+
+        evt.onSetup = () =>
+        {
+            evt.portraitId       = targetEmp.portraitId;
+            evt.targetEmployeeId = targetEmp.id;
+
+            evt.choices[0].resultMent1 = ment1_0Template.Replace("{직원이름}", targetEmp.employeeName);
+            evt.choices[1].resultMent1 = ment1_1Template.Replace("{직원이름}", targetEmp.employeeName);
+        };
+        return evt;
+    }
+
+    // ── 튜토리얼 전용 — 표절 논란 (Tut2Event) ────────────────────────
+    // [CDN fallback — RandomEventChoice_Chart.csv 의 Tut2Event 행]
+    // title: "Tut2Event" / desc: "사장님, 커뮤니티에 우리 게임 얘기가 올라왔는데… 좀 안 좋은 쪽이에요."
+    // dialogue2: "어떤 사람이 저희 게임이 자기 아이디어를 베꼈다고 글을 올렸습니다. 댓글이 벌써 300개를 넘었어요."
+    // question: "표절이라는 주장… 어떻게 할까?" / portrait: portrait_secretary(비서가 보고)
+    // choice1: label="사실이 아니잖아. 정면으로 반박해."
+    //          reply1="반박문 올렸는데… 댓글이 두 배가 됐어요. 이제 기사까지 났고요."
+    //          reply2="논란으로 인해 매출이 하락하고 있습니다."
+    // choice2: label="혹시 모르니 억울해지기 전에 조용히 합의하자." (자금 -100의 자리까지)
+    //          reply1="합의는 했는데요… 그 사람이 합의금 받은 걸 인증샷으로 올렸어요."
+    //          reply2="논란으로 인해 매출이 하락하고 있습니다."
+    // 능력치 디버프는 제거됨 — 선택지1/2 둘 다 결과는 동일하게 보유 골드를 100의 자리까지 차감
+    // (예: 780 보유 → -700, 4890 보유 → -4800 / 10~99의 자리는 남김, AlertUI2/moneyPanel 로 표시).
+    // 선택지2는 합의금이라 미리 conditionText 로 예고되지만, 선택지1(정면 반박)은 매출 하락이라는
+    // 간접 손실이라 예고 없이 선택 직후 AlertPanel2로만 통보된다 — 결과 금액 자체는 완전히 동일.
+    // 대상 직원은 onSetup에서 랜덤 선정(BossGossip과 동일 패턴, 특정 데스크 지정 없음) — 현재는 portrait만
+    // 쓰이고 텍스트/효과에는 관여하지 않음.
+    // 일반 랜덤 풀에는 등록하지 않음(Register의 pool.Add 없음) — RandomEventManager.TriggerTutorial2Event가
+    // 결정적으로만 발동시킨다.
+
+    // 보유 골드를 100의 자리까지 차감(10~99의 자리는 남김) — 100 미만 보유 시 0 차감.
+    static int Tut2CostFor(int gold) => gold - gold % 100;
+
+    static void ApplyTut2Cost(int cost, string message)
+    {
+        MoneyManager.Instance.ForceSpendGold(cost, saveImmediately: false);
+        AlertUI.Instance.ShowMoney(message, -cost);
+    }
+
+    public static RandomEventChoiceData CreateTut2Event(Dictionary<string, RandomEventChoiceChartRow> chart)
+    {
+        EmployeeData targetEmp = null;
+        RandomEventChoiceData evt = null;
+        evt = new RandomEventChoiceData
+        {
+            type        = RandomEventType.Tut2Event,
+            weight      = 1f,
+            categoryMin = 1,
+            categoryMax = 4,
+            requiresPatrol        = false,
+            requiredPatrolPointId = "",
+            choices = new List<RandomEventChoiceOption>
+            {
+                // ── 선택지 1: 정면 반박 ────────────────────────
+                new RandomEventChoiceOption
+                {
+                    onChoose = () =>
+                    {
+                        int cost = Tut2CostFor(MoneyManager.Instance.Gold);
+                        ApplyTut2Cost(cost, $"논란으로 매출이 하락해 {cost:N0}G의 손해를 봤습니다");
+                    }
+                },
+                // ── 선택지 2: 조용히 합의(100의 자리까지) ────────────────
+                new RandomEventChoiceOption
+                {
+                    onChoose = () =>
+                    {
+                        int cost = Tut2CostFor(MoneyManager.Instance.Gold);
+                        ApplyTut2Cost(cost, $"합의금으로 {cost:N0}G가 차감되었습니다");
+                    }
+                }
+            }
+        };
+        Apply(evt, chart);
+
+        // 능력치 디버프를 없앤 뒤로는 "{직원이름} 능력치 4주 동안 -10%" 결과 팝업 텍스트도 더 이상 사실이
+        // 아니므로 표시하지 않는다(차트가 채워둔 값을 그대로 두면 안 일어난 일을 보여주게 됨).
+        evt.choices[0].resultMent1 = "";
+        evt.choices[1].resultMent1 = "";
+
+        evt.onSetup = () =>
+        {
+            var employees = EmployeeManager.Instance.ownedEmployees;
+            if (employees.Count == 0) { evt.cancelled = true; return; }
+            targetEmp = employees[UnityEngine.Random.Range(0, employees.Count)];
+            evt.portraitId       = "portrait_secretary";
+            evt.targetEmployeeId = targetEmp.id;
+
+            // 선택지2 예고 문구도 실제 차감액(100의 자리까지)에 맞춰 매번 갱신 — 보유 골드가 바뀌어도
+            // 이벤트가 뜰 때마다 정확한 금액이 보이게 한다.
+            evt.choices[1].conditionText = $"자금 -{Tut2CostFor(MoneyManager.Instance.Gold):N0} G";
+        };
+        return evt;
+    }
+
     // 두 직원 싸움 계열 이벤트 공통 생성 (TangsuYukFight / AntiMintchoc / AcWar)
     // forcedEmp1/forcedEmp2: 둘 다 지정되면 역할 랜덤 선정을 건너뛰고 그대로 사용(튜토리얼 등 결정적 발동용).
     public static RandomEventChoiceData CreateTwoEmpFightEvent(

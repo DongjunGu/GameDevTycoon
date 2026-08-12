@@ -43,8 +43,13 @@ public class GameTimeManager : MonoBehaviour
     // 값을 쓰지 않는다 — 사용자 명세: "1주=5초(소형 기준)라는 체감 속도는 튜토리얼이든 아니든 항상 그대로
     // 유지, 그 대신 완료에 필요한 주 수 자체를 줄여서 빨리 끝나게 한다". DevelopmentManager 3곳(developmentDuration
     // 계산)만 이 프로퍼티를 거친다 — 절대 80f/40f를 직접 하드코딩하지 말 것.
+    // OnboardingState.Tutorial19Done도 함께 체크 — completedProjects.Count>0(1사이클 첫 프로젝트 출시)만
+    // 보면, 그 리스트 갱신 타이밍이 어긋나는 경우(예: 저장 직후 로컬 반영 지연) 2번째 프로젝트(19-1 "이제
+    // 혼자 해보라" 이후, 2사이클)의 소형 개발이 여전히 40초로 남는 사고가 날 수 있다 — 19-1은 1사이클
+    // 전체(첫 프로젝트 출시까지)가 끝나야만 true가 되므로 count 체크의 안전망으로 겸용한다.
     public static float BaseDevDurationSeconds =>
-        CompletedProjectManager.Instance != null && CompletedProjectManager.Instance.completedProjects.Count > 0
+        (CompletedProjectManager.Instance != null && CompletedProjectManager.Instance.completedProjects.Count > 0)
+        || OnboardingState.Tutorial19Done
             ? 80f : 40f;
 
     // 개발(Developing) 시계 속도: 전 규모 총 80초 기준으로 고정(주수 16/24/32) — 튜토리얼 여부와 무관하게

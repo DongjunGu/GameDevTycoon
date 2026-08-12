@@ -304,8 +304,8 @@ public class CreativityGameGridUI : MonoBehaviour, IBeginDragHandler, IDragHandl
         }
     }
 
-    // 알파값 60(0~255 기준) — 0~1 스케일로 환산.
-    const float TargetMarkerAlpha = 60f / 255f;
+    // 알파값 150(0~255 기준) — 0~1 스케일로 환산.
+    const float TargetMarkerAlpha = 150f / 255f;
 
     public void HideTargetMarker()
     {
