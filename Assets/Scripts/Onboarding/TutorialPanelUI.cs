@@ -78,6 +78,15 @@ public class TutorialPanelUI : MonoBehaviour
         panelRoot.transform.SetAsLastSibling();
     }
 
+    // 디버그 강제 정리 전용(TutorialController.ForceResetToNormal/ForceResetAndStart) — PlayStepGroup
+    // 코루틴이 StopAllCoroutines() 등으로 도중에 죽어서 마지막 panelRoot.SetActive(false)를 못 타면
+    // 패널이 화면에 고아로 남는다. 그걸 즉시 정리한다. 정상 흐름에서는 쓰지 말 것.
+    public void ForceHideImmediate()
+    {
+        if (panelRoot != null) panelRoot.SetActive(false);
+        _clicked = false;
+    }
+
     // stepGroup 전체(여러 줄)를 순차 재생 — 마지막 줄 클릭까지 끝나면 반환.
     // anchoredPosition 지정 시 표시 전에 패널 위치를 그 값으로 옮김(스텝마다 다른 위치에 띄우고 싶을 때 사용).
     public IEnumerator PlayStepGroup(string stepGroup, Vector2? anchoredPosition = null)

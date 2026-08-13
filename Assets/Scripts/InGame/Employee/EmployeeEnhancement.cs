@@ -3,41 +3,43 @@ using UnityEngine;
 // 직원 강화의 단일 소스 — 비용/확률 테이블 + 강화 롤 실행.
 // TrainingUI(리스트→강화→결과 3분할 화면)와 TrainingPanelUI(단일 화면)가 함께 사용한다.
 // 주스탯/부스탯 증가 계산은 EmployeeManager.ApplyEnhancement/ReverseEnhancement 가 담당.
-public enum EnhanceOutcome { Success, Maintain, Downgrade }
+// Protected  = 하락 판정이 나왔지만 '하락 방어권'(enhanceProtect) 자동 소모로 막힌 경우 (2026-08-14 신설).
+// (초심 회복기는 강화 굴림과 무관한 즉시효과 아이템으로 재설계됨 — ItemManager.UseItem 참고, EnhanceOnce와 무관)
+public enum EnhanceOutcome { Success, Maintain, Downgrade, Protected }
 
 public static class EmployeeEnhancement
 {
-    // 강화 비용 테이블 [현재 레벨] = (현재 레벨 → +1 비용)
+    // 강화 비용 테이블 [현재 레벨] = (현재 레벨 → +1 비용) — 2026-08-13 재조정
     public static readonly int[] CostTable =
     {
-           100,  // 0→1
-           150,  // 1→2
-           200,  // 2→3
-           250,  // 3→4
-           300,  // 4→5
-           400,  // 5→6
-           500,  // 6→7
-           600,  // 7→8
-           700,  // 8→9
-           800,  // 9→10
-           900,  // 10→11
-         2_000,  // 11→12
-         3_000,  // 12→13
-         4_000,  // 13→14
+           200,  // 0→1
+           200,  // 1→2
+           400,  // 2→3
+           400,  // 3→4
+           600,  // 4→5
+           600,  // 5→6
+           800,  // 6→7
+         1_000,  // 7→8
+         1_300,  // 8→9
+         1_600,  // 9→10
+         2_000,  // 10→11
+         3_400,  // 11→12
+         3_800,  // 12→13
+         4_300,  // 13→14
          5_000,  // 14→15
-        12_000,  // 15→16
-        14_000,  // 16→17
-        16_000,  // 17→18
-        18_000,  // 18→19
+         5_800,  // 15→16
+        11_000,  // 16→17
+        12_000,  // 17→18
+        15_000,  // 18→19
         18_000,  // 19→20
-        40_000,  // 20→21
-        45_000,  // 21→22
-        50_000,  // 22→23
-       100_000,  // 23→24
-       150_000,  // 24→25
+        21_000,  // 20→21
+        32_000,  // 21→22
+        39_000,  // 22→23
+        72_000,  // 23→24
+        94_000,  // 24→25
     };
 
-    // 강화 확률 테이블 [현재 레벨] = (성공%, 유지%, 하락%)
+    // 강화 확률 테이블 [현재 레벨] = (성공%, 유지%, 하락%) — 2026-08-13 재조정(11강 이후 하락률 상향)
     // 0~10: 하락 없음(유지), 11~24: 소폭 하락 발생. 유지/하락은 소수점 포함.
     public static readonly (float success, float maintain, float downgrade)[] RateTable =
     {
@@ -52,20 +54,20 @@ public static class EmployeeEnhancement
         (50, 50,     0),     // 8
         (50, 50,     0),     // 9
         (50, 50,     0),     // 10
-        (45, 54f,    1f),    // 11
-        (45, 53.7f,  1.3f),  // 12
-        (40, 58.4f,  1.6f),  // 13
-        (40, 58.1f,  1.9f),  // 14
-        (35, 62.8f,  2.2f),  // 15
-        (35, 62.5f,  2.5f),  // 16
-        (30, 67.2f,  2.8f),  // 17
-        (30, 66.8f,  3.2f),  // 18
-        (30, 66.5f,  3.5f),  // 19
-        (20, 76.2f,  3.8f),  // 20
-        (20, 75.9f,  4.1f),  // 21
-        (20, 75.6f,  4.4f),  // 22
-        (10, 85.3f,  4.7f),  // 23
-        ( 5, 90f,    5f),    // 24
+        (45, 53f,    2f),    // 11
+        (45, 52.4f,  2.6f),  // 12
+        (40, 56.8f,  3.2f),  // 13
+        (40, 56.2f,  3.8f),  // 14
+        (40, 55.6f,  4.4f),  // 15
+        (35, 60f,    5f),    // 16
+        (35, 59.4f,  5.6f),  // 17
+        (30, 63.6f,  6.4f),  // 18
+        (30, 63f,    7f),    // 19
+        (30, 62.4f,  7.6f),  // 20
+        (20, 71.8f,  8.2f),  // 21
+        (20, 71.2f,  8.8f),  // 22
+        (10, 80.6f,  9.4f),  // 23
+        ( 5, 85f,   10f),    // 24
     };
 
     public static int GetMaxLevel(EmployeeGrade grade) => EmployeeData.MaxEnhancementForGrade(grade);
@@ -82,23 +84,29 @@ public static class EmployeeEnhancement
     }
 
     public static (float success, float maintain, float downgrade) GetRates(EmployeeData emp)
+        => GetRates(emp, 0);
+
+    // extraSuccessBoost — 하급/중급/상급 강화권 사용 시 "다음 강화 1회"에 걸리는 성공확률 가산(%p, 5/10/100).
+    // 표시(미리보기)·실제 롤 양쪽에서 이 오버로드를 공유 — TrainingPanelUI가 보류 중인 강화권이 있으면
+    // 그 값을 그대로 넘겨서 미리보기와 실제 결과가 항상 일치하게 한다.
+    public static (float success, float maintain, float downgrade) GetRates(EmployeeData emp, int extraSuccessBoost)
     {
         int lv = Mathf.Clamp(emp.enhancementLevel, 0, RateTable.Length - 1);
         var r = RateTable[lv];
 
-        // 특성 's3'(highEnhanceSuccess) — 강화레벨 15 이상에서 성공 확률 +N%p (유지/하락에서 차감).
-        // 표시·실제 롤이 GetRates 단일 소스라 한 곳만 보정.
+        // 특성 's3'(highEnhanceSuccess, 강화레벨 15 이상)과 강화권 보너스를 합산 — 표시·실제 롤이
+        // GetRates 단일 소스라 한 곳만 보정.
+        int bonus = Mathf.Max(0, extraSuccessBoost);
         if (emp.enhancementLevel >= 15)
+            bonus += TraitEffectApplier.GetHighEnhanceSuccessBonus();
+
+        if (bonus > 0)
         {
-            int bonus = TraitEffectApplier.GetHighEnhanceSuccessBonus();
-            if (bonus > 0)
-            {
-                float success  = Mathf.Min(100f, r.success + bonus);
-                float absorbed = success - r.success;            // 실제 증가분
-                float downgrade = Mathf.Max(0f, r.downgrade - absorbed);
-                float maintain  = Mathf.Max(0f, 100f - success - downgrade);
-                return (success, maintain, downgrade);
-            }
+            float success  = Mathf.Min(100f, r.success + bonus);
+            float absorbed = success - r.success;            // 실제 증가분
+            float downgrade = Mathf.Max(0f, r.downgrade - absorbed);
+            float maintain  = Mathf.Max(0f, 100f - success - downgrade);
+            return (success, maintain, downgrade);
         }
         return r;
     }
@@ -111,12 +119,18 @@ public static class EmployeeEnhancement
     // 확률 UI는 그대로 진짜 값을 보여주고, EnhanceOnce의 실제 판정만 우회한다).
     public static int ForceSuccessRemaining = 0;
 
+    // 하락 방어권(enhanceProtect) 자동 방어가 적용되는 강화레벨 범위 — "11~24성 사이일때 사용 가능".
+    const int ProtectMinLevel = 11;
+    const int ProtectMaxLevel = 24;
+
     // 강화 1회 실행 — 비용 차감/저장은 호출자 책임.
-    // 레벨/주스탯/부스탯/연봉/만족도를 변경한 뒤 결과(성공/유지/하락)를 반환한다.
-    public static EnhanceOutcome EnhanceOnce(EmployeeData emp)
+    // successBoostPercent — 하급/중급/상급 강화권 사용 시 이번 1회에만 적용할 성공확률 가산(%p).
+    // 아이템 소모는 호출자(TrainingPanelUI/EmployeeListUI)가 담당 — 여기선 순수하게 굴림에만 반영.
+    // 레벨/주스탯/부스탯/연봉/만족도를 변경한 뒤 결과(성공/유지/하락/방어됨)를 반환한다.
+    public static EnhanceOutcome EnhanceOnce(EmployeeData emp, int successBoostPercent = 0)
     {
         int level = emp.enhancementLevel;
-        var (success, maintain, downgrade) = GetRates(emp);
+        var (success, maintain, downgrade) = GetRates(emp, successBoostPercent);
 
         bool forceSuccess = ForceSuccessRemaining > 0;
         if (forceSuccess) ForceSuccessRemaining--;
@@ -135,6 +149,15 @@ public static class EmployeeEnhancement
 
         if (downgrade > 0 && roll >= success + maintain)
         {
+            // 하락 방어권 — 사용 버튼이 없는 아이템(항상 비활성, ItemDetailUI 참고), 11~24성에서
+            // 재고가 있으면 하락 판정이 나온 순간 자동으로 1개 소모하고 하락 자체를 무효화한다.
+            if (level >= ProtectMinLevel && level <= ProtectMaxLevel
+                && ItemManager.Instance != null && ItemManager.Instance.GetCount("enhanceProtect") > 0)
+            {
+                ItemManager.Instance.UseItemDirect("enhanceProtect");
+                return EnhanceOutcome.Protected;
+            }
+
             EmployeeManager.Instance.ReverseEnhancement(emp, level);
             emp.enhancementLevel = Mathf.Max(0, level - 1);
             return EnhanceOutcome.Downgrade;

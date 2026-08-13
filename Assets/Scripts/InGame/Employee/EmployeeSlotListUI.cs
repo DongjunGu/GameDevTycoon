@@ -14,7 +14,7 @@ public class EmployeeSlotListUI : MonoBehaviour
 {
     [Header("UI")]
     public Image employeePortraitImage; // 초상화 컨테이너 (자식 bgImage/portraitImage 의 탐색 기준)
-    public TextMeshProUGUI levelText;          // 강화 레벨 "Lv.{}"
+    public TextMeshProUGUI levelText;          // 강화 레벨 "+"
     public Button selectButton;
     public Image roleIcon;          // 역할 아이콘
     public RoleIconSet roleIconSet; // 역할 아이콘 세트 (공용)
@@ -59,7 +59,7 @@ public class EmployeeSlotListUI : MonoBehaviour
         if (levelText != null)
         {
             if (!_levelColorCached) { _levelTextColor = levelText.color; _levelColorCached = true; }
-            levelText.text = $"Lv.{data.enhancementLevel}";
+            levelText.text = $"+{data.enhancementLevel}";
         }
 
         var portrait = ResolvePortrait();
@@ -93,6 +93,12 @@ public class EmployeeSlotListUI : MonoBehaviour
     {
         if (_gradeCo != null) { StopCoroutine(_gradeCo); _gradeCo = null; }
         if (_scaleCo != null) { StopCoroutine(_scaleCo); _scaleCo = null; }
+    }
+
+    // 강화 직후 등 — 전체 Setup을 다시 돌지 않고 레벨 텍스트만 갱신.
+    public void RefreshLevelText(int enhancementLevel)
+    {
+        if (levelText != null) levelText.text = $"+{enhancementLevel}";
     }
 
     void ApplyGrade(EmployeeGrade grade)

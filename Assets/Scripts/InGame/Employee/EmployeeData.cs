@@ -365,19 +365,10 @@ public class EmployeeData
     public string ArtText()        => $"아트: {EffectiveArtSkill}";
     public string CreativityText() => $"창의성: {EffectiveCreativitySkill}";
 
-    // 채용 인터벌 등급 보너스 — Rare 이상은 주스탯 인터벌 +50 (기본 20~50 → 70~100).
+    // 채용 등급 보너스 — Rare 이상은 주스탯 +50 (기본 20~50 → 70~100). 실제 확정 수치(developSkill 등)에
+    // 직접 가산되는 실제 보너스 — LoadRandomCandidates/LoadTutorialFixedCandidates 참고.
     public int GradeIntervalBonus => grade >= EmployeeGrade.Rare ? 50 : 0;
 
-    // 주스탯은 강화 반영 범위, 부스탯은 확정 수치로 표시
-    public string DevelopDisplayText()  => role == EmployeeRole.Programmer
-        ? $"개발: {developMin + mainStatEnhanceGain + GradeIntervalBonus}~{developMax + mainStatEnhanceGain + GradeIntervalBonus}"
-        : DevelopText();
-    public string PlanningDisplayText() => role == EmployeeRole.Planner
-        ? $"기획: {planningMin + mainStatEnhanceGain + GradeIntervalBonus}~{planningMax + mainStatEnhanceGain + GradeIntervalBonus}"
-        : PlanningText();
-    public string ArtDisplayText()      => role == EmployeeRole.Artist
-        ? $"아트: {artMin + mainStatEnhanceGain + GradeIntervalBonus}~{artMax + mainStatEnhanceGain + GradeIntervalBonus}"
-        : ArtText();
     public string SatisfactionText() => $"만족도: {satisfaction}";
 
     // 최대 강화 레벨 — 등급 무관 전 등급 25강 공통. EmployeeEnhancement.GetMaxLevel 와 단일 소스 공유.

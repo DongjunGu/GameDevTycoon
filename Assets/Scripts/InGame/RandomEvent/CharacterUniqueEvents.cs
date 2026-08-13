@@ -90,7 +90,8 @@ public static class CharacterUniqueEvents
             string stageStr = stage.ToString();
             foreach (var kv in cache)
             {
-                if (kv.Value.category == "강화") continue; // 강화권/초심 회복기 등 강화 계열은 지급 대상 제외 (MerchantManager.RollItems와 동일 규칙)
+                // 2026-08-14 — 강화권/초심 회복기 등 강화 계열도 이제 실제 효과가 구현돼 있어 지급 대상 포함
+                // (MerchantManager.RollItems와 동일 규칙).
                 var stages = kv.Value.appearStages;
                 if (string.IsNullOrEmpty(stages)) continue;
                 foreach (var s in stages.Split(','))
@@ -99,7 +100,7 @@ public static class CharacterUniqueEvents
         }
         if (ids.Count == 0)
             foreach (var kv in cache)
-                if (kv.Value.category != "강화") ids.Add(kv.Key);
+                ids.Add(kv.Key);
         return ids.Count > 0 ? ids[Random.Range(0, ids.Count)] : null;
     }
 

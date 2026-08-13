@@ -260,6 +260,51 @@ public class EmployeeManager : MonoBehaviour
     public bool IsAcquired(string masterEmployeeId) =>
         _acquiredEmployeeIds.Contains(masterEmployeeId);
 
+    // ── 채용 계약금/연봉 (2026-08-13 신설, 08-14 티어별로 세분화) ──────
+    // 채용 후보 기본 연봉 범위 [tierIndex] = (min, max), 50G 단위 롤. 1단계=100~500 랜덤, 2/3단계=300 고정.
+    private static readonly (int min, int max)[] HireBaseSalaryRange =
+    {
+        (100, 500),
+        (300, 300),
+        (300, 300),
+    };
+
+    // 계약금 등급 배율 — 일반/레어/에픽/유니크/레전더리. 계약금 = GetExpectedEnhanceCost(강화레벨) × 이 배율.
+    // 1단계는 강화레벨이 항상 0으로 확정돼 기댓값 자체가 0이라 배율과 무관하게 계약금 0 — 2/3단계부터 실제로 작동.
+    private static readonly float[] HireContractGradeMultiplier = { 0.6f, 0.7f, 0.8f, 0.9f, 1f };
+
+    // 계약금 할인 룰렛 [tierIndex] = (할인율, 가중치) 목록 — 티어마다 확률표가 다름. 각 티어 합 100.
+    private static readonly (float discount, float weight)[][] HireContractDiscountTable =
+    {
+        new (float discount, float weight)[] { (0.4f, 10f), (0.3f, 20f), (0.2f, 20f), (0.1f, 20f), (0f, 30f) }, // 1단계
+        new (float discount, float weight)[] { (0.4f, 10f), (0.3f, 15f), (0.2f, 20f), (0.1f, 20f), (0f, 35f) }, // 2단계
+        new (float discount, float weight)[] { (0.4f, 10f), (0.3f, 15f), (0.2f, 25f), (0.1f,  0f), (0f, 50f) }, // 3단계
+    };
+
+    // 채용 계약금 롤 — 강화레벨이 확정된 뒤(HiringUI가 ApplyEnhancementLevel 직후) 호출해야 함.
+    public static int RollHireContractFee(EmployeeData employee, int tierIndex)
+    {
+        int gradeIdx = Mathf.Clamp((int)employee.grade, 0, HireContractGradeMultiplier.Length - 1);
+        float baseFee = GetExpectedEnhanceCost(employee.enhancementLevel) * HireContractGradeMultiplier[gradeIdx];
+
+        int ti = Mathf.Clamp(tierIndex, 0, HireContractDiscountTable.Length - 1);
+        float roll = UnityEngine.Random.Range(0f, 100f);
+        float cum = 0f;
+        float discount = 0f;
+        foreach (var (d, w) in HireContractDiscountTable[ti])
+        {
+            cum += w;
+            if (roll < cum) { discount = d; break; }
+        }
+
+        return Mathf.RoundToInt(baseFee * (1f - discount));
+    }
+
+    // 채용 후보 연봉 상승분("연봉 상승값") — 강화레벨이 확정된 뒤 기본 연봉(HireBaseSalaryRange 롤값)에
+    // 더해야 함. 계약금과 동일하게 GetExpectedEnhanceCost 기준(금수저면 이 증가분도 50% 감소).
+    public static int RollHireSalaryLevelBonus(EmployeeData employee)
+        => CharacterTraitApplier.ApplyGoldspoonSalary(employee, GetExpectedEnhanceCost(employee.enhancementLevel));
+
     // ── 채용 후보 랜덤 추출 ───────────────────
     public void LoadRandomCandidates(int count, int tierIndex, System.Action<List<EmployeeData>> onComplete)
     {
@@ -282,11 +327,12 @@ public class EmployeeManager : MonoBehaviour
 
         foreach (var employee in candidates)
         {
-            // Grade / Potential 결정 — 등급 상한은 OutGameEmployeeManager의 도달 maxGrade 기준
-            var maxGrade = OutGameEmployeeManager.Instance != null
+            // Grade / Potential 결정 — 등급은 더 이상 0~maxGrade 균등 랜덤이 아니라 항상 도달한 최고 등급
+            // 그대로 확정(2026-08-14 변경, 예전엔 에픽 해금이어도 노말/레어가 섞여 나왔음).
+            // 등급 상한은 OutGameEmployeeManager의 도달 maxGrade 기준.
+            employee.grade = OutGameEmployeeManager.Instance != null
                 ? OutGameEmployeeManager.Instance.GetMaxGrade(employee.id)
                 : EmployeeGrade.Normal;
-            employee.grade = RollGrade(maxGrade);
             employee.potential = RollPotential(employee.grade, tierIndex);
 
             // 능력치는 마스터 min~max 범위로 재랜덤
@@ -295,9 +341,14 @@ public class EmployeeManager : MonoBehaviour
             employee.artSkill = UnityEngine.Random.Range(employee.artMin, employee.artMax + 1);
             employee.creativitySkill = UnityEngine.Random.Range(employee.creativityMin, employee.creativityMax + 1);
 
-            // 연봉 재랜덤 — 금수저 특성(Epic+)이면 기본 연봉 50% 감소 적용
-            int steps = (employee.salaryMax - employee.salaryMin) / 50;
-            int rolledSalary = employee.salaryMin + (UnityEngine.Random.Range(0, steps + 1) * 50);
+            // 연봉 기본값 재랜덤 — 2026-08-13부터 직원별 마스터데이터(salaryMin~Max) 대신 티어별
+            // 공통 범위(HireBaseSalaryRange, 1단계=100~500 랜덤/2·3단계=300 고정)로 통일. 강화레벨 기반
+            // 상승분("연봉 상승값")은 HiringUI가 강화레벨을 확정한 뒤 별도로 더한다(이 시점엔 아직
+            // enhancementLevel이 0이라 여기서는 기본값만 롤). 금수저 특성(Epic+)이면 기본 연봉 50% 감소 적용.
+            int salTi = Mathf.Clamp(tierIndex, 0, HireBaseSalaryRange.Length - 1);
+            var (salMin, salMax) = HireBaseSalaryRange[salTi];
+            int steps = (salMax - salMin) / 50;
+            int rolledSalary = salMin + (UnityEngine.Random.Range(0, steps + 1) * 50);
             employee.salary = CharacterTraitApplier.ApplyGoldspoonSalary(employee, rolledSalary);
         }
 
@@ -493,46 +544,45 @@ public class EmployeeManager : MonoBehaviour
     }
 
     // ── Grade / Potential 헬퍼 ────────────────
-    private EmployeeGrade RollGrade(EmployeeGrade maxGrade)
-    {
-        int rolled = UnityEngine.Random.Range(0, (int)maxGrade + 1);
-        return (EmployeeGrade)rolled;
-    }
-
     // [tierIndex][gradeIndex] → C, B, A, S 가중치
-    // gradeIndex: Normal=0, Rare=1, Epic=2, Unique=3
+    // gradeIndex: Normal=0, Rare=1, Epic=2, Unique=3, Legendary=4 (전 티어 Legendary 행 완비, 2026-08-14)
+    // RollPotential은 여전히 배열 길이로 방어적 clamp를 걸어둠(향후 등급 추가 시 대비, IndexOutOfRange 방지).
     private static readonly int[][][] PotentialWeightTable =
     {
-        // 1단계
+        // 1단계 (2026-08-13 재조정 — Legendary 신설)
         new int[][]
         {
-            new[] { 60, 40,  0,  0 },  // Normal
-            new[] { 50, 30, 20,  0 },  // Rare
-            new[] { 40, 30, 30,  0 },  // Epic
-            new[] { 40, 30, 30,  0 },  // Unique
+            new[] { 80, 18,  2,  0 },  // Normal
+            new[] { 70, 25,  5,  0 },  // Rare
+            new[] { 60, 30, 10,  0 },  // Epic
+            new[] { 50, 35, 15,  0 },  // Unique
+            new[] { 40, 40, 20,  0 },  // Legendary
         },
-        // 2단계
+        // 2단계 (2026-08-14 재조정 — Legendary 신설)
         new int[][]
         {
-            new[] { 50, 30, 20,  0 },  // Normal
-            new[] { 40, 40, 20,  0 },  // Rare
-            new[] { 30, 40, 30,  0 },  // Epic
-            new[] { 30, 40, 30, 10 },  // Unique
+            new[] { 60, 35,  5,  0 },  // Normal
+            new[] { 50, 40,  9,  1 },  // Rare
+            new[] { 40, 40, 17,  3 },  // Epic
+            new[] { 30, 40, 25,  5 },  // Unique
+            new[] { 20, 40, 30, 10 },  // Legendary
         },
-        // 3단계
+        // 3단계 (2026-08-14 재조정 — Legendary 신설)
         new int[][]
         {
-            new[] { 40, 30, 30,  0 },  // Normal
-            new[] { 30, 40, 30,  0 },  // Rare
-            new[] { 20, 50, 30, 10 },  // Epic
-            new[] { 20, 40, 40, 20 },  // Unique
+            new[] { 40, 49, 10,  1 },  // Normal
+            new[] { 30, 52, 15,  3 },  // Rare
+            new[] { 20, 55, 20,  5 },  // Epic
+            new[] { 10, 50, 30, 10 },  // Unique
+            new[] {  0, 40, 40, 20 },  // Legendary
         },
     };
 
     private EmployeePotential RollPotential(EmployeeGrade grade, int tierIndex)
     {
         int ti = Mathf.Clamp(tierIndex, 0, PotentialWeightTable.Length - 1);
-        int[] weights = PotentialWeightTable[ti][(int)grade];
+        int gradeIdx = Mathf.Clamp((int)grade, 0, PotentialWeightTable[ti].Length - 1);
+        int[] weights = PotentialWeightTable[ti][gradeIdx];
 
         int total = 0;
         foreach (int w in weights) total += w;
@@ -891,37 +941,37 @@ public class EmployeeManager : MonoBehaviour
         });
     }
     // ── 강화 적용 ─────────────────────────────
-    // 강화 단계별 연봉 증가량 [강화 단계(0→1 ~ 24→25)]
+    // 강화 단계별 연봉 증가량 [강화 단계(0→1 ~ 24→25)] — 2026-08-13 재조정(1강부터 소액 상승 시작)
     private static readonly int[] EnhanceSalaryTable =
     {
               0,  // 0→1
-              0,  // 1→2
-              0,  // 2→3
-              0,  // 3→4
-              0,  // 4→5
-              0,  // 5→6
-              0,  // 6→7
-              0,  // 7→8
-              0,  // 8→9
-              0,  // 9→10
-          1_500,  // 10→11
-          3_000,  // 11→12
-          4_500,  // 12→13
-          6_000,  // 13→14
-         15_000,  // 14→15
-         20_000,  // 15→16
-         25_000,  // 16→17
-         30_000,  // 17→18
-         35_000,  // 18→19
-        100_000,  // 19→20
-        130_000,  // 20→21
-        160_000,  // 21→22
-        200_000,  // 22→23
-        250_000,  // 23→24
-        300_000,  // 24→25
+            100,  // 1→2
+            200,  // 2→3
+            300,  // 3→4
+            400,  // 4→5
+            500,  // 5→6
+            600,  // 6→7
+            700,  // 7→8
+            800,  // 8→9
+            900,  // 9→10
+          1_000,  // 10→11
+          1_500,  // 11→12
+          3_000,  // 12→13
+          4_500,  // 13→14
+          6_300,  // 14→15
+         10_000,  // 15→16
+         13_000,  // 16→17
+         25_000,  // 17→18
+         30_000,  // 18→19
+         35_000,  // 19→20
+        100_000,  // 20→21
+        130_000,  // 21→22
+        160_000,  // 22→23
+        200_000,  // 23→24
+        250_000,  // 24→25
     };
 
-    // 주스탯 증가량 테이블 [강화 단계(0→1 ~ 24→25)] = (min, max)
+    // 주스탯 증가량 테이블 [강화 단계(0→1 ~ 24→25)] = (min, max) — 2026-08-13 재조정
     private static readonly (int min, int max)[] MainStatGainTable =
     {
         ( 20,  20),  // 0→1
@@ -937,14 +987,14 @@ public class EmployeeManager : MonoBehaviour
         ( 40,  40),  // 10→11
         ( 50,  50),  // 11→12
         ( 50,  50),  // 12→13
-        ( 50,  50),  // 13→14
-        ( 50,  50),  // 14→15
-        ( 65,  65),  // 15→16
+        ( 55,  55),  // 13→14
+        ( 55,  55),  // 14→15
+        ( 55,  55),  // 15→16
         ( 65,  65),  // 16→17
         ( 65,  65),  // 17→18
-        ( 65,  65),  // 18→19
-        ( 65,  65),  // 19→20
-        ( 90,  90),  // 20→21
+        ( 70,  70),  // 18→19
+        ( 70,  70),  // 19→20
+        ( 70,  70),  // 20→21
         ( 90,  90),  // 21→22
         ( 90,  90),  // 22→23
         (120, 120),  // 23→24
@@ -964,14 +1014,7 @@ public class EmployeeManager : MonoBehaviour
         int mainGain = UnityEngine.Random.Range(mainMin, mainMax + 1);
 
         // Potential 보너스 적용 후 부스탯 계산 기준으로 사용
-        int potentialBonus = employee.potential switch
-        {
-            EmployeePotential.C => 0,
-            EmployeePotential.B => 1,
-            EmployeePotential.A => 3,
-            EmployeePotential.S => 8,
-            _ => 0
-        };
+        int potentialBonus = PotentialBonus(employee.potential);
         int totalMainGain = mainGain + potentialBonus;
 
         // 부스탯: 주스탯 증가량의 0.5 고정 — 3개(비주스탯 2 + 창의성) 동일 적용
@@ -992,14 +1035,7 @@ public class EmployeeManager : MonoBehaviour
         int tableIndex = Mathf.Clamp(levelToReverse - 1, 0, MainStatGainTable.Length - 1);
         var (mainMin, mainMax) = MainStatGainTable[tableIndex];
 
-        int potentialBonus = employee.potential switch
-        {
-            EmployeePotential.C => 0,
-            EmployeePotential.B => 1,
-            EmployeePotential.A => 3,
-            EmployeePotential.S => 8,
-            _ => 0
-        };
+        int potentialBonus = PotentialBonus(employee.potential);
         int totalMainGain = (mainMin + mainMax) / 2 + potentialBonus; // 0~10강은 min==max
         int subGain = Mathf.RoundToInt(totalMainGain * SubStatRatio);
 
@@ -1011,37 +1047,18 @@ public class EmployeeManager : MonoBehaviour
         employee.salary = Mathf.Max(0, employee.salary - CharacterTraitApplier.ApplyGoldspoonSalary(employee, EnhanceSalaryTable[tableIndex]));
     }
 
-    // 강화된 직원 채용 비용 = 연봉 누적 증가량 (EnhanceSalaryTable 의 레벨별 누적합).
-    // 강화 레벨 N 후보를 뽑을 때 이 값(±20%)을 비용으로 차감. (11강부터 비용 발생)
-    private static readonly int[] CumulativeExpectedEnhanceCost =
+    // 강화된 직원 채용 비용 = 연봉 누적 증가량 ([레벨] = 0강에서 그 레벨까지 도달하는 데 필요한 EnhanceSalaryTable 누적합).
+    // 강화 레벨 N 후보를 뽑을 때 이 값(±20%)을 비용으로 차감.
+    // EnhanceSalaryTable에서 자동 계산 — 예전엔 손으로 따로 유지해서 EnhanceSalaryTable 수정 시 누락되기 쉬웠음.
+    private static readonly int[] CumulativeExpectedEnhanceCost = BuildCumulativeEnhanceCost();
+
+    private static int[] BuildCumulativeEnhanceCost()
     {
-                0,  // 0강
-                0,  // 1강
-                0,  // 2강
-                0,  // 3강
-                0,  // 4강
-                0,  // 5강
-                0,  // 6강
-                0,  // 7강
-                0,  // 8강
-                0,  // 9강
-                0,  // 10강
-            1_500,  // 11강
-            4_500,  // 12강
-            9_000,  // 13강
-           15_000,  // 14강
-           30_000,  // 15강
-           50_000,  // 16강
-           75_000,  // 17강
-          105_000,  // 18강
-          140_000,  // 19강
-          240_000,  // 20강
-          370_000,  // 21강
-          530_000,  // 22강
-          730_000,  // 23강
-          980_000,  // 24강
-        1_280_000,  // 25강
-    };
+        var result = new int[EnhanceSalaryTable.Length + 1];
+        for (int i = 0; i < EnhanceSalaryTable.Length; i++)
+            result[i + 1] = result[i] + EnhanceSalaryTable[i];
+        return result;
+    }
 
     public static int GetExpectedEnhanceCost(int enhancementLevel)
     {
@@ -1056,14 +1073,7 @@ public class EmployeeManager : MonoBehaviour
         employee.enhancementLevel = targetLevel;
         if (targetLevel <= 0) return;
 
-        int potentialBonus = employee.potential switch
-        {
-            EmployeePotential.C => 0,
-            EmployeePotential.B => 1,
-            EmployeePotential.A => 3,
-            EmployeePotential.S => 8,
-            _ => 0
-        };
+        int potentialBonus = PotentialBonus(employee.potential);
 
         int mainGainTotal = 0;
         int subGainTotal  = 0;
@@ -1097,13 +1107,13 @@ public class EmployeeManager : MonoBehaviour
         employee.salary += CharacterTraitApplier.ApplyGoldspoonSalary(employee, salaryGain);
     }
 
-    // 잠재력 보너스 (강화 주스탯 증가량에 가산)
+    // 잠재력 보너스 (강화 주스탯 증가량에 가산) — 2026-08-13 재조정(이전 0/1/3/8)
     private static int PotentialBonus(EmployeePotential p) => p switch
     {
         EmployeePotential.C => 0,
-        EmployeePotential.B => 1,
-        EmployeePotential.A => 3,
-        EmployeePotential.S => 8,
+        EmployeePotential.B => 2,
+        EmployeePotential.A => 4,
+        EmployeePotential.S => 7,
         _ => 0
     };
 

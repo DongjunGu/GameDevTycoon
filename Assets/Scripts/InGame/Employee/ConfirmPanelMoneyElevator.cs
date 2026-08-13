@@ -23,6 +23,9 @@ public class ConfirmPanelMoneyElevator : MonoBehaviour
     [SerializeField] GameObject moneyPanel;
     [Tooltip("최상단으로 올릴 것들 — ConfirmUI / AlertUI 등. b+6(모두 위)로 정렬 + HUD 숨김에서도 제외.")]
     [SerializeField] GameObject[] topObjects;
+    [Tooltip("정렬(sortingOrder)은 안 건드리고 HUD 숨김에서만 제외할 것들 — InfoUI 등. 이 패널에 가려져 안 보이기만 하고" +
+        " 꺼지지는 않아서, 코루틴/콜백이 있는 채로 진행 중이어도 안 끊기고 뒤에서 자연스럽게 끝까지 재생된다.")]
+    [SerializeField] GameObject[] keepAliveOnly;
     [Tooltip("이 패널이 떠 있는 동안 자식들을 숨길 HUDCanvas. MoneyPanel/topObjects(및 그 컨테이너)은 제외하고 모두 비활성, 닫히면 복구.")]
     [SerializeField] Transform hudCanvas;
     [Tooltip("HUDCanvas 밖이지만 같이 숨길 것들 — EmployeeStatusPanel 등. 패널 열릴 때 비활성, 닫히면 복구.")]
@@ -152,11 +155,13 @@ public class ConfirmPanelMoneyElevator : MonoBehaviour
 
         if (hudCanvas != null)
         {
-            // 유지(숨기지 않을) 대상: MoneyPanel + topObjects(ConfirmUI/AlertUI)
+            // 유지(숨기지 않을) 대상: MoneyPanel + topObjects(ConfirmUI/AlertUI) + keepAliveOnly(정렬은 그대로, 숨김만 방지)
             _keepTargets.Clear();
             if (moneyPanel != null) _keepTargets.Add(moneyPanel.transform);
             if (topObjects != null)
                 foreach (var go in topObjects) if (go != null) _keepTargets.Add(go.transform);
+            if (keepAliveOnly != null)
+                foreach (var go in keepAliveOnly) if (go != null) _keepTargets.Add(go.transform);
 
             HideSiblingsAlongPath(hudCanvas);
         }

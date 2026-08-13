@@ -52,7 +52,8 @@ public class HiringUI : MonoBehaviour
     public TextMeshProUGUI confirmCreativityText;
     public TextMeshProUGUI confirmSalaryText;
     public TextMeshProUGUI confirmSatisfactionText;
-    public TextMeshProUGUI confirmHireCostText;
+    [Tooltip("ConfirmHirePanel/confirmBtn/paymentText — 계약금 표시")]
+    public TextMeshProUGUI paymentText;
     [Header("Exist Employee")]
     [Tooltip("ConfirmHirePanel/ExistEmployeePanel — 이력서 후보와 동일한 직원을 이미 보유 중일 때 표시(초상화+능력치)")]
     public ExistEmployeePanelUI existEmployeePanel;
@@ -92,7 +93,6 @@ public class HiringUI : MonoBehaviour
     public EmployeeResumePanel resumeRightPanel;
 
     [Header("Settings")]
-    public int candidateCount = 4;
     const int INTERVIEW_WEEKS = 3; // 채용 클릭 → 후보 리스트 공개까지 대기 주차
     // [임시테스트] true면 "면접 확정" 멘트는 그대로 뜨되, 확인 후 실제 대기(주 단위) 없이 짧은 테스트
     // 딜레이(TEST_INTERVIEW_DELAY_SECONDS)만 지나면 바로 후보 공개. 온보딩 첫 채용 1주 단축(FirstHireDone)은
@@ -126,13 +126,31 @@ public class HiringUI : MonoBehaviour
     private bool _refreshUsed      = false;     // 같은 세션 1회 가드
     private bool _candidateFlowActive = false;  // 채용 공개~리스트 종료 동안 시간 정지 유지 + ModalGate 점유
 
-    // 티어 데이터 (강화 레벨 범위/가중치, 잠재력 확률은 EmployeeManager.PotentialWeightTable 참조)
-    private static readonly (string label, int cost, int[] range, int[] weights)[] Tiers =
+    // 티어 데이터 (진입비용). 잠재력 확률은 EmployeeManager.PotentialWeightTable 참조.
+    // 강화레벨 롤 방식: 1단계=Tier1FixedRange/Weights로 항상 0강 고정 / 2·3단계=NormalEnhanceParams(정규분포).
+    // 후보 인원수는 TierCandidateCount 참조(예전엔 전 티어 공용 candidateCount 필드였으나 티어별로 갈라짐).
+    private static readonly (string label, int cost)[] Tiers =
     {
-        ("채용 1단계", 2000,  new[] { 0 }, new[] { 1 }),
-        ("채용 2단계", 7000,  new[] { 0, 11 }, new[] { 1, 1 }),
-        ("채용 3단계", 20000, new[] { 12, 14 }, new[] { 1, 1 }),
+        ("채용 1단계", 2_000),
+        ("채용 2단계", 10_000),
+        ("채용 3단계", 100_000),
     };
+
+    // 1단계 전용 — 강화레벨 항상 0으로 확정(RollWeighted 단일값 롤).
+    private static readonly int[] Tier1FixedRange   = { 0 };
+    private static readonly int[] Tier1FixedWeights = { 1 };
+
+    // 2/3단계 — 강화레벨을 정규분포 난수로 생성 후 [min,max] 클램프. [tierIndex] = (min, max, 평균, 표준편차).
+    // 인덱스0(1단계)은 미사용(Tier1FixedRange/Weights를 대신 씀) — 배열 인덱스만 맞춰둔 자리.
+    private static readonly (int min, int max, float mean, float stdDev)[] NormalEnhanceParams =
+    {
+        (0, 0, 0f, 0f),
+        (1, 15, 8f, 3.3f),
+        (5, 19, 13f, 3.3f),
+    };
+
+    // 티어별 채용 후보 기본 인원수(훈수쟁이/한 명 더!/방해 이벤트 보정 전).
+    private static readonly int[] TierCandidateCount = { 3, 4, 5 };
 
     void Awake()
     {
@@ -497,22 +515,27 @@ public class HiringUI : MonoBehaviour
     // 후보 리스트 1세트 생성(동기) — 등급/능력치/연봉 + 강화 + 확정 채용비용까지. 공개 시 A/B 각각 생성용.
     List<EmployeeData> GenerateCandidateList(int tierIndex)
     {
-        var (label, baseCost, range, weights) = Tiers[tierIndex];
+        var (label, baseCost) = Tiers[tierIndex];
         int recruitBonus  = TraitEffectApplier.GetRecruitApplicantsBonus();
         int hiringPenalty = RandomEventManager.Instance?.HiringPenalty ?? 0;
         // 테크트리 '한 명 더!(hire_more)' — 후보 +1
         int hireMoreBonus = (TechTreeManager.Instance != null && TechTreeManager.Instance.IsUnlocked("hire_more")) ? 1 : 0;
-        int effectiveCount = Mathf.Max(1, candidateCount + recruitBonus + hireMoreBonus - hiringPenalty);
+        int effectiveCount = Mathf.Max(1, TierCandidateCount[tierIndex] + recruitBonus + hireMoreBonus - hiringPenalty);
 
         List<EmployeeData> result = null;
         System.Action<List<EmployeeData>> onCandidates = candidates =>
         {
             foreach (var employee in candidates)
             {
-                ApplyEnhancementLevel(employee, RollWeighted(range, weights));
-                // 채용 비용도 이 시점에 확정(재접속에도 고정) — 후보에 저장.
-                int b = EmployeeManager.GetExpectedEnhanceCost(employee.enhancementLevel);
-                employee.hireCost = Mathf.RoundToInt(b * UnityEngine.Random.Range(0.8f, 1.2f));
+                int targetLevel = tierIndex == 0
+                    ? RollWeighted(Tier1FixedRange, Tier1FixedWeights)
+                    : RollNormalEnhanceLevel(tierIndex);
+                ApplyEnhancementLevel(employee, targetLevel);
+                // 연봉 상승분/계약금 모두 강화레벨이 확정된 이 시점에 계산(재접속에도 고정) — 후보에 저장.
+                // 튜토리얼 고정 후보(연봉이 이미 salaryMax로 고정됨)도 이 경로를 같이 타지만, 1단계
+                // 강화레벨은 항상 0이라 두 값 다 0으로 계산돼 기존 고정 연봉을 건드리지 않는다.
+                employee.salary += EmployeeManager.RollHireSalaryLevelBonus(employee);
+                employee.hireCost = EmployeeManager.RollHireContractFee(employee, tierIndex);
             }
             result = candidates;
         };
@@ -524,6 +547,17 @@ public class HiringUI : MonoBehaviour
             EmployeeManager.Instance.LoadRandomCandidates(effectiveCount, tierIndex, onCandidates);
 
         return result ?? new List<EmployeeData>();
+    }
+
+    // 2/3단계 강화레벨 롤 — Box-Muller 변환으로 정규분포 난수를 만든 뒤 NormalEnhanceParams[tierIndex]
+    // 기준으로 반올림+[min,max] 클램프.
+    static int RollNormalEnhanceLevel(int tierIndex)
+    {
+        var (min, max, mean, stdDev) = NormalEnhanceParams[tierIndex];
+        float u1 = 1f - UnityEngine.Random.value; // (0,1] — Log(0) 방지
+        float u2 = UnityEngine.Random.value;
+        float z = Mathf.Sqrt(-2f * Mathf.Log(u1)) * Mathf.Cos(2f * Mathf.PI * u2);
+        return Mathf.Clamp(Mathf.RoundToInt(mean + z * stdDev), min, max);
     }
 
     // 테크트리 '한 번 더!(hire_refresh)' — 같은 세션 1회 한정 후보 전체 재추첨. 확인창 없이 즉시 실행.
@@ -685,8 +719,9 @@ public class HiringUI : MonoBehaviour
         if (resumeLeftPanel  != null) resumeLeftPanel.Setup(_currentCandidates[(ci - 1 + n) % n]);
         if (resumeRightPanel != null) resumeRightPanel.Setup(_currentCandidates[(ci + 1) % n]);
 
-        if (confirmHireCostText != null)
-            confirmHireCostText.text = _hireCost <= 0 ? "무료" : $"{_hireCost:N0} G";
+        // employee.hireCost = 계약금(RollHireContractFee) 확정값 — EmployeeManager.cs 참고.
+        if (paymentText != null)
+            paymentText.text = $"계약금: {Mathf.Max(0, _hireCost):N0} G";
 
         // CountPanel — 현재 후보 순서/전체 후보 수 (예: 1/4). 화살표로 넘기면 PopulateConfirm 재호출로 자동 갱신.
         if (countText != null) countText.text = $"{ci + 1}/{n}";

@@ -204,7 +204,7 @@ public class MerchantManager : MonoBehaviour
             string stageStr = stage.ToString();
             foreach (var kv in cache)
             {
-                if (kv.Value.category == "강화") continue; // 강화권/초심 회복기 등 강화 계열은 상인 판매 제외
+                // 2026-08-14 — 강화권/초심 회복기 등 강화 계열도 이제 실제 효과가 구현돼 있어 상인 판매 포함.
                 var stages = kv.Value.appearStages;
                 if (string.IsNullOrEmpty(stages)) continue;
                 foreach (var s in stages.Split(','))
@@ -215,7 +215,7 @@ public class MerchantManager : MonoBehaviour
         {
             Debug.LogWarning($"[Merchant] stage={stage} 매칭 아이템 없음 — 전체 풀 폴백");
             foreach (var kv in cache)
-                if (kv.Value.category != "강화") ids.Add(kv.Key);
+                ids.Add(kv.Key);
         }
         Shuffle(ids);
         int n = Mathf.Min(itemsPerVisit, ids.Count);

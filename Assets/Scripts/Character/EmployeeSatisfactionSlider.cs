@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
+using TMPro;
 
 // 하단 상태바의 직원별 슬롯 — 초상화 + 만족도 슬라이더
 // - employeeId의 satisfaction을 자연스럽게 보간(MoveTowards) 표시
@@ -21,6 +22,9 @@ public class EmployeeSatisfactionSlider : MonoBehaviour, IPointerClickHandler
     [Header("역할 아이콘 (공용 RoleIconSet 에셋)")]
     public Image roleIcon;
     public RoleIconSet roleIconSet;
+
+    [Header("강화 표시 (옵션, \"+N\" 형식)")]
+    public TextMeshProUGUI enhancementText;
 
     [Header("파견중 표시 (옵션)")]
     public GameObject dispatchedBadge;
@@ -64,12 +68,21 @@ public class EmployeeSatisfactionSlider : MonoBehaviour, IPointerClickHandler
         // 인스펙터 미할당 시 자식 이름으로 자동 탐색 (EmployeeStatusPrefab: "ImagePanel" 프레임 / "roleIcon")
         if (gradeBorder == null) gradeBorder = FindChildImage("ImagePanel");
         if (roleIcon    == null) roleIcon    = FindChildImage("roleIcon");
+        if (enhancementText == null) enhancementText = FindChildText("enhancementText");
     }
 
     Image FindChildImage(string childName)
     {
         var t = transform.Find(childName);
         return t != null ? t.GetComponent<Image>() : null;
+    }
+
+    // enhancementText는 ImagePanel 아래 중첩돼 있어 직계 자식만 보는 Find로는 못 찾음 — 재귀 탐색.
+    TextMeshProUGUI FindChildText(string childName)
+    {
+        foreach (var t in GetComponentsInChildren<TextMeshProUGUI>(true))
+            if (t.gameObject.name == childName) return t;
+        return null;
     }
 
     public void SetEmployee(string employeeId)
@@ -94,6 +107,7 @@ public class EmployeeSatisfactionSlider : MonoBehaviour, IPointerClickHandler
         // 등급 테두리 / 역할 아이콘 (공용 SO)
         GradeSpriteSet.Apply(gradeBorder, gradeBorderSet, emp.grade);
         RoleIconSet.Apply(roleIcon,       roleIconSet,    emp.role);
+        if (enhancementText != null) enhancementText.text = $"+{emp.enhancementLevel}";
 
         RefreshDispatchVisual();
     }

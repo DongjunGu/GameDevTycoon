@@ -167,6 +167,20 @@ public class EmployeeListUI : MonoBehaviour
         if (Root.activeInHierarchy) BuildList(); // _selectedId 유지 → 스냅이 같은 직원 재선택
     }
 
+    // 강화 직후 우측 목록 슬롯의 LevelText만 즉시 갱신 — 재정렬/재선택 없이 가볍게(전체 BuildList는
+    // 등급/레벨 순 재정렬까지 다시 돌아 스크롤/선택 애니메이션이 튀므로 강화 1회마다 쓰기엔 과함).
+    public void RefreshSlotLevelText(string employeeId)
+    {
+        for (int i = 0; i < _emps.Count; i++)
+        {
+            if (_emps[i].id == employeeId)
+            {
+                _slots[i].RefreshLevelText(_emps[i].enhancementLevel);
+                break;
+            }
+        }
+    }
+
     // ── 목록 ─────────────────────────────────────
     void BuildList()
     {
@@ -313,6 +327,18 @@ public class EmployeeListUI : MonoBehaviour
         if (itemButton    != null) itemButton.interactable    = ok;
     }
 
+    // 하급/중급/상급 강화권("다음 강화 1회"에 거는 효과) — 아이템 사용 모드(선택→확인버튼)를 거치지 않고
+    // ItemDetailUI가 곧장 OpenForEnhanceWithBoost로 라우팅한다.
+    // 초심회복기(enhanceResetSpirit)는 여기 포함 안 함 — 그냥 일반 즉시효과 아이템처럼 선택→"아이템
+    // 사용하기" 버튼으로 즉시 강화 1단계 하락 + 만족도 100 회복(ItemManager.UseItem 참고), 강화 버튼/
+    // 굴림과는 무관하게 그 자리에서 끝남.
+    static readonly System.Collections.Generic.HashSet<string> PendingEnhanceEffectTypes = new()
+    {
+        "enhanceSuccessBoost"
+    };
+
+    public static bool IsEnhanceBoostItem(ItemChartRow row) => row != null && PendingEnhanceEffectTypes.Contains(row.effectType);
+
     bool IsRoleMatchForItem(EmployeeData emp)
     {
         if (_useItemRoleFilter == null) return true;
@@ -355,6 +381,8 @@ public class EmployeeListUI : MonoBehaviour
             btn.gameObject.SetActive(active);
     }
 
+    // 강화권은 ItemDetailUI가 OpenForEnhanceWithBoost로 곧장 라우팅하므로 이 모드로 안 들어옴 —
+    // 여기 남는 건 즉시효과 아이템(초심회복기 포함, 수상한 물약 등)뿐.
     public void OnClickUseItem()
     {
         var emp = Selected();
@@ -621,6 +649,21 @@ public class EmployeeListUI : MonoBehaviour
         // + 4강 체험 + 마무리 대사. pending 불필요(6-1과 동일 이유 — 재접속 자연 재오픈 때도 다시 체크됨).
         if (!OnboardingState.Tutorial17_2Done && TutorialController.Instance != null)
             TutorialController.Instance.StartCoroutine(TutorialController.Instance.PlayTutorial17_2());
+    }
+
+    // 하급/중급/상급 강화권 전용 — ItemDetailUI "사용하기"에서 곧장 호출. 아이템 사용 모드(선택→확인버튼)를
+    // 거치지 않고 바로 직원목록+TrainingPanel을 띄우고 boost를 미리 걸어둔다. 실제 아이템 소모는 나중에
+    // TrainingPanelUI.OnClickEnhance가 강화를 실제로 실행하는 순간(패널을 그냥 닫으면 소모 안 됨).
+    public void OpenForEnhanceWithBoost(ItemChartRow row)
+    {
+        if (row == null) return;
+        _useItemMode = false; // 혹시 이전 상태가 남아있어도 일반 강화 화면으로 확실히 전환
+        ApplyUseItemModeVisual(false);
+
+        TrainingPanelUI.Instance?.SetPendingBoost(row.effectValue, row.itemId, row.name);
+
+        ItemPanelUI.Instance?.OnClickClose(); // 아이템창 닫고(시간정지/ModalGate 반납) 강화 패널로 전환
+        OpenListForEnhance();
     }
 
     // 외부(EmployeeCardUI 등)에서 특정 직원 강화 — 패널 열고 그 직원 선택 + TrainingPanel 표시

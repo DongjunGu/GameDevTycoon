@@ -157,7 +157,9 @@ public class LeaderScoreUI : MonoBehaviour
         if (burstText != null) burstText.gameObject.SetActive(false);
     }
 
-    // 3회차 끝난 시점 미리보기 — "+min~max" (중첩 포함, DevelopmentManager.GetLeaderBonusPotentialRange)
+    // 3회차 끝난 시점 미리보기 — DevelopmentManager.GetLeaderBonusPotentialAmount가 이 시점에 임계선별
+    // 금액을 확정(단 1회 굴림)해두므로, 4회차 끝나고 RefreshBonusActualTexts가 표시하는 실제 지급액과
+    // 항상 동일한 값이 나온다(재추첨 없음, 유저 확정 사양).
     void RefreshBonusPotentialTexts()
     {
         SetBonusPotentialText(tick90Mark, ref tick90BonusText, 0);
@@ -170,9 +172,8 @@ public class LeaderScoreUI : MonoBehaviour
         if (text == null && tick != null) text = tick.GetComponentInChildren<TextMeshProUGUI>();
         if (text == null || DevelopmentManager.Instance == null) return;
 
-        var (min, max) = DevelopmentManager.Instance.GetLeaderBonusPotentialRange(thresholdIndex);
-        float sample = Random.Range(min, max); // 범위 텍스트 대신 그 범위 안에서 임의로 하나 찍어 정수로 표시
-        text.text = $"보너스 +{Mathf.RoundToInt(sample)}";
+        float amount = DevelopmentManager.Instance.GetLeaderBonusPotentialAmount(thresholdIndex);
+        text.text = $"보너스 +{Mathf.RoundToInt(amount)}";
     }
 
     // 4회차까지 끝난 뒤(정산 시점) — 실제로 획득한 보너스 금액으로 교체. DevelopmentManager.GetLeaderBonusAmount가 단일 소스.

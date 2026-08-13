@@ -36,6 +36,20 @@ public class InfoUI : MonoBehaviour
         if (infoPanel != null) infoPanel.SetActive(false);
     }
 
+    // GameObject가 (자신 또는 조상이) 비활성화되면 진행 중이던 코루틴은 Unity가 자동으로 멈추지만,
+    // 콜백은 안 불러준다 — 여기서 직접 마무리해야 한다. 예: ConfirmPanelMoneyElevator가 EmployeePanel/
+    // ConfirmHirePanel이 열릴 때 HUD 자식들을 통째로 SetActive(false)하면서 이 오브젝트도 같이 꺼지는 경우
+    // (2026-07-13에 이미 겪은 버그 — 콜백이 안 불려 SalesUI.OnSalesComplete가 영영 안 불리고 패널이 멈춤).
+    void OnDisable()
+    {
+        if (_co == null) return;
+        _co = null;
+        if (infoPanel != null) infoPanel.SetActive(false);
+        var cb = _pendingCallback;
+        _pendingCallback = null;
+        cb?.Invoke();
+    }
+
     RectTransform GetSlideRect()
     {
         if (slidePanel != null) return slidePanel;
