@@ -100,7 +100,8 @@ public class EmployeeResumePanel : MonoBehaviour
         }
         if (satisfactionText != null) satisfactionText.text = $"{emp.satisfaction}";
 
-        // 능력치 — 해고(actual): 확정 실제값 + 버프/디버프 색상 / 채용(interval): 강화 반영 범위, 라벨 없이 값만 ("기획: 50~200" → "50~200")
+        // 능력치 — 해고(actual): 확정 실제값 + 버프/디버프 색상 / 채용: 확정 롤값, 라벨 없이 값만 ("기획: 50" → "50")
+        // 2026-08-13부터 채용 화면도 인터벌(범위) 대신 이미 확정된 롤값을 그대로 보여줌(구 *DisplayText 삭제).
         if (showActualStats)
         {
             EmployeeCardUI.SetStatColored(planningText,   emp.planningSkill,   emp.EffectivePlanningSkill);
@@ -110,9 +111,9 @@ public class EmployeeResumePanel : MonoBehaviour
         }
         else
         {
-            if (planningText   != null) planningText.text   = ValueOnly(emp.PlanningDisplayText());
-            if (developText    != null) developText.text    = ValueOnly(emp.DevelopDisplayText());
-            if (artText        != null) artText.text        = ValueOnly(emp.ArtDisplayText());
+            if (planningText   != null) planningText.text   = ValueOnly(emp.PlanningText());
+            if (developText    != null) developText.text    = ValueOnly(emp.DevelopText());
+            if (artText        != null) artText.text        = ValueOnly(emp.ArtText());
             if (creativityText != null) creativityText.text = ValueOnly(emp.CreativityText());
         }
 

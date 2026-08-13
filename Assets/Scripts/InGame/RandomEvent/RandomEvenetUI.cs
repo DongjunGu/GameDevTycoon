@@ -38,10 +38,12 @@ public class RandomEventUI : MonoBehaviour
     public Sprite titleBGBadSprite;          // titleType == 0
     public Sprite titleBGNormalSprite;       // titleType == 1 또는 2 (중립/긍정 공용)
     public TextMeshProUGUI titleText;
-    [Tooltip("TitleBG/Panel/emergencyImagePanel/emergencyImage — titleBGImage와 동일하게 titleType에 따라 교체")]
-    public Image emergencyImage;             // titleType(0=부정/1=중립/2=긍정)에 따라 교체
-    public Sprite emergencyImageBadSprite;   // titleType == 0
-    public Sprite emergencyImageNormalSprite; // titleType == 1 또는 2 (중립/긍정 공용)
+    // emergencyImage는 원래 스프라이트 교체 방식이었는데 좋음/나쁨 이미지 크기가 서로 달라서
+    // 오브젝트 2개로 분리 + 활성/비활성 전환 방식으로 변경(2026-08). titleBGImage와 동일한 titleType 분기.
+    [Tooltip("TitleBG/Panel/emergencyImagePanel/emergencyImageBad — titleType == 0(부정)일 때만 활성")]
+    public GameObject emergencyImageBad;
+    [Tooltip("TitleBG/Panel/emergencyImagePanel/emergencyImageGood — titleType == 1 또는 2(중립/긍정)일 때만 활성")]
+    public GameObject emergencyImageGood;
     public RectTransform resultBG;           // 결과 배경 (슬라이드 대상)
     public TextMeshProUGUI resultText;       // 결과 (systemMessage)
     public RectTransform resultBG2;          // 결과2 배경 (슬라이드 대상)
@@ -279,12 +281,10 @@ public class RandomEventUI : MonoBehaviour
             Sprite s = _currentTitleType == 0 ? titleBGBadSprite : titleBGNormalSprite;
             if (s != null) titleBGImage.sprite = s;
         }
-        // emergencyImage — titleBGImage와 동일한 titleType 분기.
-        if (emergencyImage != null)
-        {
-            Sprite s = _currentTitleType == 0 ? emergencyImageBadSprite : emergencyImageNormalSprite;
-            if (s != null) emergencyImage.sprite = s;
-        }
+        // emergencyImage — titleBGImage와 동일한 titleType 분기. 스프라이트 교체 대신 둘 중 하나만 활성화.
+        bool isBadTitle = _currentTitleType == 0;
+        if (emergencyImageBad  != null) emergencyImageBad.SetActive(isBadTitle);
+        if (emergencyImageGood != null) emergencyImageGood.SetActive(!isBadTitle);
 
         // 결과 (미리 채워두되 ResultBG 가 숨겨져 있어 보이지 않음)
         if (resultText  != null) resultText.text  = _resultMessage  ?? "";

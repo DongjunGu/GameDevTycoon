@@ -1,18 +1,19 @@
 itemId,appearStages,category,name,grade,price,effect,description,effectType,effectValue,imageId
-enhanceLow,"1,2",강화,하급\n강화권,1,100,,강화에 실패해도 하락하지 않는다\n(1~10성 사이 일때 사용 가능),,0,item_enhanceLow
-enhanceMid,"2,3",강화,중급\n강화권,1,150,,강화에 실패하면 등급이 하락하는\n대신 강화확률이 20% 상승한다,,0,item_enhanceMid
-enhanceMidPlus,"3,4",강화,중급\n강화권+,1,150,,강화에 실패하면 등급이 하락하는\n대신 강화확률이 30% 상승한다,,0,item_enhanceMidPlus
-enhanceHigh,4,강화,상급\n강화권,1,150,,강화에 실패하면 등급이 하락하는\n대신 강화확률이 40% 상승한다,,0,item_enhanceHigh
-resetSpirit,"1,2,3,4",강화,초심\n회복기,1,200,,강화를 단계를 하락시키는 대신\n해당 직원 만족도를 100으로 회복한다,,0,item_resetSpirit
-upgradeRandom,"2,3,4",게임,랜덤\n업그레이드,2,150,기존 팀장 점수 로직의 1/4가 적용,랜덤한 직원이 게임성 업그레이드를 시도한다\n(게임 하나에 한 번만 사용 가능),,0,item_upgradeRandom
-upgradeDevelop,"3,4",게임,개발\n업그레이드권,2,150,기존 팀장 점수 로직의 1/4가 적용,개발 직군 직원이 게임성 업그레이드를 시도한다\n(게임 하나에 한 번만 사용 가능),,0,item_upgradeDevelop
-upgradeArt,"3,4",게임,아트\n업그레이드권,2,150,기존 팀장 점수 로직의 1/4가 적용,아트 직군 직원이 게임성 업그레이드를 시도한다\n(게임 하나에 한 번만 사용 가능),,0,item_upgradeArt
-upgradePlan,"3,4",게임,기획\n업그레이드권,2,150,기존 팀장 점수 로직의 1/4가 적용,기획 직군 직원이 게임성 업그레이드를 시도한다\n(게임 하나에 한 번만 사용 가능),,0,item_upgradePlan
-coffee,"1,2,3,4",만족도,커피,3,50,,만족도 15 회복,satisfaction,15,item_coffee
-energyDrink,"1,2,3,4",만족도,에너지드링크,3,80,,만족도 25 회복,satisfaction,25,item_energyDrink
-relax,"1,2,3,4",능력치,라꾸라꾸,3,100,"능력치 감소 상태 회복, 디버프 상태가 아니면 사용 불가능",모든 안 좋은 디버프 상태를 회복,,0,item_relax
-awaken,"1,2,3,4",능력치,각성의\n물약,3,100,4~8주간 랜덤 / 현재 버프된 능력치는 빼고 오리지널 능력치의 10% 적용,잠시동안 능력치 10% 상승,,0,item_awaken
-techNote,"3,4",테크트리 포인트,오래된\n연구노트,4,300,,테크트리 포인트 1 획득,,0,item_techNote
-blockRandom,"1,2,3,4",창의성 블록,랜덤 블록,4,150,3칸 2칸 전부 랜덤,1회성으로 언제든지 사용가능\n랜덤한 창의성 블록 생성,,0,item_blockRandom
-blockLegendary,"3,4",창의성 블록,전설의 블록,4,300,아예 정사각형 한 칸짜리,1회성으로 언제든지 사용가능\n1칸짜리 창의성 블록 생성,,0,item_blockLegendary
-hypnotizer,"1,2,3,4",이벤트 대비,최면술사의\n시계,4,500,"직원 사직서 제출시 사용 가능, 아이템이 있으면 사용하기를 누르면 퇴직 취소 되고 만족도 +20",직원이 사직서 제출을 취소하고\n만족도가 일부 상승한다,,0,item_hypnotizer
+enhanceProtect,"1,2",강화,하락\n방어권,1,100,,강화에 실패하여 단계가 하락하는걸\n자동으로 방어한다 (11~24성 사이 일때 사용 가능),,0,item_enhanceLow
+enhanceLow,"2,3",강화,하급\n강화권,2,300,,다음 강화 성공 확률 + 5%,enhanceSuccessBoost,5,item_enhanceMid
+enhanceMid,"3,4",강화,중급\n강화권,3,800,,다음 강화 성공 확률 + 10%,enhanceSuccessBoost,10,item_enhanceMidPlus
+enhanceHigh,4,강화,상급\n강화권,4,2000,,다음 강화 성공 확률을 100%로 바꾼다.,enhanceSuccessBoost,100,item_enhanceHigh
+resetSpirit,"1,2,3,4",강화,초심\n회복기,2,300,,강화를 단계를 하락시키는 대신\n해당 직원 만족도를 100으로 회복한다,enhanceResetSpirit,0,item_resetSpirit
+upgradeRandom,"2,3,4",게임,랜덤\n업그레이드,2,300,기존 팀장 점수 로직의 1/4가 적용,랜덤한 직원이 게임성 업그레이드를 시도한다\n(게임 하나에 한 번만 사용 가능),,0,item_upgradeRandom
+upgradeDevelop,"3,4",게임,개발\n업그레이드권,3,800,기존 팀장 점수 로직의 1/4가 적용,개발 직군 직원이 게임성 업그레이드를 시도한다\n(게임 하나에 한 번만 사용 가능),,0,item_upgradeDevelop
+upgradeArt,"3,4",게임,아트\n업그레이드권,3,800,기존 팀장 점수 로직의 1/4가 적용,아트 직군 직원이 게임성 업그레이드를 시도한다\n(게임 하나에 한 번만 사용 가능),,0,item_upgradeArt
+upgradePlan,"3,4",게임,기획\n업그레이드권,3,800,기존 팀장 점수 로직의 1/4가 적용,기획 직군 직원이 게임성 업그레이드를 시도한다\n(게임 하나에 한 번만 사용 가능),,0,item_upgradePlan
+coffee,"1,2,3,4",만족도,커피,2,300,,만족도 15 회복,satisfaction,15,item_coffee
+mysteryPotion,"1,2,3,4",만족도,수상한\n물약,3,800,만족도 1~25 랜덤하게 회복,만족도가 랜덤하게 회복됩니다.,satisfactionRandom,25,item_mysteryPotion
+energyDrink,"1,2,3,4",만족도,에너지드링크,4,2000,,만족도 25 회복,satisfaction,25,item_energyDrink
+relax,"1,2,3,4",능력치,라꾸라꾸,1,100,"능력치 감소 상태 회복, 디버프 상태가 아니면 사용 불가능",모든 안 좋은 디버프 상태를 회복,,0,item_relax
+awaken,"1,2,3,4",능력치,각성의\n물약,2,300,4~8주간 랜덤 / 현재 버프된 능력치는 빼고 오리지널 능력치의 10% 적용,잠시동안 능력치 10% 상승,,0,item_awaken
+techNote,"3,4",테크트리 포인트,오래된\n연구노트,4,2000,,테크트리 포인트 1 획득,,0,item_techNote
+blockRandom,"1,2,3,4",창의성 블록,랜덤 블록,1,100,3칸 2칸 전부 랜덤,1회성으로 언제든지 사용가능\n랜덤한 창의성 블록 생성,,0,item_blockRandom
+blockLegendary,"3,4",창의성 블록,전설의 블록,2,300,아예 정사각형 한 칸짜리,1회성으로 언제든지 사용가능\n1칸짜리 창의성 블록 생성,,0,item_blockLegendary
+hypnotizer,"1,2,3,4",이벤트 대비,최면술사의\n시계,4,2000,"직원 사직서 제출시 사용 가능, 아이템이 있으면 사용하기를 누르면 퇴직 취소 되고 만족도 +20",직원이 사직서 제출을 취소하고\n만족도가 일부 상승한다,,0,item_hypnotizer

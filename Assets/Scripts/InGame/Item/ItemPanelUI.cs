@@ -109,6 +109,7 @@ public class ItemPanelUI : MonoBehaviour
         if (IsRelaxButNoDebuffedEmployee(row)) return false;
         if (IsUpgradeButNoRoleEmployee(row)) return false;
         if (IsCreativityBlockCategory(row)) return false;
+        if (IsEnhanceProtectItem(row)) return false;
         return true;
     }
 
@@ -118,6 +119,11 @@ public class ItemPanelUI : MonoBehaviour
     // 창의성 블록 카테고리(랜덤/전설의 블록): 아이템창에서는 항상 비활성. 실제 사용은 창의성 미니게임의 BlockItemPanel에서만.
     static bool IsCreativityBlockCategory(ItemChartRow row)
         => row != null && row.category == "창의성 블록";
+
+    // 하락 방어권: 수동 사용 불가 — 아이템창에서는 항상 비활성. EmployeeEnhancement.EnhanceOnce가 하락
+    // 판정이 났을 때 자동으로 소모한다.
+    static bool IsEnhanceProtectItem(ItemChartRow row)
+        => row != null && row.itemId == "enhanceProtect";
 
     static bool IsGameUpgradeAlreadyUsed(ItemChartRow row)
     {

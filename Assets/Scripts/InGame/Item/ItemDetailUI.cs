@@ -50,7 +50,7 @@ public class ItemDetailUI : MonoBehaviour
         descriptionText.text = row.description;
 
         int count = ItemManager.Instance.GetCount(row.itemId);
-        useButton.interactable = count > 0 && ItemManager.IsUsableNow(row) && !IsGameUpgradeAlreadyUsed(row) && !IsRelaxButNoDebuffedEmployee(row) && !IsEventReadyCategory(row) && !IsUpgradeButNoRoleEmployee(row) && !IsCreativityBlockCategory(row);
+        useButton.interactable = count > 0 && ItemManager.IsUsableNow(row) && !IsGameUpgradeAlreadyUsed(row) && !IsRelaxButNoDebuffedEmployee(row) && !IsEventReadyCategory(row) && !IsUpgradeButNoRoleEmployee(row) && !IsCreativityBlockCategory(row) && !IsEnhanceProtectItem(row);
 
         var sprite = Resources.Load<Sprite>($"Items/{row.imageId}");
         if (sprite != null && itemImage != null)
@@ -66,7 +66,7 @@ public class ItemDetailUI : MonoBehaviour
     {
         if (_currentRow == null) return;
         int count = ItemManager.Instance.GetCount(_currentRow.itemId);
-        useButton.interactable = count > 0 && ItemManager.IsUsableNow(_currentRow) && !IsGameUpgradeAlreadyUsed(_currentRow) && !IsRelaxButNoDebuffedEmployee(_currentRow) && !IsUpgradeButNoRoleEmployee(_currentRow) && !IsCreativityBlockCategory(_currentRow);
+        useButton.interactable = count > 0 && ItemManager.IsUsableNow(_currentRow) && !IsGameUpgradeAlreadyUsed(_currentRow) && !IsRelaxButNoDebuffedEmployee(_currentRow) && !IsUpgradeButNoRoleEmployee(_currentRow) && !IsCreativityBlockCategory(_currentRow) && !IsEnhanceProtectItem(_currentRow);
     }
 
     public void OnClickUse()
@@ -94,6 +94,13 @@ public class ItemDetailUI : MonoBehaviour
                 HideDetail();
                 ItemPanelUI.Instance.OnClickClose(); // 패널 닫기 + StartTime + 카드 콜백 호출
             }
+            return;
+        }
+
+        // 강화권/초심회복기 — 아이템 사용 모드(선택→확인버튼)를 거치지 않고 곧장 직원목록+TrainingPanel로.
+        if (EmployeeListUI.IsEnhanceBoostItem(_currentRow))
+        {
+            EmployeeListUI.Instance?.OpenForEnhanceWithBoost(_currentRow);
             return;
         }
 
@@ -130,6 +137,11 @@ public class ItemDetailUI : MonoBehaviour
     // 창의성 블록 카테고리(랜덤/전설의 블록): 아이템창에서는 항상 비활성. 실제 사용은 창의성 미니게임의 BlockItemPanel에서만.
     static bool IsCreativityBlockCategory(ItemChartRow row)
         => row != null && row.category == "창의성 블록";
+
+    // 하락 방어권: 수동 사용 불가 — 아이템창에서는 항상 비활성. EmployeeEnhancement.EnhanceOnce가 하락
+    // 판정이 났을 때 자동으로 소모한다.
+    static bool IsEnhanceProtectItem(ItemChartRow row)
+        => row != null && row.itemId == "enhanceProtect";
 
     // 라꾸라꾸: 회사 직원 중 디버프 걸린 사람이 한 명도 없으면 사용 버튼 비활성
     static bool IsRelaxButNoDebuffedEmployee(ItemChartRow row)

@@ -343,6 +343,34 @@ public class ItemManager : MonoBehaviour
                     target.id, $"만족도 +{row.effectValue}", new Color(1f, 0.4f, 0.4f));
                 AlertUI.Instance?.ShowPortrait($"{target.employeeName}에게 {row.name}을 사용했습니다.\n만족도 +{row.effectValue}", target.portraitId, target.employeeName);
                 break;
+            // 수상한 물약 — effectValue를 상한으로 1~effectValue 사이 랜덤 회복.
+            case "satisfactionRandom":
+                int randomGain = Random.Range(1, row.effectValue + 1);
+                target.ChangeSatisfaction(randomGain);
+                OfficeManager.Instance?.ShowStatPopup(
+                    target.id, $"만족도 +{randomGain}", new Color(1f, 0.4f, 0.4f));
+                AlertUI.Instance?.ShowPortrait($"{target.employeeName}에게 {row.name}을 사용했습니다.\n만족도 +{randomGain}", target.portraitId, target.employeeName);
+                break;
+            // 초심 회복기 — 강화 굴림과 무관한 즉시효과. 강화 버튼을 누를 필요 없이 사용 즉시 강화 단계를
+            // 1 낮추고(일반 하락과 동일하게 EmployeeManager.ReverseEnhancement로 그 레벨의 스탯 증가분도
+            // 되돌림) 만족도를 100으로 회복한다(+100 델타는 클램프[1,100]에 의해 항상 정확히 100이 됨).
+            case "enhanceResetSpirit":
+            {
+                int oldLevel = target.enhancementLevel;
+                if (oldLevel > 0)
+                {
+                    EmployeeManager.Instance.ReverseEnhancement(target, oldLevel);
+                    target.enhancementLevel = oldLevel - 1;
+                }
+                target.ChangeSatisfaction(100);
+                OfficeManager.Instance?.ShowStatPopup(
+                    target.id, "만족도 100 회복", new Color(1f, 0.4f, 0.4f));
+                AlertUI.Instance?.ShowPortrait(
+                    $"{target.employeeName}에게 {row.name}을 사용했습니다.\n강화 단계가 1 하락하고 만족도가 100으로 회복되었습니다.",
+                    target.portraitId, target.employeeName);
+                EmployeeListUI.Instance?.RefreshSlotLevelText(target.id);
+                break;
+            }
         }
 
         // 라꾸라꾸: 디버프 스택 모두 회복 (만족도 multiplier 는 손대지 않음)
@@ -394,7 +422,10 @@ public class ItemManager : MonoBehaviour
     {
         foreach (var kv in ItemChartLoader.Cache)
         {
-            if (kv.Value.grade == 1) continue;
+            // ⚠️ 예전엔 "grade==1은 스킵"으로 강화권 4종(전부 죽은 효과였을 당시 다 같이 1등급)을 걸렀는데,
+            // 2026-08-14 가격 등급 재조정으로 grade가 등급별 가격(하=1~최상=4)을 뜻하게 되면서 라꾸라꾸/랜덤
+            // 블록처럼 무관한 아이템까지 같이 걸러지는 부작용이 생겼다. 강화권도 이제 전부 실제 효과가
+            // 구현돼 있으니 grade 기준 스킵 자체를 없애고 전 아이템을 지급한다.
             _inventory.TryGetValue(kv.Key, out int cur);
             _inventory[kv.Key] = cur + countEach;
         }

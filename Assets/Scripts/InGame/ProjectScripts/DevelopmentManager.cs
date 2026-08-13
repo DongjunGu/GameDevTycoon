@@ -1114,49 +1114,64 @@ public class DevelopmentManager : MonoBehaviour
 
     // 세션 진행 중 이미 지급된 임계선(90/95/99) — 중복 지급 방지. 새 팀장점수 시작 시 리셋.
     private bool[] _leaderBonusGranted = new bool[3];
-    private float[] _leaderBonusAmounts = new float[3]; // 임계선별 실제 지급액 (UI "+n" 표시용)
+    private float[] _leaderBonusAmounts = new float[3]; // 임계선별 확정 금액 (UI "+n" 표시용) — 지급 여부와 무관하게 롤 되는 즉시 확정
+    private bool[] _leaderBonusRolled = new bool[3]; // 임계선별 금액을 이미 굴렸는지 — 미리보기든 실제 돌파든 딱 1번만 굴리기 위한 가드
     private float _leaderBonusTotal;
 
-    // UI에서 임계선별(0=90/1=95/2=99) 지급 보너스 금액 조회 — 아직 안 넘었으면 0.
+    // UI에서 임계선별(0=90/1=95/2=99) 지급 보너스 금액 조회 — 실제로 넘겨서 지급 확정된 게 아니면 0.
     public float GetLeaderBonusAmount(int thresholdIndex)
-        => (thresholdIndex >= 0 && thresholdIndex < 3) ? _leaderBonusAmounts[thresholdIndex] : 0f;
+        => (thresholdIndex >= 0 && thresholdIndex < 3 && _leaderBonusGranted[thresholdIndex]) ? _leaderBonusAmounts[thresholdIndex] : 0f;
 
     // 이번 세션에서 지급된 보너스 총합 (90+95+99 중첩 합산) — 4회차 팝콘 연출에 같이 얹을 때 사용.
     public float GetLeaderBonusTotal() => _leaderBonusTotal;
 
-    // 3회차 끝난 시점(4회차 선택 대기 중)에 보여줄 "이 임계선까지 도달하면 받을 수 있는 총액" 미리보기.
-    // 하위 임계선까지 중첩된 f를 누적으로 더한 범위 × K. 대기 중이 아니면 (0,0).
-    public (float min, float max) GetLeaderBonusPotentialRange(int thresholdIndex)
+    // 임계선 i의 지급액을 아직 안 굴렸으면 지금 굴려서 확정(_leaderBonusAmounts[i])해둔다 — 이후 몇 번을
+    // 다시 조회하든(미리보기든 실제 돌파 시점이든) 같은 값을 돌려주기 위한 단일 굴림 지점.
+    void EnsureBonusRolled(int i, int enhanceLevel, float K)
     {
-        var ctx = _pendingRound4;
-        if (ctx == null || thresholdIndex < 0 || thresholdIndex > 2) return (0f, 0f);
+        if (_leaderBonusRolled[i]) return;
+        _leaderBonusRolled[i] = true;
 
-        int bucket = LeaderBonusGrowthBucket(ctx.employee.enhancementLevel);
-        float fMinSum = 0f, fMaxSum = 0f;
-        for (int i = 0; i <= thresholdIndex; i++)
-        {
-            var (fMin, fMax) = LeaderBonusF[bucket, i];
-            fMinSum += fMin;
-            fMaxSum += fMax;
-        }
-        return (ctx.K * fMinSum, ctx.K * fMaxSum);
+        int bucket = LeaderBonusGrowthBucket(enhanceLevel);
+        var (fMin, fMax) = LeaderBonusF[bucket, i];
+        float f = Mathf.Round(UnityEngine.Random.Range(fMin, fMax) * 100f) / 100f;
+        _leaderBonusAmounts[i] = K * f;
     }
 
-    // cumDs가 새로 90/95/99를 넘겼으면 해당 임계선 보너스를 지급(누적). 오버플로 회차에서는 호출하지 않는다.
+    // 3회차 끝난 시점(4회차 선택 대기 중)에 보여줄 "이 임계선까지 도달하면 받을 수 있는 총액" 미리보기.
+    // 하위 임계선까지 중첩된 확정 금액(EnsureBonusRolled로 이미 굴렸거나 지금 처음 굴림)을 그대로 합산 —
+    // 실제로 그 임계선을 돌파했을 때(CheckLeaderBonusThresholds) 지급되는 금액과 100% 동일하다(재추첨 없음).
+    // 대기 중이 아니면 0.
+    public float GetLeaderBonusPotentialAmount(int thresholdIndex)
+    {
+        var ctx = _pendingRound4;
+        if (ctx == null || thresholdIndex < 0 || thresholdIndex > 2) return 0f;
+
+        float sum = 0f;
+        for (int i = 0; i <= thresholdIndex; i++)
+        {
+            EnsureBonusRolled(i, ctx.employee.enhancementLevel, ctx.K);
+            sum += _leaderBonusAmounts[i];
+        }
+        return sum;
+    }
+
+    // cumDs가 90/95/99 "이상"이면 해당 임계선 보너스를 지급(누적). 오버플로 회차에서는 호출하지 않는다.
+    // 금액은 EnsureBonusRolled를 거치므로, 3회차 끝난 시점 미리보기에서 이미 굴려졌다면 그 값 그대로
+    // 지급되고(재추첨 없음), 미리보기 없이(1~3회차 중) 먼저 넘겼다면 여기서 처음 굴려진다.
+    // 주의: CalcLeaderDs가 회차 ds를 정수로 반올림해서 cumDs는 항상 정수값이다 — 예전엔 "cumDs > 임계값"
+    // (엄격히 초과)로 비교해서, 오버플로 기준(cumDs>100)과 맞물려 99 임계선은 cumDs가 정수로 딱 100일
+    // 때만 통과하는 사실상 불가능에 가까운 조건이었다(90/95도 정도는 덜하지만 같은 문제). "이상"(>=)으로
+    // 바꿔서 cumDs가 딱 90/95/99에 랜딩해도 정상 지급되게 함(유저 확정 사양).
     void CheckLeaderBonusThresholds(float cumDs, int enhanceLevel, float K)
     {
-        int bucket = LeaderBonusGrowthBucket(enhanceLevel);
         for (int i = 0; i < 3; i++)
         {
             if (_leaderBonusGranted[i]) continue;
-            if (cumDs <= LeaderBonusThresholds[i]) continue;
+            if (cumDs < LeaderBonusThresholds[i]) continue;
+            EnsureBonusRolled(i, enhanceLevel, K);
             _leaderBonusGranted[i] = true;
-
-            var (fMin, fMax) = LeaderBonusF[bucket, i];
-            float f = Mathf.Round(UnityEngine.Random.Range(fMin, fMax) * 100f) / 100f;
-            float bonus = K * f;
-            _leaderBonusAmounts[i] = bonus;
-            _leaderBonusTotal += bonus;
+            _leaderBonusTotal += _leaderBonusAmounts[i];
         }
     }
 
@@ -1181,26 +1196,26 @@ public class DevelopmentManager : MonoBehaviour
 
     // 온보딩 튜토리얼(1~3회차) 전용 고정 U — 사용자 지정값. 4회차도(SelectRound4Aim에서) U=14(새 "강" 범위
     // 최댓값)로 같이 고정하므로, 신규 채용 직원(enhancementLevel<=9 → RollLeaderStage가 항상 stage=1,
-    // M=1.35 확정) 기준 4회차까지 전부 고정: ds1=CalcLeaderDs(19+3×1.35)=23, ds2=CalcLeaderDs(19+5×1.35)=26,
-    // ds3=CalcLeaderDs(19+6×1.35)=27 → cumDs3=76, ds4=CalcLeaderDs(13+14×1.35)=32 → 누적 108 > 100,
-    // "강" 선택 시 항상 burst 확정.
-    static readonly int[] TutorialFixedRound123U = { 3, 5, 6 };
+    // M=1.35 확정) 기준 4회차까지 전부 고정: ds1=CalcLeaderDs(19+1×1.35)=20, ds2=CalcLeaderDs(19+3×1.35)=23,
+    // ds3=CalcLeaderDs(19+5×1.35)=26 → cumDs3=69, ds4=CalcLeaderDs(13+14×1.35)=32 → 누적 101 > 100,
+    // "강" 선택 시 항상 burst 확정(간신히 넘기는 101로 조정 — 예전엔 108).
+    static readonly int[] TutorialFixedRound123U = { 1, 3, 5 };
 
-    // 온보딩 튜토리얼(9-1~9-3, 개발팀장) 전용 고정 U — M을 1.35로 함께 고정하는 게 전제. cumDs3(1~3회차
-    // 누적) = 24+24+26 = 74. 4회차는 SelectRound4Aim에서 아임별로 별도 고정(약=6(그 범위 최댓값)→ds4=21→
-    // 누적95, 중/강=9(새 범위에서 중·강 양쪽 모두에 걸치는 값)→ds4=25→누적99) — 약은 99에 못 미쳐도
-    // "그래도 좋은 결과"라는 9-3 대사와 일치, 중/강은 정확히 99(오버플로 직전)로 맞아떨어져
-    // "무려 99라니"/"심장 아프다" 대사와 일치.
-    static readonly int[] TutorialFixedRound123U_Dev = { 4, 4, 5 };
+    // 온보딩 튜토리얼(9-1~9-3, 개발팀장) 전용 고정 U — M을 1.35로 함께 고정하는 게 전제. ds1=CalcLeaderDs(19+3×1.35)=23,
+    // ds2=CalcLeaderDs(19+4×1.35)=24, ds3=CalcLeaderDs(19+6×1.35)=27 → cumDs3=74. 4회차는 SelectRound4Aim에서
+    // 아임별로 별도 고정(약=6(그 범위 최댓값)→ds4=21→누적95, 중/강=9(새 범위에서 중·강 양쪽 모두에 걸치는
+    // 값)→ds4=25→누적99) — 약은 99에 못 미쳐도 "그래도 좋은 결과"라는 9-3 대사와 일치, 중/강은 정확히
+    // 99(오버플로 직전)로 맞아떨어져 "무려 99라니"/"심장 아프다" 대사와 일치.
+    static readonly int[] TutorialFixedRound123U_Dev = { 3, 4, 6 };
 
-    // 온보딩 튜토리얼(20-1/20-2, 2번째 프로젝트 기획팀장) 전용 고정 U — M=1.35 강제 전제.
-    // ds1=CalcLeaderDs(19+4×1.35)=24, ds2=CalcLeaderDs(19+6×1.35)=27, ds3=CalcLeaderDs(19+5×1.35)=26
-    // → cumDs3=77. 4회차는 SelectRound4Aim에서 조준(약/중/강) 무관하게 U=8 고정 →
-    // ds4=CalcLeaderDs(13+8×1.35)=24 → 누적 101 > 100(정수 반올림 방식이라 별도 표시 반올림 없이 그대로
-    // 101) → "어... 101...?" 대사와 정확히 맞아떨어짐.
+    // 온보딩 튜토리얼(20-1/20-2, 2번째 프로젝트 기획팀장) 전용 고정 U — M=1.5 강제 전제(1사이클/9단계와
+    // 달리 이 단계만 M=1.5, LeaderStageM[1]에 해당하는 2단계 성수 느낌을 재현).
+    // ds1=CalcLeaderDs(19+4×1.5)=25, ds2=CalcLeaderDs(19+5×1.5)=26(26.5는 은행반올림으로 짝수인 26),
+    // ds3=CalcLeaderDs(19+6×1.5)=28 → cumDs3=79. 4회차는 SelectRound4Aim에서 조준(약/중/강) 무관하게
+    // U=6 고정 → ds4=CalcLeaderDs(13+6×1.5)=22 → 누적 101 > 100 → "어... 101...?" 대사와 정확히 맞아떨어짐.
     // ⚠️ 1사이클(TutorialFixedRound123U, !Tutorial7Done)과는 완전히 별개 — 이건 completedProjects.Count==1
     // (=2번째 프로젝트 진행 중)로만 판정해 혼동되지 않는다.
-    static readonly int[] TutorialFixedRound123U_Cycle2 = { 4, 6, 5 };
+    static readonly int[] TutorialFixedRound123U_Cycle2 = { 4, 5, 6 };
 
     // ── 테스트 전용 진입점 ──────────────────────────────────────
     // 프로젝트 진행 상태(개발 단계/기여도/저장)에 전혀 영향 없이 팀장점수 연출만 실행해본다.
@@ -1235,7 +1250,7 @@ public class DevelopmentManager : MonoBehaviour
             && CompletedProjectManager.Instance != null && CompletedProjectManager.Instance.completedProjects.Count == 1
             && !OnboardingState.Tutorial20Done;
         int stage = RollLeaderStage(employee.enhancementLevel);
-        float M = (tutorialFixedRollsDev || tutorialFixedRollsCycle2) ? 1.35f : LeaderStageM[stage - 1];
+        float M = tutorialFixedRollsDev ? 1.35f : tutorialFixedRollsCycle2 ? 1.5f : LeaderStageM[stage - 1];
         float K = 0.8738f + 0.026409f * Mathf.Pow(skill, 0.9081f);
         bool lazyGenius = type == LeaderType.Programmer && CharacterTraitApplier.HasLazyGeniusOwned();
         if (lazyGenius) K *= CharacterTraitApplier.LAZY_GENIUS_LEADER_BONUS;
@@ -1243,6 +1258,7 @@ public class DevelopmentManager : MonoBehaviour
 
         _leaderBonusGranted  = new bool[3];
         _leaderBonusAmounts  = new float[3];
+        _leaderBonusRolled   = new bool[3];
         _leaderBonusTotal    = 0f;
 
         var fullRoundScores = new float[4];
@@ -1369,15 +1385,15 @@ public class DevelopmentManager : MonoBehaviour
             bool tutorialFixedRollsDev = type == LeaderType.Programmer && !OnboardingState.Tutorial9Done;
             // 온보딩 튜토리얼(20-1/20-2) 전용 — 2번째 프로젝트(completedProjects.Count==1)의 기획팀장
             // 첫 팀장점수 화면이 아직 안 끝났으면 1~3회차 U를 TutorialFixedRound123U_Cycle2로 고정
-            // + M도 1.35로 강제. 1사이클(tutorialFixedRolls, !Tutorial7Done)과는 completedProjects.Count로
-            // 완전히 구분되므로 서로 혼동되지 않는다.
+            // + M도 1.5로 강제(9단계와 달리 이 단계만 1.5). 1사이클(tutorialFixedRolls, !Tutorial7Done)과는
+            // completedProjects.Count로 완전히 구분되므로 서로 혼동되지 않는다.
             bool tutorialFixedRollsCycle2 = type == LeaderType.Planner
                 && CompletedProjectManager.Instance != null && CompletedProjectManager.Instance.completedProjects.Count == 1
                 && !OnboardingState.Tutorial20Done;
 
             // 강화도(성수) 기반 단계 추첨 → 추천가중치 M
             int stage = RollLeaderStage(employee.enhancementLevel);
-            float M = (tutorialFixedRollsDev || tutorialFixedRollsCycle2) ? 1.35f : LeaderStageM[stage - 1];
+            float M = tutorialFixedRollsDev ? 1.35f : tutorialFixedRollsCycle2 ? 1.5f : LeaderStageM[stage - 1];
 
             // K(능력치) = 0.8738 + 0.026409 × 주스탯^0.9081
             float K = 0.8738f + 0.026409f * Mathf.Pow(skill, 0.9081f);
@@ -1390,6 +1406,7 @@ public class DevelopmentManager : MonoBehaviour
             // 보너스 임계선(90/95/99) 지급 상태 리셋 — 새 팀장점수 세션 시작
             _leaderBonusGranted = new bool[3];
             _leaderBonusAmounts = new float[3];
+            _leaderBonusRolled  = new bool[3];
             _leaderBonusTotal = 0f;
 
             // 1~3회차 ds / 회차 점수 자동 진행 (누적 ds 100 초과 시 0점 + 전 회차 차감 후 종료).
@@ -1575,7 +1592,7 @@ public class DevelopmentManager : MonoBehaviour
         }
         else if (ctx.type == LeaderType.Planner && !OnboardingState.Tutorial7Done)
         {
-            // 7-x 전용 — 약/중은 잠겨있어 "강"만 선택 가능. 1~3회차(TutorialFixedRound123U={3,5,6})와
+            // 7-x 전용 — 약/중은 잠겨있어 "강"만 선택 가능. 1~3회차(TutorialFixedRound123U={1,3,5})와
             // 마찬가지로 U를 그 범위 최댓값(14)으로 고정해 4회차까지 완전히 결정적으로 burst 확정.
             U = 14;
         }
@@ -1583,9 +1600,9 @@ public class DevelopmentManager : MonoBehaviour
                  && CompletedProjectManager.Instance.completedProjects.Count == 1 && !OnboardingState.Tutorial20Done)
         {
             // 20-1/20-2 전용 — 7-x와 달리 약/중/강을 잠그지 않고 자유 선택하게 두되, 어떤 걸 고르든
-            // U=8로 고정(cumDs3=77 + ds4=24 = 101 > 100)해 항상 burst가 나오게 한다 —
+            // U=6으로 고정(cumDs3=79 + ds4=22 = 101 > 100, M=1.5 전제)해 항상 burst가 나오게 한다 —
             // "골랐던 조준과 무관하게 운이 나빴다"는 20-2 대사 및 "어... 101...?"과 정확히 일치.
-            U = 8;
+            U = 6;
         }
         else
         {

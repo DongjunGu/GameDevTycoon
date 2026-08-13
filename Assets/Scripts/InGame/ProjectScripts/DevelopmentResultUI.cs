@@ -321,18 +321,24 @@ public class DevelopmentResultUI : MonoBehaviour
 
                     float rawScore = CalcRawScore(p, d, a, c, ProjectSetupUI.SelectedPlatform);
 
-                    // 쏠린 케이스 감점 (중형, 대작만) - criticScore/sAdj 공통 적용
-                    // 불균형 = (max(P,D,A) - avg(P,D,A)) / avg(P,D,A)
-                    // 감점% = MIN(30%, 30% × MAX(0, 불균형 - 0.30) / 0.50)
+                    // 쏠린 케이스 감점 (2026-08-14 재조정) — 중형/대작만, 사무실 1단계는 적용 안 함(2단계부터).
+                    // criticScore/sAdj 공통 적용.
+                    // 불균형 배수 R = max(P,D,A) ÷ min(P,D,A)
+                    // 감점% = MIN(40%, 40% × MAX(0, R − 임계값) ÷ 0.9)
+                    // 임계값은 사무실 단계별 최대 인원(StageManager.MaxEmployeeCount)에 따라 다름 — GetCaseImbalanceThreshold 참고.
                     float casePenalty = 0f;
-                    if (ProjectSetupUI.SelectedScale == ProjectScale.Medium || ProjectSetupUI.SelectedScale == ProjectScale.Large)
+                    bool caseOfficeStageEligible = StageManager.Instance != null && StageManager.Instance.CurrentStage >= 2;
+                    if (caseOfficeStageEligible && (ProjectSetupUI.SelectedScale == ProjectScale.Medium || ProjectSetupUI.SelectedScale == ProjectScale.Large))
                     {
-                        float avgStat = (p + d + a) / 3f;
-                        if (avgStat > 0f)
+                        float maxStat = Mathf.Max(p, Mathf.Max(d, a));
+                        float minStat = Mathf.Min(p, Mathf.Min(d, a));
+                        if (maxStat > 0f)
                         {
-                            float maxStat = Mathf.Max(p, Mathf.Max(d, a));
-                            float imbalance = (maxStat - avgStat) / avgStat;
-                            casePenalty = Mathf.Min(0.30f, 0.30f * Mathf.Max(0f, imbalance - 0.30f) / 0.50f);
+                            float threshold = GetCaseImbalanceThreshold(StageManager.Instance.MaxEmployeeCount);
+                            // minStat이 0이면(스탯 하나가 완전히 방치된 최악의 쏠림) 배수가 무한대가 되므로,
+                            // 상한(40%)에 정확히 닿도록 threshold+0.9를 대입해 나눗셈 없이 캡을 재현한다.
+                            float ratio = minStat > 0f ? maxStat / minStat : threshold + 0.9f;
+                            casePenalty = Mathf.Min(0.40f, 0.40f * Mathf.Max(0f, ratio - threshold) / 0.9f);
                         }
                     }
 
@@ -407,6 +413,16 @@ public class DevelopmentResultUI : MonoBehaviour
         });
     });
     }
+    // 쏠린 케이스 감점 임계값 — 사무실 단계별 최대 인원(StageManager.MaxEmployeeCount, 씬 설정 {2,4,6,7})에
+    // 대응. 1단계(2명)는 호출부에서 CurrentStage>=2로 이미 걸러지므로 여기 없음.
+    static float GetCaseImbalanceThreshold(int maxEmployeeCount) => maxEmployeeCount switch
+    {
+        4 => 2.2f,
+        6 => 1.6f,
+        7 => 1.9f,
+        _ => 1.9f, // 정의 안 된 인원수(향후 단계 추가 등) — 가장 마지막(최고단계) 임계값으로 폴백
+    };
+
     float CalcRawScore(float p, float d, float a, float c, ProjectPlatform platform)
     {
         // n = 1 (기본 배율, 나중에 규모/장르에 따라 조정 가능)
@@ -455,9 +471,9 @@ public class DevelopmentResultUI : MonoBehaviour
     {
         return ProjectSetupUI.SelectedGenrePopularity switch
         {
-            1 => 0.97f,
+            1 => 0.95f,
             2 => 1.0f,
-            3 => 1.03f,
+            3 => 1.05f,
             _ => 1.0f
         };
     }
@@ -468,10 +484,10 @@ public class DevelopmentResultUI : MonoBehaviour
         return fatigue switch
         {
             0 => 1.0f,
-            1 => 0.98f,
-            2 => 0.96f,
-            3 => 0.93f,
-            _ => 0.93f
+            1 => 0.97f,
+            2 => 0.94f,
+            3 => 0.90f,
+            _ => 0.90f
         };
     }
 

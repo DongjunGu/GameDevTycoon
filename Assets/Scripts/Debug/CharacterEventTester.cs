@@ -198,6 +198,12 @@ public class CharacterEventTester : MonoBehaviour
         if (GUILayout.Button("대형")) QuickTest16_1(ProjectScale.Large);
         GUILayout.EndHorizontal();
         GUILayout.BeginHorizontal();
+        GUILayout.Label("16-1 고매출 테스트 (튜토리얼 고정값 우회, 1위대):", Rich());
+        if (GUILayout.Button("소형")) QuickTest16_1HighRevenue(ProjectScale.Small);
+        if (GUILayout.Button("중형")) QuickTest16_1HighRevenue(ProjectScale.Medium);
+        if (GUILayout.Button("대형")) QuickTest16_1HighRevenue(ProjectScale.Large);
+        GUILayout.EndHorizontal();
+        GUILayout.BeginHorizontal();
         GUILayout.Label("평론가UI(CriticReviewUI) 점수 직접 테스트:", Rich());
         if (GUILayout.Button("45점 (Low 반응)")) QuickTestCriticReview(45);
         if (GUILayout.Button("80점 (High 반응)")) QuickTestCriticReview(80);
@@ -249,6 +255,7 @@ public class CharacterEventTester : MonoBehaviour
     {
         OnboardingState.MarkIntroDone();
         OnboardingState.MarkTutorialDone();
+        OnboardingState.MarkFirstHireDone();
         JumpToOnboardingStep(13); // 3~12단계 완료 처리
         OnboardingState.MarkTutorial13Done();
         OnboardingState.MarkTutorial13_4Done();
@@ -258,27 +265,34 @@ public class CharacterEventTester : MonoBehaviour
         OnboardingState.MarkTutorial16_1Done();
         OnboardingState.MarkTutorial17_1Done();
         OnboardingState.MarkTutorial17_2Done();
+        // ⚠️ 17-7Done(전체)만 켜고 서브 플래그(Shop/Used/Unlock)를 빠뜨리면, TutorialController.Start()의
+        // 재개 로직이 "17-2는 끝났는데 17-7Shop이 아직"으로 읽어서 재접속/씬 재진입마다 PlayTutorial17_6()
+        // (상인 소환+하이라이트)을 계속 다시 실행시킨다 — 실제로 겪은 버그. 21_1/22_1/23_1도 동일한 구조
+        // (부모만 Done이고 서브가 비어있으면 그 사이 지점부터 재개 로직이 다시 돈다)라 전부 같이 마크해야 함.
+        OnboardingState.MarkTutorial17_7ShopDone();
+        OnboardingState.MarkTutorial17_8UsedDone();
+        OnboardingState.MarkTutorial17_8UnlockDone();
         OnboardingState.MarkTutorial17_7Done();
         OnboardingState.MarkTutorial18Done();
         OnboardingState.MarkTutorial19Done();
         OnboardingState.MarkTutorial20Done();
         OnboardingState.MarkTutorial21Done();
+        OnboardingState.MarkTutorial21_1Done();
         OnboardingState.MarkTutorial22Done();
+        OnboardingState.MarkTutorial22_1Done();
         OnboardingState.MarkTutorial23Done();
-        OnboardingState.MarkTutorial24Done(); // 13~24 전부 Done — IsFullyDone/IsMenuUnlockReady 둘 다 통과
+        OnboardingState.MarkTutorial23_1Done();
+        OnboardingState.MarkTutorial24Done(); // 13~24(서브 포함) 전부 Done — IsFullyDone/IsMenuUnlockReady 둘 다 통과
         // ⚠️ MarkTutorial24Done()은 플래그만 세울 뿐 PlayTutorial24() 코루틴을 타지 않으므로
         // GameTimeManager.TriggerBankruptcy()가 호출되지 않는다(디버그 버튼이 실제로 런을 끝내버리면 안 됨).
 
-        // 19~20 구간이 걸어둔 "시간정지 중에도 캐릭터는 계속 움직임" 오버라이드 + 하드락 정리.
-        // 원래는 DevelopmentManager.StartDeveloping()(2번째 프로젝트 실제 시작)에서만 풀리는데, 여기서
-        // 단계를 강제로 Done 처리해버리면 그 경로를 안 타서 계속 남아있는다 — 방치하면 이후 아무 모달이나
-        // 열어서 StopTime()을 불러도 캐릭터가 patrol을 멈추지 않는 버그로 이어진다.
-        if (GameTimeManager.Instance != null)
-        {
-            GameTimeManager.Instance.AllowMovementWhileStopped = false;
-            GameTimeManager.Instance.UnlockTime();
-        }
-        OnboardingState.TutorialActive = false;
+        // 버튼을 눌렀을 때 하필 다른 PlayTutorialX() 코루틴이 이미 화면에 하이라이트/TutorialPanel/시간정지를
+        // 걸어둔 채로 진행 중이었을 수 있음 — 위에서 Mark*Done()으로 플래그만 다 켜봤자 그 코루틴 자체는
+        // 안 죽어서 하이라이트/패널이 화면에 고아로 남고, 19~20 구간의 AllowMovementWhileStopped/LockTime
+        // 하드락도 정상 해제 경로(DevelopmentManager.StartDeveloping())를 안 타 영구히 안 풀린다.
+        // TutorialController.ForceResetToNormal()이 진행 중이던 코루틴을 전부 끊고 하이라이트/패널/시간정지/
+        // 하드락을 한 번에 정리해 완전한 일반 상태로 되돌린다.
+        TutorialController.Instance?.ForceResetToNormal();
 
         if (RunStateManager.Instance != null)
             RunStateManager.Instance.SetTutorial(false, success => Set(success ? "튜토리얼 완전 해제 완료 (RunState.tutorial=false)" : "온보딩 플래그는 껐지만 RunState 저장 실패"));
@@ -308,18 +322,38 @@ public class CharacterEventTester : MonoBehaviour
         if (TutorialController.Instance == null) { Set("TutorialController 인스턴스 없음 (씬에 없거나 이미 파괴됨)"); return; }
         if (SalesUI.Instance == null) { Set("SalesUI 인스턴스 없음 (인게임에서 실행하세요)"); return; }
 
-        StartCoroutine(RunQuickTest16_1(scale));
+        StartCoroutine(RunQuickTest16_1(scale, qualityScore: 70f, forceRealFormula: false));
     }
 
-    IEnumerator RunQuickTest16_1(ProjectScale scale)
+    // 원본 16-1 테스트는 "튜토리얼 첫 판매" 고정값(매출 12,000G, 순위 1·5·11 고정)을 그대로 태워서
+    // 매출이 낮고 순위 축이 실제 공식과 무관하게 눌려 보인다 — 순위-매출 이중축 차트를 높은 값대에서
+    // 확인하고 싶을 때는 SalesUI.DebugForceRealFormula 로 튜토리얼 고정 분기를 잠깐 우회하고
+    // qualityScore를 크게 줘서 1위대 매출을 강제로 만든다(소형 기준으로도 1위를 넘도록 8000 사용 —
+    // 규모가 클수록 더 여유있게 넘음).
+    void QuickTest16_1HighRevenue(ProjectScale scale)
+    {
+        if (TutorialController.Instance == null) { Set("TutorialController 인스턴스 없음 (씬에 없거나 이미 파괴됨)"); return; }
+        if (SalesUI.Instance == null) { Set("SalesUI 인스턴스 없음 (인게임에서 실행하세요)"); return; }
+
+        StartCoroutine(RunQuickTest16_1(scale, qualityScore: 8000f, forceRealFormula: true));
+    }
+
+    IEnumerator RunQuickTest16_1(ProjectScale scale, float qualityScore, bool forceRealFormula)
     {
         bool wasDone = OnboardingState.Tutorial16_1Done;
         OnboardingState.MarkTutorial16_1Done(); // 대사 재생 동안만 임시로 켬 — SalesUI 내부 자연 트리거 중복 방지
 
+        bool prevForceRealFormula = SalesUI.DebugForceRealFormula;
+        if (forceRealFormula) SalesUI.DebugForceRealFormula = true;
+
         SalesUI.Instance.ShowWithProjectName(
-            qualityScore: 70f, scale: scale, projectName: $"[테스트] 16-1 ({scale})",
+            qualityScore: qualityScore, scale: scale, projectName: $"[테스트] 16-1 ({scale})",
             cachedScale: scale, cachedGenre: ProjectGenre.RPG, cachedPlatform: ProjectPlatform.PC,
             planning: 50f, develop: 50f, art: 50f, creativity: 50f, bug: 0f);
+
+        // ShowInternal 이 호출된 시점(=신규 분기 진입해 revenuePerPeriod 확정)까지만 필요 — 곧바로 원복해
+        // 다른 SalesUI 세션(복원 등)에 새어나가지 않게 한다.
+        SalesUI.DebugForceRealFormula = prevForceRealFormula;
 
         // 실제 개발완료 흐름(DevelopmentResultUI)과 동일하게, 마케팅→판매 직전 랜덤 2인 patrol도 그대로 재현.
         if (DevelopmentManager.Instance != null)

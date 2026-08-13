@@ -190,7 +190,7 @@ public class EmployeeCardUI : MonoBehaviour
             SatisfactionFillSet.Apply(satisfactionSlider, satisfactionFillSet, displayedSatisfaction);
         }
         if (satisfactionText != null) satisfactionText.text = $"{displayedSatisfaction}/100";
-        if (enhancementText  != null) enhancementText.text  = $"Lv.{emp.enhancementLevel}";
+        if (enhancementText  != null) enhancementText.text  = $"+{emp.enhancementLevel}";
         // 능력치 = 버프/디버프 적용된 실제값 + 색상(버프 빨강 / 디버프 파랑 / 변화 없음 흰색)
         SetStatColored(planningText,   emp.planningSkill,   emp.EffectivePlanningSkill);
         SetStatColored(developText,    emp.developSkill,    emp.EffectiveDevelopSkill);

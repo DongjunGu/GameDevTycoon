@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.EventSystems;
 using TMPro;
 using System.Collections;
 using DG.Tweening;
@@ -24,6 +25,19 @@ public class SalesUI : MonoBehaviour
     public RectTransform chartArea;   // HorizontalLayoutGroup 오브젝트
     public GameObject barPrefab;      // Bar 프리팹
     private float maxBarHeight;
+
+    [Header("Chart - Rank Axis")]
+    [Tooltip("툴팁 라벨용 폰트 — 미지정 시 TMP 기본 폰트 사용")]
+    public TMPro.TMP_FontAsset chartFont;
+    [Tooltip("순위점(RankDot) 스프라이트 — 12x12. 미지정 시 무늬 없는 단색 사각형으로 대체")]
+    public Sprite rankDotSprite;
+    // 순위점/연결선은 각 주차 Bar의 자식으로 붙는다 — chartArea의 HorizontalLayoutGroup이 매 주차 추가마다
+    // 전체 행을 재정렬(가운데 정렬)해 기존 막대들의 X가 계속 바뀌는데, Bar의 자식으로 만들면 부모(Bar)가
+    // 움직일 때 같이 따라 움직여서 별도 갱신 없이 항상 정렬 유지됨. 툴팁만 세션과 무관하게 1회 생성돼 유지.
+    private RectTransform tooltipRT;
+    private TextMeshProUGUI tooltipLine1;
+    private TextMeshProUGUI tooltipLine2;
+    private Transform _prevDot; // 직전 주차 순위점(다음 점과 이어줄 선의 시작점)
 
     [Header("UI")]
     public TextMeshProUGUI totalRevenueText;
@@ -189,13 +203,13 @@ public class SalesUI : MonoBehaviour
             Destroy(child.gameObject);
         }
 
-        // 규모배율 1/2/4/8 — 대작은 직원 7명 이상이면 8, 그 외(6명 등)는 4
-        int scaleMultiplier = scale switch
+        // 규모배율 1/2.9/8.3/13.8 (2026-08-14 재조정) — 대작은 직원 7명 이상이면 13.8, 그 외(6명 등)는 8.3
+        float scaleMultiplier = scale switch
         {
-            ProjectScale.Small  => 1,
-            ProjectScale.Medium => 2,
-            ProjectScale.Large  => (EmployeeManager.Instance != null && EmployeeManager.Instance.ownedEmployees.Count >= 7) ? 8 : 4,
-            _ => 1
+            ProjectScale.Small  => 1f,
+            ProjectScale.Medium => 2.9f,
+            ProjectScale.Large  => (EmployeeManager.Instance != null && EmployeeManager.Instance.ownedEmployees.Count >= 7) ? 13.8f : 8.3f,
+            _ => 1f
         };
         float[] distribution = CalcDistribution(scale);
         barCount = distribution.Length;
@@ -250,7 +264,6 @@ public class SalesUI : MonoBehaviour
             }
             else
             {
-                float rand         = UnityEngine.Random.Range(0.9f, 1.1f);
                 float youtuberBonus = RandomEventManager.Instance != null
                     ? RandomEventManager.Instance.YoutuberSalesBonus : 1.0f;
                 // 오타쿠 특성: 보유 오타쿠의 고정 장르가 이 프로젝트 장르와 일치하면 매출 +20%.
@@ -269,18 +282,22 @@ public class SalesUI : MonoBehaviour
                 float perfectTraitBonus = (CriticReviewUI.Instance != null && CriticReviewUI.Instance.LastCriticTotal == 100)
                     ? TraitEffectApplier.GetPerfectScoreSaleBonus() : 0f;
                 // 매출 보너스는 합연산 — 유튜버 +5% + 장인정신 +10% + 만점 +15% + 오타쿠 +20% + 신의축복 +10% + 규모 +5% + 평론가만점 +5% (곱셈 아님).
-                // rand 는 별개의 자연스러운 변동성이라 곱셈 유지.
                 float bonusSum         = (youtuberBonus - 1f) + (craftsmanBonus - 1f) + perfectBonus + otakuSalesBonus + godBlessingBonus + scaleSaleBonus + perfectTraitBonus;
                 float totalMultiplier  = Mathf.Max(0f, 1f + bonusSum);
-                // 매출 = 규모배율 × 332.3 × (원천/100)^2.177 × Random(0.9~1.1)  (원천 = 최종 변환 점수 qualityScore)
+                // 매출 = 규모배율 × 248 × (원천/100)^2  (원천 = 최종 변환 점수 qualityScore)
+                // 2026-08-14 — 공식에서 Random(0.9~1.1) 삭제. 변동성은 이제 주차별 분배 지터(아래
+                // jitterSum 클램프)가 대신 담당한다.
                 totalRevenue = Mathf.RoundToInt(
-                    scaleMultiplier * 332.3f * Mathf.Pow(Mathf.Max(0f, qualityScore) / 100f, 2.177f) * rand * totalMultiplier
+                    scaleMultiplier * 248f * Mathf.Pow(Mathf.Max(0f, qualityScore) / 100f, 2f) * totalMultiplier
                 );
                 if (RandomEventManager.Instance != null)
                     RandomEventManager.Instance.YoutuberSalesBonus = 1.0f; // 적용 후 초기화
             }
 
-            // 각 주차 분배에 ±5% 변동을 주되 합이 100% 되도록 재정규화 (총 매출은 유지)
+            // 2026-08-14 — 각 주차 분배에 ±5% 변동을 주되, 예전처럼 합을 정확히 100%로 재정규화하지 않는다.
+            // 공식에서 삭제한 Random(0.9~1.1) 총매출 변동성을, 주차별 지터의 합(jitterSum, distribution 합이
+            // 1이므로 보통 1.0 근방) 자체가 대신하게 함 — 단 [0.9, 1.1] 밖으로 벗어나지 않게 클램프.
+            // 각 주차의 "상대적" 비중(jittered[i]/jitterSum)은 그대로 유지해 주차 간 자연스러운 굴곡은 보존.
             float[] jittered = new float[barCount];
             float jitterSum = 0f;
             for (int i = 0; i < barCount; i++)
@@ -289,10 +306,11 @@ public class SalesUI : MonoBehaviour
                 jitterSum += jittered[i];
             }
             if (jitterSum <= 0f) jitterSum = 1f;
+            float clampedJitterSum = Mathf.Clamp(jitterSum, 0.9f, 1.1f);
 
             revenuePerPeriod = new int[barCount];
             for (int i = 0; i < barCount; i++)
-                revenuePerPeriod[i] = Mathf.RoundToInt(totalRevenue * (jittered[i] / jitterSum));
+                revenuePerPeriod[i] = Mathf.RoundToInt(totalRevenue * clampedJitterSum * (jittered[i] / jitterSum));
 
             // 테크트리 '역주행(money_comeback)' — 첫 호출 시점의 해금 상태로 한 번 결정. 배열에 박혀 저장됨.
             bool comebackUnlocked = TechTreeManager.Instance != null && TechTreeManager.Instance.IsUnlocked("money_comeback");
@@ -310,9 +328,6 @@ public class SalesUI : MonoBehaviour
             _cachedPlanning, _cachedDevelop, _cachedArt, _cachedCreativity, _cachedBug
         );
 
-        int maxRevenue = 0;
-        foreach (var r in revenuePerPeriod) if (r > maxRevenue) maxRevenue = r;
-
         // ⚠️ 패널이 열리자마자 최종 총 매출을 먼저 찍어버리면 안 됨 — bar가 하나도 안 오른 상태에서
         // 유저가 결과를 미리 봐버리는 스포일러. 초기엔 비워두고, ShowBarsSequentially가 완료 주차는
         // 즉시/미완료 주차는 bar가 오르는 만큼 값을 채워나간다(1프레임도 안 지나 정상 갱신됨).
@@ -328,12 +343,22 @@ public class SalesUI : MonoBehaviour
         _salesInProgress = true;
         UpdateOpenBtn(); // 패널 열림 → OpenBtn 비활성
         if (_barsCoroutine != null) StopCoroutine(_barsCoroutine);
-        _barsCoroutine = StartCoroutine(ShowBarsSequentially(revenuePerPeriod, maxRevenue, completedWeeks));
+        _barsCoroutine = StartCoroutine(ShowBarsSequentially(revenuePerPeriod, completedWeeks));
     }
-    IEnumerator ShowBarsSequentially(int[] revenuePerPeriod, int maxRevenue, int completedWeeks = 0)
+    IEnumerator ShowBarsSequentially(int[] revenuePerPeriod, int completedWeeks = 0)
     {
         yield return null; // ← 한 프레임 대기 후 높이 계산
         maxBarHeight = chartArea.rect.height * 0.8f;
+
+        // 순위-매출 이중축(2026-08-13) — 1주차 순위(1~55위로 clamp)의 축 높이를 "100% 기준선"으로 삼고,
+        // 이후 매출은 그 기준선 대비 비율로 막대 높이를 정한다(더 이상 이 세션 내 최댓값 상대비교 아님).
+        EnsureTooltip();
+
+        float week1Revenue = revenuePerPeriod.Length > 0 ? revenuePerPeriod[0] : 0f;
+        int rank1 = GetRank(revenuePerPeriod.Length > 0 ? revenuePerPeriod[0] : 0, 0);
+        int clampedRank1 = Mathf.Clamp(rank1 <= 0 ? 100 : rank1, 1, 55);
+        float baselineHeight = (1f - AxisPositionFromTop01(clampedRank1)) * maxBarHeight;
+        _prevDot = null; // 순위선 연결 상태 초기화(막대는 매 세션 재생성되므로 점도 함께 새로 생김)
 
         // bar 너비/간격 — 규모별로 관리(너비는 전부 26, 간격만 개수에 맞춰 좁아짐).
         float barWidth = 26f;
@@ -356,7 +381,9 @@ public class SalesUI : MonoBehaviour
 
         for (int i = 0; i < barCount; i++)
         {
-            float targetHeight = maxRevenue > 0 ? ((float)revenuePerPeriod[i] / maxRevenue) * maxBarHeight : 0f;
+            float targetHeight = week1Revenue > 0
+                ? Mathf.Clamp(baselineHeight * (revenuePerPeriod[i] / week1Revenue), 0f, maxBarHeight)
+                : 0f;
             int endRevenue = cumulativeRevenue + revenuePerPeriod[i];
 
             var barObj = Instantiate(barPrefab, chartArea);
@@ -381,11 +408,22 @@ public class SalesUI : MonoBehaviour
             if (i < completedWeeks)
             {
                 barImage.sizeDelta = new Vector2(barImage.sizeDelta.x, targetHeight);
-                
+
                 cumulativeRevenue = endRevenue;
                 totalRevenueText.text = $"{cumulativeRevenue:N0} G";
-                UpdateBestRank(GetRank(revenuePerPeriod[i], i)); // 복원 시에도 최고순위 누적
+                int restoredRank = GetRank(revenuePerPeriod[i], i);
+                UpdateBestRank(restoredRank); // 복원 시에도 최고순위 누적
                 UpdateRecordBadges(cumulativeRevenue);
+
+                float restoredRatio = week1Revenue > 0 ? revenuePerPeriod[i] / week1Revenue : 0f;
+                // barImage 높이를 막 바꾼 직후라 Bar의 레이아웃(자기 높이 보고)이 아직 재계산 전(다음 프레임에
+                // 지연 처리됨) 상태 — 이 시점에 점의 월드좌표를 읽으면 갱신 전 낡은 높이 기준으로 계산돼버려
+                // 강제로 즉시 재계산시킨 뒤에 점을 찍는다.
+                LayoutRebuilder.ForceRebuildLayoutImmediate(chartArea);
+                PlaceRankPoint(barImage, restoredRank);
+                AttachTooltip(barImage.gameObject,
+                    $"매출 {Mathf.RoundToInt(restoredRatio * 100f)}% ({revenuePerPeriod[i]:N0}G)",
+                    restoredRank > 0 ? $"{restoredRank}위" : "차트 밖");
                 continue;
             }
 
@@ -431,11 +469,18 @@ public class SalesUI : MonoBehaviour
                 weeklyRevenue = Mathf.RoundToInt(weeklyRevenue * (1f + firstSaleBonusPct / 100f));
             int rank = GetRank(weeklyRevenue, i);
             UpdateBestRank(rank);
-            
+
             if (rankText != null)
                 rankText.text = rank > 0 ? $"{rank}위" : "순위권 밖";
             totalRevenueText.text = $"{endRevenue:N0} G";
             UpdateRecordBadges(endRevenue);
+
+            float weekRatio = week1Revenue > 0 ? revenuePerPeriod[i] / week1Revenue : 0f;
+            LayoutRebuilder.ForceRebuildLayoutImmediate(chartArea); // 위와 동일 — 방금 바뀐 높이를 즉시 반영시킨 뒤 점을 찍음
+            PlaceRankPoint(barImage, rank);
+            AttachTooltip(barImage.gameObject,
+                $"매출 {Mathf.RoundToInt(weekRatio * 100f)}% ({revenuePerPeriod[i]:N0}G)",
+                rank > 0 ? $"{rank}위" : "차트 밖");
 
             MoneyManager.Instance.AddGold(weeklyRevenue);
             QuestManager.Instance?.UpdateProgress(QuestType.TotalRevenue, weeklyRevenue);
@@ -573,8 +618,14 @@ public class SalesUI : MonoBehaviour
     // 정상 동작하지만, 순위(GetRank)는 애니메이션 도중(수 초 뒤, 이미 콜백이 도착한 뒤) 판정되면서
     // Count==0이 깨져 매주 실제 공식(CalcRank)으로 새 버렸다 — "총 매출은 고정되는데 순위는 안 먹힘" 버그.
     // 실제로 판매까지 끝나 매출이 찍힌(totalRevenue>0) 프로젝트만 세고 진행 중인 자기 자신은 항상 제외한다.
+    // 디버그 전용 — true면 실제로 첫 판매여도 튜토리얼 고정값(매출 12,000G/순위 1·5·11) 대신 실제 공식을
+    // 그대로 태운다. 16-1 테스트에서 높은 매출/순위대의 차트 모습을 확인하고 싶을 때 CharacterEventTester가
+    // 잠깐 켰다가 테스트 종료 후 원복.
+    public static bool DebugForceRealFormula = false;
+
     bool IsTutorialFirstSale()
     {
+        if (DebugForceRealFormula) return false;
         return CompletedProjectManager.Instance != null
             && CompletedProjectManager.Instance.completedProjects.FindAll(p => p.totalRevenue > 0).Count == 0;
     }
@@ -590,38 +641,194 @@ public class SalesUI : MonoBehaviour
 
     int CalcRank(int weeklyRevenue)
     {
-        if (weeklyRevenue >= 430000) return 1;
-        if (weeklyRevenue >= 380000) return 2;
+        if (weeklyRevenue >= 500000) return 1;
+        if (weeklyRevenue >= 400000) return 2;
         if (weeklyRevenue >= 320000) return 3;
-        if (weeklyRevenue >= 270000) return 4;
-        if (weeklyRevenue >= 225000) return 5;
-        if (weeklyRevenue >= 175000) return 6;
-        if (weeklyRevenue >= 130000) return 7;
-        if (weeklyRevenue >= 95000)  return 8;
-        if (weeklyRevenue >= 70000)  return 9;
-        if (weeklyRevenue >= 53000)  return 10;
-        // 11~30위: 53,000(11위) ~ 27,000(30위)
-        if (weeklyRevenue >= 27000)
-            return Mathf.Clamp(Mathf.RoundToInt(30f - ((weeklyRevenue - 27000f) / 26000f * 19f)), 11, 30);
-        // 31~60위: 27,000(31위) ~ 12,000(60위)
-        if (weeklyRevenue >= 12000)
-            return Mathf.Clamp(Mathf.RoundToInt(60f - ((weeklyRevenue - 12000f) / 15000f * 29f)), 31, 60);
-        // 61~100위: 12,000(61위) ~ 5,000(100위)
-        if (weeklyRevenue >= 5000)
-            return Mathf.Clamp(Mathf.RoundToInt(100f - ((weeklyRevenue - 5000f) / 7000f * 39f)), 61, 100);
-        return 0; // 순위권 밖 (5,000 미만)
+        if (weeklyRevenue >= 256000) return 4;
+        if (weeklyRevenue >= 205000) return 5;
+        if (weeklyRevenue >= 162000) return 6;
+        if (weeklyRevenue >= 129000) return 7;
+        if (weeklyRevenue >= 102000) return 8;
+        if (weeklyRevenue >= 81000)  return 9;
+        if (weeklyRevenue >= 64000)  return 10;
+        // 11~30위: 64,000(11위) ~ 22,000(30위), r = 10 + (64,000-revenue)/2,100
+        if (weeklyRevenue >= 22000)
+            return Mathf.Clamp(Mathf.RoundToInt(10f + (64000f - weeklyRevenue) / 2100f), 11, 30);
+        // 31~60위: 22,000(31위) ~ 8,500(60위), r = 30 + (22,000-revenue)/450
+        if (weeklyRevenue >= 8500)
+            return Mathf.Clamp(Mathf.RoundToInt(30f + (22000f - weeklyRevenue) / 450f), 31, 60);
+        // 61~100위: 8,500(61위) ~ 2,100(100위), r = 60 + (8,500-revenue)/160
+        if (weeklyRevenue >= 2100)
+            return Mathf.Clamp(Mathf.RoundToInt(60f + (8500f - weeklyRevenue) / 160f), 61, 100);
+        return 0; // 순위권 밖 (2,100 미만)
     }
 
-    // 규모별 주차 분배
+    // 규모별 주차 분배 (2026-08-14 재조정 — 대작 9주차→8주차로 축소)
     float[] CalcDistribution(ProjectScale scale)
     {
         return scale switch
         {
             ProjectScale.Small  => new float[] { 0.50f, 0.30f, 0.20f },
-            ProjectScale.Medium => new float[] { 0.35f, 0.25f, 0.15f, 0.12f, 0.08f, 0.05f },
-            ProjectScale.Large  => new float[] { 0.24f, 0.18f, 0.15f, 0.12f, 0.10f, 0.08f, 0.06f, 0.04f, 0.03f },
+            ProjectScale.Medium => new float[] { 0.31f, 0.26f, 0.15f, 0.12f, 0.09f, 0.07f },
+            ProjectScale.Large  => new float[] { 0.24f, 0.18f, 0.15f, 0.13f, 0.11f, 0.08f, 0.07f, 0.04f },
             _ => new float[] { 0.50f, 0.30f, 0.20f }
         };
+    }
+
+    // ================= 순위-매출 이중축 차트 (2026-08-13) =================
+    // 세로축 전체를 순위 하나로 표현: 위쪽 1/3=1~10위 균등, 아래쪽 2/3=10~100위 균등.
+    // rank(1~100) → 0(맨 위,1위)~1(맨 아래,100위) 위치로 변환.
+    float AxisPositionFromTop01(int rank)
+    {
+        int r = Mathf.Clamp(rank, 1, 100);
+        if (r <= 10) return (r - 1) / 9f * (1f / 3f);
+        return (1f / 3f) + (r - 10) / 90f * (2f / 3f);
+    }
+
+    // 그 주차의 실제 순위를 BarImage 위에 점으로 찍고, 직전 점과 이어 선을 그린다(순위권 밖=0위는 100위 취급, 붉은색).
+    // 점/선을 Bar 루트가 아니라 "BarImage"(실제 막대 이미지)의 자식으로 붙이는 게 핵심.
+    // Bar 루트는 VerticalLayoutGroup으로 BarImage+PeriodLabel(주차 라벨, 높이 30)을 4px 간격으로 쌓기 때문에
+    // Bar 루트의 바닥은 PeriodLabel의 바닥이지 BarImage의 바닥이 아니다 — Bar 루트 기준으로 찍으면 점이
+    // PeriodLabel 쪽으로 처박힌다. BarImage 자체의 바닥-중앙을 앵커로 잡으면 라벨 높이/간격을 몰라도 항상
+    // 막대가 실제로 시작하는 지점 기준으로 찍힌다.
+    // ChartArea의 HorizontalLayoutGroup은 막대가 하나씩 추가될 때마다 전체 행을 다시 가운데 정렬해 기존
+    // 막대들의 X가 계속 밀리는데, BarImage의 자식으로 만들면 부모가 밀릴 때 점도 같이 밀려서 별도 갱신 로직
+    // 없이 항상 자기 막대 위에 붙어 있는다. 이전 주차와의 상대 간격은 재정렬로 변하지 않으므로, 연결선도
+    // "다음 막대의 자식"으로 한 번만 계산해 두면 이후 몇 번을 더 재정렬해도 계속 정확하다.
+    void PlaceRankPoint(RectTransform barImage, int rank)
+    {
+        bool offChart = rank <= 0;
+        int axisRank = offChart ? 100 : rank;
+
+        Transform newDot = CreateRankDot(barImage, axisRank, offChart);
+
+        if (_prevDot != null)
+            CreateLineSegment(barImage, _prevDot.position, newDot.position);
+
+        _prevDot = newDot;
+    }
+
+    // BarImage의 바닥-중앙(0.5, 0)을 앵커로 삼아, 그 지점에서 축 높이만큼 위로 띄운 위치에 점을 찍는다.
+    // BarImage는 childControlHeight=false라 자기 sizeDelta.y가 얼마든 바닥 앵커 자체는 흔들리지 않는다
+    // (Bar 루트의 VerticalLayoutGroup이 매 프레임 그 바닥을 다시 고정시켜줌).
+    Transform CreateRankDot(RectTransform parentBar, int axisRank, bool offChart)
+    {
+        float localY = (1f - AxisPositionFromTop01(axisRank)) * maxBarHeight;
+        var go = new GameObject("RankDot", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(LayoutElement));
+        go.transform.SetParent(parentBar, false);
+        // Bar 루트에 VerticalLayoutGroup(BarImage/PeriodLabel 배치용)이 붙어 있어, 이 플래그 없이 자식으로
+        // 넣으면 그 레이아웃 그룹이 점을 세 번째 행으로 취급해 위치/폭을 멋대로 덮어써 버린다 — 반드시 무시시킴.
+        go.GetComponent<LayoutElement>().ignoreLayout = true;
+        var rt = go.GetComponent<RectTransform>();
+        rt.anchorMin = new Vector2(0.5f, 0f);
+        rt.anchorMax = new Vector2(0.5f, 0f);
+        rt.pivot = new Vector2(0.5f, 0.5f);
+        rt.sizeDelta = new Vector2(12f, 12f);
+        rt.anchoredPosition = new Vector2(0f, localY);
+        var img = go.GetComponent<Image>();
+        if (rankDotSprite != null) img.sprite = rankDotSprite;
+        img.color = Color.white;
+        img.raycastTarget = false;
+        return go.transform;
+    }
+
+    // 직전 점(다른 Bar의 자식일 수 있음)에서 이번 점까지, 이번 Bar를 부모로 삼아 선을 하나 만든다.
+    // 두 월드좌표를 이번 Bar의 로컬좌표로 변환해 한 번만 굽는다 — 이후 레이아웃 재정렬은 모든 막대를
+    // 동일하게 밀 뿐 막대 간 상대 간격은 바꾸지 않으므로, 이 상대 위치는 계속 유효하다.
+    void CreateLineSegment(RectTransform parentBar, Vector3 fromWorld, Vector3 toWorld)
+    {
+        var go = new GameObject("RankSeg", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(LayoutElement));
+        go.transform.SetParent(parentBar, false);
+        go.GetComponent<LayoutElement>().ignoreLayout = true; // 위와 동일한 이유로 Bar의 VerticalLayoutGroup 무시
+        var rt = go.GetComponent<RectTransform>();
+        rt.anchorMin = new Vector2(0.5f, 0f);
+        rt.anchorMax = new Vector2(0.5f, 0f);
+        rt.pivot = new Vector2(0f, 0.5f);
+
+        // InverseTransformPoint는 Bar의 피벗(중심) 기준 좌표를 주는데, 이 오브젝트의 앵커는 (0.5,0)(Bar 바닥-중앙)이라
+        // 기준점이 다르다 — Bar 피벗 기준 Y에서 rect.y(=바닥 오프셋, 즉 -높이/2)를 빼줘야 앵커 기준 Y로 정확히 변환된다.
+        // X는 피벗.x와 앵커.x가 둘 다 0.5로 같아서 보정이 필요 없다.
+        Vector2 rawA = parentBar.InverseTransformPoint(fromWorld);
+        Vector2 rawB = parentBar.InverseTransformPoint(toWorld);
+        Vector2 a = new Vector2(rawA.x, rawA.y - parentBar.rect.y);
+        Vector2 b = new Vector2(rawB.x, rawB.y - parentBar.rect.y);
+        Vector2 diff = b - a;
+        rt.sizeDelta = new Vector2(diff.magnitude, 3f);
+        rt.anchoredPosition = a;
+        rt.localRotation = Quaternion.Euler(0f, 0f, Mathf.Atan2(diff.y, diff.x) * Mathf.Rad2Deg);
+
+        var img = go.GetComponent<Image>();
+        img.color = new Color(0.16f, 0.5f, 0.55f, 0.9f);
+        img.raycastTarget = false;
+    }
+
+    // ---- 툴팁: 막대="매출 ○○% (○○○G)" — 항상 원래 단위로 환산해 표시 ----
+    void EnsureTooltip()
+    {
+        if (tooltipRT != null) return;
+        var go = new GameObject("Tooltip", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        go.transform.SetParent(chartArea.parent, false); // ChartPanel 하위 — ChartArea의 HorizontalLayoutGroup 영향 안 받음
+        tooltipRT = go.GetComponent<RectTransform>();
+        tooltipRT.anchorMin = new Vector2(0.5f, 0.5f);
+        tooltipRT.anchorMax = new Vector2(0.5f, 0.5f);
+        tooltipRT.pivot = new Vector2(0f, 0f);
+        tooltipRT.sizeDelta = new Vector2(160f, 46f);
+        var bg = go.GetComponent<Image>();
+        bg.color = new Color(0.15f, 0.1f, 0.1f, 0.85f);
+        bg.raycastTarget = false;
+
+        tooltipLine1 = CreateTooltipLabel(tooltipRT, "line1", 25f, new Color(0.86f, 0.66f, 0.32f, 1f));
+        tooltipLine2 = CreateTooltipLabel(tooltipRT, "line2", 5f, new Color(0.4f, 0.85f, 0.8f, 1f));
+
+        go.SetActive(false);
+    }
+
+    TextMeshProUGUI CreateTooltipLabel(Transform parent, string name, float bottomOffset, Color color)
+    {
+        var go = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(TextMeshProUGUI));
+        go.transform.SetParent(parent, false);
+        var rt = go.GetComponent<RectTransform>();
+        rt.anchorMin = new Vector2(0f, 0f);
+        rt.anchorMax = new Vector2(1f, 0f);
+        rt.pivot = new Vector2(0.5f, 0f);
+        rt.sizeDelta = new Vector2(-14f, 20f);
+        rt.anchoredPosition = new Vector2(0f, bottomOffset);
+        var label = go.GetComponent<TextMeshProUGUI>();
+        if (chartFont != null) label.font = chartFont;
+        label.fontSize = 15f;
+        label.alignment = TextAlignmentOptions.Left;
+        label.color = color;
+        label.raycastTarget = false;
+        return label;
+    }
+
+    void AttachTooltip(GameObject target, string line1, string line2)
+    {
+        var trigger = target.AddComponent<EventTrigger>();
+
+        var enter = new EventTrigger.Entry { eventID = EventTriggerType.PointerEnter };
+        enter.callback.AddListener((_) => ShowTooltip(target.GetComponent<RectTransform>(), line1, line2));
+        trigger.triggers.Add(enter);
+
+        var exit = new EventTrigger.Entry { eventID = EventTriggerType.PointerExit };
+        exit.callback.AddListener((_) => HideTooltip());
+        trigger.triggers.Add(exit);
+    }
+
+    void ShowTooltip(RectTransform anchorTarget, string line1, string line2)
+    {
+        if (tooltipRT == null) return;
+        Vector2 local = ((RectTransform)chartArea.parent).InverseTransformPoint(anchorTarget.position);
+        tooltipRT.anchoredPosition = local + new Vector2(-tooltipRT.sizeDelta.x / 2f, 14f);
+        tooltipLine1.text = line1;
+        tooltipLine2.text = line2;
+        tooltipRT.gameObject.SetActive(true);
+        tooltipRT.SetAsLastSibling();
+    }
+
+    void HideTooltip()
+    {
+        if (tooltipRT != null) tooltipRT.gameObject.SetActive(false);
     }
 
     // 확인(닫기) — 우측하단으로 압축되며 접힘

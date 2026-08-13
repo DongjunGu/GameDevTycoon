@@ -30,6 +30,8 @@ public class TrainingPanelUI : MonoBehaviour
     [Header("ThirdPanel")]
     public TextMeshProUGUI successRateText; // SuccessPanel 자식
     public TextMeshProUGUI failRateText;    // FailPanel 자식
+    [Tooltip("RatePanel/RateChildPanel/DownText — 하락확률. 0이면 GameObject 자체를 비활성화")]
+    public TextMeshProUGUI downRateText;
 
     [Header("BottomPanel")]
     public TextMeshProUGUI costText;
@@ -43,6 +45,13 @@ public class TrainingPanelUI : MonoBehaviour
 
     private EmployeeData _selected;
     private System.Action _onClosed; // 카드 컨텍스트 등에서 닫힐 때 1회 호출
+
+    // 하급/중급/상급 강화권 사용 예약 — "다음 강화 1회" 성공확률 보너스(%p, 5/10/100). 세션 한정(저장 안 함).
+    // 아이템은 여기선 아직 소모 안 됨 — 실제 강화 버튼을 눌러 강화가 실행되는 순간(OnClickEnhance)에
+    // _pendingBoostItemId로 그때 소비한다. 패널을 그냥 닫으면(HideDetail) 소모 없이 예약만 취소된다.
+    private int _pendingBoostPercent;
+    private string _pendingBoostItemId;
+    private string _pendingBoostItemName;
 
     // BadgePanel 내부 요소 (이름으로 1회 탐색 캐시)
     private bool _badgeResolved;
@@ -90,6 +99,17 @@ public class TrainingPanelUI : MonoBehaviour
         OnSelectEmployee(emp);
     }
 
+    // 아이템창에서 하급/중급/상급 강화권 "사용하기"를 눌렀을 때(EmployeeListUI.OpenForEnhanceWithBoost)
+    // 호출 — 이 시점엔 아이템을 아직 소모하지 않는다(직원을 자유롭게 둘러보다 패널만 닫아버릴 수도
+    // 있으므로). 값만 들고 있다가 실제로 강화 버튼을 눌러 강화가 실행되는 순간(OnClickEnhance) 그때
+    // 비로소 소모한다.
+    public void SetPendingBoost(int boostPercent, string itemId, string itemName)
+    {
+        _pendingBoostPercent  = boostPercent;
+        _pendingBoostItemId   = itemId;
+        _pendingBoostItemName = itemName;
+    }
+
     public void OnClickClose()
     {
         GameTimeManager.Instance?.StartTime();
@@ -111,6 +131,9 @@ public class TrainingPanelUI : MonoBehaviour
     void HideDetail()
     {
         _selected = null;
+        _pendingBoostPercent  = 0;
+        _pendingBoostItemId   = null;
+        _pendingBoostItemName = null;
 
         // 선택 해제 시 이전(또는 에디터 디자인타임) 텍스트가 남아있지 않도록 전부 비움.
         SetText(curEnhanceText, "");    SetText(curDevelopText, "");   SetText(curPlanningText, "");
@@ -118,6 +141,8 @@ public class TrainingPanelUI : MonoBehaviour
         SetText(expEnhanceText, "");    SetText(expDevelopText, "");   SetText(expPlanningText, "");
         SetText(expArtText, "");        SetText(expCreativityText, ""); SetText(expSalaryText, "");
         SetText(successRateText, "");   SetText(failRateText, "");     SetText(costText, "");
+        SetText(downRateText, "");
+        if (downRateText != null) downRateText.gameObject.SetActive(false);
 
         ResolveBadge();
         SetText(_badgeEnhanceText, ""); SetText(_badgePotentialText, ""); SetText(_badgeGradeText, "");
@@ -135,7 +160,7 @@ public class TrainingPanelUI : MonoBehaviour
         ColorStatPanels(emp); // 주스탯 패널만 강조색, 나머지 흰색
 
         // SPLeftPanel — 현재 수치 (raw 스킬 기준)
-        SetText(curEnhanceText,    $"현재 Lv{emp.enhancementLevel}");
+        SetText(curEnhanceText,    $"현재 +{emp.enhancementLevel}강");
         SetText(curDevelopText,    $"개발: {emp.developSkill}");
         SetText(curPlanningText,   $"기획: {emp.planningSkill}");
         SetText(curArtText,        $"아트: {emp.artSkill}");
@@ -155,6 +180,7 @@ public class TrainingPanelUI : MonoBehaviour
             SetText(successRateText, "성공확률 : -");
             SetText(failRateText,    "실패확률: -");
             SetText(costText,        "-");
+            if (downRateText != null) downRateText.gameObject.SetActive(false);
 
             if (enhanceButton != null) enhanceButton.interactable = false;
             return;
@@ -166,7 +192,7 @@ public class TrainingPanelUI : MonoBehaviour
         (int min, int max) subGain = (subAvg, subAvg);
 
         // SPRightPanel — 강화 후 예상 (현재 + 증가 범위)
-        SetText(expEnhanceText,    $"강화 후 Lv{emp.enhancementLevel + 1}");
+        SetText(expEnhanceText,    $"강화 후 +{emp.enhancementLevel + 1}강");
         SetText(expDevelopText,    ExpStat("개발",   emp.developSkill,    StatIsMain(emp, "develop")  ? mainGain : subGain));
         SetText(expPlanningText,   ExpStat("기획",   emp.planningSkill,   StatIsMain(emp, "planning") ? mainGain : subGain));
         SetText(expArtText,        ExpStat("아트",   emp.artSkill,        StatIsMain(emp, "art")      ? mainGain : subGain));
@@ -175,10 +201,23 @@ public class TrainingPanelUI : MonoBehaviour
         // 강화 후 연봉 = 현재 + 다음 강화 연봉 상승량(금수저 반영)
         SetText(expSalaryText, $"연봉: {emp.salary + EmployeeManager.Instance.GetNextSalaryGain(emp):N0} G");
 
-        // ThirdPanel — 성공/실패 확률 (실패 = 100 - 성공)
-        int success = EmployeeEnhancement.SuccessRate(emp);
-        SetText(successRateText, $"성공확률 : {success}%");
-        SetText(failRateText,    $"실패확률: {100 - success}%");
+        // ThirdPanel — 성공/실패/하락 확률. 보류 중인 강화권(_pendingBoostPercent)이 있으면 기존 확률에
+        // 취소선+반투명을 걸고 그 옆에 보너스 반영된 확률을 같이 보여준다(성공/실패만 — 하락확률은 항상
+        // 보정된 값 하나만 표시).
+        var baseRates = EmployeeEnhancement.GetRates(emp);
+        if (_pendingBoostPercent > 0)
+        {
+            var boosted = EmployeeEnhancement.GetRates(emp, _pendingBoostPercent);
+            SetText(successRateText, RateWithBoostText("성공확률", baseRates.success,       boosted.success));
+            SetText(failRateText,    RateWithBoostText("실패확률", 100f - baseRates.success, 100f - boosted.success));
+            SetDownRate(boosted.downgrade);
+        }
+        else
+        {
+            SetText(successRateText, $"성공확률 : {Mathf.RoundToInt(baseRates.success)}%");
+            SetText(failRateText,    $"실패확률 : {Mathf.RoundToInt(100f - baseRates.success)}%");
+            SetDownRate(baseRates.downgrade);
+        }
 
         // BottomPanel — 필요한 재화
         int cost = EmployeeEnhancement.GetCost(emp);
@@ -214,7 +253,18 @@ public class TrainingPanelUI : MonoBehaviour
         int oldP = _selected.planningSkill, oldD = _selected.developSkill;
         int oldA = _selected.artSkill,      oldC = _selected.creativitySkill;
 
-        var outcome = EmployeeEnhancement.EnhanceOnce(_selected);
+        // 보류 중인 강화권은 이번 클릭 1회로 소비 — 결과(성공/유지/하락/방어) 무관하게 리셋.
+        // 아이템 자체는 지금(강화가 실제로 실행되는 이 시점)에 소모한다 — 직원을 둘러보다 패널만 닫으면
+        // 여기까지 안 와서 소모되지 않는다.
+        int boost = _pendingBoostPercent;
+        if (!string.IsNullOrEmpty(_pendingBoostItemId))
+            ItemManager.Instance?.UseItemDirect(_pendingBoostItemId);
+        _pendingBoostPercent  = 0;
+        _pendingBoostItemId   = null;
+        _pendingBoostItemName = null;
+
+        var emp = _selected; // ShowPortrait 콜백에서 RefreshDetail 이후에도 안전하게 쓰려고 미리 캡처
+        var outcome = EmployeeEnhancement.EnhanceOnce(_selected, boost);
 
         if (!deferSave)
         {
@@ -224,8 +274,9 @@ public class TrainingPanelUI : MonoBehaviour
         }
 
         RefreshDetail();
+        EmployeeListUI.Instance?.RefreshSlotLevelText(emp.id); // 우측 목록 슬롯 LevelText 즉시 갱신
 
-        ShowEnhanceResult(outcome == EnhanceOutcome.Success, oldLevel, oldP, oldD, oldA, oldC);
+        ShowEnhanceResult(outcome, oldLevel, oldP, oldD, oldA, oldC);
     }
 
     // ── 헬퍼 ─────────────────────────────────
@@ -311,6 +362,23 @@ public class TrainingPanelUI : MonoBehaviour
         if (t != null) t.text = s;
     }
 
+    // 강화권 보너스 적용 전/후를 한 줄로 — 기존 값은 취소선+반투명(알파 절반), 옆에 보정된 값.
+    static string RateWithBoostText(string label, float oldPct, float newPct)
+    {
+        int o = Mathf.RoundToInt(oldPct);
+        int n = Mathf.RoundToInt(newPct);
+        return $"{label} : <s><alpha=#80>{o}%</alpha></s> {n}%";
+    }
+
+    // 하락확률 텍스트 — 0이면 GameObject 자체를 비활성화(요청 사양).
+    void SetDownRate(float downgrade)
+    {
+        if (downRateText == null) return;
+        int d = Mathf.RoundToInt(downgrade);
+        downRateText.gameObject.SetActive(d > 0);
+        if (d > 0) downRateText.text = $"하락확률 : {d}%";
+    }
+
     // ════════════════ 강화 결과 패널 (성공/실패) 애니메이션 ════════════════
     [Header("Result Animation (TrainingResultPanel)")]
     [Tooltip("TrainingResultPanel 루트만 연결 — 하위 오브젝트는 이름으로 자동 탐색")]
@@ -345,17 +413,22 @@ public class TrainingPanelUI : MonoBehaviour
     public float sprinkleAlphaMax = 1f;
 
     bool _resultResolved;
-    GameObject _successRoot, _failRoot, _ellipse, _shinePanel;
+    // 유지=Fail / 하락=Down / 방어=Protected — 셋 다 TrainingFailPanel과 동일한 구조(FaillImage+sprinkle
+    // 7개, TouchText, ConfirmBtn)를 그대로 복제한 패널이라 sprinkle/터치텍스트를 패널별로 따로 들고 있는다
+    // (예전엔 실패 패널 1개뿐이라 전역 FindDeep 한 번으로 충분했지만, 이제 이름이 겹쳐서 루트별로 스코프해야 함).
+    GameObject _successRoot, _failRoot, _downRoot, _protectedRoot, _ellipse, _shinePanel;
     Image[] _shineEffects;
     readonly List<Tween> _shineTweens = new();
-    Image[] _sprinkles;
+    Image[] _sprinkles; // 현재 재생 중인 패널의 sprinkle 세트 — PlayFailStyleAnim 호출 시마다 갱신
+    Image[] _failSprinkles, _downSprinkles, _protectedSprinkles;
     readonly List<Tween> _sprinkleTweens = new();
     RectTransform _portraitEllipseRT;
     Image _portraitEllipseImg;
     GameObject _nameTextGo, _enhBeforeGo, _enhArrowGo, _enhAfterGo;
     RectTransform _resultImageRT, _detailRT;
     TextMeshProUGUI _nameText, _enhBefore, _enhAfter, _touchText, _failDetailText;
-    Button[] _confirmBtns; // [0]=SuccessPanel, [1]=FailPanel
+    TextMeshProUGUI _failTouchText, _downTouchText, _protectedTouchText;
+    readonly List<Button> _confirmBtns = new(); // Success/Fail/Down/Protected 전부 — 전부 OnClickResultConfirm
     VerticalLayoutGroup _vlg;
     RectTransform[] _statPanels;
     CanvasGroup[]   _statPanelCGs; // 각 스탯 패널(PlanningPanel 등) CanvasGroup
@@ -371,6 +444,8 @@ public class TrainingPanelUI : MonoBehaviour
 
         _successRoot   = FindDeep(root, "TrainingSuccessPanel")?.gameObject;
         _failRoot      = FindDeep(root, "TrainingFailPanel")?.gameObject;
+        _downRoot      = FindDeep(root, "TrainingDownPanel")?.gameObject;
+        _protectedRoot = FindDeep(root, "TrainingProtectedPanel")?.gameObject;
         _ellipse = FindDeep(root, "EllipseImage")?.gameObject;
         var portraitEllipseT = FindDeep(root, "EllipseImage");
         _portraitEllipseRT  = portraitEllipseT as RectTransform;
@@ -392,19 +467,12 @@ public class TrainingPanelUI : MonoBehaviour
             _shineEffects = shines.ToArray();
         }
 
-        // TrainingFailPanel/.../FaillImage 자식 중 "sprinkle" 전부 수집(전부 동일하게 이름 붙어있음).
-        var failImageT = FindDeep(root, "FaillImage");
-        if (failImageT != null)
-        {
-            var sprinkles = new List<Image>();
-            foreach (Transform child in failImageT)
-            {
-                if (!child.name.Equals("sprinkle", System.StringComparison.OrdinalIgnoreCase)) continue;
-                var img = child.GetComponent<Image>();
-                if (img != null) sprinkles.Add(img);
-            }
-            _sprinkles = sprinkles.ToArray();
-        }
+        // Fail/Down/Protected 세 패널 모두 자기 하위에 FaillImage/.../sprinkle(들)을 각자 가지고 있음 —
+        // 이름이 겹치므로(전부 "FaillImage"/"sprinkle") 반드시 각 패널 루트 밑으로 스코프해서 수집해야
+        // 한다(전역으로 찾으면 항상 트리 순서상 첫 번째 것만 잡혀 나머지 패널이 빈 sprinkle을 갖게 됨).
+        _failSprinkles      = _failRoot      != null ? CollectSprinkles(_failRoot.transform)      : null;
+        _downSprinkles      = _downRoot      != null ? CollectSprinkles(_downRoot.transform)      : null;
+        _protectedSprinkles = _protectedRoot != null ? CollectSprinkles(_protectedRoot.transform)  : null;
 
         _resultImageRT = FindDeep(root, "ResultImage") as RectTransform;
         _detailRT      = FindDeep(root, "ResultDetailPanel") as RectTransform;
@@ -414,8 +482,12 @@ public class TrainingPanelUI : MonoBehaviour
         _enhBefore      = FindText(root, "beforeText");    _enhBeforeGo = _enhBefore != null ? _enhBefore.gameObject : null;
         _enhAfter       = FindText(root, "afterText");     _enhAfterGo  = _enhAfter  != null ? _enhAfter.gameObject  : null;
         var arrow       = FindDeep(root, "arrowText");     _enhArrowGo  = arrow != null ? arrow.gameObject : null;
-        _touchText      = FindText(root, "TouchText");
-        _failDetailText = FindText(root, "FailDetailText");
+        // TouchText는 4개 패널(Success/Fail/Down/Protected) 전부에 동일한 이름으로 있어서 각자 스코프해서 찾아야 함.
+        _touchText          = _successRoot   != null ? FindText(_successRoot.transform,   "TouchText") : null;
+        _failTouchText      = _failRoot      != null ? FindText(_failRoot.transform,      "TouchText") : null;
+        _downTouchText      = _downRoot      != null ? FindText(_downRoot.transform,      "TouchText") : null;
+        _protectedTouchText = _protectedRoot != null ? FindText(_protectedRoot.transform, "TouchText") : null;
+        _failDetailText     = FindText(root, "FailDetailText"); // TrainingFailPanel 전용 — Down/Protected엔 없음
 
         string[] names = { "PlanningPanel", "DevPanel", "ArtPanel", "CreativityPanel" };
         _statPanels   = new RectTransform[4];
@@ -434,17 +506,33 @@ public class TrainingPanelUI : MonoBehaviour
             _statAfter[i]  = TmpUnder(p, "AfterPanel");
         }
 
-        _confirmBtns = new Button[2];
-        GameObject[] roots = { _successRoot, _failRoot };
-        for (int i = 0; i < 2; i++)
+        _confirmBtns.Clear();
+        GameObject[] roots = { _successRoot, _failRoot, _downRoot, _protectedRoot };
+        foreach (var r in roots)
         {
-            if (roots[i] == null) continue;
-            var btn = FindDeep(roots[i].transform, "ConfirmBtn")?.GetComponent<Button>();
+            if (r == null) continue;
+            var btn = FindDeep(r.transform, "ConfirmBtn")?.GetComponent<Button>();
             if (btn == null) continue;
             btn.onClick.RemoveListener(OnClickResultConfirm);
             btn.onClick.AddListener(OnClickResultConfirm);
-            _confirmBtns[i] = btn;
+            _confirmBtns.Add(btn);
         }
+    }
+
+    // FaillImage 자식의 sprinkle(들) — Fail/Down/Protected 세 패널이 각자 동일한 구조를 복제해 가지고
+    // 있어서, root를 스코프해 넘겨야 서로 안 섞인다.
+    static Image[] CollectSprinkles(Transform panelRoot)
+    {
+        var faillImageT = FindDeep(panelRoot, "FaillImage");
+        if (faillImageT == null) return null;
+        var sprinkles = new List<Image>();
+        foreach (Transform child in faillImageT)
+        {
+            if (!child.name.Equals("sprinkle", System.StringComparison.OrdinalIgnoreCase)) continue;
+            var img = child.GetComponent<Image>();
+            if (img != null) sprinkles.Add(img);
+        }
+        return sprinkles.ToArray();
     }
 
     static TextMeshProUGUI TmpUnder(Transform root, string childName)
@@ -453,8 +541,9 @@ public class TrainingPanelUI : MonoBehaviour
         return c != null ? c.GetComponentInChildren<TextMeshProUGUI>(true) : null;
     }
 
-    // 성공이면 TrainingSuccessPanel 애니메이션, 아니면 TrainingFailPanel 표시.
-    void ShowEnhanceResult(bool success, int oldLevel, int oldP, int oldD, int oldA, int oldC)
+    // Success면 TrainingSuccessPanel 애니메이션. Maintain/Downgrade/Protected는 전부 같은 구조를 복제한
+    // "실패풍" 패널(FaillImage+sprinkle+TouchText+ConfirmBtn) 중 해당하는 것 하나만 켠다.
+    void ShowEnhanceResult(EnhanceOutcome outcome, int oldLevel, int oldP, int oldD, int oldA, int oldC)
     {
         ResolveResultRefs();
         if (trainingResultPanel == null) return;
@@ -462,31 +551,50 @@ public class TrainingPanelUI : MonoBehaviour
         KillResultTweens();
         trainingResultPanel.SetActive(true);
         SetConfirmInteractable(false); // 애니 끝날 때까지 터치 차단
-        if (_successRoot != null) _successRoot.SetActive(success);
-        if (_failRoot    != null) _failRoot.SetActive(!success);
+
+        bool success = outcome == EnhanceOutcome.Success;
+        SetActiveSafe(_successRoot,   success);
+        SetActiveSafe(_failRoot,      outcome == EnhanceOutcome.Maintain);
+        SetActiveSafe(_downRoot,      outcome == EnhanceOutcome.Downgrade);
+        SetActiveSafe(_protectedRoot, outcome == EnhanceOutcome.Protected);
         ApplyPortrait(_selected);
 
         if (success)
         {
             PlaySuccessAnim(oldLevel, oldP, oldD, oldA, oldC);
+            return;
         }
-        else
+
+        // 실패풍 공통 연출: EllipseImage(+ShinePanel) 숨김 + TouchText 깜빡임 + sprinkle 반짝임/맥동.
+        SetActiveSafe(_ellipse, false);
+        SetActiveSafe(_shinePanel, false);
+        SetConfirmInteractable(true);
+
+        TextMeshProUGUI touch;
+        switch (outcome)
         {
-            // 실패: EllipseImage(+ShinePanel) 숨김 + 캐릭터 이름 삽입 + TouchText 깜빡임 + sprinkle 반짝임/맥동
-            SetActiveSafe(_ellipse, false);
-            SetActiveSafe(_shinePanel, false);
-            string empName = _selected != null ? _selected.employeeName : "";
-            SetText(_failDetailText, $"'{empName}' 강화에 성공하지 못했습니다");
-            SetConfirmInteractable(true);
-            var failTouch = _failRoot != null ? FindText(_failRoot.transform, "TouchText") : null;
-            var touch = failTouch ?? _touchText;
-            if (touch != null)
-            {
-                touch.gameObject.SetActive(true);
-                _blinkTween = touch.DOFade(0.25f, 0.45f).SetLoops(-1, LoopType.Yoyo).SetUpdate(true);
-            }
-            StartSprinkles();
+            case EnhanceOutcome.Downgrade:
+                _sprinkles = _downSprinkles;
+                touch = _downTouchText;
+                break;
+            case EnhanceOutcome.Protected:
+                _sprinkles = _protectedSprinkles;
+                touch = _protectedTouchText;
+                break;
+            default: // Maintain — 기존 "실패" 패널. 성공하지 못했다는 문구는 여기서만 표시.
+                _sprinkles = _failSprinkles;
+                touch = _failTouchText ?? _touchText;
+                string empName = _selected != null ? _selected.employeeName : "";
+                SetText(_failDetailText, $"'{empName}' 강화에 성공하지 못했습니다");
+                break;
         }
+
+        if (touch != null)
+        {
+            touch.gameObject.SetActive(true);
+            _blinkTween = touch.DOFade(0.25f, 0.45f).SetLoops(-1, LoopType.Yoyo).SetUpdate(true);
+        }
+        StartSprinkles();
     }
 
     void PlaySuccessAnim(int oldLevel, int oldP, int oldD, int oldA, int oldC)

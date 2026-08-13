@@ -2038,21 +2038,34 @@ public class TutorialController : MonoBehaviour
     // ⚠️ 정상 플레이 흐름(자연 진행/재접속 재개)에서는 절대 호출하지 말 것 — 순수 디버그 전용.
     public void ForceResetAndStart(IEnumerator nextRoutine)
     {
+        ForceResetToNormal();
+        StartCoroutine(nextRoutine);
+    }
+
+    // 디버그 "튜토리얼 완전 해제" 전용(CharacterEventTester.DisableTutorial) — ForceResetAndStart와 같은
+    // 정리를 하되 다음 루틴을 새로 시작하지 않고 그대로 "일반 플레이 상태"로 남긴다. 이걸 안 부르고
+    // OnboardingState.Mark*Done()만 죽 부르면, 그 순간 화면에 떠 있던 하이라이트/TutorialPanel/시간정지/
+    // AllowMovementWhileStopped 하드락은 전부 고아로 남아 절대 안 풀린다(진행 중이던 코루틴이 안 죽으므로).
+    // ⚠️ 정상 플레이 흐름에서는 절대 호출하지 말 것 — 순수 디버그 전용.
+    public void ForceResetToNormal()
+    {
         StopAllCoroutines(); // 진행 중이던 PlayTutorialX() 전부 중단(그 안의 BeginDimTimeStop 등도 함께 죽음)
 
         EnsureHighlighter();
-        _highlighter.ForceHideImmediate(); // dim/구멍/캐처/손 아이콘 즉시 정리
+        _highlighter.ForceHideImmediate();       // dim/구멍/캐처/손 아이콘 즉시 정리
+        TutorialPanelUI.Instance?.ForceHideImmediate(); // 대사창이 도중에 떠 있었다면 즉시 숨김
 
-        // _timeStopped는 방금 죽인 코루틴이 걸어뒀을 수 있는 상태라 신뢰 불가 — 무조건 풀어서 재개.
+        // _timeStopped/AllowMovementWhileStopped는 방금 죽인 코루틴이 걸어뒀을 수 있는 상태라 신뢰 불가
+        // — 무조건 풀어서 재개.
         _timeStopped = false;
         OnboardingState.TutorialActive = false;
+        if (GameTimeManager.Instance != null)
+            GameTimeManager.Instance.AllowMovementWhileStopped = false;
         GameTimeManager.Instance?.UnlockTime();      // 혹시 걸려있던 하드락(LockTime)까지 확실히 해제
         GameTimeManager.Instance?.ForceStartTime();
 
         // 메뉴 버튼 상태를 지금 이 순간 기준으로 재평가 — 폴링 코루틴이 이미 끝나 잠들어있었다면 다시 깨움.
         FindObjectOfType<MenuController>()?.RefreshMenuLockState();
-
-        StartCoroutine(nextRoutine);
     }
 
     // ── dim 동안 시간 정지 (패널 켜는 것과 동일) ──────────────────────────────
