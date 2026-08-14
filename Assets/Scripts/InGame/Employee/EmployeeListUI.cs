@@ -120,6 +120,14 @@ public class EmployeeListUI : MonoBehaviour
     private bool _forceFireMode;
     private System.Action<bool> _onForceFireDone; // bool: 실제로 해고했는지(true) / 취소·닫기(false)
 
+    // 이 패널이 자체적으로 GameTimeManager.StopTime()+ModalGate.Register(this) 를 쥐고 있는 중인지.
+    // OpenList/OpenListForEnhance/OpenForEnhance/OpenForForceFire(신규 진입) 에서 true, OnClickClose/
+    // CloseForceFireMode(완전 종료)에서 false. OpenListForEnhance 가 이미 열려있는 세션(아이템버튼→
+    // 강화권 사용 흐름의 OpenForEnhanceWithBoost) 위에서 또 호출될 때 Stop/Register 를 중복으로 쌓지
+    // 않기 위한 가드 — 안 그러면 StartTime 카운트가 안 맞아 패널을 다 닫아도 시간이 영영 안 풀리고
+    // MenuController.OnTimeStopChanged(false) 가 안 불려 메뉴 버튼이 사라진 채로 남는다.
+    private bool _holdingModal;
+
     GameObject Root => panelRoot != null ? panelRoot : gameObject;
 
     void Awake()
@@ -145,6 +153,7 @@ public class EmployeeListUI : MonoBehaviour
     {
         GameTimeManager.Instance?.StopTime();
         ModalGate.I.Register(this);
+        _holdingModal = true;
         _selectedId = ""; // 진입 시 맨 위(첫) 직원 자동 선택
         Root.SetActive(true);
         ResetSlide();      // 항상 InfoPanel 부터 시작
@@ -158,6 +167,7 @@ public class EmployeeListUI : MonoBehaviour
         if (_forceFireMode) { CloseForceFireMode(fired: false); return; }
         GameTimeManager.Instance?.StartTime();
         ModalGate.I.Unregister(this);
+        _holdingModal = false;
         Root.SetActive(false);
     }
 
@@ -417,6 +427,7 @@ public class EmployeeListUI : MonoBehaviour
 
         GameTimeManager.Instance?.StopTime();
         ModalGate.I.Register(this);
+        _holdingModal = true;
         _selectedId = ""; // 진입 시 맨 위(첫) 직원 자동 선택
         Root.SetActive(true);
         ResetSlide();
@@ -456,6 +467,7 @@ public class EmployeeListUI : MonoBehaviour
         ApplyForceFireModeVisual(false);
         GameTimeManager.Instance?.StartTime();
         ModalGate.I.Unregister(this);
+        _holdingModal = false;
         Root.SetActive(false);
 
         var cb = _onForceFireDone;
@@ -633,8 +645,15 @@ public class EmployeeListUI : MonoBehaviour
         // OpenList()를 그대로 쓰면 그 내부의 PlayOpenIntro()가 "InfoPanel 노출"을 목표로 코루틴을 먼저
         // 시작해버려서, 뒤이은 SetSlideInstant(true)로 순간이동해도 그 코루틴이 다시 InfoPanel로 되돌려놓는다.
         // OpenForEnhance와 동일하게 슬라이드를 먼저 확정한 뒤 PlayOpenIntro()를 호출해야 한다.
-        GameTimeManager.Instance?.StopTime();
-        ModalGate.I.Register(this);
+        // 아이템버튼→강화권 사용(OpenForEnhanceWithBoost)처럼 이 패널이 이미 열려 세션(시간정지+
+        // ModalGate)을 쥔 채로 호출될 수 있다 — 이땐 또 Stop/Register 하면 나중에 OnClickClose 가
+        // 한 번만 풀어줘서 카운트가 안 맞아 시간이 영영 안 풀리는 버그(메뉴 버튼 실종)로 이어진다.
+        if (!_holdingModal)
+        {
+            GameTimeManager.Instance?.StopTime();
+            ModalGate.I.Register(this);
+            _holdingModal = true;
+        }
         _selectedId = ""; // 진입 시 맨 위(첫) 직원 자동 선택
         Root.SetActive(true);
         SetSlideInstant(true);  // InfoPanel 대신 TrainingPanel 부터 (애니 없이)
@@ -651,16 +670,15 @@ public class EmployeeListUI : MonoBehaviour
             TutorialController.Instance.StartCoroutine(TutorialController.Instance.PlayTutorial17_2());
     }
 
-    // 하급/중급/상급 강화권 전용 — ItemDetailUI "사용하기"에서 곧장 호출. 아이템 사용 모드(선택→확인버튼)를
-    // 거치지 않고 바로 직원목록+TrainingPanel을 띄우고 boost를 미리 걸어둔다. 실제 아이템 소모는 나중에
-    // TrainingPanelUI.OnClickEnhance가 강화를 실제로 실행하는 순간(패널을 그냥 닫으면 소모 안 됨).
+    // 하급/중급/상급 강화권 전용 — ItemDetailUI "사용하기"에서 곧장 호출. 그 시점에 이미
+    // ItemManager.ReserveEnhanceBoost 로 아이템 소모 + 예약이 서버에 저장된 뒤라, 여기선 그냥
+    // 아이템 사용 모드(선택→확인버튼)를 거치지 않고 바로 직원목록+TrainingPanel만 띄운다.
+    // TrainingPanelUI 는 예약을 ItemManager.PendingBoostRow 로 직접 읽는다(로컬 상태 없음).
     public void OpenForEnhanceWithBoost(ItemChartRow row)
     {
         if (row == null) return;
         _useItemMode = false; // 혹시 이전 상태가 남아있어도 일반 강화 화면으로 확실히 전환
         ApplyUseItemModeVisual(false);
-
-        TrainingPanelUI.Instance?.SetPendingBoost(row.effectValue, row.itemId, row.name);
 
         ItemPanelUI.Instance?.OnClickClose(); // 아이템창 닫고(시간정지/ModalGate 반납) 강화 패널로 전환
         OpenListForEnhance();
@@ -672,6 +690,7 @@ public class EmployeeListUI : MonoBehaviour
         if (emp == null) return;
         GameTimeManager.Instance?.StopTime();
         ModalGate.I.Register(this);
+        _holdingModal = true;
         _selectedId = emp.id;     // 이 직원 선택 (BuildList→snap 이 IndexOfSelected 로 선택)
         Root.SetActive(true);
         SetSlideInstant(true);    // InfoPanel 대신 TrainingPanel 부터

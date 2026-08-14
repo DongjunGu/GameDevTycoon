@@ -11,6 +11,15 @@ public class ItemManager : MonoBehaviour
     private string _rowInDate = null;
     private bool   _isLoaded  = false;
 
+    // 예약된 강화권(하급/중급/상급) itemId — "다음 강화 1회" 성공확률 보너스. 아이템은 예약을 거는
+    // 시점(ReserveEnhanceBoost)에 이미 소모되고 서버에 저장되므로, 재접속해도 예약이 유지된다.
+    // null/빈 문자열이면 예약 없음.
+    private string _pendingBoostItemId = null;
+    public string PendingBoostItemId => _pendingBoostItemId;
+    public bool   HasPendingBoost => !string.IsNullOrEmpty(_pendingBoostItemId);
+    public ItemChartRow PendingBoostRow
+        => HasPendingBoost && ItemChartLoader.Cache.TryGetValue(_pendingBoostItemId, out var row) ? row : null;
+
     public IReadOnlyDictionary<string, int> Inventory => _inventory;
 
     void Awake()
@@ -33,6 +42,8 @@ public class ItemManager : MonoBehaviour
                     var row = rows[rows.Count - 1];
                     _rowInDate = SafeString(row, "inDate", "");
                     ParseInventory(SafeString(row, "itemsJson", "{}"));
+                    _pendingBoostItemId = SafeString(row, "pendingBoostItemId", "");
+                    if (string.IsNullOrEmpty(_pendingBoostItemId)) _pendingBoostItemId = null;
                     _isLoaded = true;
                     Save(); // 신규 컬럼 자동 반영
                     Debug.Log($"[ItemManager] 로드 완료: {SerializeInventory()}");
@@ -60,6 +71,7 @@ public class ItemManager : MonoBehaviour
 
         var param = new Param();
         param.Add("itemsJson", SerializeInventory());
+        param.Add("pendingBoostItemId", _pendingBoostItemId ?? "");
 
         if (!string.IsNullOrEmpty(_rowInDate))
         {
@@ -84,6 +96,7 @@ public class ItemManager : MonoBehaviour
     public void ResetForNewRun(System.Action onComplete = null)
     {
         _inventory.Clear();
+        _pendingBoostItemId = null;
         _isLoaded = true;
         Save(onComplete);
     }
@@ -174,6 +187,29 @@ public class ItemManager : MonoBehaviour
         _inventory[itemId]--;
         Save();
         return true;
+    }
+
+    // 강화권(하급/중급/상급) "사용하기" — 클릭 즉시 소모 + 예약을 서버에 저장(재접속해도 유지).
+    // 이미 예약된 강화권이 있으면 실패(호출부가 안내 얼럿을 띄운다).
+    public bool ReserveEnhanceBoost(string itemId)
+    {
+        if (HasPendingBoost) return false;
+        if (GetCount(itemId) <= 0) return false;
+        var chart = ItemChartLoader.Cache;
+        if (!chart.TryGetValue(itemId, out var row) || !IsUsableNow(row)) return false;
+
+        _inventory[itemId]--;
+        _pendingBoostItemId = itemId;
+        Save();
+        return true;
+    }
+
+    // 예약된 강화권이 실제 강화에 쓰여 소모 완료됐을 때 호출 — 예약 해제 + 저장.
+    public void ClearPendingBoost()
+    {
+        if (!HasPendingBoost) return;
+        _pendingBoostItemId = null;
+        Save();
     }
 
     // 대상 직원 없이 사용하는 아이템 (창의성 블록 등). 효과 적용 성공 시에만 차감.

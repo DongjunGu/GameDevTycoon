@@ -58,4 +58,12 @@ public class DeskManager : MonoBehaviour
     {
         return allDesks.Find(d => d.deskId == deskId);
     }
+
+    // [테스트] 리스트에서 특정 deskId들을 제거 — 사무실 레벨 전환 후 화면 밖(비활성 영역)에 남은 옛
+    // 데스크가 GetEmptyDesk()에 계속 걸려 신규 채용이 안 보이는 자리로 배정되는 걸 막기 위해.
+    public void RemoveDesks(params string[] deskIds)
+    {
+        if (deskIds == null) return;
+        allDesks.RemoveAll(d => d != null && System.Array.IndexOf(deskIds, d.deskId) >= 0);
+    }
 }

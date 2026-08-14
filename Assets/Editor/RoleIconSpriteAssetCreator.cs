@@ -139,6 +139,30 @@ public class RoleIconSpriteAssetCreator : EditorWindow
         }
     }
 
+    // "_L"(대형) 역할 아이콘 세트 — ResumeUI용 원본(Job_{Plan|Dev|Art}_L.png)을 그대로 인라인 스프라이트로.
+    // 위 "_s" 세트와 별개 에셋(PlanIconSpriteAsset을 덮어쓰지 않음) — 퀘스트 아이템처럼 큰 아이콘이 필요한
+    // 곳 전용. 텍스트에서는 <sprite="PlanIconLSpriteAsset" name="planL"> 등으로 사용.
+    [InitializeOnLoadMethod]
+    static void AutoCreateLargeIconsIfMissing()
+    {
+        var planL = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Sprites/UI/ResumeUI/Job_Plan_L.png");
+        var devL  = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Sprites/UI/ResumeUI/Job_Dev_L.png");
+        var artL  = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Sprites/UI/ResumeUI/Job_Art_L.png");
+        if (planL == null || devL == null || artL == null) return;
+
+        bool changed = false;
+        changed |= RegenIfSizeMismatch(planL, "PlanIconLSpriteAsset", "planL");
+        changed |= RegenIfSizeMismatch(devL,  "DevIconLSpriteAsset",  "devL");
+        changed |= RegenIfSizeMismatch(artL,  "ArtIconLSpriteAsset",  "artL");
+
+        if (changed)
+        {
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+            Debug.Log("[RoleIconSpriteAssetCreator] AutoCreateLargeIconsIfMissing 로 _L 아이콘 스프라이트 에셋 생성됨");
+        }
+    }
+
     static bool RegenIfSizeMismatch(Sprite sprite, string assetName, string spriteName)
     {
         var outputPath = $"{OutputDir}/{assetName}.asset";

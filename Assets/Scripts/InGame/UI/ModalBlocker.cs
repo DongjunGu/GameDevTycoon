@@ -43,6 +43,7 @@ public class ModalBlocker : MonoBehaviour
     Canvas _canvas;
     Image  _image;
     readonly List<ModalLayer> _stack = new();
+    readonly List<ModalLayer> _ordered = new();
 
     // 블러
     RawImage      _blurImage;
@@ -114,17 +115,24 @@ public class ModalBlocker : MonoBehaviour
         }
 
         // 등록 순서대로 BASE+2, +4, ... 재할당 → 마지막(맨 위) 모달만 블로커 위, 나머지는 아래로 차단.
+        // 단, ExcludeFromSharedDim 모달(AlertUI 등 자체 배경을 가진 "항상 최상단" 정보 팝업)은 등록 시점과
+        // 무관하게 일반 모달들보다 항상 위로 재배치한다 — 안 그러면 정보 팝업이 뜬 뒤 다른 모달이 재등록될
+        // 때(예: EmployeeListUI 아이템 사용 → AlertUI3 표시 → 패널로 복귀) 그 모달이 더 늦게 등록됐다는
+        // 이유만으로 정보 팝업 위에 올라와 덮어버리는 버그가 생긴다.
         if (_canvas.worldCamera == null) _canvas.worldCamera = Camera.main; // 씬 전환 후 카메라 재참조
-        for (int i = 0; i < _stack.Count; i++)
-            _stack[i].ApplyOrder(BASE_ORDER + (i + 1) * STEP);
+        _ordered.Clear();
+        foreach (var l in _stack) if (l != null && !l.ExcludeFromSharedDim) _ordered.Add(l);
+        foreach (var l in _stack) if (l != null && l.ExcludeFromSharedDim) _ordered.Add(l);
+        for (int i = 0; i < _ordered.Count; i++)
+            _ordered[i].ApplyOrder(BASE_ORDER + (i + 1) * STEP);
 
         // 공유 딤은 ExcludeFromSharedDim 인 모달(예: AlertUI — 자체 반투명 배경 있음)을 건너뛰고,
         // 그 아래에서 가장 위에 있는 "일반" 모달 바로 밑에 놓는다. 전부 제외 대상이면 딤 자체를 끈다
         // (그 모달들이 각자 자기 배경으로 이미 가리고 있으므로 공유 딤이 필요 없음).
         int dimBelowOrder = -1;
-        for (int i = _stack.Count - 1; i >= 0; i--)
+        for (int i = _ordered.Count - 1; i >= 0; i--)
         {
-            if (_stack[i] != null && !_stack[i].ExcludeFromSharedDim) { dimBelowOrder = _stack[i].AssignedOrder; break; }
+            if (!_ordered[i].ExcludeFromSharedDim) { dimBelowOrder = _ordered[i].AssignedOrder; break; }
         }
         if (dimBelowOrder < 0)
         {

@@ -35,4 +35,7 @@ public class StageManager : MonoBehaviour
     {
         currentStage = 1;
     }
+
+    // [테스트] currentStage에 setter가 없어 외부(TestMenuButtons 등)에서 강제로 올릴 때 사용.
+    public void SetStage(int stage) => currentStage = Mathf.Max(1, stage);
 }
