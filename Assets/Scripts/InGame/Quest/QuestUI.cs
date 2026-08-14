@@ -39,7 +39,11 @@ public class QuestUI : MonoBehaviour
     public void Refresh()
     {
         foreach (Transform child in questListContent)
+        {
+            // [테스트] 사무실4단계 레이아웃 확인용 고정 표시 아이템 — Refresh 때 삭제되지 않게 예외.
+            if (child.name == "QuestItemSimpleforTest2") continue;
             Destroy(child.gameObject);
+        }
 
 
         var quests = QuestManager.Instance.GetAllQuests()

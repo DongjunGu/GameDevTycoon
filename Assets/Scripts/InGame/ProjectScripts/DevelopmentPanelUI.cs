@@ -35,12 +35,6 @@ public class DevelopmentPanelUI : MonoBehaviour
     public RectTransform artPanel;
     public RectTransform bugPanel;
     public RectTransform creativityPanel;
-    [Tooltip("표시값이 오르는 동안(=MoveDisplay가 매 프레임 changed) 아이콘/텍스트가 커지는 배율")]
-    public float statPulseScale = 1.2f;
-    [Tooltip("현재 스케일이 목표(1배 또는 statPulseScale)로 근접하는 속도 (초당 배율)")]
-    public float statPulseLerpSpeed = 8f;
-    [Tooltip("아이콘이 커지기 시작한 뒤 텍스트가 커지기 시작하기까지의 지연시간(초)")]
-    public float textPulseDelay = 0.3f;
 
     [Header("임팩트 펀치 (흡입되는 순간 패널 전체가 튀는 연출)")]
     [Tooltip("카운트업이 시작되는 첫 프레임(=흡입 임팩트 순간)에 패널 전체가 튀는 가산 배율. 예: 0.35면 1배 → 1.35배까지 튀었다가 되튕겨 정착")]
@@ -52,9 +46,8 @@ public class DevelopmentPanelUI : MonoBehaviour
     [Tooltip("되튕김 탄성(0=탄성 없이 감쇠, 1=강하게 튕김)")]
     [Range(0f, 1f)] public float punchElasticity = 0.7f;
 
-    // panel의 첫 자식 "IconImage" — Start에서 1회 캐싱해 매 프레임 Find 안 하도록 함.
-    private RectTransform _planningIcon, _devIcon, _artIcon, _bugIcon, _creativityIcon;
-    // panel별로 애니메이션이 끊기지 않고 지속된 시간 — textPulseDelay 넘어야 텍스트 펄스 시작.
+    // panel별로 카운트업이 끊기지 않고 지속된 시간 — 0에서 다시 시작되는 프레임(risingEdge)을 감지해
+    // 그때만 펀치를 1회 발동시키는 데 사용.
     private float _planningAnimTime, _developAnimTime, _artAnimTime, _bugAnimTime, _creativityAnimTime;
 
     public float GetPlanning() => _planning;
@@ -101,18 +94,6 @@ public class DevelopmentPanelUI : MonoBehaviour
     void Start()
     {
         UpdateDefaultText();
-        _planningIcon   = FindIcon(planningPanel);
-        _devIcon        = FindIcon(devPanel);
-        _artIcon        = FindIcon(artPanel);
-        _bugIcon        = FindIcon(bugPanel);
-        _creativityIcon = FindIcon(creativityPanel);
-    }
-
-    static RectTransform FindIcon(RectTransform panel)
-    {
-        if (panel == null) return null;
-        var found = panel.Find("IconImage");
-        return found != null ? found as RectTransform : null;
     }
 
     void Update()
@@ -132,48 +113,32 @@ public class DevelopmentPanelUI : MonoBehaviour
         bool bugChanged        = MoveDisplay(ref _bugDisplay,        _bugReveal,        ref _bugSpeed,        dt);
         bool creativityChanged = MoveDisplay(ref _creativityDisplay, _creativityReveal, ref _creativitySpeed, dt);
 
-        UpdateStatPulsePair(_planningIcon,   planningText,   planningPanel,   planningChanged,   dt, ref _planningAnimTime);
-        UpdateStatPulsePair(_devIcon,        developText,    devPanel,        developChanged,    dt, ref _developAnimTime);
-        UpdateStatPulsePair(_artIcon,        artText,        artPanel,        artChanged,        dt, ref _artAnimTime);
-        UpdateStatPulsePair(_bugIcon,        bugText,        bugPanel,        bugChanged,        dt, ref _bugAnimTime);
-        UpdateStatPulsePair(_creativityIcon, creativityText, creativityPanel, creativityChanged, dt, ref _creativityAnimTime);
+        FirePunchOnRisingEdge(planningPanel,   planningChanged,   dt, ref _planningAnimTime);
+        FirePunchOnRisingEdge(devPanel,        developChanged,    dt, ref _developAnimTime);
+        FirePunchOnRisingEdge(artPanel,        artChanged,        dt, ref _artAnimTime);
+        FirePunchOnRisingEdge(bugPanel,        bugChanged,        dt, ref _bugAnimTime);
+        FirePunchOnRisingEdge(creativityPanel, creativityChanged, dt, ref _creativityAnimTime);
 
         if (planningChanged || developChanged || artChanged || bugChanged || creativityChanged) UpdateUI();
     }
 
-    // 아이콘은 표시값이 오르는 동안(animating) 즉시 statPulseScale 배로 커지고, 텍스트는 그 상태가
-    // textPulseDelay 만큼 끊기지 않고 지속된 뒤에야 커지기 시작 — "아이콘 먼저, 텍스트는 0.3초 후".
-    // animTime 은 animating 이 끊기면(카운트업이 잠시 멈추면) 0으로 리셋돼 다음 펄스도 아이콘부터 다시 시작.
-    void UpdateStatPulsePair(RectTransform icon, TextMeshProUGUI text, RectTransform panel, bool animating, float dt, ref float animTime)
+    // 카운트업이 "새로 시작되는" 프레임(risingEdge)에만 패널 전체를 1회 펀치 스케일 — 팡 커졌다가
+    // 탄성으로 빠르게 정착. animTime 은 카운트업이 끊기면(잠깐 멈추면) 0으로 리셋돼 다음 펄스도 새로 감지됨.
+    void FirePunchOnRisingEdge(RectTransform panel, bool animating, float dt, ref float animTime)
     {
         bool risingEdge = animating && animTime <= 0f; // 이번 프레임에 카운트업이 새로 시작 = 흡입 임팩트 순간
         animTime = animating ? animTime + dt : 0f;
-        bool textAnimating = animating && animTime >= textPulseDelay;
-
-        PulseTowards(icon, animating, dt);
-        PulseTowards(text != null ? text.transform : null, textAnimating, dt);
 
         if (risingEdge) FirePunch(panel);
     }
 
-    // 흡입 임팩트 순간 패널 전체를 짧게 펀치 스케일 — 지속형 부풀림(PulseTowards)과 별개로,
-    // 타격감을 위해 한 번 튀었다가 탄성으로 되튕겨 정착한다.
+    // 흡입 임팩트 순간 패널 전체(아이콘+텍스트 포함, 자식이라 같이 스케일됨)를 팡 튀웠다가 빠르게 정착.
     void FirePunch(RectTransform panel)
     {
         if (panel == null) return;
         panel.DOKill();
         panel.localScale = Vector3.one;
         panel.DOPunchScale(Vector3.one * punchStrength, punchDuration, punchVibrato, punchElasticity).SetUpdate(true);
-    }
-
-    // 표시값이 오르는 동안(animating) statPulseScale 배로, 멈추면 1배로 서서히 되돌림.
-    void PulseTowards(Transform t, bool animating, float dt)
-    {
-        if (t == null) return;
-        float target = animating ? statPulseScale : 1f;
-        float current = t.localScale.x;
-        float next = Mathf.MoveTowards(current, target, statPulseLerpSpeed * dt);
-        t.localScale = Vector3.one * next;
     }
 
     // 남은 거리와 무관하게 fillDuration 안에 목표 도달 (등속). 목표 변경 시 RevealValues 가 speed 를 재설정.

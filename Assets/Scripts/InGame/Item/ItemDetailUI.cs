@@ -84,6 +84,28 @@ public class ItemDetailUI : MonoBehaviour
             return;
         }
 
+        // 강화권/초심회복기 — 아이템 사용 모드(선택→확인버튼)를 거치지 않고 곧장 직원목록+TrainingPanel로.
+        // 카드/리스트 컨텍스트(TargetEmployeeId)로 열렸어도 이 분기가 먼저 처리해야 한다 — 아래
+        // TargetEmployeeId 분기로 먼저 빠지면 ItemManager.UseItem 이 이 effectType 을 처리하는 case 가
+        // 없어 인벤토리만 차감되고 아무 효과 없이 끝나버린다(EmployeeCardUI/EmployeeListUI 둘 다 해당).
+        if (EmployeeListUI.IsEnhanceBoostItem(_currentRow))
+        {
+            // 이미 예약된 강화권이 있으면 새로 사용 불가 — 안내만 하고 아무것도 소모하지 않는다.
+            // bypassGate: ItemPanel 이 이미 ModalGate 를 쥐고 열려있는 채라 안 걸면 패널을 닫아야 뒤늦게 뜬다.
+            var pending = ItemManager.Instance?.PendingBoostRow;
+            if (pending != null)
+            {
+                AlertUI.Instance?.Show($"{pending.name}이 적용중입니다.", null, bypassGate: true);
+                return;
+            }
+
+            // 사용하기 클릭 즉시 소모 + 예약을 서버에 저장(재접속해도 유지) — 실제 강화 실행 시점까지
+            // 미루지 않는다.
+            if (ItemManager.Instance != null && ItemManager.Instance.ReserveEnhanceBoost(_currentRow.itemId))
+                EmployeeListUI.Instance?.OpenForEnhanceWithBoost(_currentRow);
+            return;
+        }
+
         // 카드 컨텍스트(특정 직원 대상으로 열림): 직원 선택 단계 건너뛰고 즉시 사용
         string targetId = ItemPanelUI.Instance != null ? ItemPanelUI.Instance.TargetEmployeeId : null;
         if (!string.IsNullOrEmpty(targetId))
@@ -94,13 +116,6 @@ public class ItemDetailUI : MonoBehaviour
                 HideDetail();
                 ItemPanelUI.Instance.OnClickClose(); // 패널 닫기 + StartTime + 카드 콜백 호출
             }
-            return;
-        }
-
-        // 강화권/초심회복기 — 아이템 사용 모드(선택→확인버튼)를 거치지 않고 곧장 직원목록+TrainingPanel로.
-        if (EmployeeListUI.IsEnhanceBoostItem(_currentRow))
-        {
-            EmployeeListUI.Instance?.OpenForEnhanceWithBoost(_currentRow);
             return;
         }
 

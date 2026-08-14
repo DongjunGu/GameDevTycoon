@@ -71,6 +71,8 @@ public class OfficeCharacter : MonoBehaviour, IPointerClickHandler
         if (_state == CharacterState.Patrolling) return;
         _state = CharacterState.Working;
         _animator?.SetWorking(true);
+        if (assignedDesk != null && assignedDesk.flipXWhileSeated)
+            _animator?.SetFacing(true, true);
     }
 
     public void ApplyDeskAnimation()
@@ -98,6 +100,11 @@ public class OfficeCharacter : MonoBehaviour, IPointerClickHandler
             _state = CharacterState.Idle;
             _animator?.SetIdle(true);
         }
+
+        // CEO/비서석처럼 가구가 좌우 반전된 자리는 앉은 캐릭터도 계속 반전 유지해야 방향이 맞다 —
+        // SetWorking/SetIdle이 방금 flipX=false로 리셋했으므로 그 직후 다시 걸어준다.
+        if (assignedDesk.flipXWhileSeated)
+            _animator?.SetFacing(true, true);
     }
 
     // 해고 시 호출 — 패트롤 중단, 데스크 해제, 상태 초기화

@@ -46,12 +46,9 @@ public class TrainingPanelUI : MonoBehaviour
     private EmployeeData _selected;
     private System.Action _onClosed; // 카드 컨텍스트 등에서 닫힐 때 1회 호출
 
-    // 하급/중급/상급 강화권 사용 예약 — "다음 강화 1회" 성공확률 보너스(%p, 5/10/100). 세션 한정(저장 안 함).
-    // 아이템은 여기선 아직 소모 안 됨 — 실제 강화 버튼을 눌러 강화가 실행되는 순간(OnClickEnhance)에
-    // _pendingBoostItemId로 그때 소비한다. 패널을 그냥 닫으면(HideDetail) 소모 없이 예약만 취소된다.
-    private int _pendingBoostPercent;
-    private string _pendingBoostItemId;
-    private string _pendingBoostItemName;
+    // 하급/중급/상급 강화권 예약 — ItemManager 가 단일 소스(사용하기 클릭 즉시 소모 + 서버 저장,
+    // 재접속해도 유지). 여기선 로컬 상태를 따로 들지 않고 매번 조회한다.
+    ItemChartRow PendingBoostRow => ItemManager.Instance?.PendingBoostRow;
 
     // BadgePanel 내부 요소 (이름으로 1회 탐색 캐시)
     private bool _badgeResolved;
@@ -99,17 +96,6 @@ public class TrainingPanelUI : MonoBehaviour
         OnSelectEmployee(emp);
     }
 
-    // 아이템창에서 하급/중급/상급 강화권 "사용하기"를 눌렀을 때(EmployeeListUI.OpenForEnhanceWithBoost)
-    // 호출 — 이 시점엔 아이템을 아직 소모하지 않는다(직원을 자유롭게 둘러보다 패널만 닫아버릴 수도
-    // 있으므로). 값만 들고 있다가 실제로 강화 버튼을 눌러 강화가 실행되는 순간(OnClickEnhance) 그때
-    // 비로소 소모한다.
-    public void SetPendingBoost(int boostPercent, string itemId, string itemName)
-    {
-        _pendingBoostPercent  = boostPercent;
-        _pendingBoostItemId   = itemId;
-        _pendingBoostItemName = itemName;
-    }
-
     public void OnClickClose()
     {
         GameTimeManager.Instance?.StartTime();
@@ -131,9 +117,8 @@ public class TrainingPanelUI : MonoBehaviour
     void HideDetail()
     {
         _selected = null;
-        _pendingBoostPercent  = 0;
-        _pendingBoostItemId   = null;
-        _pendingBoostItemName = null;
+        // 예약된 강화권(있다면)은 ItemManager 가 서버에 들고 있는 상태라 여기선 건드리지 않는다 —
+        // 선택 해제/패널 닫기와 무관하게 실제 강화에 쓰일 때까지 유지돼야 한다.
 
         // 선택 해제 시 이전(또는 에디터 디자인타임) 텍스트가 남아있지 않도록 전부 비움.
         SetText(curEnhanceText, "");    SetText(curDevelopText, "");   SetText(curPlanningText, "");
@@ -201,13 +186,14 @@ public class TrainingPanelUI : MonoBehaviour
         // 강화 후 연봉 = 현재 + 다음 강화 연봉 상승량(금수저 반영)
         SetText(expSalaryText, $"연봉: {emp.salary + EmployeeManager.Instance.GetNextSalaryGain(emp):N0} G");
 
-        // ThirdPanel — 성공/실패/하락 확률. 보류 중인 강화권(_pendingBoostPercent)이 있으면 기존 확률에
-        // 취소선+반투명을 걸고 그 옆에 보너스 반영된 확률을 같이 보여준다(성공/실패만 — 하락확률은 항상
-        // 보정된 값 하나만 표시).
+        // ThirdPanel — 성공/실패/하락 확률. 예약된 강화권(ItemManager.PendingBoostRow)이 있으면 기존
+        // 확률에 취소선+반투명을 걸고 그 옆에 보너스 반영된 확률을 같이 보여준다(성공/실패만 — 하락확률은
+        // 항상 보정된 값 하나만 표시).
+        int pendingBoostPercent = PendingBoostRow?.effectValue ?? 0;
         var baseRates = EmployeeEnhancement.GetRates(emp);
-        if (_pendingBoostPercent > 0)
+        if (pendingBoostPercent > 0)
         {
-            var boosted = EmployeeEnhancement.GetRates(emp, _pendingBoostPercent);
+            var boosted = EmployeeEnhancement.GetRates(emp, pendingBoostPercent);
             SetText(successRateText, RateWithBoostText("성공확률", baseRates.success,       boosted.success));
             SetText(failRateText,    RateWithBoostText("실패확률", 100f - baseRates.success, 100f - boosted.success));
             SetDownRate(boosted.downgrade);
@@ -253,15 +239,12 @@ public class TrainingPanelUI : MonoBehaviour
         int oldP = _selected.planningSkill, oldD = _selected.developSkill;
         int oldA = _selected.artSkill,      oldC = _selected.creativitySkill;
 
-        // 보류 중인 강화권은 이번 클릭 1회로 소비 — 결과(성공/유지/하락/방어) 무관하게 리셋.
-        // 아이템 자체는 지금(강화가 실제로 실행되는 이 시점)에 소모한다 — 직원을 둘러보다 패널만 닫으면
-        // 여기까지 안 와서 소모되지 않는다.
-        int boost = _pendingBoostPercent;
-        if (!string.IsNullOrEmpty(_pendingBoostItemId))
-            ItemManager.Instance?.UseItemDirect(_pendingBoostItemId);
-        _pendingBoostPercent  = 0;
-        _pendingBoostItemId   = null;
-        _pendingBoostItemName = null;
+        // 예약된 강화권은 이번 클릭 1회로 소비 — 결과(성공/유지/하락/방어) 무관하게 예약 해제.
+        // 아이템 자체는 이미 "사용하기" 클릭 시점(ItemManager.ReserveEnhanceBoost)에 소모+저장됐으므로
+        // 여기선 값만 읽고 예약을 지운다.
+        var boostRow = PendingBoostRow;
+        int boost = boostRow?.effectValue ?? 0;
+        if (boostRow != null) ItemManager.Instance.ClearPendingBoost();
 
         var emp = _selected; // ShowPortrait 콜백에서 RefreshDetail 이후에도 안전하게 쓰려고 미리 캡처
         var outcome = EmployeeEnhancement.EnhanceOnce(_selected, boost);
@@ -362,12 +345,15 @@ public class TrainingPanelUI : MonoBehaviour
         if (t != null) t.text = s;
     }
 
-    // 강화권 보너스 적용 전/후를 한 줄로 — 기존 값은 취소선+반투명(알파 절반), 옆에 보정된 값.
+    // 강화권 보너스 적용 전/후를 한 줄로 — 기존 값은 취소선+반투명(알파 절반), 옆에 보정된 값은 원래 밝기.
+    // <s>...</s> 는 정상적으로 닫히지만, TMP 의 <alpha> 태그는 </alpha> 닫는 태그를 지원하지 않는다
+    // (닫히지 않고 리터럴 텍스트로 새며 뒤 텍스트까지 계속 반투명 적용됨) — 그래서 알파만 <alpha=#FF>로
+    // 다시 불투명하게 되돌리고, 취소선은 </s>로 정상적으로 닫는다.
     static string RateWithBoostText(string label, float oldPct, float newPct)
     {
         int o = Mathf.RoundToInt(oldPct);
         int n = Mathf.RoundToInt(newPct);
-        return $"{label} : <s><alpha=#80>{o}%</alpha></s> {n}%";
+        return $"{label} : <alpha=#80><s>{o}%</s><alpha=#FF> {n}%";
     }
 
     // 하락확률 텍스트 — 0이면 GameObject 자체를 비활성화(요청 사양).

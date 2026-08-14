@@ -53,6 +53,8 @@ public class CharacterEventTester : MonoBehaviour
         // New Input System (activeInputHandler=1) — UnityEngine.Input 은 예외 발생하므로 Keyboard.current 사용.
         var kb = UnityEngine.InputSystem.Keyboard.current;
         if (kb != null && kb.f9Key.wasPressedThisFrame) _open = !_open;
+        if (kb != null && kb.pKey.wasPressedThisFrame) SatisfactionMaxAndPatrolTest();
+        if (kb != null && kb.sKey.wasPressedThisFrame) StopAutoPatrolTest();
 
         if (debugTrigger16_1)
         {
@@ -572,6 +574,50 @@ public class CharacterEventTester : MonoBehaviour
         var em = EmployeeManager.Instance;
         foreach (var e in em.ownedEmployees) if (!e.isCEO) e.ChangeSatisfaction(amount);
         Set($"전 직원 만족도 {(amount >= 0 ? "+" : "")}{amount}");
+    }
+
+    // [테스트] P 키 — Level4 사무실 테스트용: 만족도 전원 100 + 그 중 랜덤 3명만 뽑아 p3/p4/spawn_point에
+    // 한 명씩 배정해 patrol. CEO는 ownedEmployees의 isCEO로, 비서는 애초에 EmployeeData가 없는
+    // 시각전용 NPC라 ownedEmployees에 안 잡혀 둘 다 자연히 제외됨.
+    static readonly string[] Level4TestPatrolPoints = { "p3", "p4", "spawn_point" };
+
+    void SatisfactionMaxAndPatrolTest()
+    {
+        var em = EmployeeManager.Instance;
+        if (em == null || OfficeManager.Instance == null) return;
+
+        OfficeManager.Instance.RefreshPatrolPoints(); // Level4가 방금 활성화됐을 수도 있으니 재스캔
+
+        var candidates = new List<EmployeeData>();
+        foreach (var e in em.ownedEmployees)
+        {
+            if (e.isCEO) continue;
+            e.ChangeSatisfaction(100); // [1,100] 클램프라 100으로 고정됨
+            candidates.Add(e);
+        }
+
+        // Fisher-Yates로 섞은 뒤 앞에서부터 최대 3명만 뽑아 p3/p4/spawn_point에 한 명씩.
+        for (int i = candidates.Count - 1; i > 0; i--)
+        {
+            int j = Random.Range(0, i + 1);
+            (candidates[i], candidates[j]) = (candidates[j], candidates[i]);
+        }
+
+        int patrolCount = Mathf.Min(3, candidates.Count);
+        for (int i = 0; i < patrolCount; i++)
+            OfficeManager.Instance.ForceCharacterToPatrolPoint(candidates[i].id, Level4TestPatrolPoints[i]);
+
+        Set($"[P] {candidates.Count}명 만족도 100 (CEO/비서 제외), 그 중 {patrolCount}명 p3/p4/spawn_point patrol");
+    }
+
+    // [테스트] S 키 — 배경 자동 patrol(PatrolScheduler) 즉시 중단 + 현재 patrol 중인 직원 전원 데스크로
+    // 복귀. 개발 시작 시 호출되는 OfficeManager.StopDevelopmentPatrol()을 그대로 재사용(멱등이라 여러 번
+    // 눌러도 안전) — 다시 자동 patrol을 켜려면 개발 시작/완료 등 기존 트리거를 타거나 씬을 재진입해야 함.
+    void StopAutoPatrolTest()
+    {
+        if (OfficeManager.Instance == null) return;
+        OfficeManager.Instance.StopDevelopmentPatrol();
+        Set("[S] 자동 patrol 중단");
     }
 
     void FireUgi()
