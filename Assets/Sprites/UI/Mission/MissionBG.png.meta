@@ -1,0 +1,4238 @@
+fileFormatVersion: 2
+guid: 36e1b16534a89f74686fe2f2448c750c
+TextureImporter:
+  internalIDToNameTable:
+  - first:
+      213: -5526540896621000823
+    second: MissionBG_0
+  - first:
+      213: -9011210413040456864
+    second: MissionBG_1
+  - first:
+      213: 3569158904541226929
+    second: MissionBG_2
+  - first:
+      213: 5330813860210540756
+    second: MissionBG_3
+  - first:
+      213: 4935949762997491115
+    second: MissionBG_4
+  - first:
+      213: -7683066207729433563
+    second: MissionBG_5
+  - first:
+      213: -8408565818064865720
+    second: MissionBG_6
+  - first:
+      213: 2866470852551375178
+    second: MissionBG_7
+  - first:
+      213: 2918659232935356692
+    second: MissionBG_8
+  - first:
+      213: 9185280518114308753
+    second: MissionBG_9
+  - first:
+      213: 3278685299260801478
+    second: MissionBG_10
+  - first:
+      213: -3556312416908694897
+    second: MissionBG_11
+  - first:
+      213: -9140586340613819681
+    second: MissionBG_12
+  - first:
+      213: -5514877194701418210
+    second: MissionBG_13
+  - first:
+      213: 8561667629831958740
+    second: MissionBG_14
+  - first:
+      213: -280447667791302250
+    second: MissionBG_15
+  - first:
+      213: -5192895848810941049
+    second: MissionBG_16
+  - first:
+      213: -8491171311406592629
+    second: MissionBG_17
+  - first:
+      213: 2018409042961053704
+    second: MissionBG_18
+  - first:
+      213: -5545352814469006741
+    second: MissionBG_19
+  - first:
+      213: 1205839041694329109
+    second: MissionBG_20
+  - first:
+      213: 5552834655414768310
+    second: MissionBG_21
+  - first:
+      213: 1797815661528432153
+    second: MissionBG_22
+  - first:
+      213: 3195141484071087487
+    second: MissionBG_23
+  - first:
+      213: -6319508828007193814
+    second: MissionBG_24
+  - first:
+      213: 8750793133448874339
+    second: MissionBG_25
+  - first:
+      213: -3014129420191936691
+    second: MissionBG_26
+  - first:
+      213: 8257448242498074975
+    second: MissionBG_27
+  - first:
+      213: -3379816056046221145
+    second: MissionBG_28
+  - first:
+      213: -8777848226329798167
+    second: MissionBG_29
+  - first:
+      213: -233711868349679949
+    second: MissionBG_30
+  - first:
+      213: 4717580379132418539
+    second: MissionBG_31
+  - first:
+      213: -6794774276425957051
+    second: MissionBG_32
+  - first:
+      213: 4090648443128174600
+    second: MissionBG_33
+  - first:
+      213: 3284102198929355424
+    second: MissionBG_34
+  - first:
+      213: 6761484877822682081
+    second: MissionBG_35
+  - first:
+      213: -126482003504560749
+    second: MissionBG_36
+  - first:
+      213: -3816225825489890235
+    second: MissionBG_37
+  - first:
+      213: -9068068814875048810
+    second: MissionBG_38
+  - first:
+      213: -6506382500700669083
+    second: MissionBG_39
+  - first:
+      213: 5347786496874746834
+    second: MissionBG_40
+  - first:
+      213: -2533876554488634892
+    second: MissionBG_41
+  - first:
+      213: 7552317844574041414
+    second: MissionBG_42
+  - first:
+      213: 3427091070433730566
+    second: MissionBG_43
+  - first:
+      213: 1220492257775818455
+    second: MissionBG_44
+  - first:
+      213: 1128365947976957298
+    second: MissionBG_45
+  - first:
+      213: 8001863456430534363
+    second: MissionBG_46
+  - first:
+      213: 6019949619438006045
+    second: MissionBG_47
+  - first:
+      213: 5121148290987569505
+    second: MissionBG_48
+  - first:
+      213: 8867797695993207185
+    second: MissionBG_49
+  - first:
+      213: -1515583965378220164
+    second: MissionBG_50
+  - first:
+      213: 3729868164510312715
+    second: MissionBG_51
+  - first:
+      213: -5771252848283616575
+    second: MissionBG_52
+  - first:
+      213: -8467563647456257041
+    second: MissionBG_53
+  - first:
+      213: -5021286201825921647
+    second: MissionBG_54
+  - first:
+      213: 3702557532876921634
+    second: MissionBG_55
+  - first:
+      213: -4002836295830482553
+    second: MissionBG_56
+  - first:
+      213: -2702534783837158004
+    second: MissionBG_57
+  - first:
+      213: 3698241071065776433
+    second: MissionBG_58
+  - first:
+      213: 1687995752744078559
+    second: MissionBG_59
+  - first:
+      213: 1928268945092056599
+    second: MissionBG_60
+  - first:
+      213: 4221448649715892864
+    second: MissionBG_61
+  - first:
+      213: 645600861681104265
+    second: MissionBG_62
+  - first:
+      213: -7455483185793169649
+    second: MissionBG_63
+  - first:
+      213: 5880548512544847939
+    second: MissionBG_64
+  - first:
+      213: 4646257314841782205
+    second: MissionBG_65
+  - first:
+      213: -207814296551549583
+    second: MissionBG_66
+  - first:
+      213: -613030652357768880
+    second: MissionBG_67
+  - first:
+      213: -8164670325591258643
+    second: MissionBG_68
+  - first:
+      213: -3732725904302874178
+    second: MissionBG_69
+  - first:
+      213: -7767855386350152139
+    second: MissionBG_70
+  - first:
+      213: 2569625562031070590
+    second: MissionBG_71
+  - first:
+      213: -4875673076959011200
+    second: MissionBG_72
+  - first:
+      213: -3146000689110522823
+    second: MissionBG_73
+  - first:
+      213: 6850554602623331977
+    second: MissionBG_74
+  - first:
+      213: 4613302276042109168
+    second: MissionBG_75
+  - first:
+      213: 2195707031157845879
+    second: MissionBG_76
+  - first:
+      213: -1781323890760826412
+    second: MissionBG_77
+  - first:
+      213: -4299515878009369679
+    second: MissionBG_78
+  - first:
+      213: 2683222079847364662
+    second: MissionBG_79
+  - first:
+      213: 8761809451699777581
+    second: MissionBG_80
+  - first:
+      213: -930528450457283681
+    second: MissionBG_81
+  - first:
+      213: -8689782140332206572
+    second: MissionBG_82
+  - first:
+      213: 2846777863522514683
+    second: MissionBG_83
+  - first:
+      213: -5708300023572038145
+    second: MissionBG_84
+  - first:
+      213: 2134817202673182984
+    second: MissionBG_85
+  - first:
+      213: -1808692602871623792
+    second: MissionBG_86
+  - first:
+      213: -6705960100799091883
+    second: MissionBG_87
+  - first:
+      213: 1135323437026913010
+    second: MissionBG_88
+  - first:
+      213: 2895721597311105019
+    second: MissionBG_89
+  - first:
+      213: 7245871728532987811
+    second: MissionBG_90
+  - first:
+      213: 3737218216036433819
+    second: MissionBG_91
+  - first:
+      213: 197388664580865033
+    second: MissionBG_92
+  - first:
+      213: 4201727890625975693
+    second: MissionBG_93
+  - first:
+      213: 4541430561573989766
+    second: MissionBG_94
+  - first:
+      213: 3580923161827885441
+    second: MissionBG_95
+  - first:
+      213: -5367362097847773761
+    second: MissionBG_96
+  - first:
+      213: -333154215548265095
+    second: MissionBG_97
+  - first:
+      213: 290522887242164656
+    second: MissionBG_98
+  - first:
+      213: -6963396935596527451
+    second: MissionBG_99
+  - first:
+      213: 5195142458693189512
+    second: MissionBG_100
+  - first:
+      213: 1495326536118151998
+    second: MissionBG_101
+  - first:
+      213: 1048187975797843697
+    second: MissionBG_102
+  - first:
+      213: 7419963251338073030
+    second: MissionBG_103
+  - first:
+      213: -3696165783830341105
+    second: MissionBG_104
+  - first:
+      213: -3196012579057527407
+    second: MissionBG_105
+  - first:
+      213: 1656471281437901781
+    second: MissionBG_106
+  - first:
+      213: 199221270933319423
+    second: MissionBG_107
+  - first:
+      213: 2395049735518373222
+    second: MissionBG_108
+  - first:
+      213: -321529142877539925
+    second: MissionBG_109
+  - first:
+      213: 707934461672025977
+    second: MissionBG_110
+  - first:
+      213: 8102167660534568927
+    second: MissionBG_111
+  - first:
+      213: 5358901315651232572
+    second: MissionBG_112
+  - first:
+      213: -5022654303191498334
+    second: MissionBG_113
+  - first:
+      213: 8361005676993838229
+    second: MissionBG_114
+  - first:
+      213: -6949851279064778299
+    second: MissionBG_115
+  - first:
+      213: 5759603484449925288
+    second: MissionBG_116
+  - first:
+      213: -4150470159465083889
+    second: MissionBG_117
+  - first:
+      213: -9047358048354691880
+    second: MissionBG_118
+  - first:
+      213: 62943246171825540
+    second: MissionBG_119
+  - first:
+      213: -3216048698169081497
+    second: MissionBG_120
+  - first:
+      213: -4776601567056948869
+    second: MissionBG_121
+  - first:
+      213: 8455704409278649265
+    second: MissionBG_122
+  - first:
+      213: 3504795356640167310
+    second: MissionBG_123
+  - first:
+      213: 1834353657898731457
+    second: MissionBG_124
+  - first:
+      213: 6450448843103285902
+    second: MissionBG_125
+  - first:
+      213: -7776012333009455007
+    second: MissionBG_126
+  - first:
+      213: -2792387526210036926
+    second: MissionBG_127
+  - first:
+      213: 3935285075342113080
+    second: MissionBG_128
+  - first:
+      213: 9167908509811782833
+    second: MissionBG_129
+  - first:
+      213: -6852820228645848874
+    second: MissionBG_130
+  - first:
+      213: 4613458359661823640
+    second: MissionBG_131
+  - first:
+      213: 4481950346378756465
+    second: MissionBG_132
+  - first:
+      213: 5802986089366469399
+    second: MissionBG_133
+  - first:
+      213: -1895683386398921226
+    second: MissionBG_134
+  - first:
+      213: 1809089242170548948
+    second: MissionBG_135
+  - first:
+      213: 2981948927404816298
+    second: MissionBG_136
+  - first:
+      213: -2120287895181896066
+    second: MissionBG_137
+  - first:
+      213: 5722989370626915789
+    second: MissionBG_138
+  - first:
+      213: 2461461987186296710
+    second: MissionBG_139
+  - first:
+      213: -2550073451887581643
+    second: MissionBG_140
+  - first:
+      213: 8691492872680203884
+    second: MissionBG_141
+  - first:
+      213: -4551521762375672412
+    second: MissionBG_142
+  - first:
+      213: -1050895063449642051
+    second: MissionBG_143
+  - first:
+      213: -1430951379300745943
+    second: MissionBG_144
+  - first:
+      213: -2458193614764609434
+    second: MissionBG_145
+  - first:
+      213: 989632218519203642
+    second: MissionBG_146
+  - first:
+      213: -6205778329499066930
+    second: MissionBG_147
+  - first:
+      213: 6446004255776634154
+    second: MissionBG_148
+  - first:
+      213: -7919984549165659493
+    second: MissionBG_149
+  - first:
+      213: 4896964695645697823
+    second: MissionBG_150
+  - first:
+      213: 4937168518042772181
+    second: MissionBG_151
+  - first:
+      213: 6344287736754171121
+    second: MissionBG_152
+  - first:
+      213: 5798969263000092247
+    second: MissionBG_153
+  - first:
+      213: 2346800708970762233
+    second: MissionBG_154
+  - first:
+      213: -8016256614599129183
+    second: MissionBG_155
+  - first:
+      213: 7036752443094677880
+    second: MissionBG_156
+  externalObjects: {}
+  serializedVersion: 13
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 0
+    sRGBTexture: 1
+    linearTexture: 0
+    fadeOut: 0
+    borderMipMap: 0
+    mipMapsPreserveCoverage: 0
+    alphaTestReferenceValue: 0.5
+    mipMapFadeDistanceStart: 1
+    mipMapFadeDistanceEnd: 3
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: 0.25
+    normalMapFilter: 0
+    flipGreenChannel: 0
+  isReadable: 0
+  streamingMipmaps: 0
+  streamingMipmapsPriority: 0
+  vTOnly: 0
+  ignoreMipmapLimit: 0
+  grayScaleToAlpha: 0
+  generateCubemap: 6
+  cubemapConvolution: 0
+  seamlessCubemap: 0
+  textureFormat: 1
+  maxTextureSize: 2048
+  textureSettings:
+    serializedVersion: 2
+    filterMode: 1
+    aniso: 1
+    mipBias: 0
+    wrapU: 1
+    wrapV: 1
+    wrapW: 1
+  nPOTScale: 0
+  lightmap: 0
+  compressionQuality: 50
+  spriteMode: 1
+  spriteExtrude: 1
+  spriteMeshType: 1
+  alignment: 0
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 100
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteGenerateFallbackPhysicsShape: 1
+  alphaUsage: 1
+  alphaIsTransparency: 1
+  spriteTessellationDetail: -1
+  textureType: 8
+  textureShape: 1
+  singleChannelComponent: 0
+  flipbookRows: 1
+  flipbookColumns: 1
+  maxTextureSizeSet: 0
+  compressionQualitySet: 0
+  textureFormatSet: 0
+  ignorePngGamma: 0
+  applyGammaDecoding: 0
+  swizzle: 50462976
+  cookieLightType: 0
+  platformSettings:
+  - serializedVersion: 4
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Standalone
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Android
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: WebGL
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: iOS
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  spriteSheet:
+    serializedVersion: 2
+    sprites:
+    - serializedVersion: 2
+      name: MissionBG_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 0
+        width: 1015
+        height: 920
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 9878c3cd558cd43b0800000000000000
+      internalID: -5526540896621000823
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_1
+      rect:
+        serializedVersion: 2
+        x: 2
+        y: 912
+        width: 9
+        height: 8
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 06b2c6e6fdfb1f280800000000000000
+      internalID: -9011210413040456864
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_2
+      rect:
+        serializedVersion: 2
+        x: 19
+        y: 911
+        width: 6
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 1b72a1c0d13388130800000000000000
+      internalID: 3569158904541226929
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_3
+      rect:
+        serializedVersion: 2
+        x: 24
+        y: 911
+        width: 6
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 4d0049546fadaf940800000000000000
+      internalID: 5330813860210540756
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_4
+      rect:
+        serializedVersion: 2
+        x: 28
+        y: 912
+        width: 6
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ba593ac5824008440800000000000000
+      internalID: 4935949762997491115
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_5
+      rect:
+        serializedVersion: 2
+        x: 34
+        y: 910
+        width: 6
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 524ca7e9df3406590800000000000000
+      internalID: -7683066207729433563
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_6
+      rect:
+        serializedVersion: 2
+        x: 40
+        y: 913
+        width: 6
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 84670cf50f5ce4b80800000000000000
+      internalID: -8408565818064865720
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_7
+      rect:
+        serializedVersion: 2
+        x: 56
+        y: 913
+        width: 7
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: a49f55d9d00c7c720800000000000000
+      internalID: 2866470852551375178
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_8
+      rect:
+        serializedVersion: 2
+        x: 61
+        y: 914
+        width: 8
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 419a68fcb19218820800000000000000
+      internalID: 2918659232935356692
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_9
+      rect:
+        serializedVersion: 2
+        x: 103
+        y: 913
+        width: 8
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 192f48c27fba87f70800000000000000
+      internalID: 9185280518114308753
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_10
+      rect:
+        serializedVersion: 2
+        x: 131
+        y: 911
+        width: 7
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 6c14cb098ea308d20800000000000000
+      internalID: 3278685299260801478
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_11
+      rect:
+        serializedVersion: 2
+        x: 133
+        y: 914
+        width: 11
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f8aa8dfe2b075aec0800000000000000
+      internalID: -3556312416908694897
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_12
+      rect:
+        serializedVersion: 2
+        x: 141
+        y: 910
+        width: 8
+        height: 9
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: fd2fce0f62d162180800000000000000
+      internalID: -9140586340613819681
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_13
+      rect:
+        serializedVersion: 2
+        x: 159
+        y: 915
+        width: 6
+        height: 5
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: e115be519683773b0800000000000000
+      internalID: -5514877194701418210
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_14
+      rect:
+        serializedVersion: 2
+        x: 163
+        y: 912
+        width: 9
+        height: 8
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 4d03811095721d670800000000000000
+      internalID: 8561667629831958740
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_15
+      rect:
+        serializedVersion: 2
+        x: 187
+        y: 911
+        width: 8
+        height: 9
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 691763ff456ab1cf0800000000000000
+      internalID: -280447667791302250
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_16
+      rect:
+        serializedVersion: 2
+        x: 202
+        y: 909
+        width: 10
+        height: 11
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 785f5081db02fe7b0800000000000000
+      internalID: -5192895848810941049
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_17
+      rect:
+        serializedVersion: 2
+        x: 213
+        y: 914
+        width: 6
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b8d4f903eac492a80800000000000000
+      internalID: -8491171311406592629
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_18
+      rect:
+        serializedVersion: 2
+        x: 221
+        y: 914
+        width: 7
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 8083121a454d20c10800000000000000
+      internalID: 2018409042961053704
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_19
+      rect:
+        serializedVersion: 2
+        x: 233
+        y: 913
+        width: 7
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b6abc5beef2fa03b0800000000000000
+      internalID: -5545352814469006741
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_20
+      rect:
+        serializedVersion: 2
+        x: 258
+        y: 914
+        width: 9
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 519ec7838300cb010800000000000000
+      internalID: 1205839041694329109
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_21
+      rect:
+        serializedVersion: 2
+        x: 289
+        y: 911
+        width: 6
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 6b2d97ce2b1af0d40800000000000000
+      internalID: 5552834655414768310
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_22
+      rect:
+        serializedVersion: 2
+        x: 303
+        y: 912
+        width: 6
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 91e3905a1df13f810800000000000000
+      internalID: 1797815661528432153
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_23
+      rect:
+        serializedVersion: 2
+        x: 310
+        y: 913
+        width: 7
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f7deb2d404c675c20800000000000000
+      internalID: 3195141484071087487
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_24
+      rect:
+        serializedVersion: 2
+        x: 331
+        y: 912
+        width: 7
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: a23afaff3389c48a0800000000000000
+      internalID: -6319508828007193814
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_25
+      rect:
+        serializedVersion: 2
+        x: 359
+        y: 913
+        width: 10
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 369c52ebdff017970800000000000000
+      internalID: 8750793133448874339
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_26
+      rect:
+        serializedVersion: 2
+        x: 374
+        y: 909
+        width: 8
+        height: 8
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d4fc76a0349ab26d0800000000000000
+      internalID: -3014129420191936691
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_27
+      rect:
+        serializedVersion: 2
+        x: 397
+        y: 910
+        width: 12
+        height: 9
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f59754d3d69589270800000000000000
+      internalID: 8257448242498074975
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_28
+      rect:
+        serializedVersion: 2
+        x: 415
+        y: 915
+        width: 6
+        height: 5
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 7a8043d343b7811d0800000000000000
+      internalID: -3379816056046221145
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_29
+      rect:
+        serializedVersion: 2
+        x: 419
+        y: 912
+        width: 9
+        height: 8
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 9e9d1519b81de2680800000000000000
+      internalID: -8777848226329798167
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_30
+      rect:
+        serializedVersion: 2
+        x: 443
+        y: 911
+        width: 8
+        height: 9
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 3b679334b40b1ccf0800000000000000
+      internalID: -233711868349679949
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_31
+      rect:
+        serializedVersion: 2
+        x: 458
+        y: 909
+        width: 10
+        height: 11
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: be95a892c56387140800000000000000
+      internalID: 4717580379132418539
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_32
+      rect:
+        serializedVersion: 2
+        x: 469
+        y: 914
+        width: 6
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 5414bacbbcc14b1a0800000000000000
+      internalID: -6794774276425957051
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_33
+      rect:
+        serializedVersion: 2
+        x: 477
+        y: 914
+        width: 7
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 808d8a9f517e4c830800000000000000
+      internalID: 4090648443128174600
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_34
+      rect:
+        serializedVersion: 2
+        x: 489
+        y: 913
+        width: 7
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 0a2734dcc89739d20800000000000000
+      internalID: 3284102198929355424
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_35
+      rect:
+        serializedVersion: 2
+        x: 514
+        y: 914
+        width: 9
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 1e3ebc82cae95dd50800000000000000
+      internalID: 6761484877822682081
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_36
+      rect:
+        serializedVersion: 2
+        x: 545
+        y: 911
+        width: 6
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 39581a6b945ae3ef0800000000000000
+      internalID: -126482003504560749
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_37
+      rect:
+        serializedVersion: 2
+        x: 559
+        y: 912
+        width: 6
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 544d009b4da0a0bc0800000000000000
+      internalID: -3816225825489890235
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_38
+      rect:
+        serializedVersion: 2
+        x: 566
+        y: 913
+        width: 7
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 6944392257fb72280800000000000000
+      internalID: -9068068814875048810
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_39
+      rect:
+        serializedVersion: 2
+        x: 587
+        y: 912
+        width: 7
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 56b3be0869fa4b5a0800000000000000
+      internalID: -6506382500700669083
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_40
+      rect:
+        serializedVersion: 2
+        x: 615
+        y: 913
+        width: 10
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 2d399d03c77273a40800000000000000
+      internalID: 5347786496874746834
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_41
+      rect:
+        serializedVersion: 2
+        x: 630
+        y: 909
+        width: 8
+        height: 8
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 4f1a301e2bcd5dcd0800000000000000
+      internalID: -2533876554488634892
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_42
+      rect:
+        serializedVersion: 2
+        x: 653
+        y: 910
+        width: 12
+        height: 9
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 645fda4d0193fc860800000000000000
+      internalID: 7552317844574041414
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_43
+      rect:
+        serializedVersion: 2
+        x: 671
+        y: 915
+        width: 6
+        height: 5
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 600ad1acb297f8f20800000000000000
+      internalID: 3427091070433730566
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_44
+      rect:
+        serializedVersion: 2
+        x: 675
+        y: 912
+        width: 9
+        height: 8
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 7d697d3fd3f00f010800000000000000
+      internalID: 1220492257775818455
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_45
+      rect:
+        serializedVersion: 2
+        x: 699
+        y: 911
+        width: 8
+        height: 9
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 27d30d1f9d2c8af00800000000000000
+      internalID: 1128365947976957298
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_46
+      rect:
+        serializedVersion: 2
+        x: 714
+        y: 909
+        width: 10
+        height: 11
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: bdea8bdfa645c0f60800000000000000
+      internalID: 8001863456430534363
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_47
+      rect:
+        serializedVersion: 2
+        x: 725
+        y: 914
+        width: 6
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d1fa958a8482b8350800000000000000
+      internalID: 6019949619438006045
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_48
+      rect:
+        serializedVersion: 2
+        x: 733
+        y: 914
+        width: 7
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 161b966dc39f11740800000000000000
+      internalID: 5121148290987569505
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_49
+      rect:
+        serializedVersion: 2
+        x: 745
+        y: 913
+        width: 7
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 199d3b9550fb01b70800000000000000
+      internalID: 8867797695993207185
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_50
+      rect:
+        serializedVersion: 2
+        x: 770
+        y: 914
+        width: 9
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: c7f6a54d96097fae0800000000000000
+      internalID: -1515583965378220164
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_51
+      rect:
+        serializedVersion: 2
+        x: 801
+        y: 911
+        width: 6
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b09ecac755723c330800000000000000
+      internalID: 3729868164510312715
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_52
+      rect:
+        serializedVersion: 2
+        x: 815
+        y: 912
+        width: 6
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 1caf715ac1468efa0800000000000000
+      internalID: -5771252848283616575
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_53
+      rect:
+        serializedVersion: 2
+        x: 822
+        y: 913
+        width: 7
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: febdb58c9bb2d7a80800000000000000
+      internalID: -8467563647456257041
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_54
+      rect:
+        serializedVersion: 2
+        x: 829
+        y: 914
+        width: 7
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 1957898adcec05ab0800000000000000
+      internalID: -5021286201825921647
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_55
+      rect:
+        serializedVersion: 2
+        x: 844
+        y: 912
+        width: 6
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 22b539b8570226330800000000000000
+      internalID: 3702557532876921634
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_56
+      rect:
+        serializedVersion: 2
+        x: 871
+        y: 913
+        width: 10
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 781dbfcc8911378c0800000000000000
+      internalID: -4002836295830482553
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_57
+      rect:
+        serializedVersion: 2
+        x: 899
+        y: 911
+        width: 7
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: c85cf38ceeaae7ad0800000000000000
+      internalID: -2702534783837158004
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_58
+      rect:
+        serializedVersion: 2
+        x: 901
+        y: 907
+        width: 16
+        height: 13
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 131c2a6f8aac25330800000000000000
+      internalID: 3698241071065776433
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_59
+      rect:
+        serializedVersion: 2
+        x: 926
+        y: 907
+        width: 14
+        height: 13
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: fdccda89137fc6710800000000000000
+      internalID: 1687995752744078559
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_60
+      rect:
+        serializedVersion: 2
+        x: 942
+        y: 910
+        width: 9
+        height: 10
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 71611af936692ca10800000000000000
+      internalID: 1928268945092056599
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_61
+      rect:
+        serializedVersion: 2
+        x: 953
+        y: 907
+        width: 10
+        height: 13
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 0824ed34e29959a30800000000000000
+      internalID: 4221448649715892864
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_62
+      rect:
+        serializedVersion: 2
+        x: 967
+        y: 911
+        width: 12
+        height: 9
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 985303b2092a5f800800000000000000
+      internalID: 645600861681104265
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_63
+      rect:
+        serializedVersion: 2
+        x: 981
+        y: 914
+        width: 6
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f0786e91b8dc88890800000000000000
+      internalID: -7455483185793169649
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_64
+      rect:
+        serializedVersion: 2
+        x: 989
+        y: 913
+        width: 7
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 348ffa637b7eb9150800000000000000
+      internalID: 5880548512544847939
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_65
+      rect:
+        serializedVersion: 2
+        x: 993
+        y: 911
+        width: 14
+        height: 9
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: db764323962da7040800000000000000
+      internalID: 4646257314841782205
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_66
+      rect:
+        serializedVersion: 2
+        x: 1007
+        y: 898
+        width: 8
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 1751cc29ff1bd1df0800000000000000
+      internalID: -207814296551549583
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_67
+      rect:
+        serializedVersion: 2
+        x: 1008
+        y: 903
+        width: 7
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 0590ac1aed31e77f0800000000000000
+      internalID: -613030652357768880
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_68
+      rect:
+        serializedVersion: 2
+        x: 1
+        y: 887
+        width: 9
+        height: 8
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: de9c5fed89341be80800000000000000
+      internalID: -8164670325591258643
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_69
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 874
+        width: 9
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: eb1e02e1191b23cc0800000000000000
+      internalID: -3732725904302874178
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_70
+      rect:
+        serializedVersion: 2
+        x: 1009
+        y: 880
+        width: 6
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 5369ef59ea8033490800000000000000
+      internalID: -7767855386350152139
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_71
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 861
+        width: 6
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: e7d10ae85d429a320800000000000000
+      internalID: 2569625562031070590
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_72
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 848
+        width: 20
+        height: 14
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 08e1cee3b21265cb0800000000000000
+      internalID: -4875673076959011200
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_73
+      rect:
+        serializedVersion: 2
+        x: 1009
+        y: 843
+        width: 6
+        height: 9
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 934ee6e9a092754d0800000000000000
+      internalID: -3146000689110522823
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_74
+      rect:
+        serializedVersion: 2
+        x: 1006
+        y: 830
+        width: 6
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 98ee7c38d1f021f50800000000000000
+      internalID: 6850554602623331977
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_75
+      rect:
+        serializedVersion: 2
+        x: 1007
+        y: 824
+        width: 7
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 0f0bdfc4afdb50040800000000000000
+      internalID: 4613302276042109168
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_76
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 818
+        width: 5
+        height: 10
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 77fadf659e7b87e10800000000000000
+      internalID: 2195707031157845879
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_77
+      rect:
+        serializedVersion: 2
+        x: 1009
+        y: 816
+        width: 6
+        height: 9
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 4d1c845fb577747e0800000000000000
+      internalID: -1781323890760826412
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_78
+      rect:
+        serializedVersion: 2
+        x: 1007
+        y: 811
+        width: 8
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 1bb8919b61d0554c0800000000000000
+      internalID: -4299515878009369679
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_79
+      rect:
+        serializedVersion: 2
+        x: 1
+        y: 753
+        width: 6
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 63879cae348bc3520800000000000000
+      internalID: 2683222079847364662
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_80
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 724
+        width: 5
+        height: 10
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d20b9363643389970800000000000000
+      internalID: 8761809451699777581
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_81
+      rect:
+        serializedVersion: 2
+        x: 1008
+        y: 725
+        width: 6
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f935911fd491613f0800000000000000
+      internalID: -930528450457283681
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_82
+      rect:
+        serializedVersion: 2
+        x: 1
+        y: 718
+        width: 11
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 41617fd0f21b76780800000000000000
+      internalID: -8689782140332206572
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_83
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 703
+        width: 7
+        height: 8
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: bf674bd4269c18720800000000000000
+      internalID: 2846777863522514683
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_84
+      rect:
+        serializedVersion: 2
+        x: 1004
+        y: 696
+        width: 9
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ffd72a75f5b08c0b0800000000000000
+      internalID: -5708300023572038145
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_85
+      rect:
+        serializedVersion: 2
+        x: 1006
+        y: 703
+        width: 7
+        height: 8
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 8096ab16fe460ad10800000000000000
+      internalID: 2134817202673182984
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_86
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 690
+        width: 6
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 09fc5f919ab36e6e0800000000000000
+      internalID: -1808692602871623792
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_87
+      rect:
+        serializedVersion: 2
+        x: 1007
+        y: 691
+        width: 6
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 55b6de961d4afe2a0800000000000000
+      internalID: -6705960100799091883
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_88
+      rect:
+        serializedVersion: 2
+        x: 1
+        y: 677
+        width: 11
+        height: 9
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 2fa2a2996aa71cf00800000000000000
+      internalID: 1135323437026913010
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_89
+      rect:
+        serializedVersion: 2
+        x: 1002
+        y: 647
+        width: 13
+        height: 9
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: bf7b728537baf2820800000000000000
+      internalID: 2895721597311105019
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_90
+      rect:
+        serializedVersion: 2
+        x: 1004
+        y: 656
+        width: 9
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 3af114362f18e8460800000000000000
+      internalID: 7245871728532987811
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_91
+      rect:
+        serializedVersion: 2
+        x: 1
+        y: 628
+        width: 10
+        height: 11
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b9f78f6ba244dd330800000000000000
+      internalID: 3737218216036433819
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_92
+      rect:
+        serializedVersion: 2
+        x: 1005
+        y: 635
+        width: 7
+        height: 8
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 90cf703d1f34db200800000000000000
+      internalID: 197388664580865033
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_93
+      rect:
+        serializedVersion: 2
+        x: 1008
+        y: 630
+        width: 7
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d85dc9b31498f4a30800000000000000
+      internalID: 4201727890625975693
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_94
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 618
+        width: 7
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 68d68b2c807660f30800000000000000
+      internalID: 4541430561573989766
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_95
+      rect:
+        serializedVersion: 2
+        x: 1009
+        y: 624
+        width: 6
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 18148b4a4aef1b130800000000000000
+      internalID: 3580923161827885441
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_96
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 605
+        width: 6
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: fb553e80c9c4385b0800000000000000
+      internalID: -5367362097847773761
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_97
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 598
+        width: 6
+        height: 8
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 97d52de8106606bf0800000000000000
+      internalID: -333154215548265095
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_98
+      rect:
+        serializedVersion: 2
+        x: 1009
+        y: 587
+        width: 6
+        height: 9
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 0b9a035d605280400800000000000000
+      internalID: 290522887242164656
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_99
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 562
+        width: 5
+        height: 10
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 5a0b9b7716b0d5f90800000000000000
+      internalID: -6963396935596527451
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_100
+      rect:
+        serializedVersion: 2
+        x: 1009
+        y: 560
+        width: 6
+        height: 9
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 88ff4f78a8ad81840800000000000000
+      internalID: 5195142458693189512
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_101
+      rect:
+        serializedVersion: 2
+        x: 1010
+        y: 540
+        width: 5
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: e3ba980ef8770c410800000000000000
+      internalID: 1495326536118151998
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_102
+      rect:
+        serializedVersion: 2
+        x: 1
+        y: 497
+        width: 6
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 1f624431969eb8e00800000000000000
+      internalID: 1048187975797843697
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_103
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 468
+        width: 5
+        height: 10
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 6c35572b34109f660800000000000000
+      internalID: 7419963251338073030
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_104
+      rect:
+        serializedVersion: 2
+        x: 1008
+        y: 469
+        width: 6
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f0ad6df7dc494bcc0800000000000000
+      internalID: -3696165783830341105
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_105
+      rect:
+        serializedVersion: 2
+        x: 1
+        y: 462
+        width: 11
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 19598971e7b75a3d0800000000000000
+      internalID: -3196012579057527407
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_106
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 447
+        width: 7
+        height: 8
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 5d30eb6aad7fcf610800000000000000
+      internalID: 1656471281437901781
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_107
+      rect:
+        serializedVersion: 2
+        x: 1004
+        y: 440
+        width: 9
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ffeaeadb0b6c3c200800000000000000
+      internalID: 199221270933319423
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_108
+      rect:
+        serializedVersion: 2
+        x: 1006
+        y: 447
+        width: 7
+        height: 8
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 66547f08b0dec3120800000000000000
+      internalID: 2395049735518373222
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_109
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 434
+        width: 6
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ba139d5b2f2b98bf0800000000000000
+      internalID: -321529142877539925
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_110
+      rect:
+        serializedVersion: 2
+        x: 1007
+        y: 435
+        width: 6
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 97fe73064a613d900800000000000000
+      internalID: 707934461672025977
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_111
+      rect:
+        serializedVersion: 2
+        x: 1
+        y: 421
+        width: 11
+        height: 9
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: fd712d46f8ea07070800000000000000
+      internalID: 8102167660534568927
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_112
+      rect:
+        serializedVersion: 2
+        x: 1002
+        y: 391
+        width: 13
+        height: 9
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: c33e3c99a54ae5a40800000000000000
+      internalID: 5358901315651232572
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_113
+      rect:
+        serializedVersion: 2
+        x: 1004
+        y: 400
+        width: 9
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 2a10facb582fb4ab0800000000000000
+      internalID: -5022654303191498334
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_114
+      rect:
+        serializedVersion: 2
+        x: 1
+        y: 372
+        width: 10
+        height: 11
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 59cfd3e5d52480470800000000000000
+      internalID: 8361005676993838229
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_115
+      rect:
+        serializedVersion: 2
+        x: 1005
+        y: 379
+        width: 7
+        height: 8
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 5c9bc85651b2d8f90800000000000000
+      internalID: -6949851279064778299
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_116
+      rect:
+        serializedVersion: 2
+        x: 1008
+        y: 374
+        width: 7
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 8a86db97ad83eef40800000000000000
+      internalID: 5759603484449925288
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_117
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 362
+        width: 7
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f0c893e41619666c0800000000000000
+      internalID: -4150470159465083889
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_118
+      rect:
+        serializedVersion: 2
+        x: 1009
+        y: 368
+        width: 6
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 8d41c0c3ac3517280800000000000000
+      internalID: -9047358048354691880
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_119
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 349
+        width: 6
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 485e4158c8e9fd000800000000000000
+      internalID: 62943246171825540
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_120
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 342
+        width: 6
+        height: 8
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 76146459fbc4e53d0800000000000000
+      internalID: -3216048698169081497
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_121
+      rect:
+        serializedVersion: 2
+        x: 1009
+        y: 331
+        width: 6
+        height: 9
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b711ff9ae2a16bdb0800000000000000
+      internalID: -4776601567056948869
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_122
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 306
+        width: 5
+        height: 10
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 1b312c82c52b85570800000000000000
+      internalID: 8455704409278649265
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_123
+      rect:
+        serializedVersion: 2
+        x: 1009
+        y: 304
+        width: 6
+        height: 9
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: e85c9f2cec883a030800000000000000
+      internalID: 3504795356640167310
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_124
+      rect:
+        serializedVersion: 2
+        x: 1010
+        y: 284
+        width: 5
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 1c70e7bdeeee47910800000000000000
+      internalID: 1834353657898731457
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_125
+      rect:
+        serializedVersion: 2
+        x: 1
+        y: 241
+        width: 6
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: e82300ffb09948950800000000000000
+      internalID: 6450448843103285902
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_126
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 212
+        width: 5
+        height: 10
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 1683ae17bfd061490800000000000000
+      internalID: -7776012333009455007
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_127
+      rect:
+        serializedVersion: 2
+        x: 1008
+        y: 213
+        width: 6
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 24bd401f6527f39d0800000000000000
+      internalID: -2792387526210036926
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_128
+      rect:
+        serializedVersion: 2
+        x: 1
+        y: 206
+        width: 11
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 839b9ad0de0fc9630800000000000000
+      internalID: 3935285075342113080
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_129
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 191
+        width: 7
+        height: 8
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 1b4bc9c4734fa3f70800000000000000
+      internalID: 9167908509811782833
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_130
+      rect:
+        serializedVersion: 2
+        x: 1005
+        y: 190
+        width: 8
+        height: 9
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 6d8f3f15f44e5e0a0800000000000000
+      internalID: -6852820228645848874
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_131
+      rect:
+        serializedVersion: 2
+        x: 1007
+        y: 184
+        width: 6
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 89603b95feb460040800000000000000
+      internalID: 4613458359661823640
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_132
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 178
+        width: 6
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 17148d8f716133e30800000000000000
+      internalID: 4481950346378756465
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_133
+      rect:
+        serializedVersion: 2
+        x: 1007
+        y: 179
+        width: 6
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 71bb83d4a19588050800000000000000
+      internalID: 5802986089366469399
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_134
+      rect:
+        serializedVersion: 2
+        x: 1
+        y: 165
+        width: 11
+        height: 9
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 6fd251bf00e21b5e0800000000000000
+      internalID: -1895683386398921226
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_135
+      rect:
+        serializedVersion: 2
+        x: 1002
+        y: 135
+        width: 13
+        height: 9
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 4d26e8ea41d2b1910800000000000000
+      internalID: 1809089242170548948
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_136
+      rect:
+        serializedVersion: 2
+        x: 1
+        y: 116
+        width: 10
+        height: 11
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: aa7325c10c2026920800000000000000
+      internalID: 2981948927404816298
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_137
+      rect:
+        serializedVersion: 2
+        x: 1003
+        y: 122
+        width: 9
+        height: 8
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: e765f12a4693392e0800000000000000
+      internalID: -2120287895181896066
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_138
+      rect:
+        serializedVersion: 2
+        x: 1009
+        y: 118
+        width: 6
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: dcdbd89c2842c6f40800000000000000
+      internalID: 5722989370626915789
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_139
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 106
+        width: 7
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 687cd5ec2aed82220800000000000000
+      internalID: 2461461987186296710
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_140
+      rect:
+        serializedVersion: 2
+        x: 1009
+        y: 112
+        width: 6
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 5362615d4b15c9cd0800000000000000
+      internalID: -2550073451887581643
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_141
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 93
+        width: 6
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: c6661fbd7b26e9870800000000000000
+      internalID: 8691492872680203884
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_142
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 86
+        width: 6
+        height: 8
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 4ad5326721fb5d0c0800000000000000
+      internalID: -4551521762375672412
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_143
+      rect:
+        serializedVersion: 2
+        x: 1009
+        y: 75
+        width: 6
+        height: 9
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: dbb5fd6f1887a61f0800000000000000
+      internalID: -1050895063449642051
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_144
+      rect:
+        serializedVersion: 2
+        x: 1006
+        y: 62
+        width: 7
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 92d7ce15d4d342ce0800000000000000
+      internalID: -1430951379300745943
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_145
+      rect:
+        serializedVersion: 2
+        x: 1007
+        y: 56
+        width: 7
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 66072d27eedb2edd0800000000000000
+      internalID: -2458193614764609434
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_146
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 50
+        width: 5
+        height: 10
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: a3f6e1b6241ebbd00800000000000000
+      internalID: 989632218519203642
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_147
+      rect:
+        serializedVersion: 2
+        x: 1007
+        y: 48
+        width: 8
+        height: 9
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ecd146b2d75a0e9a0800000000000000
+      internalID: -6205778329499066930
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_148
+      rect:
+        serializedVersion: 2
+        x: 18
+        y: 0
+        width: 6
+        height: 5
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: a25f83ed7bec47950800000000000000
+      internalID: 6446004255776634154
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_149
+      rect:
+        serializedVersion: 2
+        x: 47
+        y: 0
+        width: 9
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b9a0660b300961290800000000000000
+      internalID: -7919984549165659493
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_150
+      rect:
+        serializedVersion: 2
+        x: 63
+        y: 0
+        width: 14
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f173799027385f340800000000000000
+      internalID: 4896964695645697823
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_151
+      rect:
+        serializedVersion: 2
+        x: 132
+        y: 0
+        width: 10
+        height: 5
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 5d26e22eb98548440800000000000000
+      internalID: 4937168518042772181
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_152
+      rect:
+        serializedVersion: 2
+        x: 139
+        y: 0
+        width: 9
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 1fc691645107b0850800000000000000
+      internalID: 6344287736754171121
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_153
+      rect:
+        serializedVersion: 2
+        x: 206
+        y: 0
+        width: 13
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 75e778802d31a7050800000000000000
+      internalID: 5798969263000092247
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_154
+      rect:
+        serializedVersion: 2
+        x: 303
+        y: 0
+        width: 9
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 9ff46d89fc2819020800000000000000
+      internalID: 2346800708970762233
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_155
+      rect:
+        serializedVersion: 2
+        x: 316
+        y: 0
+        width: 17
+        height: 11
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 1a7817ab41980c090800000000000000
+      internalID: -8016256614599129183
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionBG_156
+      rect:
+        serializedVersion: 2
+        x: 388
+        y: 0
+        width: 10
+        height: 5
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 879350f801197a160800000000000000
+      internalID: 7036752443094677880
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    outline: []
+    customData: 
+    physicsShape: []
+    bones: []
+    spriteID: 5e97eb03825dee720800000000000000
+    internalID: 0
+    vertices: []
+    indices: 
+    edges: []
+    weights: []
+    secondaryTextures: []
+    spriteCustomMetadata:
+      entries: []
+    nameFileIdTable:
+      MissionBG_0: -5526540896621000823
+      MissionBG_1: -9011210413040456864
+      MissionBG_10: 3278685299260801478
+      MissionBG_100: 5195142458693189512
+      MissionBG_101: 1495326536118151998
+      MissionBG_102: 1048187975797843697
+      MissionBG_103: 7419963251338073030
+      MissionBG_104: -3696165783830341105
+      MissionBG_105: -3196012579057527407
+      MissionBG_106: 1656471281437901781
+      MissionBG_107: 199221270933319423
+      MissionBG_108: 2395049735518373222
+      MissionBG_109: -321529142877539925
+      MissionBG_11: -3556312416908694897
+      MissionBG_110: 707934461672025977
+      MissionBG_111: 8102167660534568927
+      MissionBG_112: 5358901315651232572
+      MissionBG_113: -5022654303191498334
+      MissionBG_114: 8361005676993838229
+      MissionBG_115: -6949851279064778299
+      MissionBG_116: 5759603484449925288
+      MissionBG_117: -4150470159465083889
+      MissionBG_118: -9047358048354691880
+      MissionBG_119: 62943246171825540
+      MissionBG_12: -9140586340613819681
+      MissionBG_120: -3216048698169081497
+      MissionBG_121: -4776601567056948869
+      MissionBG_122: 8455704409278649265
+      MissionBG_123: 3504795356640167310
+      MissionBG_124: 1834353657898731457
+      MissionBG_125: 6450448843103285902
+      MissionBG_126: -7776012333009455007
+      MissionBG_127: -2792387526210036926
+      MissionBG_128: 3935285075342113080
+      MissionBG_129: 9167908509811782833
+      MissionBG_13: -5514877194701418210
+      MissionBG_130: -6852820228645848874
+      MissionBG_131: 4613458359661823640
+      MissionBG_132: 4481950346378756465
+      MissionBG_133: 5802986089366469399
+      MissionBG_134: -1895683386398921226
+      MissionBG_135: 1809089242170548948
+      MissionBG_136: 2981948927404816298
+      MissionBG_137: -2120287895181896066
+      MissionBG_138: 5722989370626915789
+      MissionBG_139: 2461461987186296710
+      MissionBG_14: 8561667629831958740
+      MissionBG_140: -2550073451887581643
+      MissionBG_141: 8691492872680203884
+      MissionBG_142: -4551521762375672412
+      MissionBG_143: -1050895063449642051
+      MissionBG_144: -1430951379300745943
+      MissionBG_145: -2458193614764609434
+      MissionBG_146: 989632218519203642
+      MissionBG_147: -6205778329499066930
+      MissionBG_148: 6446004255776634154
+      MissionBG_149: -7919984549165659493
+      MissionBG_15: -280447667791302250
+      MissionBG_150: 4896964695645697823
+      MissionBG_151: 4937168518042772181
+      MissionBG_152: 6344287736754171121
+      MissionBG_153: 5798969263000092247
+      MissionBG_154: 2346800708970762233
+      MissionBG_155: -8016256614599129183
+      MissionBG_156: 7036752443094677880
+      MissionBG_16: -5192895848810941049
+      MissionBG_17: -8491171311406592629
+      MissionBG_18: 2018409042961053704
+      MissionBG_19: -5545352814469006741
+      MissionBG_2: 3569158904541226929
+      MissionBG_20: 1205839041694329109
+      MissionBG_21: 5552834655414768310
+      MissionBG_22: 1797815661528432153
+      MissionBG_23: 3195141484071087487
+      MissionBG_24: -6319508828007193814
+      MissionBG_25: 8750793133448874339
+      MissionBG_26: -3014129420191936691
+      MissionBG_27: 8257448242498074975
+      MissionBG_28: -3379816056046221145
+      MissionBG_29: -8777848226329798167
+      MissionBG_3: 5330813860210540756
+      MissionBG_30: -233711868349679949
+      MissionBG_31: 4717580379132418539
+      MissionBG_32: -6794774276425957051
+      MissionBG_33: 4090648443128174600
+      MissionBG_34: 3284102198929355424
+      MissionBG_35: 6761484877822682081
+      MissionBG_36: -126482003504560749
+      MissionBG_37: -3816225825489890235
+      MissionBG_38: -9068068814875048810
+      MissionBG_39: -6506382500700669083
+      MissionBG_4: 4935949762997491115
+      MissionBG_40: 5347786496874746834
+      MissionBG_41: -2533876554488634892
+      MissionBG_42: 7552317844574041414
+      MissionBG_43: 3427091070433730566
+      MissionBG_44: 1220492257775818455
+      MissionBG_45: 1128365947976957298
+      MissionBG_46: 8001863456430534363
+      MissionBG_47: 6019949619438006045
+      MissionBG_48: 5121148290987569505
+      MissionBG_49: 8867797695993207185
+      MissionBG_5: -7683066207729433563
+      MissionBG_50: -1515583965378220164
+      MissionBG_51: 3729868164510312715
+      MissionBG_52: -5771252848283616575
+      MissionBG_53: -8467563647456257041
+      MissionBG_54: -5021286201825921647
+      MissionBG_55: 3702557532876921634
+      MissionBG_56: -4002836295830482553
+      MissionBG_57: -2702534783837158004
+      MissionBG_58: 3698241071065776433
+      MissionBG_59: 1687995752744078559
+      MissionBG_6: -8408565818064865720
+      MissionBG_60: 1928268945092056599
+      MissionBG_61: 4221448649715892864
+      MissionBG_62: 645600861681104265
+      MissionBG_63: -7455483185793169649
+      MissionBG_64: 5880548512544847939
+      MissionBG_65: 4646257314841782205
+      MissionBG_66: -207814296551549583
+      MissionBG_67: -613030652357768880
+      MissionBG_68: -8164670325591258643
+      MissionBG_69: -3732725904302874178
+      MissionBG_7: 2866470852551375178
+      MissionBG_70: -7767855386350152139
+      MissionBG_71: 2569625562031070590
+      MissionBG_72: -4875673076959011200
+      MissionBG_73: -3146000689110522823
+      MissionBG_74: 6850554602623331977
+      MissionBG_75: 4613302276042109168
+      MissionBG_76: 2195707031157845879
+      MissionBG_77: -1781323890760826412
+      MissionBG_78: -4299515878009369679
+      MissionBG_79: 2683222079847364662
+      MissionBG_8: 2918659232935356692
+      MissionBG_80: 8761809451699777581
+      MissionBG_81: -930528450457283681
+      MissionBG_82: -8689782140332206572
+      MissionBG_83: 2846777863522514683
+      MissionBG_84: -5708300023572038145
+      MissionBG_85: 2134817202673182984
+      MissionBG_86: -1808692602871623792
+      MissionBG_87: -6705960100799091883
+      MissionBG_88: 1135323437026913010
+      MissionBG_89: 2895721597311105019
+      MissionBG_9: 9185280518114308753
+      MissionBG_90: 7245871728532987811
+      MissionBG_91: 3737218216036433819
+      MissionBG_92: 197388664580865033
+      MissionBG_93: 4201727890625975693
+      MissionBG_94: 4541430561573989766
+      MissionBG_95: 3580923161827885441
+      MissionBG_96: -5367362097847773761
+      MissionBG_97: -333154215548265095
+      MissionBG_98: 290522887242164656
+      MissionBG_99: -6963396935596527451
+  mipmapLimitGroupName: 
+  pSDRemoveMatte: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

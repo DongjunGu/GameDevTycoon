@@ -207,6 +207,23 @@ public class DevelopmentManager : MonoBehaviour
     };
     public ProjectStage CurrentStage { get; set; } = ProjectStage.None;
 
+    // ── 도전과제 ──
+    private readonly ChallengeManager _challenge = new ChallengeManager();
+    public ChallengeManager Challenge => _challenge;
+    public string GetChallengeSaveData() => _challenge.GetSaveData();
+    public void RestoreChallengeSaveData(string data) => _challenge.RestoreSaveData(data);
+    // 각 파트 팀장점수 총합 확정 지점(BuildAndShowLeaderScore/SelectRound4Aim)에서 공통으로 거쳐가는 창구.
+    void SetLeaderBonusTotal(LeaderType type, float total)
+    {
+        switch (type)
+        {
+            case LeaderType.Programmer: _leaderDevelopBonusTotal  = total; break;
+            case LeaderType.Planner:    _leaderPlanningBonusTotal = total; break;
+            case LeaderType.Artist:     _leaderArtBonusTotal      = total; break;
+        }
+        _challenge.OnLeaderScoreFinalized(type);
+    }
+
     private float _elapsed;
     private bool _isRunning;
     private bool _triggered25;
@@ -335,12 +352,13 @@ public class DevelopmentManager : MonoBehaviour
             RandomEventManager.Instance.TriggerInvestmentEvent(() => //투자 이벤트
             {
                 IsPendingLeaderSelect = true;
+                // 도전과제 확정 — SaveProject에 포함되도록 먼저 롤. 공지 알림을 닫으면 기획 팀장 선택으로 이어간다.
+                _challenge.RollNew(() => DispatchPanelUI.Instance.OpenForLeaderSelect(LeaderType.Planner, null));
                 ProjectSaveManager.Instance.SaveProject();
 
                 // onComplete=null — 개발 재개(ForceStartTime+DevelopmentCoroutine)는 팀장 선택 직후가 아니라
                 // 팀장점수(LeaderScoreUI) 확정 후 ContinueAfterLeaderScore.StartDeveloping()에서 처리된다.
                 // 여기서 콜백으로 미리 재개해버리면 점수 연출이 재생되는 동안 시간/개발진행도가 새는 버그가 생긴다.
-                DispatchPanelUI.Instance.OpenForLeaderSelect(LeaderType.Planner, null);
             });
         }
 
@@ -724,6 +742,7 @@ public class DevelopmentManager : MonoBehaviour
     void OnDevelopmentComplete()
     {
         FireRemainingTicks();
+        _challenge.OnDevelopmentComplete(); // 파트총점 도전과제 판정 — 최종 틱까지 반영된 뒤라야 정확
         _isRunning = false;
         // 개발 완료 시 캐릭터 감속·진행도 보정 즉시 해제 — SaveProject 전에 클리어해야 stale 복원 방지
         if (_characterSlowCoroutine != null) { StopCoroutine(_characterSlowCoroutine); _characterSlowCoroutine = null; }
@@ -995,8 +1014,12 @@ public class DevelopmentManager : MonoBehaviour
         });
     }
 
+    // 지금 팀장점수 화면에 떠 있는 파트 — MissionPanelDisplay가 도전과제 파트와 비교해 상시표시 여부를 판단.
+    public LeaderType? CurrentLeaderScoreType { get; private set; }
+
     public void SetLeader(LeaderType type, EmployeeData employee)
     {
+        CurrentLeaderScoreType = type;
         switch (type)
         {
             case LeaderType.Planner: plannerLeader = employee; break;
@@ -1521,9 +1544,7 @@ public class DevelopmentManager : MonoBehaviour
             }
         }
 
-        if (type == LeaderType.Programmer) _leaderDevelopBonusTotal  = total;
-        if (type == LeaderType.Planner)    _leaderPlanningBonusTotal = total;
-        if (type == LeaderType.Artist)     _leaderArtBonusTotal      = total;
+        SetLeaderBonusTotal(type, total);
 
         bool hasValues = overflowRound != -1; // overflow 면 값 잠금 저장, 아니면 직원만 저장(재추첨 허용)
 
@@ -1641,9 +1662,7 @@ public class DevelopmentManager : MonoBehaviour
         for (int r = 0; r < 4; r++) total += roundScores[r];
         total += _leaderBonusTotal; // 90/95/99 임계선 보너스 (1~3회차분 포함 누적치)
 
-        if (ctx.type == LeaderType.Programmer) _leaderDevelopBonusTotal  = total;
-        if (ctx.type == LeaderType.Planner)    _leaderPlanningBonusTotal = total;
-        if (ctx.type == LeaderType.Artist)     _leaderArtBonusTotal      = total;
+        SetLeaderBonusTotal(ctx.type, total);
 
         int hunsuBonus = 0;
         LeaderType hunsuBonusTarget = LeaderType.Planner;
@@ -2392,6 +2411,8 @@ public class DevelopmentManager : MonoBehaviour
         _leaderDevelopBonusTotal  = 0f;
         _leaderPlanningBonusTotal = 0f;
         _leaderArtBonusTotal      = 0f;
+        CurrentLeaderScoreType    = null;
+        _challenge.ResetForNewRun();
         BugPenalty = 0f;
         BugEventBonus = 0f;
         _progressVisualOffset = 0f;
