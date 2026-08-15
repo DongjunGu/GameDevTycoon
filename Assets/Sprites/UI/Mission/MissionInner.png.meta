@@ -1,0 +1,4004 @@
+fileFormatVersion: 2
+guid: efd75d15bbdc432418fb6e24e0da391c
+TextureImporter:
+  internalIDToNameTable:
+  - first:
+      213: -1667201408024871693
+    second: MissionInner_0
+  - first:
+      213: 4877778571906241431
+    second: MissionInner_1
+  - first:
+      213: -7777507417376150838
+    second: MissionInner_2
+  - first:
+      213: -4924376220602032078
+    second: MissionInner_3
+  - first:
+      213: 2833027417709804466
+    second: MissionInner_4
+  - first:
+      213: 7384412910461045644
+    second: MissionInner_5
+  - first:
+      213: 2741962173389441220
+    second: MissionInner_6
+  - first:
+      213: -3311434611132334287
+    second: MissionInner_7
+  - first:
+      213: -205679447931926777
+    second: MissionInner_8
+  - first:
+      213: 3049465578530100073
+    second: MissionInner_9
+  - first:
+      213: -3693504482508870061
+    second: MissionInner_10
+  - first:
+      213: -6864955849559473662
+    second: MissionInner_11
+  - first:
+      213: -43234479724015072
+    second: MissionInner_12
+  - first:
+      213: -4407222396348785265
+    second: MissionInner_13
+  - first:
+      213: -3178524250149852495
+    second: MissionInner_14
+  - first:
+      213: -7776601933052520374
+    second: MissionInner_15
+  - first:
+      213: 2553290618476721241
+    second: MissionInner_16
+  - first:
+      213: 3101827527471839625
+    second: MissionInner_17
+  - first:
+      213: -2575702003312725625
+    second: MissionInner_18
+  - first:
+      213: 7031718141022447875
+    second: MissionInner_19
+  - first:
+      213: 3260595533006095542
+    second: MissionInner_20
+  - first:
+      213: 8679845977188895785
+    second: MissionInner_21
+  - first:
+      213: -269512355968329103
+    second: MissionInner_22
+  - first:
+      213: -6545847583124921280
+    second: MissionInner_23
+  - first:
+      213: 3668752834589244383
+    second: MissionInner_24
+  - first:
+      213: 999981759592207649
+    second: MissionInner_25
+  - first:
+      213: -3823857231303952064
+    second: MissionInner_26
+  - first:
+      213: 6146793278842345340
+    second: MissionInner_27
+  - first:
+      213: -3626157570437065274
+    second: MissionInner_28
+  - first:
+      213: -5016535181606018184
+    second: MissionInner_29
+  - first:
+      213: -1943198971132963749
+    second: MissionInner_30
+  - first:
+      213: 2206328693384307218
+    second: MissionInner_31
+  - first:
+      213: -7768033437289244007
+    second: MissionInner_32
+  - first:
+      213: -7257806643039355995
+    second: MissionInner_33
+  - first:
+      213: 6739606405559636053
+    second: MissionInner_34
+  - first:
+      213: 1223328007907113149
+    second: MissionInner_35
+  - first:
+      213: 6382399553701408588
+    second: MissionInner_36
+  - first:
+      213: -3470677999325750229
+    second: MissionInner_37
+  - first:
+      213: 3899224214520296501
+    second: MissionInner_38
+  - first:
+      213: -209834957648084512
+    second: MissionInner_39
+  - first:
+      213: 269763376707729702
+    second: MissionInner_40
+  - first:
+      213: -2646233180111605256
+    second: MissionInner_41
+  - first:
+      213: 3022926718888512008
+    second: MissionInner_42
+  - first:
+      213: 6414201536631626557
+    second: MissionInner_43
+  - first:
+      213: -2418741989530443447
+    second: MissionInner_44
+  - first:
+      213: 4816075512013851699
+    second: MissionInner_45
+  - first:
+      213: 2238829007035498190
+    second: MissionInner_46
+  - first:
+      213: -2109893000215653230
+    second: MissionInner_47
+  - first:
+      213: -7163791551389941883
+    second: MissionInner_48
+  - first:
+      213: 886413080479668773
+    second: MissionInner_49
+  - first:
+      213: -5570603713455580429
+    second: MissionInner_50
+  - first:
+      213: -6690185796710818489
+    second: MissionInner_51
+  - first:
+      213: 8439664316250880314
+    second: MissionInner_52
+  - first:
+      213: 2708945493313877486
+    second: MissionInner_53
+  - first:
+      213: -7413022032500637877
+    second: MissionInner_54
+  - first:
+      213: 8350901580215255872
+    second: MissionInner_55
+  - first:
+      213: -1264754090856000307
+    second: MissionInner_56
+  - first:
+      213: 6296783241046544828
+    second: MissionInner_57
+  - first:
+      213: 7318633996548788114
+    second: MissionInner_58
+  - first:
+      213: 8173868325100448033
+    second: MissionInner_59
+  - first:
+      213: 9136200925894464059
+    second: MissionInner_60
+  - first:
+      213: 5828549438522767409
+    second: MissionInner_61
+  - first:
+      213: -7229009769337352671
+    second: MissionInner_62
+  - first:
+      213: 5453773324842026781
+    second: MissionInner_63
+  - first:
+      213: 3246835110517595943
+    second: MissionInner_64
+  - first:
+      213: -6300812674391952032
+    second: MissionInner_65
+  - first:
+      213: -4229522733528684287
+    second: MissionInner_66
+  - first:
+      213: -7681200698512663891
+    second: MissionInner_67
+  - first:
+      213: 3742089289437971582
+    second: MissionInner_68
+  - first:
+      213: 761017385682815237
+    second: MissionInner_69
+  - first:
+      213: -8611325223215526180
+    second: MissionInner_70
+  - first:
+      213: 4101183412330296305
+    second: MissionInner_71
+  - first:
+      213: -2455288693420200535
+    second: MissionInner_72
+  - first:
+      213: -8906838987110379867
+    second: MissionInner_73
+  - first:
+      213: 266245577691409865
+    second: MissionInner_74
+  - first:
+      213: -2223461071822229368
+    second: MissionInner_75
+  - first:
+      213: -5571206681517037243
+    second: MissionInner_76
+  - first:
+      213: 2204981366454089433
+    second: MissionInner_77
+  - first:
+      213: 4125831749961403875
+    second: MissionInner_78
+  - first:
+      213: 4023030065728238265
+    second: MissionInner_79
+  - first:
+      213: -8649960146262759391
+    second: MissionInner_80
+  - first:
+      213: 5571786647139398367
+    second: MissionInner_81
+  - first:
+      213: 8493251124532526204
+    second: MissionInner_82
+  - first:
+      213: -8610199837334537538
+    second: MissionInner_83
+  - first:
+      213: -9056454875753850308
+    second: MissionInner_84
+  - first:
+      213: -6290450303825186736
+    second: MissionInner_85
+  - first:
+      213: 5604046780777529896
+    second: MissionInner_86
+  - first:
+      213: -4341594695332826
+    second: MissionInner_87
+  - first:
+      213: -638780501051768250
+    second: MissionInner_88
+  - first:
+      213: 373266350697476984
+    second: MissionInner_89
+  - first:
+      213: 1403132721145985328
+    second: MissionInner_90
+  - first:
+      213: -4128348228756179376
+    second: MissionInner_91
+  - first:
+      213: 1028097208629796830
+    second: MissionInner_92
+  - first:
+      213: 1435562081103455260
+    second: MissionInner_93
+  - first:
+      213: 7781338780165136996
+    second: MissionInner_94
+  - first:
+      213: -7985283016610044153
+    second: MissionInner_95
+  - first:
+      213: -3683255645784421536
+    second: MissionInner_96
+  - first:
+      213: 3444932731318104927
+    second: MissionInner_97
+  - first:
+      213: -4033263802339680929
+    second: MissionInner_98
+  - first:
+      213: 7705678189544454124
+    second: MissionInner_99
+  - first:
+      213: -3355206227912294967
+    second: MissionInner_100
+  - first:
+      213: -8915776763104014585
+    second: MissionInner_101
+  - first:
+      213: 4759846956678565951
+    second: MissionInner_102
+  - first:
+      213: -8779328089331454295
+    second: MissionInner_103
+  - first:
+      213: 8063351113182116269
+    second: MissionInner_104
+  - first:
+      213: -2953783474493829618
+    second: MissionInner_105
+  - first:
+      213: -7638504083520144488
+    second: MissionInner_106
+  - first:
+      213: -4884511100372044704
+    second: MissionInner_107
+  - first:
+      213: 3157617767186245237
+    second: MissionInner_108
+  - first:
+      213: -4048702115483735523
+    second: MissionInner_109
+  - first:
+      213: -2212567160935999336
+    second: MissionInner_110
+  - first:
+      213: 7125476976243573673
+    second: MissionInner_111
+  - first:
+      213: 2905854392562450240
+    second: MissionInner_112
+  - first:
+      213: 2395959131515158929
+    second: MissionInner_113
+  - first:
+      213: -606315579445984252
+    second: MissionInner_114
+  - first:
+      213: 6507378518739559400
+    second: MissionInner_115
+  - first:
+      213: 6862641657328978976
+    second: MissionInner_116
+  - first:
+      213: 2308299947814576193
+    second: MissionInner_117
+  - first:
+      213: 4231995699468407224
+    second: MissionInner_118
+  - first:
+      213: 7085428876458385292
+    second: MissionInner_119
+  - first:
+      213: -6871102003645659236
+    second: MissionInner_120
+  - first:
+      213: 2887544442831431170
+    second: MissionInner_121
+  - first:
+      213: -9173897155990593180
+    second: MissionInner_122
+  - first:
+      213: 2291185562330957878
+    second: MissionInner_123
+  - first:
+      213: -3847681372041121761
+    second: MissionInner_124
+  - first:
+      213: -4160657781148055860
+    second: MissionInner_125
+  - first:
+      213: -3882692274844849164
+    second: MissionInner_126
+  - first:
+      213: -7577837221024192146
+    second: MissionInner_127
+  - first:
+      213: 2818973564282051173
+    second: MissionInner_128
+  - first:
+      213: -334317573719908549
+    second: MissionInner_129
+  - first:
+      213: 123822947718310055
+    second: MissionInner_130
+  - first:
+      213: -7107293769585897957
+    second: MissionInner_131
+  - first:
+      213: 895579442371773209
+    second: MissionInner_132
+  - first:
+      213: 7547732373798305632
+    second: MissionInner_133
+  - first:
+      213: -9034821478343024921
+    second: MissionInner_134
+  - first:
+      213: -1779324112041064822
+    second: MissionInner_135
+  - first:
+      213: 939924597905478274
+    second: MissionInner_136
+  - first:
+      213: 6458140278061718981
+    second: MissionInner_137
+  - first:
+      213: 7929089844487073903
+    second: MissionInner_138
+  - first:
+      213: 6856988003198723251
+    second: MissionInner_139
+  - first:
+      213: 4750145282611616171
+    second: MissionInner_140
+  - first:
+      213: 2008306066151164583
+    second: MissionInner_141
+  - first:
+      213: -2426594587195902746
+    second: MissionInner_142
+  - first:
+      213: -8301575063897925452
+    second: MissionInner_143
+  - first:
+      213: 4119436002022039237
+    second: MissionInner_144
+  - first:
+      213: -735584417020321019
+    second: MissionInner_145
+  - first:
+      213: -903032542576253739
+    second: MissionInner_146
+  - first:
+      213: 4497603150607651269
+    second: MissionInner_147
+  externalObjects: {}
+  serializedVersion: 13
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 0
+    sRGBTexture: 1
+    linearTexture: 0
+    fadeOut: 0
+    borderMipMap: 0
+    mipMapsPreserveCoverage: 0
+    alphaTestReferenceValue: 0.5
+    mipMapFadeDistanceStart: 1
+    mipMapFadeDistanceEnd: 3
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: 0.25
+    normalMapFilter: 0
+    flipGreenChannel: 0
+  isReadable: 0
+  streamingMipmaps: 0
+  streamingMipmapsPriority: 0
+  vTOnly: 0
+  ignoreMipmapLimit: 0
+  grayScaleToAlpha: 0
+  generateCubemap: 6
+  cubemapConvolution: 0
+  seamlessCubemap: 0
+  textureFormat: 1
+  maxTextureSize: 2048
+  textureSettings:
+    serializedVersion: 2
+    filterMode: 1
+    aniso: 1
+    mipBias: 0
+    wrapU: 1
+    wrapV: 1
+    wrapW: 1
+  nPOTScale: 0
+  lightmap: 0
+  compressionQuality: 50
+  spriteMode: 1
+  spriteExtrude: 1
+  spriteMeshType: 1
+  alignment: 0
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 100
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteGenerateFallbackPhysicsShape: 1
+  alphaUsage: 1
+  alphaIsTransparency: 1
+  spriteTessellationDetail: -1
+  textureType: 8
+  textureShape: 1
+  singleChannelComponent: 0
+  flipbookRows: 1
+  flipbookColumns: 1
+  maxTextureSizeSet: 0
+  compressionQualitySet: 0
+  textureFormatSet: 0
+  ignorePngGamma: 0
+  applyGammaDecoding: 0
+  swizzle: 50462976
+  cookieLightType: 0
+  platformSettings:
+  - serializedVersion: 4
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Standalone
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Android
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: WebGL
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: iOS
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  spriteSheet:
+    serializedVersion: 2
+    sprites:
+    - serializedVersion: 2
+      name: MissionInner_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 0
+        width: 976
+        height: 887
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 3fc75a11729ecd8e0800000000000000
+      internalID: -1667201408024871693
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_1
+      rect:
+        serializedVersion: 2
+        x: 2
+        y: 879
+        width: 9
+        height: 8
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 793db7f74c951b340800000000000000
+      internalID: 4877778571906241431
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_2
+      rect:
+        serializedVersion: 2
+        x: 28
+        y: 879
+        width: 6
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: aca245df53eb01490800000000000000
+      internalID: -7777507417376150838
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_3
+      rect:
+        serializedVersion: 2
+        x: 40
+        y: 880
+        width: 6
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 230a2a6fae919abb0800000000000000
+      internalID: -4924376220602032078
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_4
+      rect:
+        serializedVersion: 2
+        x: 56
+        y: 880
+        width: 7
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 2bbf8872d6fe05720800000000000000
+      internalID: 2833027417709804466
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_5
+      rect:
+        serializedVersion: 2
+        x: 61
+        y: 881
+        width: 8
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: c8bc6d2fa64ba7660800000000000000
+      internalID: 7384412910461045644
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_6
+      rect:
+        serializedVersion: 2
+        x: 103
+        y: 880
+        width: 8
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 4c88f64b1186d0620800000000000000
+      internalID: 2741962173389441220
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_7
+      rect:
+        serializedVersion: 2
+        x: 133
+        y: 881
+        width: 11
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 13ff58214cb6b02d0800000000000000
+      internalID: -3311434611132334287
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_8
+      rect:
+        serializedVersion: 2
+        x: 141
+        y: 877
+        width: 8
+        height: 9
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 7074b60c1a7452df0800000000000000
+      internalID: -205679447931926777
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_9
+      rect:
+        serializedVersion: 2
+        x: 159
+        y: 882
+        width: 6
+        height: 5
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 963511379c0e15a20800000000000000
+      internalID: 3049465578530100073
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_10
+      rect:
+        serializedVersion: 2
+        x: 163
+        y: 879
+        width: 9
+        height: 8
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 35eeebffd390ebcc0800000000000000
+      internalID: -3693504482508870061
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_11
+      rect:
+        serializedVersion: 2
+        x: 187
+        y: 878
+        width: 8
+        height: 9
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 2028444e607cab0a0800000000000000
+      internalID: -6864955849559473662
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_12
+      rect:
+        serializedVersion: 2
+        x: 202
+        y: 876
+        width: 10
+        height: 11
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 02250024876666ff0800000000000000
+      internalID: -43234479724015072
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_13
+      rect:
+        serializedVersion: 2
+        x: 213
+        y: 881
+        width: 6
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f8d1c7bb49666d2c0800000000000000
+      internalID: -4407222396348785265
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_14
+      rect:
+        serializedVersion: 2
+        x: 221
+        y: 881
+        width: 7
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 1ba6ad7f80d93e3d0800000000000000
+      internalID: -3178524250149852495
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_15
+      rect:
+        serializedVersion: 2
+        x: 233
+        y: 880
+        width: 7
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: a48d9cc7eb5f31490800000000000000
+      internalID: -7776601933052520374
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_16
+      rect:
+        serializedVersion: 2
+        x: 258
+        y: 881
+        width: 9
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 95474a22a4c1f6320800000000000000
+      internalID: 2553290618476721241
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_17
+      rect:
+        serializedVersion: 2
+        x: 303
+        y: 879
+        width: 6
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 989bc79b3b7eb0b20800000000000000
+      internalID: 3101827527471839625
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_18
+      rect:
+        serializedVersion: 2
+        x: 310
+        y: 880
+        width: 7
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 7817845bca4414cd0800000000000000
+      internalID: -2575702003312725625
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_19
+      rect:
+        serializedVersion: 2
+        x: 331
+        y: 879
+        width: 7
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 3092054c46ea59160800000000000000
+      internalID: 7031718141022447875
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_20
+      rect:
+        serializedVersion: 2
+        x: 359
+        y: 880
+        width: 10
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 6b4cd05ac56ff3d20800000000000000
+      internalID: 3260595533006095542
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_21
+      rect:
+        serializedVersion: 2
+        x: 397
+        y: 877
+        width: 12
+        height: 9
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 92c827fade1057870800000000000000
+      internalID: 8679845977188895785
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_22
+      rect:
+        serializedVersion: 2
+        x: 415
+        y: 882
+        width: 6
+        height: 5
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 17addefa0ff724cf0800000000000000
+      internalID: -269512355968329103
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_23
+      rect:
+        serializedVersion: 2
+        x: 419
+        y: 879
+        width: 9
+        height: 8
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 0446df5fd4a7825a0800000000000000
+      internalID: -6545847583124921280
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_24
+      rect:
+        serializedVersion: 2
+        x: 443
+        y: 878
+        width: 8
+        height: 9
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: fdb3662e3470ae230800000000000000
+      internalID: 3668752834589244383
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_25
+      rect:
+        serializedVersion: 2
+        x: 458
+        y: 876
+        width: 10
+        height: 11
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 1251d5abc16a0ed00800000000000000
+      internalID: 999981759592207649
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_26
+      rect:
+        serializedVersion: 2
+        x: 469
+        y: 881
+        width: 6
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 049b1589b1eeeeac0800000000000000
+      internalID: -3823857231303952064
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_27
+      rect:
+        serializedVersion: 2
+        x: 477
+        y: 881
+        width: 7
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: c7718258bebcd4550800000000000000
+      internalID: 6146793278842345340
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_28
+      rect:
+        serializedVersion: 2
+        x: 489
+        y: 880
+        width: 7
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 6c55182e6ec4dadc0800000000000000
+      internalID: -3626157570437065274
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_29
+      rect:
+        serializedVersion: 2
+        x: 514
+        y: 881
+        width: 9
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 873af11c4dfa16ab0800000000000000
+      internalID: -5016535181606018184
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_30
+      rect:
+        serializedVersion: 2
+        x: 559
+        y: 879
+        width: 6
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b5417bdc4de5805e0800000000000000
+      internalID: -1943198971132963749
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_31
+      rect:
+        serializedVersion: 2
+        x: 566
+        y: 880
+        width: 7
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 2126ceac1447e9e10800000000000000
+      internalID: 2206328693384307218
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_32
+      rect:
+        serializedVersion: 2
+        x: 587
+        y: 879
+        width: 7
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 99a940fdeb6623490800000000000000
+      internalID: -7768033437289244007
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_33
+      rect:
+        serializedVersion: 2
+        x: 615
+        y: 880
+        width: 10
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 5ab3b29cf47174b90800000000000000
+      internalID: -7257806643039355995
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_34
+      rect:
+        serializedVersion: 2
+        x: 653
+        y: 877
+        width: 12
+        height: 9
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 55054516154e78d50800000000000000
+      internalID: 6739606405559636053
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_35
+      rect:
+        serializedVersion: 2
+        x: 671
+        y: 882
+        width: 6
+        height: 5
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: db8f61b77522af010800000000000000
+      internalID: 1223328007907113149
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_36
+      rect:
+        serializedVersion: 2
+        x: 675
+        y: 879
+        width: 9
+        height: 8
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: c4febf42496d29850800000000000000
+      internalID: 6382399553701408588
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_37
+      rect:
+        serializedVersion: 2
+        x: 699
+        y: 878
+        width: 8
+        height: 9
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b2cdc608fbca5dfc0800000000000000
+      internalID: -3470677999325750229
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_38
+      rect:
+        serializedVersion: 2
+        x: 714
+        y: 876
+        width: 10
+        height: 11
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 534751e93c3dc1630800000000000000
+      internalID: 3899224214520296501
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_39
+      rect:
+        serializedVersion: 2
+        x: 725
+        y: 881
+        width: 6
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 0e14defb734861df0800000000000000
+      internalID: -209834957648084512
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_40
+      rect:
+        serializedVersion: 2
+        x: 733
+        y: 881
+        width: 7
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 629f212ac546eb300800000000000000
+      internalID: 269763376707729702
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_41
+      rect:
+        serializedVersion: 2
+        x: 745
+        y: 880
+        width: 7
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 8f1789a61f0b64bd0800000000000000
+      internalID: -2646233180111605256
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_42
+      rect:
+        serializedVersion: 2
+        x: 770
+        y: 881
+        width: 9
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 80a036da5d793f920800000000000000
+      internalID: 3022926718888512008
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_43
+      rect:
+        serializedVersion: 2
+        x: 815
+        y: 879
+        width: 6
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d3b51bc4052d30950800000000000000
+      internalID: 6414201536631626557
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_44
+      rect:
+        serializedVersion: 2
+        x: 822
+        y: 880
+        width: 9
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 94167beb9f6ee6ed0800000000000000
+      internalID: -2418741989530443447
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_45
+      rect:
+        serializedVersion: 2
+        x: 829
+        y: 881
+        width: 7
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 33c0b09592326d240800000000000000
+      internalID: 4816075512013851699
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_46
+      rect:
+        serializedVersion: 2
+        x: 844
+        y: 879
+        width: 6
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ecef03dbe1be11f10800000000000000
+      internalID: 2238829007035498190
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_47
+      rect:
+        serializedVersion: 2
+        x: 871
+        y: 880
+        width: 8
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 2941018be7728b2e0800000000000000
+      internalID: -2109893000215653230
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_48
+      rect:
+        serializedVersion: 2
+        x: 901
+        y: 876
+        width: 11
+        height: 11
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 58f35761a89159c90800000000000000
+      internalID: -7163791551389941883
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_49
+      rect:
+        serializedVersion: 2
+        x: 927
+        y: 882
+        width: 6
+        height: 5
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 52a1042100c2d4c00800000000000000
+      internalID: 886413080479668773
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_50
+      rect:
+        serializedVersion: 2
+        x: 930
+        y: 876
+        width: 10
+        height: 11
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 3fa120bdf6d31b2b0800000000000000
+      internalID: -5570603713455580429
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_51
+      rect:
+        serializedVersion: 2
+        x: 938
+        y: 879
+        width: 9
+        height: 8
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 74d10b9c67fa723a0800000000000000
+      internalID: -6690185796710818489
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_52
+      rect:
+        serializedVersion: 2
+        x: 953
+        y: 874
+        width: 10
+        height: 13
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: a397ca9faf5bf1570800000000000000
+      internalID: 8439664316250880314
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_53
+      rect:
+        serializedVersion: 2
+        x: 969
+        y: 871
+        width: 7
+        height: 8
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ee57ed4d29b189520800000000000000
+      internalID: 2708945493313877486
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_54
+      rect:
+        serializedVersion: 2
+        x: 970
+        y: 864
+        width: 6
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b4fb7a0ccb7af1990800000000000000
+      internalID: -7413022032500637877
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_55
+      rect:
+        serializedVersion: 2
+        x: 971
+        y: 858
+        width: 5
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 0438af20ebc54e370800000000000000
+      internalID: 8350901580215255872
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_56
+      rect:
+        serializedVersion: 2
+        x: 1
+        y: 854
+        width: 9
+        height: 8
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: dc45e46fad0b27ee0800000000000000
+      internalID: -1264754090856000307
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_57
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 841
+        width: 9
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: cb15636fefaa26750800000000000000
+      internalID: 6296783241046544828
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_58
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 828
+        width: 6
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 29f436518d2019560800000000000000
+      internalID: 7318633996548788114
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_59
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 815
+        width: 20
+        height: 14
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 129ed664fe96f6170800000000000000
+      internalID: 8173868325100448033
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_60
+      rect:
+        serializedVersion: 2
+        x: 971
+        y: 829
+        width: 5
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b32d880265e4ace70800000000000000
+      internalID: 9136200925894464059
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_61
+      rect:
+        serializedVersion: 2
+        x: 970
+        y: 818
+        width: 6
+        height: 9
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 138b3f655da23e050800000000000000
+      internalID: 5828549438522767409
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_62
+      rect:
+        serializedVersion: 2
+        x: 971
+        y: 813
+        width: 5
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 12e81dc6ae56dab90800000000000000
+      internalID: -7229009769337352671
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_63
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 785
+        width: 5
+        height: 10
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d17c5b091f1bfab40800000000000000
+      internalID: 5453773324842026781
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_64
+      rect:
+        serializedVersion: 2
+        x: 965
+        y: 763
+        width: 10
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 72fdaae94531f0d20800000000000000
+      internalID: 3246835110517595943
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_65
+      rect:
+        serializedVersion: 2
+        x: 967
+        y: 737
+        width: 8
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 065b69a71440f88a0800000000000000
+      internalID: -6300812674391952032
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_66
+      rect:
+        serializedVersion: 2
+        x: 1
+        y: 720
+        width: 6
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 109659a9b77bd45c0800000000000000
+      internalID: -4229522733528684287
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_67
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 691
+        width: 5
+        height: 10
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: daa9ba459a4e66590800000000000000
+      internalID: -7681200698512663891
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_68
+      rect:
+        serializedVersion: 2
+        x: 967
+        y: 701
+        width: 8
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: e748ebed1629ee330800000000000000
+      internalID: 3742089289437971582
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_69
+      rect:
+        serializedVersion: 2
+        x: 1
+        y: 685
+        width: 11
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 509458db74daf8a00800000000000000
+      internalID: 761017385682815237
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_70
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 670
+        width: 7
+        height: 8
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: cde80e0955d6e7880800000000000000
+      internalID: -8611325223215526180
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_71
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 657
+        width: 6
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 1f3fba2a5945ae830800000000000000
+      internalID: 4101183412330296305
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_72
+      rect:
+        serializedVersion: 2
+        x: 970
+        y: 655
+        width: 6
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 9ade7a721ff0dedd0800000000000000
+      internalID: -2455288693420200535
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_73
+      rect:
+        serializedVersion: 2
+        x: 1
+        y: 644
+        width: 11
+        height: 9
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 5ae8fa5b12d846480800000000000000
+      internalID: -8906838987110379867
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_74
+      rect:
+        serializedVersion: 2
+        x: 965
+        y: 615
+        width: 11
+        height: 10
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 9cda05931f4e1b300800000000000000
+      internalID: 266245577691409865
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_75
+      rect:
+        serializedVersion: 2
+        x: 970
+        y: 623
+        width: 6
+        height: 11
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 88070228feda421e0800000000000000
+      internalID: -2223461071822229368
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_76
+      rect:
+        serializedVersion: 2
+        x: 968
+        y: 608
+        width: 8
+        height: 8
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 549e4e96a091fa2b0800000000000000
+      internalID: -5571206681517037243
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_77
+      rect:
+        serializedVersion: 2
+        x: 970
+        y: 602
+        width: 6
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 9d6f9dbcedaa99e10800000000000000
+      internalID: 2204981366454089433
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_78
+      rect:
+        serializedVersion: 2
+        x: 1
+        y: 595
+        width: 10
+        height: 11
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 3ed4a73fd16e14930800000000000000
+      internalID: 4125831749961403875
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_79
+      rect:
+        serializedVersion: 2
+        x: 971
+        y: 595
+        width: 5
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 9b2b274a78ca4d730800000000000000
+      internalID: 4023030065728238265
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_80
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 585
+        width: 7
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 128e8b0931b25f780800000000000000
+      internalID: -8649960146262759391
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_81
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 572
+        width: 6
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: fd2320b5f66f25d40800000000000000
+      internalID: 5571786647139398367
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_82
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 565
+        width: 6
+        height: 8
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: c7cb2f906e61ed570800000000000000
+      internalID: 8493251124532526204
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_83
+      rect:
+        serializedVersion: 2
+        x: 971
+        y: 573
+        width: 5
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: eba7c82eddc628880800000000000000
+      internalID: -8610199837334537538
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_84
+      rect:
+        serializedVersion: 2
+        x: 970
+        y: 564
+        width: 6
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: c3a565e0642015280800000000000000
+      internalID: -9056454875753850308
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_85
+      rect:
+        serializedVersion: 2
+        x: 971
+        y: 557
+        width: 5
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 0507043e6c4d3b8a0800000000000000
+      internalID: -6290450303825186736
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_86
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 529
+        width: 5
+        height: 10
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 8228ae80bd295cd40800000000000000
+      internalID: 5604046780777529896
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_87
+      rect:
+        serializedVersion: 2
+        x: 1
+        y: 464
+        width: 6
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 62c0d66b75390fff0800000000000000
+      internalID: -4341594695332826
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_88
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 435
+        width: 5
+        height: 10
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 6420d59c4889227f0800000000000000
+      internalID: -638780501051768250
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_89
+      rect:
+        serializedVersion: 2
+        x: 966
+        y: 445
+        width: 9
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 873fdefa4cb1e2500800000000000000
+      internalID: 373266350697476984
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_90
+      rect:
+        serializedVersion: 2
+        x: 1
+        y: 429
+        width: 11
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 03932a896cde87310800000000000000
+      internalID: 1403132721145985328
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_91
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 414
+        width: 7
+        height: 8
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 056ffdba82925b6c0800000000000000
+      internalID: -4128348228756179376
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_92
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 401
+        width: 6
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: edf13f2d6f8844e00800000000000000
+      internalID: 1028097208629796830
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_93
+      rect:
+        serializedVersion: 2
+        x: 970
+        y: 399
+        width: 6
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: c1421395b142ce310800000000000000
+      internalID: 1435562081103455260
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_94
+      rect:
+        serializedVersion: 2
+        x: 1
+        y: 388
+        width: 11
+        height: 9
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 462e6bca46edcfb60800000000000000
+      internalID: 7781338780165136996
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_95
+      rect:
+        serializedVersion: 2
+        x: 965
+        y: 359
+        width: 11
+        height: 10
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 707affb77639e2190800000000000000
+      internalID: -7985283016610044153
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_96
+      rect:
+        serializedVersion: 2
+        x: 970
+        y: 367
+        width: 6
+        height: 11
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 06b4110418272ecc0800000000000000
+      internalID: -3683255645784421536
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_97
+      rect:
+        serializedVersion: 2
+        x: 968
+        y: 352
+        width: 8
+        height: 8
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f53f45d211cdecf20800000000000000
+      internalID: 3444932731318104927
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_98
+      rect:
+        serializedVersion: 2
+        x: 970
+        y: 346
+        width: 6
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f5d1a10e0f7f608c0800000000000000
+      internalID: -4033263802339680929
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_99
+      rect:
+        serializedVersion: 2
+        x: 1
+        y: 339
+        width: 10
+        height: 11
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ce7b549ac7110fa60800000000000000
+      internalID: 7705678189544454124
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_100
+      rect:
+        serializedVersion: 2
+        x: 971
+        y: 339
+        width: 5
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 9cdfb1d56b9ef61d0800000000000000
+      internalID: -3355206227912294967
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_101
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 329
+        width: 7
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 70fc082954cc44480800000000000000
+      internalID: -8915776763104014585
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_102
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 316
+        width: 6
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f30dc0e969f5e0240800000000000000
+      internalID: 4759846956678565951
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_103
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 309
+        width: 6
+        height: 8
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 9ae2acc1e9f892680800000000000000
+      internalID: -8779328089331454295
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_104
+      rect:
+        serializedVersion: 2
+        x: 971
+        y: 317
+        width: 5
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: da97870bd17c6ef60800000000000000
+      internalID: 8063351113182116269
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_105
+      rect:
+        serializedVersion: 2
+        x: 970
+        y: 308
+        width: 6
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: e0e406b649d0207d0800000000000000
+      internalID: -2953783474493829618
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_106
+      rect:
+        serializedVersion: 2
+        x: 971
+        y: 301
+        width: 5
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 89b396ea1059ef590800000000000000
+      internalID: -7638504083520144488
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_107
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 273
+        width: 5
+        height: 10
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 0643fd0980bb63cb0800000000000000
+      internalID: -4884511100372044704
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_108
+      rect:
+        serializedVersion: 2
+        x: 1
+        y: 208
+        width: 6
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 576299521ac12db20800000000000000
+      internalID: 3157617767186245237
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_109
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 179
+        width: 5
+        height: 10
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d1a283d70ee10d7c0800000000000000
+      internalID: -4048702115483735523
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_110
+      rect:
+        serializedVersion: 2
+        x: 966
+        y: 189
+        width: 9
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 89817bac3e16b41e0800000000000000
+      internalID: -2212567160935999336
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_111
+      rect:
+        serializedVersion: 2
+        x: 1
+        y: 173
+        width: 11
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 9a30938be87c2e260800000000000000
+      internalID: 7125476976243573673
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_112
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 158
+        width: 7
+        height: 8
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 04f71b59c2ba35820800000000000000
+      internalID: 2905854392562450240
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_113
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 145
+        width: 6
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 1918052c228204120800000000000000
+      internalID: 2395959131515158929
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_114
+      rect:
+        serializedVersion: 2
+        x: 970
+        y: 143
+        width: 6
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 4044651613fe597f0800000000000000
+      internalID: -606315579445984252
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_115
+      rect:
+        serializedVersion: 2
+        x: 968
+        y: 103
+        width: 8
+        height: 10
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 8e3aa74094ade4a50800000000000000
+      internalID: 6507378518739559400
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_116
+      rect:
+        serializedVersion: 2
+        x: 970
+        y: 111
+        width: 6
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 02c44ed3a300d3f50800000000000000
+      internalID: 6862641657328978976
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_117
+      rect:
+        serializedVersion: 2
+        x: 969
+        y: 96
+        width: 7
+        height: 8
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 1406a88929ab80020800000000000000
+      internalID: 2308299947814576193
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_118
+      rect:
+        serializedVersion: 2
+        x: 1
+        y: 86
+        width: 9
+        height: 8
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 8b19bc5aaa11bba30800000000000000
+      internalID: 4231995699468407224
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_119
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 73
+        width: 7
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: c8fd89ed500845260800000000000000
+      internalID: 7085428876458385292
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_120
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 60
+        width: 6
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: c97c931e121f4a0a0800000000000000
+      internalID: -6871102003645659236
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_121
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 53
+        width: 10
+        height: 8
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 206ee143f5e921820800000000000000
+      internalID: 2887544442831431170
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_122
+      rect:
+        serializedVersion: 2
+        x: 971
+        y: 61
+        width: 5
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 461e63b5425cfa080800000000000000
+      internalID: -9173897155990593180
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_123
+      rect:
+        serializedVersion: 2
+        x: 970
+        y: 50
+        width: 6
+        height: 9
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 6388d35312debcf10800000000000000
+      internalID: 2291185562330957878
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_124
+      rect:
+        serializedVersion: 2
+        x: 971
+        y: 45
+        width: 5
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f10f9929d2a4a9ac0800000000000000
+      internalID: -3847681372041121761
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_125
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 17
+        width: 5
+        height: 10
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: cc684bacacf5246c0800000000000000
+      internalID: -4160657781148055860
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_126
+      rect:
+        serializedVersion: 2
+        x: 22
+        y: 0
+        width: 18
+        height: 8
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 4fb28b982f7ed1ac0800000000000000
+      internalID: -3882692274844849164
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_127
+      rect:
+        serializedVersion: 2
+        x: 42
+        y: 0
+        width: 7
+        height: 5
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: e69ae13523d16d690800000000000000
+      internalID: -7577837221024192146
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_128
+      rect:
+        serializedVersion: 2
+        x: 48
+        y: 0
+        width: 7
+        height: 5
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 56a9f3a65810f1720800000000000000
+      internalID: 2818973564282051173
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_129
+      rect:
+        serializedVersion: 2
+        x: 58
+        y: 0
+        width: 9
+        height: 5
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b3f114020f34c5bf0800000000000000
+      internalID: -334317573719908549
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_130
+      rect:
+        serializedVersion: 2
+        x: 95
+        y: 0
+        width: 8
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 7a8aacd9058e7b100800000000000000
+      internalID: 123822947718310055
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_131
+      rect:
+        serializedVersion: 2
+        x: 106
+        y: 0
+        width: 8
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b1e4c7df8f1dd5d90800000000000000
+      internalID: -7107293769585897957
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_132
+      rect:
+        serializedVersion: 2
+        x: 175
+        y: 0
+        width: 8
+        height: 11
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 91346b202ccbd6c00800000000000000
+      internalID: 895579442371773209
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_133
+      rect:
+        serializedVersion: 2
+        x: 278
+        y: 0
+        width: 18
+        height: 10
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 06fb6f7ba9eeeb860800000000000000
+      internalID: 7547732373798305632
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_134
+      rect:
+        serializedVersion: 2
+        x: 298
+        y: 0
+        width: 7
+        height: 5
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 7ee5b46ebbddd9280800000000000000
+      internalID: -9034821478343024921
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_135
+      rect:
+        serializedVersion: 2
+        x: 314
+        y: 0
+        width: 9
+        height: 5
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: a864189b5229e47e0800000000000000
+      internalID: -1779324112041064822
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_136
+      rect:
+        serializedVersion: 2
+        x: 351
+        y: 0
+        width: 8
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 282decd11784b0d00800000000000000
+      internalID: 939924597905478274
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_137
+      rect:
+        serializedVersion: 2
+        x: 431
+        y: 0
+        width: 8
+        height: 8
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 5cdd28fbd5cef9950800000000000000
+      internalID: 6458140278061718981
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_138
+      rect:
+        serializedVersion: 2
+        x: 534
+        y: 0
+        width: 18
+        height: 10
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f603fc41439c90e60800000000000000
+      internalID: 7929089844487073903
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_139
+      rect:
+        serializedVersion: 2
+        x: 554
+        y: 0
+        width: 7
+        height: 5
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 3b466cf424ae82f50800000000000000
+      internalID: 6856988003198723251
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_140
+      rect:
+        serializedVersion: 2
+        x: 570
+        y: 0
+        width: 9
+        height: 5
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ba9109997f7ebe140800000000000000
+      internalID: 4750145282611616171
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_141
+      rect:
+        serializedVersion: 2
+        x: 607
+        y: 0
+        width: 8
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 7aac3390abfeedb10800000000000000
+      internalID: 2008306066151164583
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_142
+      rect:
+        serializedVersion: 2
+        x: 687
+        y: 0
+        width: 8
+        height: 8
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 6e47d406411035ed0800000000000000
+      internalID: -2426594587195902746
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_143
+      rect:
+        serializedVersion: 2
+        x: 790
+        y: 0
+        width: 18
+        height: 10
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 4b89f188671eacc80800000000000000
+      internalID: -8301575063897925452
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_144
+      rect:
+        serializedVersion: 2
+        x: 810
+        y: 0
+        width: 7
+        height: 5
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 5ce9a77d73d2b2930800000000000000
+      internalID: 4119436002022039237
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_145
+      rect:
+        serializedVersion: 2
+        x: 826
+        y: 0
+        width: 9
+        height: 5
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 503e039beddaac5f0800000000000000
+      internalID: -735584417020321019
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_146
+      rect:
+        serializedVersion: 2
+        x: 863
+        y: 0
+        width: 8
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 5d4ef1fdfa8c773f0800000000000000
+      internalID: -903032542576253739
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MissionInner_147
+      rect:
+        serializedVersion: 2
+        x: 942
+        y: 0
+        width: 9
+        height: 10
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 5c195a47c32ba6e30800000000000000
+      internalID: 4497603150607651269
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    outline: []
+    customData: 
+    physicsShape: []
+    bones: []
+    spriteID: 5e97eb03825dee720800000000000000
+    internalID: 0
+    vertices: []
+    indices: 
+    edges: []
+    weights: []
+    secondaryTextures: []
+    spriteCustomMetadata:
+      entries: []
+    nameFileIdTable:
+      MissionInner_0: -1667201408024871693
+      MissionInner_1: 4877778571906241431
+      MissionInner_10: -3693504482508870061
+      MissionInner_100: -3355206227912294967
+      MissionInner_101: -8915776763104014585
+      MissionInner_102: 4759846956678565951
+      MissionInner_103: -8779328089331454295
+      MissionInner_104: 8063351113182116269
+      MissionInner_105: -2953783474493829618
+      MissionInner_106: -7638504083520144488
+      MissionInner_107: -4884511100372044704
+      MissionInner_108: 3157617767186245237
+      MissionInner_109: -4048702115483735523
+      MissionInner_11: -6864955849559473662
+      MissionInner_110: -2212567160935999336
+      MissionInner_111: 7125476976243573673
+      MissionInner_112: 2905854392562450240
+      MissionInner_113: 2395959131515158929
+      MissionInner_114: -606315579445984252
+      MissionInner_115: 6507378518739559400
+      MissionInner_116: 6862641657328978976
+      MissionInner_117: 2308299947814576193
+      MissionInner_118: 4231995699468407224
+      MissionInner_119: 7085428876458385292
+      MissionInner_12: -43234479724015072
+      MissionInner_120: -6871102003645659236
+      MissionInner_121: 2887544442831431170
+      MissionInner_122: -9173897155990593180
+      MissionInner_123: 2291185562330957878
+      MissionInner_124: -3847681372041121761
+      MissionInner_125: -4160657781148055860
+      MissionInner_126: -3882692274844849164
+      MissionInner_127: -7577837221024192146
+      MissionInner_128: 2818973564282051173
+      MissionInner_129: -334317573719908549
+      MissionInner_13: -4407222396348785265
+      MissionInner_130: 123822947718310055
+      MissionInner_131: -7107293769585897957
+      MissionInner_132: 895579442371773209
+      MissionInner_133: 7547732373798305632
+      MissionInner_134: -9034821478343024921
+      MissionInner_135: -1779324112041064822
+      MissionInner_136: 939924597905478274
+      MissionInner_137: 6458140278061718981
+      MissionInner_138: 7929089844487073903
+      MissionInner_139: 6856988003198723251
+      MissionInner_14: -3178524250149852495
+      MissionInner_140: 4750145282611616171
+      MissionInner_141: 2008306066151164583
+      MissionInner_142: -2426594587195902746
+      MissionInner_143: -8301575063897925452
+      MissionInner_144: 4119436002022039237
+      MissionInner_145: -735584417020321019
+      MissionInner_146: -903032542576253739
+      MissionInner_147: 4497603150607651269
+      MissionInner_15: -7776601933052520374
+      MissionInner_16: 2553290618476721241
+      MissionInner_17: 3101827527471839625
+      MissionInner_18: -2575702003312725625
+      MissionInner_19: 7031718141022447875
+      MissionInner_2: -7777507417376150838
+      MissionInner_20: 3260595533006095542
+      MissionInner_21: 8679845977188895785
+      MissionInner_22: -269512355968329103
+      MissionInner_23: -6545847583124921280
+      MissionInner_24: 3668752834589244383
+      MissionInner_25: 999981759592207649
+      MissionInner_26: -3823857231303952064
+      MissionInner_27: 6146793278842345340
+      MissionInner_28: -3626157570437065274
+      MissionInner_29: -5016535181606018184
+      MissionInner_3: -4924376220602032078
+      MissionInner_30: -1943198971132963749
+      MissionInner_31: 2206328693384307218
+      MissionInner_32: -7768033437289244007
+      MissionInner_33: -7257806643039355995
+      MissionInner_34: 6739606405559636053
+      MissionInner_35: 1223328007907113149
+      MissionInner_36: 6382399553701408588
+      MissionInner_37: -3470677999325750229
+      MissionInner_38: 3899224214520296501
+      MissionInner_39: -209834957648084512
+      MissionInner_4: 2833027417709804466
+      MissionInner_40: 269763376707729702
+      MissionInner_41: -2646233180111605256
+      MissionInner_42: 3022926718888512008
+      MissionInner_43: 6414201536631626557
+      MissionInner_44: -2418741989530443447
+      MissionInner_45: 4816075512013851699
+      MissionInner_46: 2238829007035498190
+      MissionInner_47: -2109893000215653230
+      MissionInner_48: -7163791551389941883
+      MissionInner_49: 886413080479668773
+      MissionInner_5: 7384412910461045644
+      MissionInner_50: -5570603713455580429
+      MissionInner_51: -6690185796710818489
+      MissionInner_52: 8439664316250880314
+      MissionInner_53: 2708945493313877486
+      MissionInner_54: -7413022032500637877
+      MissionInner_55: 8350901580215255872
+      MissionInner_56: -1264754090856000307
+      MissionInner_57: 6296783241046544828
+      MissionInner_58: 7318633996548788114
+      MissionInner_59: 8173868325100448033
+      MissionInner_6: 2741962173389441220
+      MissionInner_60: 9136200925894464059
+      MissionInner_61: 5828549438522767409
+      MissionInner_62: -7229009769337352671
+      MissionInner_63: 5453773324842026781
+      MissionInner_64: 3246835110517595943
+      MissionInner_65: -6300812674391952032
+      MissionInner_66: -4229522733528684287
+      MissionInner_67: -7681200698512663891
+      MissionInner_68: 3742089289437971582
+      MissionInner_69: 761017385682815237
+      MissionInner_7: -3311434611132334287
+      MissionInner_70: -8611325223215526180
+      MissionInner_71: 4101183412330296305
+      MissionInner_72: -2455288693420200535
+      MissionInner_73: -8906838987110379867
+      MissionInner_74: 266245577691409865
+      MissionInner_75: -2223461071822229368
+      MissionInner_76: -5571206681517037243
+      MissionInner_77: 2204981366454089433
+      MissionInner_78: 4125831749961403875
+      MissionInner_79: 4023030065728238265
+      MissionInner_8: -205679447931926777
+      MissionInner_80: -8649960146262759391
+      MissionInner_81: 5571786647139398367
+      MissionInner_82: 8493251124532526204
+      MissionInner_83: -8610199837334537538
+      MissionInner_84: -9056454875753850308
+      MissionInner_85: -6290450303825186736
+      MissionInner_86: 5604046780777529896
+      MissionInner_87: -4341594695332826
+      MissionInner_88: -638780501051768250
+      MissionInner_89: 373266350697476984
+      MissionInner_9: 3049465578530100073
+      MissionInner_90: 1403132721145985328
+      MissionInner_91: -4128348228756179376
+      MissionInner_92: 1028097208629796830
+      MissionInner_93: 1435562081103455260
+      MissionInner_94: 7781338780165136996
+      MissionInner_95: -7985283016610044153
+      MissionInner_96: -3683255645784421536
+      MissionInner_97: 3444932731318104927
+      MissionInner_98: -4033263802339680929
+      MissionInner_99: 7705678189544454124
+  mipmapLimitGroupName: 
+  pSDRemoveMatte: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

@@ -603,6 +603,17 @@ public class CharacterEventTester : MonoBehaviour
             (candidates[i], candidates[j]) = (candidates[j], candidates[i]);
         }
 
+        // 랜덤이벤트가 특정 직원을 특정 지점(requiredPatrolPointId)까지 강제 patrol 시켜두고 도착을
+        // 기다리는 중일 수 있음(RandomEventManager._pendingEvent/_pendingChoiceEvent) — 그 상태에서
+        // 아무 직원이나 다른 곳으로 강제 patrol 시키면 원래 목적지에 영영 도착 못 해 OnPatrolArrived가
+        // 안 불리고, HasPendingEvent가 영구히 true로 남아 25%/75% 팀장선택 마일스톤이 시간은 흐르는데
+        // 영원히 안 뜨는 hang으로 이어진다(실제로 겪은 버그). 안전하게 pending 중엔 patrol 리다이렉트 스킵.
+        if (RandomEventManager.Instance != null && RandomEventManager.Instance.HasPendingEvent)
+        {
+            Set($"[P] {candidates.Count}명 만족도 100 (CEO/비서 제외) — 랜덤이벤트 대기 중이라 patrol은 스킵함(진행 중인 이벤트가 깨질 수 있음)");
+            return;
+        }
+
         int patrolCount = Mathf.Min(3, candidates.Count);
         for (int i = 0; i < patrolCount; i++)
             OfficeManager.Instance.ForceCharacterToPatrolPoint(candidates[i].id, Level4TestPatrolPoints[i]);
@@ -616,6 +627,16 @@ public class CharacterEventTester : MonoBehaviour
     void StopAutoPatrolTest()
     {
         if (OfficeManager.Instance == null) return;
+
+        // StopDevelopmentPatrol()은 전원을 CancelPatrol()로 즉시 데스크 복귀시킨다 — 랜덤이벤트가
+        // 특정 직원의 patrol 도착(OnPatrolArrived)을 기다리는 중이면 그 직원도 강제로 끊겨버려서
+        // 이벤트가 영원히 안 끝나고 25%/75% 팀장선택이 hang되는 버그로 이어진다(P키와 동일 원인).
+        if (RandomEventManager.Instance != null && RandomEventManager.Instance.HasPendingEvent)
+        {
+            Set("[S] 랜덤이벤트 대기 중이라 자동patrol 중단을 스킵함(진행 중인 이벤트가 깨질 수 있음)");
+            return;
+        }
+
         OfficeManager.Instance.StopDevelopmentPatrol();
         Set("[S] 자동 patrol 중단");
     }

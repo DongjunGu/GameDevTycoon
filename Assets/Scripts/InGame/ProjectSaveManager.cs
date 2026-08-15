@@ -79,6 +79,7 @@ public class ProjectSaveManager : MonoBehaviour
     private string _loadedUsedGameUpgrades = "";
     private string _loadedContributionJson = "";
     private string _loadedLeaderScoreResumeJson = "";
+    private string _loadedChallengeSaveData = "";
 
     private string _loadedProjectName = "프로젝트명";
     public string GetLoadedProjectName() => _loadedProjectName;
@@ -165,6 +166,7 @@ public class ProjectSaveManager : MonoBehaviour
         param.Add("usedGameUpgrades", dm.GetUsedGameUpgradesString());
         param.Add("contributionJson", dm.GetContributionJson());
         param.Add("leaderScoreResumeJson", dm.GetLeaderScoreResumeJson());
+        param.Add("challengeSaveData", dm.GetChallengeSaveData());
 
         if (!string.IsNullOrEmpty(_rowInDate))
         {
@@ -304,6 +306,7 @@ public class ProjectSaveManager : MonoBehaviour
             _loadedUsedGameUpgrades              = SafeString(row, "usedGameUpgrades", "");
             _loadedContributionJson             = SafeString(row, "contributionJson", "");
             _loadedLeaderScoreResumeJson        = SafeString(row, "leaderScoreResumeJson", "");
+            _loadedChallengeSaveData             = SafeString(row, "challengeSaveData", "");
 
             Debug.Log($"프로젝트 로드 완료: stage={_loadedStage} elapsed={_loadedElapsed:F1}");
             onComplete?.Invoke();
@@ -324,6 +327,9 @@ public class ProjectSaveManager : MonoBehaviour
 
         // 팀장점수 진행 재개 데이터 — RestoreState 가 leaderScoreResume 분기를 판단할 수 있게 먼저 주입
         DevelopmentManager.Instance.RestoreLeaderScoreResumeJson(_loadedLeaderScoreResumeJson);
+        // 도전과제 상태 — 아래에서 팀장점수 replay(ResumeLeaderScore)가 일어나기 전에 먼저 복원해야
+        // OnLeaderConfirmed 재실행 시 _partProcessed 가드로 중복 판정/중복 보상 지급을 막을 수 있다.
+        DevelopmentManager.Instance.RestoreChallengeSaveData(_loadedChallengeSaveData);
 
         // ── RestoreState 먼저 (SetValues 호출됨) ──
         DevelopmentManager.Instance.RestoreState(
