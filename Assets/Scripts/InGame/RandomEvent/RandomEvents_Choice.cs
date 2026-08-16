@@ -34,8 +34,9 @@ public static class RandomEvents_Choice
                         {
                             var emp = EmployeeManager.Instance.GetEmployee(birthdayEvt.targetEmployeeId);
                             if (emp == null) return;
+                            int before = emp.satisfaction;
                             emp.ChangeSatisfaction(-5);
-                            OfficeManager.Instance?.ShowStatPopup(emp.id, "만족도 -5", new Color(0.4f, 0.6f, 1f));
+                            InfoFeedUI.Instance?.ShowSatisfaction(emp, emp.satisfaction - before);
                         }
                     },
                     // ── 선택지 2: 강아지 생일 챙기기 ────────────
@@ -49,8 +50,9 @@ public static class RandomEvents_Choice
                             int cost = Mathf.Max(1, (int)(emp.salary * 0.03f));
                             int goldAfter = MoneyManager.Instance.Gold - cost;
                             MoneyManager.Instance.ForceSpendGold(cost, saveImmediately: false);
+                            int birthdayBefore = emp.satisfaction;
                             emp.ChangeSatisfaction(10);
-                            OfficeManager.Instance?.ShowStatPopup(emp.id, "만족도 +10", new Color(1f, 0.4f, 0.4f));
+                            InfoFeedUI.Instance?.ShowSatisfaction(emp, emp.satisfaction - birthdayBefore);
                             if (goldAfter < 0) GameTimeManager.Instance?.TriggerBankruptcy();
                         }
                     }
@@ -351,8 +353,9 @@ public static class RandomEvents_Choice
                         {
                             var emp = EmployeeManager.Instance.GetEmployee(gossiperEmp?.id);
                             if (emp == null) return;
+                            int before = emp.satisfaction;
                             emp.ChangeSatisfaction(-5);
-                            OfficeManager.Instance?.ShowStatPopup(emp.id, "만족도 -5", new Color(0.4f, 0.6f, 1f));
+                            InfoFeedUI.Instance?.ShowSatisfaction(emp, emp.satisfaction - before);
 
                             int buffWeeks = RandomStatBuffWeeksByStage();
                             emp.ApplyStatBuff(buffWeeks, 10);
@@ -558,8 +561,9 @@ public static class RandomEvents_Choice
                         {
                             var emp = EmployeeManager.Instance.GetEmployee(earlyLeaveEvt.targetEmployeeId);
                             if (emp == null) return;
+                            int before = emp.satisfaction;
                             emp.ChangeSatisfaction(-5);
-                            OfficeManager.Instance?.ShowStatPopup(emp.id, "만족도 -5", new Color(0.4f, 0.6f, 1f));
+                            InfoFeedUI.Instance?.ShowSatisfaction(emp, emp.satisfaction - before);
                         }
                     },
                     // ── 선택지 2: 허락 ──────────────────────────────
@@ -569,8 +573,9 @@ public static class RandomEvents_Choice
                         {
                             var emp = EmployeeManager.Instance.GetEmployee(earlyLeaveEvt.targetEmployeeId);
                             if (emp == null) return;
+                            int before = emp.satisfaction;
                             emp.ChangeSatisfaction(5);
-                            OfficeManager.Instance?.ShowStatPopup(emp.id, "만족도 +5", new Color(1f, 0.4f, 0.4f));
+                            InfoFeedUI.Instance?.ShowSatisfaction(emp, emp.satisfaction - before);
 
                             int delayWeeks = ProjectSetupUI.SelectedScale switch
                             {
@@ -587,6 +592,7 @@ public static class RandomEvents_Choice
                                 _ => 80f / 16f
                             };
                             DevelopmentManager.Instance.ExtendDevelopmentDuration(delayWeeks * secondsPerWeek, delayWeeks * 2 * secondsPerWeek); // 연장 N주 / 감속 2N주
+                            InfoFeedUI.Instance?.ShowDevelopmentDelay(emp, delayWeeks);
 
                             string weeks = delayWeeks.ToString();
                             var c1 = earlyLeaveEvt.choices[1];
@@ -673,6 +679,7 @@ public static class RandomEvents_Choice
                                 _ => 80f / 16f
                             };
                             DevelopmentManager.Instance.ExtendDevelopmentDuration(delayWeeks * secondsPerWeek, delayWeeks * 2 * secondsPerWeek); // 연장 N주 / 감속 2N주
+                            InfoFeedUI.Instance?.ShowDevelopmentDelay(hackyEmp, delayWeeks);
                             string weeks = delayWeeks.ToString();
                             var c1 = hackyEvt.choices[1];
                             c1.reply1     = c1.reply1?.Replace("{주수}", weeks);
@@ -754,8 +761,9 @@ public static class RandomEvents_Choice
                     {
                         var emp = EmployeeManager.Instance.GetEmployee(evt.targetEmployeeId);
                         if (emp == null) return;
+                        int before = emp.satisfaction;
                         emp.ChangeSatisfaction(25);
-                        OfficeManager.Instance?.ShowStatPopup(emp.id, "만족도 +25", new Color(1f, 0.4f, 0.4f));
+                        InfoFeedUI.Instance?.ShowSatisfaction(emp, emp.satisfaction - before);
                     }
                 },
                 // ── 선택지 2: 쉬게 해주기 ─────────────────────
@@ -765,8 +773,9 @@ public static class RandomEvents_Choice
                     {
                         var emp = EmployeeManager.Instance.GetEmployee(evt.targetEmployeeId);
                         if (emp == null) return;
+                        int before = emp.satisfaction;
                         emp.ChangeSatisfaction(25);
-                        OfficeManager.Instance?.ShowStatPopup(emp.id, "만족도 +25", new Color(1f, 0.4f, 0.4f));
+                        InfoFeedUI.Instance?.ShowSatisfaction(emp, emp.satisfaction - before);
                     }
                 }
             }
@@ -900,8 +909,9 @@ public static class RandomEvents_Choice
                     {
                         var winner = EmployeeManager.Instance.GetEmployee(emp1?.id);
                         if (winner == null) return;
+                        int before = winner.satisfaction;
                         winner.ChangeSatisfaction(10);
-                        OfficeManager.Instance?.ShowStatPopup(winner.id, "만족도 +10", new Color(1f, 0.4f, 0.4f));
+                        InfoFeedUI.Instance?.ShowSatisfaction(winner, winner.satisfaction - before);
                         float bonus = DevelopmentManager.Instance.GetLeaderBonusByRole(winner.role);
                         float delta = Mathf.Max(1f, bonus * 0.1f);
                         DevelopmentPanelUI.Instance.AddValues(
@@ -917,8 +927,9 @@ public static class RandomEvents_Choice
                     {
                         var winner = EmployeeManager.Instance.GetEmployee(emp2?.id);
                         if (winner == null) return;
+                        int before = winner.satisfaction;
                         winner.ChangeSatisfaction(10);
-                        OfficeManager.Instance?.ShowStatPopup(winner.id, "만족도 +10", new Color(1f, 0.4f, 0.4f));
+                        InfoFeedUI.Instance?.ShowSatisfaction(winner, winner.satisfaction - before);
                         float bonus = DevelopmentManager.Instance.GetLeaderBonusByRole(winner.role);
                         float delta = Mathf.Max(1f, bonus * 0.1f);
                         DevelopmentPanelUI.Instance.AddValues(
@@ -1053,8 +1064,9 @@ public static class RandomEvents_Choice
             {
                 var loser = EmployeeManager.Instance.GetEmployee(emp2?.id);
                 if (loser == null) return;
+                int before = loser.satisfaction;
                 loser.ChangeSatisfaction(-10);
-                OfficeManager.Instance?.ShowStatPopup(loser.id, "만족도 -10", new Color(0.4f, 0.6f, 1f));
+                InfoFeedUI.Instance?.ShowSatisfaction(loser, loser.satisfaction - before);
                 float b = DevelopmentManager.Instance.GetLeaderBonusByRole(loser.role);
                 float d = Mathf.Max(1f, b * 0.1f);
                 DevelopmentPanelUI.Instance.AddValues(
@@ -1072,8 +1084,9 @@ public static class RandomEvents_Choice
             {
                 var loser = EmployeeManager.Instance.GetEmployee(emp1?.id);
                 if (loser == null) return;
+                int before = loser.satisfaction;
                 loser.ChangeSatisfaction(-10);
-                OfficeManager.Instance?.ShowStatPopup(loser.id, "만족도 -10", new Color(0.4f, 0.6f, 1f));
+                InfoFeedUI.Instance?.ShowSatisfaction(loser, loser.satisfaction - before);
                 float b = DevelopmentManager.Instance.GetLeaderBonusByRole(loser.role);
                 float d = Mathf.Max(1f, b * 0.1f);
                 DevelopmentPanelUI.Instance.AddValues(

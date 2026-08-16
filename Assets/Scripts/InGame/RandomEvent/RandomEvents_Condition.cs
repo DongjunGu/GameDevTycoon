@@ -128,11 +128,12 @@ public static class RandomEvents_Condition
             sysMsg2,
             () =>
             {
+                int before = emp.satisfaction;
                 emp.ChangeSatisfaction(-5);
                 emp.ApplyStatBuff(n, -10);
                 EmployeeManager.Instance.UpdateEmployee(emp);
-                OfficeManager.Instance?.ShowStatPopup(emp.id, "만족도 -5", new Color(0.4f, 0.6f, 1f));
-                OfficeManager.Instance?.ShowStatPopup(emp.id, $"능력치 {n}주 -10%", new Color(0.4f, 0.6f, 1f));
+                InfoFeedUI.Instance?.ShowSatisfaction(emp, emp.satisfaction - before);
+                InfoFeedUI.Instance?.ShowStatBuff(emp, n, 10, false);
                 GameTimeManager.Instance?.ForceStartTime();
                 GameTimeManager.Instance?.SaveGameTime();
             },
@@ -302,7 +303,7 @@ public static class RandomEvents_Condition
 
         emp.ApplyStatDebuff(n);
         EmployeeManager.Instance.UpdateEmployee(emp);
-        OfficeManager.Instance?.ShowStatPopup(emp.id, $"능력치 {n}주 -20%", new Color(0.4f, 0.6f, 1f));
+        InfoFeedUI.Instance?.ShowStatBuff(emp, n, 20, false);
 
         RandomEventUI.Instance.Show(
             row?.title ?? "팀장 멈춰!",

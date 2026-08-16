@@ -53,9 +53,10 @@ public static class RandomEvents_Condition_Choice
                     onChoose = () =>
                     {
                         if (targetEmp == null) return;
+                        int before = targetEmp.satisfaction;
                         targetEmp.ChangeSatisfaction(-10);
                         EmployeeManager.Instance.UpdateEmployee(targetEmp);
-                        OfficeManager.Instance?.ShowStatPopup(targetEmp.id, "만족도 -10", new Color(0.4f, 0.6f, 1f));
+                        InfoFeedUI.Instance?.ShowSatisfaction(targetEmp, targetEmp.satisfaction - before);
                     }
                 }
             },
@@ -144,6 +145,7 @@ public static class RandomEvents_Condition_Choice
                     DevelopmentManager.Instance?.ExtendDevelopmentDuration(
                         delayWeeks[0] * GetSecondsPerWeek(),
                         delayWeeks[0] * 2f * GetSecondsPerWeek()); // 연장 N주 / 감속 2N주
+                    InfoFeedUI.Instance?.ShowDevelopmentDelay(targetEmp, delayWeeks[0]);
                 }
                 else
                 {
@@ -158,11 +160,12 @@ public static class RandomEvents_Condition_Choice
                     // 커피 아이템 본연의 효과(만족도, Item_Chart "coffee" effectValue) 적용 — 이전엔 이벤트 전용
                     // 능력치 버프만 적용되고 아이템 자체의 만족도 효과가 누락돼 있었음.
                     int coffeeSat = ItemChartLoader.Cache.TryGetValue("coffee", out var coffeeRow2) ? coffeeRow2.effectValue : 15;
+                    int coffeeSatBefore = targetEmp.satisfaction;
                     targetEmp.ChangeSatisfaction(coffeeSat);
 
                     EmployeeManager.Instance.UpdateEmployee(targetEmp);
-                    OfficeManager.Instance?.ShowStatPopup(targetEmp.id, "능력치 +10%", new Color(1f, 0.4f, 0.4f));
-                    OfficeManager.Instance?.ShowStatPopup(targetEmp.id, $"만족도 +{coffeeSat}", new Color(1f, 0.4f, 0.4f));
+                    InfoFeedUI.Instance?.ShowStatBuff(targetEmp, buffWeeks, 10, true);
+                    InfoFeedUI.Instance?.ShowSatisfaction(targetEmp, targetEmp.satisfaction - coffeeSatBefore);
                 }
                 ItemPanelUI.Instance?.Refresh();
                 GameTimeManager.Instance?.SaveGameTime();
@@ -220,11 +223,12 @@ public static class RandomEvents_Condition_Choice
                         // 에너지드링크 아이템 본연의 효과(만족도, Item_Chart "energyDrink" effectValue) 적용
                         // — CoffeeRequest 와 동일한 누락(능력치 버프만 적용되고 아이템 자체 효과 누락)을 여기도 수정.
                         int drinkSat = ItemChartLoader.Cache.TryGetValue("energyDrink", out var drinkRow) ? drinkRow.effectValue : 25;
+                        int drinkSatBefore = targetEmp.satisfaction;
                         targetEmp.ChangeSatisfaction(drinkSat);
 
                         EmployeeManager.Instance.UpdateEmployee(targetEmp);
-                        OfficeManager.Instance?.ShowStatPopup(targetEmp.id, "능력치 +10%", new Color(1f, 0.4f, 0.4f));
-                        OfficeManager.Instance?.ShowStatPopup(targetEmp.id, $"만족도 +{drinkSat}", new Color(1f, 0.4f, 0.4f));
+                        InfoFeedUI.Instance?.ShowStatBuff(targetEmp, buffWeeks, 10, true);
+                        InfoFeedUI.Instance?.ShowSatisfaction(targetEmp, targetEmp.satisfaction - drinkSatBefore);
                         ItemPanelUI.Instance?.Refresh();
                     }
                 },
@@ -233,9 +237,10 @@ public static class RandomEvents_Condition_Choice
                     onChoose = () =>
                     {
                         if (targetEmp == null) return;
+                        int before = targetEmp.satisfaction;
                         targetEmp.ChangeSatisfaction(-10);
                         EmployeeManager.Instance.UpdateEmployee(targetEmp);
-                        OfficeManager.Instance?.ShowStatPopup(targetEmp.id, "만족도 -10", new Color(0.4f, 0.6f, 1f));
+                        InfoFeedUI.Instance?.ShowSatisfaction(targetEmp, targetEmp.satisfaction - before);
                     }
                 }
             },

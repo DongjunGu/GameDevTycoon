@@ -1,9 +1,13 @@
 using System.Collections;
 using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 
 // 슬라이드 인 → 잠시 표시 → 슬라이드 아웃 되는 짧은 알림 UI
 // - 사용 예: InfoUI.Instance?.Show("판매 완료!");
+// - 매 Show() 마다 InfoPrefab을 container(InfoPanel)에 Instantiate 해서 쓰고 끝나면 Destroy — InfoFeedUI와 동일한 생성 방식.
+//   VerticalLayoutGroup이 붙은 container 안에서 직접 슬라이드하려면 위치를 자유롭게 움직여야 하므로
+//   생성 직후 LayoutElement.ignoreLayout = true 로 레이아웃 제어에서 제외한다.
 // - GameTimeManager.IsRunning 을 봐서 진행 — 직원리스트 등 모달이 떠서 시간이 멈추면 같이 멈췄다가
 //   모달이 닫혀 시간이 재개되면 이어서 진행된다(Time.unscaledDeltaTime 로 애니메이션 자체는 프레임 단위로 부드럽게).
 public class InfoUI : MonoBehaviour
@@ -11,29 +15,24 @@ public class InfoUI : MonoBehaviour
     public static InfoUI Instance { get; private set; }
 
     [Header("References")]
-    public GameObject infoPanel;
-    [Tooltip("실제 슬라이드될 RectTransform (비우면 infoPanel의 RectTransform 사용)")]
-    public RectTransform slidePanel;
-    public TextMeshProUGUI infoText;
+    public RectTransform container;
+    public GameObject infoPrefab;
 
     [Header("Slide")]
     public Vector2 shownAnchoredPos;
-    public Vector2 hiddenAnchoredPos;
+    public Vector2 hiddenAnchoredPos = new Vector2(700f, 0f);
     public float slideInDuration  = 0.3f;
     public float holdDuration     = 1.5f;
     public float slideOutDuration = 0.3f;
 
     private Coroutine _co;
     private System.Action _pendingCallback;
+    private GameObject _activeInstance;
 
     void Awake()
     {
         if (Instance != null) { Destroy(gameObject); return; }
         Instance = this;
-
-        var rect = GetSlideRect();
-        if (rect != null) rect.anchoredPosition = hiddenAnchoredPos;
-        if (infoPanel != null) infoPanel.SetActive(false);
     }
 
     // GameObject가 (자신 또는 조상이) 비활성화되면 진행 중이던 코루틴은 Unity가 자동으로 멈추지만,
@@ -44,42 +43,49 @@ public class InfoUI : MonoBehaviour
     {
         if (_co == null) return;
         _co = null;
-        if (infoPanel != null) infoPanel.SetActive(false);
+        if (_activeInstance != null) { Destroy(_activeInstance); _activeInstance = null; }
         var cb = _pendingCallback;
         _pendingCallback = null;
         cb?.Invoke();
-    }
-
-    RectTransform GetSlideRect()
-    {
-        if (slidePanel != null) return slidePanel;
-        if (infoPanel != null)  return infoPanel.transform as RectTransform;
-        return null;
     }
 
     public void Show(string text) => Show(text, null);
 
     public void Show(string text, System.Action onComplete)
     {
-        var rect = GetSlideRect();
-        if (rect == null) { onComplete?.Invoke(); return; }
-        if (infoText != null) infoText.text = text;
+        if (container == null || infoPrefab == null) { onComplete?.Invoke(); return; }
 
         // 이전 사이클이 진행 중이면 그쪽 콜백을 잃지 않도록 먼저 호출 후 새 사이클로 교체
         if (_co != null)
         {
             StopCoroutine(_co);
+            if (_activeInstance != null) { Destroy(_activeInstance); _activeInstance = null; }
             var prev = _pendingCallback;
             _pendingCallback = null;
             prev?.Invoke();
         }
+
+        var go = Instantiate(infoPrefab, container);
+        var layoutElement = go.GetComponent<LayoutElement>();
+        if (layoutElement != null) layoutElement.ignoreLayout = true;
+
+        var portrait = go.transform.Find("Content/InfoPortrait/InfoPortraitImage");
+        if (portrait != null)
+        {
+            var img = portrait.GetComponent<Image>();
+            if (img != null) img.enabled = false;
+        }
+
+        var textComp = go.GetComponentInChildren<TextMeshProUGUI>();
+        if (textComp != null) textComp.text = text;
+
+        _activeInstance = go;
         _pendingCallback = onComplete;
-        _co = StartCoroutine(ShowRoutine(rect));
+        _co = StartCoroutine(ShowRoutine(go.transform as RectTransform));
     }
 
     IEnumerator ShowRoutine(RectTransform rect)
     {
-        if (infoPanel != null) infoPanel.SetActive(true);
         rect.anchoredPosition = hiddenAnchoredPos;
 
         yield return SlideTo(rect, hiddenAnchoredPos, shownAnchoredPos, slideInDuration);
@@ -95,7 +101,7 @@ public class InfoUI : MonoBehaviour
 
         yield return SlideTo(rect, shownAnchoredPos, hiddenAnchoredPos, slideOutDuration);
 
-        if (infoPanel != null) infoPanel.SetActive(false);
+        if (_activeInstance != null) { Destroy(_activeInstance); _activeInstance = null; }
         _co = null;
         var cb = _pendingCallback;
         _pendingCallback = null;

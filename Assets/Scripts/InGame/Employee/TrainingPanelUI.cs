@@ -258,6 +258,7 @@ public class TrainingPanelUI : MonoBehaviour
 
         RefreshDetail();
         EmployeeListUI.Instance?.RefreshSlotLevelText(emp.id); // 우측 목록 슬롯 LevelText 즉시 갱신
+        EmployeeStatusBarUI.Instance?.RefreshSlot(emp.id);     // 하단 상태바 슬롯 enhancementText 즉시 갱신
 
         ShowEnhanceResult(outcome, oldLevel, oldP, oldD, oldA, oldC);
     }
@@ -373,7 +374,7 @@ public class TrainingPanelUI : MonoBehaviour
     public Image successPortraitImage;
     [Tooltip("TrainingFailPanel 안의 PortraitImage")]
     public Image failPortraitImage;
-    [Tooltip("스탯 패널이 아래에서 위로 올라오는 거리(px)")]
+    [Tooltip("SuccessPanel/EllipseImage/ShinePanel이 아래에서 위로 올라오는 거리(px)")]
     public float riseOffset = 60f;
 
     [Tooltip("Portrait 뒤에서 가운데서 펼쳐지듯 나타나는 글로우 연출 시간(초)")]
@@ -410,6 +411,11 @@ public class TrainingPanelUI : MonoBehaviour
     readonly List<Tween> _sprinkleTweens = new();
     RectTransform _portraitEllipseRT;
     Image _portraitEllipseImg;
+    // SuccessPanel/ShinePanel — EllipseImage와 함께 "하단에서 올라오며 페이드"되는 3종. rest 위치는
+    // ResolveResultRefs(최초 1회)에서 캡처해두고, 매 PlaySuccessAnim마다 rest-riseOffset → rest로 되돌린다.
+    RectTransform _successRootRT, _shinePanelRT;
+    CanvasGroup _successRootCG, _shinePanelCG;
+    Vector2 _successRootRestPos, _shinePanelRestPos, _portraitEllipseRestPos, _successPortraitRestPos;
     GameObject _nameTextGo, _enhBeforeGo, _enhArrowGo, _enhAfterGo;
     RectTransform _resultImageRT, _detailRT;
     TextMeshProUGUI _nameText, _enhBefore, _enhAfter, _touchText, _failDetailText;
@@ -436,6 +442,17 @@ public class TrainingPanelUI : MonoBehaviour
         var portraitEllipseT = FindDeep(root, "EllipseImage");
         _portraitEllipseRT  = portraitEllipseT as RectTransform;
         _portraitEllipseImg = portraitEllipseT != null ? portraitEllipseT.GetComponent<Image>() : null;
+        if (_portraitEllipseRT != null) _portraitEllipseRestPos = _portraitEllipseRT.anchoredPosition;
+        if (successPortraitImage != null) _successPortraitRestPos = successPortraitImage.rectTransform.anchoredPosition;
+
+        // SuccessPanel — 등장 시 "하단에서 올라오며 페이드" 연출용 CanvasGroup 확보 + rest 위치 캡처.
+        if (_successRoot != null)
+        {
+            _successRootRT = _successRoot.transform as RectTransform;
+            _successRootCG = _successRoot.GetComponent<CanvasGroup>();
+            if (_successRootCG == null) _successRootCG = _successRoot.AddComponent<CanvasGroup>();
+            if (_successRootRT != null) _successRootRestPos = _successRootRT.anchoredPosition;
+        }
 
         // ShineEffect(들)은 이제 EllipseImage 자식이 아니라 별도 ShinePanel 아래에 있음 — ShinePanel을
         // 찾아 그 자식 중 "ShineEffect"로 시작하는 것 전부 수집(개수 가변 — ShineEffect, ShineEffect (1)...).
@@ -443,6 +460,10 @@ public class TrainingPanelUI : MonoBehaviour
         _shinePanel = FindDeep(root, "ShinePanel")?.gameObject;
         if (_shinePanel != null)
         {
+            _shinePanelRT = _shinePanel.transform as RectTransform;
+            _shinePanelCG = _shinePanel.GetComponent<CanvasGroup>();
+            if (_shinePanelCG == null) _shinePanelCG = _shinePanel.AddComponent<CanvasGroup>();
+            if (_shinePanelRT != null) _shinePanelRestPos = _shinePanelRT.anchoredPosition;
             var shines = new List<Image>();
             foreach (Transform child in _shinePanel.transform)
             {
@@ -601,9 +622,25 @@ public class TrainingPanelUI : MonoBehaviour
         SetActiveSafe(_shinePanel, false);
         SetActiveSafe(successPortraitImage?.gameObject, false);
         if (_resultImageRT != null) { _resultImageRT.gameObject.SetActive(true); SetScaleY(_resultImageRT, 0f); }
-        if (_portraitEllipseRT != null) { _portraitEllipseRT.gameObject.SetActive(false); _portraitEllipseRT.localScale = Vector3.zero; }
-        if (_portraitEllipseImg != null) { var c = _portraitEllipseImg.color; c.a = 1f; _portraitEllipseImg.color = c; }
-        if (successPortraitImage != null) { var pc = successPortraitImage.color; pc.a = 0f; successPortraitImage.color = pc; }
+        // SuccessPanel/EllipseImage/ShinePanel — 전부 rest 위치에서 riseOffset만큼 아래로 내려놓고 alpha=0으로
+        // 시작(하단에서 올라오며 페이드 인 연출용). localScale은 더 이상 안 건드림.
+        if (_successRootRT != null) _successRootRT.anchoredPosition = _successRootRestPos - new Vector2(0f, riseOffset);
+        if (_successRootCG != null) _successRootCG.alpha = 0f;
+        if (_shinePanelRT  != null) _shinePanelRT.anchoredPosition  = _shinePanelRestPos  - new Vector2(0f, riseOffset);
+        if (_shinePanelCG  != null) _shinePanelCG.alpha = 0f;
+        if (_portraitEllipseRT != null)
+        {
+            _portraitEllipseRT.gameObject.SetActive(false);
+            _portraitEllipseRT.localScale = Vector3.one;
+            _portraitEllipseRT.anchoredPosition = _portraitEllipseRestPos - new Vector2(0f, riseOffset);
+        }
+        if (_portraitEllipseImg != null) { var c = _portraitEllipseImg.color; c.a = 0f; _portraitEllipseImg.color = c; } // 0에서 rest알파까지 페이드 인
+        if (successPortraitImage != null)
+        {
+            var pc = successPortraitImage.color; pc.a = 0f; successPortraitImage.color = pc;
+            // 위에서 아래로 내려오며 페이드 인 — rest보다 riseOffset만큼 위에서 시작.
+            successPortraitImage.rectTransform.anchoredPosition = _successPortraitRestPos + new Vector2(0f, riseOffset);
+        }
         SetActiveSafe(_nameTextGo, false);
         SetActiveSafe(_enhBeforeGo, false);
         SetActiveSafe(_enhArrowGo, false);
@@ -621,8 +658,8 @@ public class TrainingPanelUI : MonoBehaviour
 
         _animSeq = DOTween.Sequence().SetUpdate(true);
 
-        // 1) 0.05초 후 EllipseImage 활성 — 가운데서 펼쳐지듯(scale 0→1) 나타나며 alpha 255→36 으로 가라앉음.
-        // 그 조정이 끝난 뒤에는 Portrait 는 별도 애니메이션 없이 그냥 활성화만 한다.
+        // 1) 0.05초 후 SuccessPanel/EllipseImage/ShinePanel 동시 등장 — 셋 다 rest 위치보다 riseOffset만큼
+        // 아래에서 올라오며(anchoredPosition) 동시에 alpha 0→목표값으로 페이드 인.
         _animSeq.AppendInterval(0.05f);
         _animSeq.AppendCallback(() =>
         {
@@ -630,14 +667,27 @@ public class TrainingPanelUI : MonoBehaviour
             SetActiveSafe(_shinePanel, true);
             if (_portraitEllipseRT != null) _portraitEllipseRT.gameObject.SetActive(true);
         });
+        if (_successRootRT != null)
+            _animSeq.Join(_successRootRT.DOAnchorPos(_successRootRestPos, portraitEllipseRevealDuration).SetEase(Ease.OutCubic).SetUpdate(true));
+        if (_successRootCG != null)
+            _animSeq.Join(_successRootCG.DOFade(1f, portraitEllipseRevealDuration).SetUpdate(true));
+        if (_shinePanelRT != null)
+            _animSeq.Join(_shinePanelRT.DOAnchorPos(_shinePanelRestPos, portraitEllipseRevealDuration).SetEase(Ease.OutCubic).SetUpdate(true));
+        if (_shinePanelCG != null)
+            _animSeq.Join(_shinePanelCG.DOFade(1f, portraitEllipseRevealDuration).SetUpdate(true));
         if (_portraitEllipseRT != null)
-            _animSeq.Join(_portraitEllipseRT.DOScale(1f, portraitEllipseRevealDuration).SetEase(Ease.OutCubic).SetUpdate(true));
+            _animSeq.Join(_portraitEllipseRT.DOAnchorPos(_portraitEllipseRestPos, portraitEllipseRevealDuration).SetEase(Ease.OutCubic).SetUpdate(true));
         if (_portraitEllipseImg != null)
             _animSeq.Join(_portraitEllipseImg.DOFade(Mathf.Clamp01(portraitEllipseRestAlpha255 / 255f), portraitEllipseRevealDuration).SetUpdate(true));
 
+        // PortraitImage — 위에서 아래로 내려오면서(anchoredPosition) 동시에 alpha 0→1로 페이드 인.
         _animSeq.AppendCallback(() => SetActiveSafe(successPortraitImage?.gameObject, true));
         if (successPortraitImage != null)
+        {
             _animSeq.Join(successPortraitImage.DOFade(1f, portraitEllipseRevealDuration).SetUpdate(true));
+            _animSeq.Join(successPortraitImage.rectTransform
+                .DOAnchorPos(_successPortraitRestPos, portraitEllipseRevealDuration).SetEase(Ease.OutCubic).SetUpdate(true));
+        }
 
         // EllipseImage 펼쳐지는 연출이 끝난 직후부터 ShineEffect들이 각자 랜덤 타이밍으로 반짝이기 시작.
         _animSeq.AppendCallback(StartShineEffects);
@@ -646,8 +696,9 @@ public class TrainingPanelUI : MonoBehaviour
         if (_resultImageRT != null)
             _animSeq.Append(_resultImageRT.DOScaleY(1f, 0.28f).SetEase(Ease.OutCubic).SetUpdate(true));
 
-        // 3) beforeText → arrowText → afterText 순차 활성화
-        _animSeq.AppendCallback(() => { SetActiveSafe(_nameTextGo, true); SetActiveSafe(_enhBeforeGo, true); });
+        // 3) beforeText → arrowText → afterText 순차 활성화. before/after는 알파는 그대로 두고
+        // 자기 중심(pivot)에서 scale 0→1로 펼쳐지듯 등장(PlayCenterExpand) — arrowText는 기존처럼 그냥 활성화.
+        _animSeq.AppendCallback(() => { SetActiveSafe(_nameTextGo, true); PlayCenterExpand(_enhBeforeGo); });
         _animSeq.AppendInterval(0.1f);
         _animSeq.AppendCallback(() => SetActiveSafe(_enhArrowGo, true));
         _animSeq.AppendInterval(0.1f);
@@ -657,7 +708,7 @@ public class TrainingPanelUI : MonoBehaviour
         float fadeDur = 0.35f;
         _animSeq.AppendCallback(() =>
         {
-            SetActiveSafe(_enhAfterGo, true);
+            PlayCenterExpand(_enhAfterGo);
             for (int i = 0; i < 4; i++)
                 if (_statPanelCGs[i] != null)
                     _statPanelCGs[i].DOFade(1f, fadeDur).SetUpdate(true);
@@ -672,6 +723,17 @@ public class TrainingPanelUI : MonoBehaviour
             _touchText.gameObject.SetActive(true);
             _blinkTween = _touchText.DOFade(0.25f, 0.45f).SetLoops(-1, LoopType.Yoyo).SetUpdate(true);
         });
+    }
+
+    // beforeText/afterText 전용 — 알파는 건드리지 않고, 세로로 접혀있다가(scaleY 0) 펴지는(scaleY 0→1)
+    // 느낌으로 등장. X는 항상 1 유지 — 균일 확대(줌인)가 아니라 접힌 종이가 펴지는 인상을 주기 위함.
+    static void PlayCenterExpand(GameObject go, float duration = 0.2f)
+    {
+        if (go == null) return;
+        var t = go.transform;
+        t.localScale = new Vector3(1f, 0f, 1f);
+        go.SetActive(true);
+        t.DOScaleY(1f, duration).SetEase(Ease.OutBack).SetUpdate(true);
     }
 
     void SetStat(int i, int before, int after)

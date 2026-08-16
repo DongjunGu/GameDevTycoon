@@ -143,7 +143,11 @@ public static class EmployeeEnhancement
             // 테크트리 '고급 인력(sat_elite)' — 11성 이상 강화 성공 시 해당 직원 만족도 +5
             if (emp.enhancementLevel >= 11 &&
                 TechTreeManager.Instance != null && TechTreeManager.Instance.IsUnlocked("sat_elite"))
+            {
+                int before = emp.satisfaction;
                 emp.ChangeSatisfaction(+5);
+                InfoFeedUI.Instance?.ShowSatisfaction(emp, emp.satisfaction - before);
+            }
             return EnhanceOutcome.Success;
         }
 

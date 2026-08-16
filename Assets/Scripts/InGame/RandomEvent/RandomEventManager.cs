@@ -210,21 +210,20 @@ public class RandomEventManager : MonoBehaviour
         if (TickYearlySchedule(_yearlyRecover, TraitEffectApplier.GetYearlySatRecoverChancePct()))
         {
             // a2 — 랜덤 직원 1명 만족도 풀 회복
-            if (TraitEffectApplier.DoYearlySatRecover(out var emp) && emp != null)
+            if (TraitEffectApplier.DoYearlySatRecover(out var emp, out int satDelta) && emp != null)
             {
-                OfficeManager.Instance?.ShowStatPopup(emp.id, "만족도 회복!", new Color(1f, 0.5f, 0.5f));
+                InfoFeedUI.Instance?.ShowSatisfaction(emp, satDelta);
                 GameTimeManager.Instance?.SaveGameTime(); // 컬럼(weeksLeft=-1) 저장 + 만족도 fan-out
             }
         }
 
         if (TickYearlySchedule(_yearlyAllRecover, TraitEffectApplier.GetYearlyAllRecoverChancePct()))
         {
-            // s4 — 직원 전원 만족도 95 회복
+            // s4 — 직원 전원 만족도 95 회복. 특정 직원 1명이 아니라 전원 대상이라 초상화 없이(포트레이트
+            // Image 컴포넌트만 비활성화되는) 전체용 알림 1개만 띄운다 — 직원마다 개별 알림을 띄우지 않음.
             if (TraitEffectApplier.DoYearlyAllRecover())
             {
-                if (EmployeeManager.Instance?.ownedEmployees != null)
-                    foreach (var emp in EmployeeManager.Instance.ownedEmployees)
-                        OfficeManager.Instance?.ShowStatPopup(emp.id, "만족도 회복!", new Color(1f, 0.5f, 0.5f));
+                InfoFeedUI.Instance?.ShowGlobal("모든 직원의 만족도가 95로 회복됐다.");
                 GameTimeManager.Instance?.SaveGameTime();
             }
         }
@@ -1154,6 +1153,7 @@ public class RandomEventManager : MonoBehaviour
                     {
                         EmployeeManager.Instance.FireEmployee(captured);
                         EmployeeManager.Instance.ReduceAllSatisfactionExcept(5, captured);
+                        InfoFeedUI.Instance?.ShowGlobalSatisfaction(-5);
                         // 튜토리얼 23(사직서 이벤트)도 이 경로를 그대로 타므로, 튜토리얼 중엔 회사 평점 1점
                         // 후속 이벤트가 확률적으로 끼어들지 않게 막는다(BadRumor/AnxietyInducing과 동일 이유).
                         fireBadReview[0] = TutorialController.IsFullyDone() && UnityEngine.Random.value < 0.3f;
@@ -1166,11 +1166,11 @@ public class RandomEventManager : MonoBehaviour
                     onChoose = () =>
                     {
                         ItemManager.Instance.UseItemDirect("hypnotizer");
+                        int before = captured.satisfaction;
                         captured.satisfaction = 80;
                         captured.ClearAllStatDebuffs();
                         EmployeeManager.Instance.UpdateEmployee(captured);
-                        OfficeManager.Instance?.ShowStatPopup(
-                            captured.id, "만족도 80, 디버프 회복", new Color(1f, 0.4f, 0.4f));
+                        InfoFeedUI.Instance?.ShowSatisfaction(captured, captured.satisfaction - before);
                         ItemPanelUI.Instance?.Refresh();
                     }
                 }

@@ -42,8 +42,9 @@ public static class RandomEvents_Dev
             {
                 foreach (var emp in EmployeeManager.Instance.ownedEmployees)
                 {
+                    int before = emp.satisfaction;
                     emp.ChangeSatisfaction(-5);
-                    OfficeManager.Instance?.ShowStatPopup(emp.id, "만족도 -10", new Color(0.4f, 0.6f, 1f));
+                    InfoFeedUI.Instance?.ShowSatisfaction(emp, emp.satisfaction - before);
                 }
             }
         });
@@ -75,8 +76,9 @@ public static class RandomEvents_Dev
                 {
                     var emp = EmployeeManager.Instance.GetEmployee(avoidEvt.targetEmployeeId);
                     if (emp == null) return;
+                    int before = emp.satisfaction;
                     emp.ChangeSatisfaction(-10);
-                    OfficeManager.Instance?.ShowStatPopup(emp.id, "만족도 -10", new Color(0.4f, 0.6f, 1f));
+                    InfoFeedUI.Instance?.ShowSatisfaction(emp, emp.satisfaction - before);
                 }
             };
             Add(pool, chart, avoidEvt);
@@ -111,7 +113,7 @@ public static class RandomEvents_Dev
                     var emp = EmployeeManager.Instance.GetEmployee(coldEvt.targetEmployeeId);
                     if (emp == null) return;
                     emp.ApplyStatDebuff(coldWeeks);
-                    OfficeManager.Instance?.ShowStatPopup(emp.id, $"능력치 -{coldWeeks}주", new Color(0.4f, 0.6f, 1f));
+                    InfoFeedUI.Instance?.ShowStatBuff(emp, coldWeeks, 20, false);
                 }
             };
             Add(pool, chart, coldEvt);
@@ -142,8 +144,9 @@ public static class RandomEvents_Dev
                 {
                     var emp = EmployeeManager.Instance.GetEmployee(badReviewEvt.targetEmployeeId);
                     if (emp == null) return;
+                    int before = emp.satisfaction;
                     emp.ChangeSatisfaction(-10);
-                    OfficeManager.Instance?.ShowStatPopup(emp.id, "만족도 -10", new Color(0.4f, 0.6f, 1f));
+                    InfoFeedUI.Instance?.ShowSatisfaction(emp, emp.satisfaction - before);
                 }
             };
             Add(pool, chart, badReviewEvt);
@@ -192,6 +195,8 @@ public static class RandomEvents_Dev
                         _ => 80f / 16f
                     };
                     DevelopmentManager.Instance.ExtendDevelopmentDuration(delayWeeks * secondsPerWeek, delayWeeks * 2 * secondsPerWeek); // 연장 N주 / 감속 2N주
+                    InfoFeedUI.Instance?.ShowDevelopmentDelay(
+                        EmployeeManager.Instance.GetEmployee(networkEvt.targetEmployeeId), delayWeeks);
                 }
             };
             RandomEventChartLoader.Apply(networkEvt, chart);
@@ -227,7 +232,7 @@ public static class RandomEvents_Dev
                     var emp = EmployeeManager.Instance.GetEmployee(drillEvt.targetEmployeeId);
                     if (emp == null) return;
                     emp.ApplyStatDebuff(drillWeeks);
-                    OfficeManager.Instance?.ShowStatPopup(emp.id, $"능력치 -{drillWeeks}주", new Color(0.4f, 0.6f, 1f));
+                    InfoFeedUI.Instance?.ShowStatBuff(emp, drillWeeks, 20, false);
                 }
             };
             Add(pool, chart, drillEvt);
@@ -309,8 +314,9 @@ public static class RandomEvents_Dev
             {
                 var emp = EmployeeManager.Instance.GetEmployee(evt.targetEmployeeId);
                 if (emp == null) return;
+                int before = emp.satisfaction;
                 emp.ChangeSatisfaction(-20);
-                OfficeManager.Instance?.ShowStatPopup(emp.id, "만족도 -20", new Color(0.4f, 0.6f, 1f));
+                InfoFeedUI.Instance?.ShowSatisfaction(emp, emp.satisfaction - before);
             }
         };
         RandomEventChartLoader.Apply(evt, chart);

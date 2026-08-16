@@ -48,6 +48,9 @@ public class CharacterEventTester : MonoBehaviour
     // 다음 프레임에 QuickTest16_1()이 실행되고 자동으로 false로 되돌아간다.
     public bool debugTrigger16_1 = false;
 
+    // MCP 디버깅용 — InfoFeedUI.ShowSatisfaction 직접 발동 훅.
+    public bool debugTriggerInfoFeed = false;
+
     void Update()
     {
         // New Input System (activeInputHandler=1) — UnityEngine.Input 은 예외 발생하므로 Keyboard.current 사용.
@@ -60,6 +63,15 @@ public class CharacterEventTester : MonoBehaviour
         {
             debugTrigger16_1 = false;
             QuickTest16_1(ProjectScale.Small);
+        }
+
+        if (debugTriggerInfoFeed)
+        {
+            debugTriggerInfoFeed = false;
+            var em = EmployeeManager.Instance;
+            var emp = em?.ownedEmployees?.Find(x => !x.isCEO);
+            Debug.Log($"[InfoFeedDebug] InfoFeedUI.Instance={(InfoFeedUI.Instance != null)} emp={(emp != null ? emp.employeeName : "null")}");
+            InfoFeedUI.Instance?.ShowSatisfaction(emp, 10);
         }
     }
 
@@ -95,6 +107,28 @@ public class CharacterEventTester : MonoBehaviour
                 + (e.cosmicFrozen ? " (고정)" : "")
                 + (e.godBlessingStatPercent > 0 ? $" / 축복+{e.godBlessingStatPercent}%" : "")
                 + (e.godBlessingSalesActive ? " / 매출축복" : ""));
+        }
+
+        GUILayout.Space(8);
+        GUILayout.Label("<b>━━ InfoFeedUI 알림 테스트 (직접 발동) ━━</b>", Rich());
+        {
+            var testEmp = em.ownedEmployees.Find(x => !x.isCEO);
+            if (testEmp == null)
+            {
+                GUILayout.Label("직원 없음 — 위에서 유니크 직원을 먼저 채용하세요");
+            }
+            else
+            {
+                GUILayout.Label($"대상: {testEmp.employeeName}");
+                if (GUILayout.Button("만족도 +10")) InfoFeedUI.Instance?.ShowSatisfaction(testEmp, 10);
+                if (GUILayout.Button("만족도 -10")) InfoFeedUI.Instance?.ShowSatisfaction(testEmp, -10);
+                if (GUILayout.Button("능력치 버프 (4주 10%)")) InfoFeedUI.Instance?.ShowStatBuff(testEmp, 4, 10, true);
+                if (GUILayout.Button("능력치 너프 (4주 20%)")) InfoFeedUI.Instance?.ShowStatBuff(testEmp, 4, 20, false);
+                if (GUILayout.Button("각성 모드 발동 (잭팟)")) InfoFeedUI.Instance?.ShowJackpot(testEmp);
+                if (GUILayout.Button("개발기간 지연 (3주)")) InfoFeedUI.Instance?.ShowDevelopmentDelay(testEmp, 3);
+                if (GUILayout.Button("전체 알림 (초상화 없음)")) InfoFeedUI.Instance?.ShowGlobalSatisfaction(5);
+                if (GUILayout.Button("연속 5개 스팸 (선입선출 확인)")) StartCoroutine(SpamInfoFeed(testEmp));
+            }
         }
 
         GUILayout.Space(8);
@@ -150,6 +184,17 @@ public class CharacterEventTester : MonoBehaviour
             if (GUILayout.Button("스탯로그", GUILayout.Width(70))) LogStatBreakdown(e);
             GUILayout.EndHorizontal();
         }
+
+        GUILayout.Space(4);
+        GUILayout.Label("누적 ds(스트레스) 임계값 고정 테스트 — 아무나 1명(첫 직원) 기준, 1~3회차는 무작위/4회차만 역산해 정확히 이 값으로 맞춤:");
+        GUILayout.BeginHorizontal();
+        var dsTestEmployee = em.ownedEmployees.Count > 0 ? em.ownedEmployees[0] : null;
+        if (GUILayout.Button("90 (보너스1)")) DevelopmentManager.Instance?.TestLeaderScoreAtDs(dsTestEmployee, LeaderType.Planner, 90f);
+        if (GUILayout.Button("95 (보너스2)")) DevelopmentManager.Instance?.TestLeaderScoreAtDs(dsTestEmployee, LeaderType.Planner, 95f);
+        if (GUILayout.Button("99 (보너스3)")) DevelopmentManager.Instance?.TestLeaderScoreAtDs(dsTestEmployee, LeaderType.Planner, 99f);
+        if (GUILayout.Button("101 (오버플로/burst)")) DevelopmentManager.Instance?.TestLeaderScoreAtDs(dsTestEmployee, LeaderType.Planner, 101f);
+        GUILayout.EndHorizontal();
+        if (dsTestEmployee == null) GUILayout.Label("채용된 직원이 없어 위 버튼은 아무 동작 안 함");
 
         GUILayout.Space(8);
         GUILayout.Label("<b>━━ 모달 차단 테스트 ━━</b>", Rich());
@@ -567,6 +612,15 @@ public class CharacterEventTester : MonoBehaviour
         emp.lastUniqueEventYear = -1;
         CharacterUniqueEvents.Trigger(emp);
         Set($"신의 축복 발동 (주사위 {(dice == 0 ? "랜덤" : dice.ToString())}): {emp.employeeName}");
+    }
+
+    IEnumerator SpamInfoFeed(EmployeeData emp)
+    {
+        for (int i = 1; i <= 5; i++)
+        {
+            InfoFeedUI.Instance?.ShowSatisfaction(emp, i % 2 == 0 ? 10 : -10);
+            yield return new WaitForSeconds(0.4f);
+        }
     }
 
     void AllSatisfaction(int amount)

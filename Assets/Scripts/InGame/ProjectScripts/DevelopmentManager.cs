@@ -222,6 +222,27 @@ public class DevelopmentManager : MonoBehaviour
             case LeaderType.Artist:     _leaderArtBonusTotal      = total; break;
         }
         _challenge.OnLeaderScoreFinalized(type);
+
+        // 팀장점수(95/99존) 도전과제 성공 알림은 4회차 점수가 다 오르는 연출이 끝나고 LeaderScoreUI 패널을
+        // 닫아야만(OnConfirmClosed) MissionAlertUI를 띄운다 — 연출 도중에 패널이 뜨는 문제 방지. 이 함수는
+        // 세션(신규/재접속 재생 공용)마다 정확히 1회 호출되므로 매번 재구독(중복 방지 위해 -= 먼저)해 안전하게 커버.
+        if (LeaderScoreUI.Instance != null)
+        {
+            LeaderScoreUI.Instance.OnConfirmClosed -= OnLeaderScoreClosedCheckChallengeClaim;
+            LeaderScoreUI.Instance.OnConfirmClosed += OnLeaderScoreClosedCheckChallengeClaim;
+        }
+    }
+
+    // 방금 닫힌 팀장점수 세션이 도전과제 도전 파트와 일치하고, 성공했는데 아직 보상 미수령이면 MissionAlertUI를 띄운다.
+    void OnLeaderScoreClosedCheckChallengeClaim()
+    {
+        if (CurrentLeaderScoreType.HasValue
+            && _challenge.IsActive && _challenge.Kind != ChallengeKind.PartTotal
+            && _challenge.ChallengePart == CurrentLeaderScoreType.Value
+            && _challenge.Resolved && _challenge.Succeeded && !_challenge.RewardApplied)
+        {
+            MissionAlertUI.Instance?.Show();
+        }
     }
 
     private float _elapsed;
@@ -787,6 +808,22 @@ public class DevelopmentManager : MonoBehaviour
             _tutorialCreativityPool.Clear();
         }
 
+        // 파트총점 도전과제 성공 시 — "창의성을 올리세요!" 얼럿보다 먼저 MissionAlertUI를 띄워 보상을 받게
+        // 하고, ReceiveRewardBtn(또는 이미 수령 상태면 그냥 닫힘)으로 패널이 닫힌 뒤에야 다음 단계로 진행한다.
+        // 재접속 재개도 pendingCreativityGame 복원 시 이 함수를 다시 타므로 자연히 커버됨.
+        bool needsPartTotalClaim = _challenge.IsActive && _challenge.Kind == ChallengeKind.PartTotal
+            && _challenge.Resolved && _challenge.Succeeded && !_challenge.RewardApplied;
+        if (needsPartTotalClaim && MissionAlertUI.Instance != null)
+        {
+            MissionAlertUI.Instance.Show(ShowCreativityPrompt);
+            return;
+        }
+
+        ShowCreativityPrompt();
+    }
+
+    void ShowCreativityPrompt()
+    {
         AlertUI.Instance.Show("창의성을 올리세요!", () =>
         {
             CreativityGameUI.Instance.Open(() =>
@@ -1068,6 +1105,17 @@ public class DevelopmentManager : MonoBehaviour
     const float LeaderScoreC0 = 0.176f;
     const float LeaderBurstCutFactor = 0.05f; // 누적ds 100 초과(burst) 시 전 회차 점수 차감율 — 고정 5%
 
+    // burst 시 전 회차 점수 차감 — 단순 반올림(Mathf.Round)만 쓰면 원 점수가 10점 미만일 때 5% 차감분이
+    // 반올림 과정에서 그대로 사라져(예: 9×0.95=8.55→반올림 9) 사실상 "안 깎인 것처럼" 보이는 문제가 있다.
+    // 반올림 결과가 원 점수와 같아지면(=차감이 안 보이면) 최소 1점은 확실히 깎이도록 보정한다.
+    static float ApplyLeaderBurstCut(float fullScore, float cutFactor)
+    {
+        if (fullScore <= 0f) return fullScore;
+        float cut = Mathf.Round(fullScore * (1f - cutFactor));
+        if (cut >= fullScore) cut = fullScore - 1f;
+        return Mathf.Max(0f, cut);
+    }
+
     // 잠재력(EmployeePotential) → P(잠재력 배율)
     static float GetLeaderPotentialP(EmployeePotential potential) => potential switch
     {
@@ -1141,8 +1189,34 @@ public class DevelopmentManager : MonoBehaviour
     private bool[] _leaderBonusRolled = new bool[3]; // 임계선별 금액을 이미 굴렸는지 — 미리보기든 실제 돌파든 딱 1번만 굴리기 위한 가드
     private float _leaderBonusTotal;
 
-    // UI에서 임계선별(0=90/1=95/2=99) 지급 보너스 금액 조회 — 실제로 넘겨서 지급 확정된 게 아니면 0.
+    // GetLeaderBonusPotentialAmount(1회차부터 보이는 미리보기)용 — K/enhancementLevel은 회차 진행과
+    // 무관하게 세션 시작 시점에 이미 확정되므로 여기 캐싱해두고 _pendingRound4(3회차 끝나야 생김)를
+    // 기다리지 않는다. 세션 시작 시(BuildAndShowLeaderScore/TestLeaderScore*) 세팅.
+    private float _leaderBonusPreviewK;
+    private int _leaderBonusPreviewEnhanceLevel;
+    private bool _leaderBonusPreviewActive;
+
+    // UI에서 임계선별(0=90/1=95/2=99) 지급 보너스 금액 조회 — GetLeaderBonusPotentialAmount와 동일하게
+    // "이 임계선까지 중첩 누적된 금액"을 반환한다(하위 임계선까지 실제로 지급된 것만 합산). 예전엔 여기가
+    // 해당 임계선 단독 금액만 반환해서, 3회차 끝난 시점 미리보기(중첩 합산)와 4회차 뒤 실제 표시(단독)가
+    // 서로 달라 보이는 버그가 있었음 — 재추첨 없이 같은 _leaderBonusAmounts를 합산하므로 항상 미리보기와 일치.
     public float GetLeaderBonusAmount(int thresholdIndex)
+    {
+        if (thresholdIndex < 0 || thresholdIndex > 2) return 0f;
+        float sum = 0f;
+        for (int i = 0; i <= thresholdIndex; i++)
+            if (_leaderBonusGranted[i]) sum += _leaderBonusAmounts[i];
+        return sum;
+    }
+
+    // UI에서 임계선별(0=90/1=95/2=99) 실제 달성(지급) 여부 조회 — LeaderScoreUI의 dimImage 활성화 등에 사용.
+    public bool IsLeaderBonusGranted(int thresholdIndex)
+        => thresholdIndex >= 0 && thresholdIndex < 3 && _leaderBonusGranted[thresholdIndex];
+
+    // GetLeaderBonusAmount(중첩 누적, "+n" 라벨 텍스트용)와 달리 이 임계선 "하나만"의 개별 지급액.
+    // 보너스 아이콘 흡입 연출이 총점을 정확히 이 임계선 몫만큼만 올리기 위해 사용 — 중첩 누적값을 쓰면
+    // 90/95/99가 모두 지급됐을 때 하위 임계선 금액이 여러 번 겹쳐서 더해지는 버그가 생긴다.
+    public float GetLeaderBonusAmountIndividual(int thresholdIndex)
         => (thresholdIndex >= 0 && thresholdIndex < 3 && _leaderBonusGranted[thresholdIndex]) ? _leaderBonusAmounts[thresholdIndex] : 0f;
 
     // 이번 세션에서 지급된 보너스 총합 (90+95+99 중첩 합산) — 4회차 팝콘 연출에 같이 얹을 때 사용.
@@ -1161,19 +1235,20 @@ public class DevelopmentManager : MonoBehaviour
         _leaderBonusAmounts[i] = K * f;
     }
 
-    // 3회차 끝난 시점(4회차 선택 대기 중)에 보여줄 "이 임계선까지 도달하면 받을 수 있는 총액" 미리보기.
-    // 하위 임계선까지 중첩된 확정 금액(EnsureBonusRolled로 이미 굴렸거나 지금 처음 굴림)을 그대로 합산 —
-    // 실제로 그 임계선을 돌파했을 때(CheckLeaderBonusThresholds) 지급되는 금액과 100% 동일하다(재추첨 없음).
-    // 대기 중이 아니면 0.
+    // 1회차 시작 시점(90/95/99BG가 처음 활성화되는 그 순간)부터 보여줄 "이 임계선까지 도달하면 받을 수
+    // 있는 총액" 미리보기. K/enhancementLevel은 회차 진행과 무관하게 세션 시작 시 이미 확정돼 있으므로
+    // (_leaderBonusPreviewK/_leaderBonusPreviewEnhanceLevel, 세션 시작 지점에서 캐싱) 3회차 완료(4회차
+    // 대기, _pendingRound4)를 기다릴 필요가 없다. 하위 임계선까지 중첩된 확정 금액(EnsureBonusRolled로
+    // 이미 굴렸거나 지금 처음 굴림)을 그대로 합산 — 실제로 그 임계선을 돌파했을 때(CheckLeaderBonusThresholds)
+    // 지급되는 금액과 100% 동일하다(재추첨 없음). 세션이 시작 안 됐으면(_leaderBonusPreviewActive=false) 0.
     public float GetLeaderBonusPotentialAmount(int thresholdIndex)
     {
-        var ctx = _pendingRound4;
-        if (ctx == null || thresholdIndex < 0 || thresholdIndex > 2) return 0f;
+        if (!_leaderBonusPreviewActive || thresholdIndex < 0 || thresholdIndex > 2) return 0f;
 
         float sum = 0f;
         for (int i = 0; i <= thresholdIndex; i++)
         {
-            EnsureBonusRolled(i, ctx.employee.enhancementLevel, ctx.K);
+            EnsureBonusRolled(i, _leaderBonusPreviewEnhanceLevel, _leaderBonusPreviewK);
             sum += _leaderBonusAmounts[i];
         }
         return sum;
@@ -1283,6 +1358,9 @@ public class DevelopmentManager : MonoBehaviour
         _leaderBonusAmounts  = new float[3];
         _leaderBonusRolled   = new bool[3];
         _leaderBonusTotal    = 0f;
+        _leaderBonusPreviewK = K;
+        _leaderBonusPreviewEnhanceLevel = employee.enhancementLevel;
+        _leaderBonusPreviewActive = true;
 
         var fullRoundScores = new float[4];
         var roundScores     = new float[4];
@@ -1309,7 +1387,7 @@ public class DevelopmentManager : MonoBehaviour
                 fullRoundScores[r] = 0f;
                 roundScores[r] = 0f;
                 for (int k = 0; k < r; k++)
-                    roundScores[k] = Mathf.Round(fullRoundScores[k] * (1f - cutFactor));
+                    roundScores[k] = ApplyLeaderBurstCut(fullRoundScores[k], cutFactor);
                 overflowedEarly = true;
                 break;
             }
@@ -1348,6 +1426,94 @@ public class DevelopmentManager : MonoBehaviour
                     TutorialController.Instance.StartCoroutine(TutorialController.Instance.PlayTutorial20());
             }
             return;
+        }
+
+        float total = 0f;
+        for (int r = 0; r < 4; r++) total += roundScores[r];
+        total += _leaderBonusTotal;
+
+        LeaderScoreUI.Instance.Show(employee, type, fullRoundScores, roundScores, cumDsAfter,
+                                    total, overflowRound, cutFactor,
+                                    () => { /* 테스트 확정 — 아무 것도 반영 안 함 */ },
+                                    testMode: true);
+    }
+
+    // ── 테스트 전용 진입점 (임계값 고정) ────────────────────────
+    // 1~3회차는 평소처럼 무작위로 굴리되, 4회차의 ds만 역산해서 최종 누적 ds가 정확히 targetCumDs가
+    // 되도록 강제한다 — 90/95/99(보너스 임계선)/101(오버플로 burst) 연출을 정확한 경계값에서 바로
+    // 확인하기 위한 단축 경로. 1~3회차 누적 ds의 이론상 최댓값(~83)이 90보다 항상 작아서 4회차 ds는
+    // 이 범위(90/95/99/101) 어디를 찍어도 항상 양수로 나온다.
+    public void TestLeaderScoreAtDs(EmployeeData employee, LeaderType type, float targetCumDs)
+    {
+        if (employee == null || LeaderScoreUI.Instance == null) return;
+
+        if (LeaderSelectUI.Instance != null)
+        {
+            LeaderSelectUI.Instance.entireLeaderPanel.gameObject.SetActive(true);
+            if (LeaderSelectUI.Instance.leaderPanel != null)
+                LeaderSelectUI.Instance.leaderPanel.gameObject.SetActive(false);
+        }
+
+        int skill = type switch
+        {
+            LeaderType.Planner    => employee.EffectivePlanningSkill,
+            LeaderType.Programmer => employee.EffectiveDevelopSkill,
+            LeaderType.Artist     => employee.EffectiveArtSkill,
+            _ => 0
+        };
+
+        int stage = RollLeaderStage(employee.enhancementLevel);
+        float M = LeaderStageM[stage - 1];
+        float K = 0.8738f + 0.026409f * Mathf.Pow(skill, 0.9081f);
+        bool lazyGenius = type == LeaderType.Programmer && CharacterTraitApplier.HasLazyGeniusOwned();
+        if (lazyGenius) K *= CharacterTraitApplier.LAZY_GENIUS_LEADER_BONUS;
+        float P = GetLeaderPotentialP(employee.potential);
+
+        _leaderBonusGranted  = new bool[3];
+        _leaderBonusAmounts  = new float[3];
+        _leaderBonusRolled   = new bool[3];
+        _leaderBonusTotal    = 0f;
+        _leaderBonusPreviewK = K;
+        _leaderBonusPreviewEnhanceLevel = employee.enhancementLevel;
+        _leaderBonusPreviewActive = true;
+
+        var fullRoundScores = new float[4];
+        var roundScores     = new float[4];
+        var cumDsAfter      = new float[4];
+        float cumDs = 0f;
+
+        for (int r = 0; r < 3; r++)
+        {
+            int roll = UnityEngine.Random.Range(1, LeaderDsMaxRoll[r] + 1);
+            float ds = CalcLeaderDs(r, roll, M);
+            cumDs += ds;
+            cumDsAfter[r] = cumDs;
+            fullRoundScores[r] = CalcLeaderRoundScore(r, K, P, ds);
+            roundScores[r] = fullRoundScores[r];
+            CheckLeaderBonusThresholds(cumDs, employee.enhancementLevel, K);
+        }
+
+        float ds4 = Mathf.Max(0f, targetCumDs - cumDs); // 4회차 자체 ds(델타) — 역산
+        cumDs = targetCumDs;
+        cumDsAfter[3] = cumDs;
+
+        int overflowRound = -1;
+        float cutFactor = 0f;
+
+        if (cumDs > 100f)
+        {
+            overflowRound = 3;
+            cutFactor = LeaderBurstCutFactor;
+            fullRoundScores[3] = 0f;
+            roundScores[3] = 0f;
+            for (int k = 0; k < 3; k++)
+                roundScores[k] = ApplyLeaderBurstCut(fullRoundScores[k], cutFactor);
+        }
+        else
+        {
+            CheckLeaderBonusThresholds(cumDs, employee.enhancementLevel, K);
+            fullRoundScores[3] = CalcLeaderRoundScore(3, K, P, ds4);
+            roundScores[3] = fullRoundScores[3];
         }
 
         float total = 0f;
@@ -1431,6 +1597,9 @@ public class DevelopmentManager : MonoBehaviour
             _leaderBonusAmounts = new float[3];
             _leaderBonusRolled  = new bool[3];
             _leaderBonusTotal = 0f;
+            _leaderBonusPreviewK = K;
+            _leaderBonusPreviewEnhanceLevel = employee.enhancementLevel;
+            _leaderBonusPreviewActive = true;
 
             // 1~3회차 ds / 회차 점수 자동 진행 (누적 ds 100 초과 시 0점 + 전 회차 차감 후 종료).
             // 4회차는 여기서 굴리지 않는다 — 3회차까지 오버플로 없이 끝나야만 유저가 조준(약/중/강)을
@@ -1460,7 +1629,7 @@ public class DevelopmentManager : MonoBehaviour
                     fullRoundScores[r] = 0f;
                     roundScores[r] = 0f;
                     for (int k = 0; k < r; k++)
-                        roundScores[k] = Mathf.Round(fullRoundScores[k] * (1f - cutFactor));
+                        roundScores[k] = ApplyLeaderBurstCut(fullRoundScores[k], cutFactor);
                     overflowedEarly = true;
                     break;
                 }
@@ -1647,7 +1816,7 @@ public class DevelopmentManager : MonoBehaviour
             fullRoundScores[3] = 0f;
             roundScores[3] = 0f;
             for (int k = 0; k < 3; k++)
-                roundScores[k] = Mathf.Round(fullRoundScores[k] * (1f - cutFactor));
+                roundScores[k] = ApplyLeaderBurstCut(fullRoundScores[k], cutFactor);
         }
         else
         {
@@ -2309,6 +2478,7 @@ public class DevelopmentManager : MonoBehaviour
                 float jackpot = Mathf.Max(1, Mathf.RoundToInt(1.8f * S * UnityEngine.Random.Range(0.8f, 1.2f)));
                 {
                     Color jackpotColor = new Color(1f, 0.85f, 0f);
+                    InfoFeedUI.Instance?.ShowJackpot(employee);
                     switch (employee.role)
                     {
                         case EmployeeRole.Planner:
