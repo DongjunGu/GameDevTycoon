@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: b0e236475963d4e47b17d469f5a9d3da
+guid: 2f52ba627596d3c4d95087cbe88d013c
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: -6623525728508945526
-    second: Fever_Guage_Stress_Fill_100 1_0
+      213: -3236750007060418927
+    second: Fever_Guage_Stress_Fill_50 3_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -40,7 +40,7 @@ TextureImporter:
     filterMode: 1
     aniso: 1
     mipBias: 0
-    wrapU: 0
+    wrapU: 1
     wrapV: 1
     wrapW: 1
   nPOTScale: 0
@@ -52,11 +52,11 @@ TextureImporter:
   alignment: 0
   spritePivot: {x: 0.5, y: 0.5}
   spritePixelsToUnits: 100
-  spriteBorder: {x: 0, y: 0, z: 0, w: 21}
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
   spriteGenerateFallbackPhysicsShape: 1
   alphaUsage: 1
   alphaIsTransparency: 1
-  spriteTessellationDetail: 0
+  spriteTessellationDetail: -1
   textureType: 8
   textureShape: 1
   singleChannelComponent: 0
@@ -139,43 +139,33 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: Fever_Guage_Stress_Fill_100 1_0
+      name: Fever_Guage_Stress_Fill_50 3_0
       rect:
         serializedVersion: 2
         x: 0
         y: 0
         width: 63
-        height: 119
+        height: 423
       alignment: 0
-      pivot: {x: 0.5, y: 0.5}
-      border: {x: 0, y: 0, z: 0, w: 14}
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: a8b509f51728414a0800000000000000
-      internalID: -6623525728508945526
+      spriteID: 19eab628401c413d0800000000000000
+      internalID: -3236750007060418927
       vertices: []
       indices: 
       edges: []
       weights: []
-    outline:
-    - - {x: 31.5, y: 59.5}
-      - {x: -31.5, y: 59.5}
-      - {x: -31.5, y: -59.5}
-      - {x: 31.5, y: -59.5}
-    - - {x: -28.5, y: 51.5}
-      - {x: 12.5, y: 35.5}
-      - {x: 13.5, y: 35.5}
-      - {x: 28.5, y: 53.5}
-      - {x: 13.5, y: 52.5}
-      - {x: 12.5, y: 52.5}
+    outline: []
     customData: 
     physicsShape: []
     bones: []
     spriteID: 5e97eb03825dee720800000000000000
-    internalID: 1537655665
+    internalID: 0
     vertices: []
     indices: 
     edges: []
@@ -184,7 +174,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      Fever_Guage_Stress_Fill_100 1_0: -6623525728508945526
+      Fever_Guage_Stress_Fill_50 3_0: -3236750007060418927
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

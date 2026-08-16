@@ -185,6 +185,14 @@ public class EmployeeStatusBarUI : MonoBehaviour
         _ => 3
     };
 
+    // 강화 등 슬롯 생성 이후 바뀐 값(enhancementLevel 등)을 즉시 반영 — SetEmployee를 다시 태워 전체 재조회.
+    public void RefreshSlot(string employeeId)
+    {
+        if (string.IsNullOrEmpty(employeeId)) return;
+        if (_slots.TryGetValue(employeeId, out var slot) && slot != null)
+            slot.SetEmployee(employeeId);
+    }
+
     public void RemoveSlot(string employeeId)
     {
         if (string.IsNullOrEmpty(employeeId)) return;

@@ -97,8 +97,11 @@ public class ChallengeManager
     public LeaderType RewardPart => _rewardPart;
     public bool TargetComputed => _targetComputed;
     public float TargetValue => _targetValue;
+    public bool RewardComputed => _rewardComputed;
+    public float RewardScore => _rewardScore;
     public bool Resolved => _resolved;
     public bool Succeeded => _succeeded;
+    public bool RewardApplied => _rewardApplied;
     public static string PartDisplayName(LeaderType t) => PartName(t);
     public static string PartSpriteAsset(LeaderType t) => t switch
     {
@@ -182,9 +185,14 @@ public class ChallengeManager
         ChallengeKind.PartTotal    => "파트 총점",
         _ => ""
     };
-    string BuildAnnounceText() =>
-        $"이번 프로젝트 도전과제!\n[{PartName(_challengePart)}] {KindName()} 도전\n" +
-        $"성공 시 [{PartName(_rewardPart)}] 파트에 보상 지급";
+    string BuildAnnounceText()
+    {
+        if (_kind == ChallengeKind.LeaderZone95 || _kind == ChallengeKind.LeaderZone99)
+            return $"{PartName(_challengePart)}팀장 점수 {Mathf.RoundToInt(_targetValue)}점 달성하기";
+
+        return $"이번 프로젝트 도전과제!\n[{PartName(_challengePart)}] {KindName()} 도전\n" +
+            $"성공 시 [{PartName(_rewardPart)}] 파트에 보상 지급";
+    }
 
     static EmployeeRole ToRole(LeaderType t) => t switch
     {
@@ -324,16 +332,18 @@ public class ChallengeManager
         Resolve(GetActualPartTotal(_challengePart) >= _targetValue);
     }
 
-    // 성공/실패 자체는 팝업 없이 조용히 확정 — MissionPanel(LeaderScoreEntirePanel 상시 표시)이 실시간으로
-    // 반영하므로 별도 알림이 필요 없다. 보상은 판 시작 시점에 이미 계산돼 있으므로 성공 즉시 지급.
+    // 성공/실패 판정만 조용히 확정. MissionAlertUI를 언제 띄울지는 DevelopmentManager가 결정한다 —
+    // 팀장점수(95/99존)는 4회차 연출이 끝나고 LeaderScoreUI 패널을 닫아야(OnConfirmClosed) 띄우고,
+    // 파트총점은 "개발 완료!" 얼럿 이후·"창의성을 올리세요!" 얼럿 이전(ShowCreativityGame)에 띄운다.
+    // 보상은 더 이상 자동 지급되지 않고 MissionAlertUI의 ReceiveRewardBtn을 눌러야만(ClaimReward) 지급된다.
     void Resolve(bool succeeded)
     {
         _resolved = true;
         _succeeded = succeeded;
-        if (succeeded) TryApplyReward();
     }
 
-    void TryApplyReward()
+    // MissionAlertUI.ReceiveRewardBtn 클릭 시에만 호출 — 보상 점수 + 만족도를 실제로 지급.
+    public void ClaimReward()
     {
         if (!_resolved || !_succeeded || _rewardApplied) return;
         _rewardApplied = true;
@@ -345,10 +355,7 @@ public class ChallengeManager
             case LeaderType.Artist:     DevelopmentPanelUI.Instance.AddValuesInstant(0f, 0f, _rewardScore, 0f); break;
         }
 
-        string satisfactionLine = ApplySatisfactionReward();
-        string rewardLine = $"<sprite=\"{PartSpriteAsset(_rewardPart)}\" name=\"{PartSpriteName(_rewardPart)}\"> " +
-                             $"{PartName(_rewardPart)} 총점 +{Mathf.RoundToInt(_rewardScore)}";
-        LeaderMissionResultUI.Instance?.Show(rewardLine, satisfactionLine);
+        ApplySatisfactionReward();
     }
 
     // 95수준=랜덤 1명 +5 / 파트총점수준=랜덤 1명 +10 / 99수준=전 직원 +5. 표시용 설명 문자열을 반환.
@@ -363,15 +370,26 @@ public class ChallengeManager
         switch (_kind)
         {
             case ChallengeKind.LeaderZone95:
-                pool[Random.Range(0, pool.Count)].ChangeSatisfaction(5);
+            {
+                var emp = pool[Random.Range(0, pool.Count)];
+                int before = emp.satisfaction;
+                emp.ChangeSatisfaction(5);
+                InfoFeedUI.Instance?.ShowSatisfaction(emp, emp.satisfaction - before);
                 line = "직원 만족도 +5";
                 break;
+            }
             case ChallengeKind.PartTotal:
-                pool[Random.Range(0, pool.Count)].ChangeSatisfaction(10);
+            {
+                var emp = pool[Random.Range(0, pool.Count)];
+                int before = emp.satisfaction;
+                emp.ChangeSatisfaction(10);
+                InfoFeedUI.Instance?.ShowSatisfaction(emp, emp.satisfaction - before);
                 line = "직원 만족도 +10";
                 break;
+            }
             case ChallengeKind.LeaderZone99:
                 foreach (var e in pool) e.ChangeSatisfaction(5);
+                InfoFeedUI.Instance?.ShowGlobalSatisfaction(5);
                 line = "전 직원 만족도 +5";
                 break;
             default:

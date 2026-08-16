@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: c3126b770c6804443bd7d0425baf42ab
+guid: d57649b8f5327ad44bb5d86010d57afa
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: -5321883444878150531
-    second: Fever_Guage_Stress_Frame 2_0
+      213: -9061445948052903292
+    second: dimRec_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -139,13 +139,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: Fever_Guage_Stress_Frame 2_0
+      name: dimRec_0
       rect:
         serializedVersion: 2
         x: 0
         y: 0
-        width: 75
-        height: 432
+        width: 207
+        height: 57
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -154,8 +154,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: d747104143fd426b0800000000000000
-      internalID: -5321883444878150531
+      spriteID: 48a67ea7be64f3280800000000000000
+      internalID: -9061445948052903292
       vertices: []
       indices: 
       edges: []
@@ -174,7 +174,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      Fever_Guage_Stress_Frame 2_0: -5321883444878150531
+      dimRec_0: -9061445948052903292
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

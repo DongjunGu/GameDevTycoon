@@ -1,16 +1,10 @@
 fileFormatVersion: 2
-guid: 7f7f0d9ddf65e304ead6bab0d94e2c5d
+guid: ffaa25e2d8d64df4dbeb6a88034dfa22
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: 2709300935115080350
-    second: fire-Sheet 1_0
-  - first:
-      213: 6506134346748515711
-    second: fire-Sheet 1_1
-  - first:
-      213: 690159013562478629
-    second: fire-Sheet 1_2
+      213: 288890468857249019
+    second: Fever_Icon_Down 1_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -52,7 +46,7 @@ TextureImporter:
   nPOTScale: 0
   lightmap: 0
   compressionQuality: 50
-  spriteMode: 2
+  spriteMode: 1
   spriteExtrude: 1
   spriteMeshType: 1
   alignment: 0
@@ -145,13 +139,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: fire-Sheet 1_0
+      name: Fever_Icon_Down 1_0
       rect:
         serializedVersion: 2
-        x: 13
-        y: 13
-        width: 235
-        height: 310
+        x: 1
+        y: 2
+        width: 105
+        height: 116
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -160,52 +154,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: e920b2398de599520800000000000000
-      internalID: 2709300935115080350
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: fire-Sheet 1_1
-      rect:
-        serializedVersion: 2
-        x: 280
-        y: 13
-        width: 235
-        height: 301
-      alignment: 0
-      pivot: {x: 0, y: 0}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: -1
-      bones: []
-      spriteID: f75d9e6a7be6a4a50800000000000000
-      internalID: 6506134346748515711
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: fire-Sheet 1_2
-      rect:
-        serializedVersion: 2
-        x: 547
-        y: 13
-        width: 241
-        height: 343
-      alignment: 0
-      pivot: {x: 0, y: 0}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: -1
-      bones: []
-      spriteID: 520fce957ffe39900800000000000000
-      internalID: 690159013562478629
+      spriteID: bfc7b3fc958520400800000000000000
+      internalID: 288890468857249019
       vertices: []
       indices: 
       edges: []
@@ -224,9 +174,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      fire-Sheet 1_0: 2709300935115080350
-      fire-Sheet 1_1: 6506134346748515711
-      fire-Sheet 1_2: 690159013562478629
+      Fever_Icon_Down 1_0: 288890468857249019
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

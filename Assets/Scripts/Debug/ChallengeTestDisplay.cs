@@ -5,8 +5,6 @@ using TMPro;
 public class ChallengeTestDisplay : MonoBehaviour
 {
     public TextMeshProUGUI descText;
-    public GameObject progressRow;
-    public TextMeshProUGUI progressValueText;
 
     void Update()
     {
@@ -15,7 +13,6 @@ public class ChallengeTestDisplay : MonoBehaviour
         if (c == null || !c.IsActive)
         {
             if (descText != null) descText.text = "도전과제 없음";
-            if (progressRow != null) progressRow.SetActive(false);
             return;
         }
 
@@ -26,9 +23,5 @@ public class ChallengeTestDisplay : MonoBehaviour
         string label = $"<sprite=\"{spriteAsset}\" name=\"{spriteName}\"> {partName} {Mathf.RoundToInt(c.TargetValue)}점 달성";
         if (c.Resolved) label += c.Succeeded ? " (성공)" : " (실패)";
         if (descText != null) descText.text = label;
-
-        if (progressRow != null) progressRow.SetActive(true);
-        if (progressValueText != null)
-            progressValueText.text = $"{Mathf.RoundToInt(c.GetChallengeCurrentValue())} / {Mathf.RoundToInt(c.TargetValue)}";
     }
 }

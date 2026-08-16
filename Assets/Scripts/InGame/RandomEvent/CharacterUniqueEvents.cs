@@ -221,6 +221,11 @@ public static class CharacterUniqueEvents
         ProjectSaveManager.Instance?.SaveProject();
         GameTimeManager.Instance?.SaveGameTime();
 
+        // 신의 축복(UgiUnique)은 더 이상 확인 클릭이 필요한 모달 패널(ShowEventPanel)로 안 뜬다 —
+        // ApplyGodBlessing 안에서 이미 InfoFeedUI 토스트로 결과를 안내했으므로 여기선 그냥 끝낸다
+        // (시간정지/ModalGate 대기 없음).
+        if (eventType == "UgiUnique") return;
+
         // 패널은 ModalGate 큐로 순차 표시 — 같은 주에 여러 전용 이벤트/사직 패널이 겹쳐도 하나씩 차례로.
         // 표시 동안 StopTime ↔ 확인 시 StartTime(카운터 균형) → 마지막 패널이 닫힐 때만 시간 재개.
         ModalGate.I.WhenFree(() =>
@@ -352,7 +357,8 @@ public static class CharacterUniqueEvents
     }
 
     // ──────────── 신의 축복 (UgiUnique) — 1년 1회 d6 주사위 ────────────
-    // 결과별 효과 적용 + 패널 표시 문구 반환. 2/3/6 은 "다음 축복까지" 지속(영속 필드), 4/5 는 즉시 1회.
+    // 결과별 효과 적용 + InfoFeedUI 토스트 안내(더 이상 확인 클릭이 필요한 모달 패널 아님, Trigger 참고).
+    // 2/3/6 은 "다음 축복까지" 지속(영속 필드), 4/5 는 즉시 1회.
     // 발동 시 작년 축복의 지속효과는 ClearGodBlessing 으로 먼저 해제(한 번에 하나만 활성).
     static string ApplyGodBlessing(EmployeeData ugi)
     {
@@ -366,29 +372,44 @@ public static class CharacterUniqueEvents
         switch (dice)
         {
             case 1: // 꽝
+                InfoFeedUI.Instance?.ShowCustom(ugi, $"{ugi.employeeName}에게 아무 일도 일어나지 않았다. (꽝)");
                 return "주사위 결과: 1\n\n…이번 해에는 아무 일도 일어나지 않았습니다. (꽝)";
             case 2: // 우기 능력치 100~130% 중 특정값 고정 (다음 축복까지, 우주의 기운 매주 재추첨 정지)
             {
                 int pct = Random.Range(100, 131); // 100~130
                 ugi.cosmicEnergyPercent = pct;
                 ugi.cosmicFrozen        = true;
+                InfoFeedUI.Instance?.ShowCustom(ugi,
+                    $"{InfoFeedUI.Colorize(ugi.employeeName, true)}의 능력치 배율이 {InfoFeedUI.Colorize($"{pct}%", true)}로 고정됐다.");
                 return $"주사위 결과: 2\n\n{ugi.employeeName}의 능력치 배율이 <b>{pct}%</b>로 고정됩니다!\n(다음 축복 때까지 매주 변동 정지)";
             }
             case 3: // 랜덤 직원 능력치 +10% (다음 축복까지)
             {
                 var target = PickRandomOwnedEmployee();
-                if (target == null) return "주사위 결과: 3\n\n…대상 직원이 없어 축복이 흩어졌습니다.";
+                if (target == null)
+                {
+                    InfoFeedUI.Instance?.ShowCustom(ugi, "대상 직원이 없어 축복이 흩어졌다.");
+                    return "주사위 결과: 3\n\n…대상 직원이 없어 축복이 흩어졌습니다.";
+                }
                 target.godBlessingStatPercent = GOD_BLESSING_STAT_PERCENT;
+                InfoFeedUI.Instance?.ShowCustom(target,
+                    $"{InfoFeedUI.Colorize(target.employeeName, true)}의 능력치가 {InfoFeedUI.Colorize("10%", true)} 상승했다.");
                 return $"주사위 결과: 3\n\n<b>{target.employeeName}</b>의 능력치가 +10% 상승합니다!\n(다음 축복 때까지 유지)";
             }
             case 4: // 우기 만족도 +20 (즉시)
+            {
+                int before = ugi.satisfaction;
                 ugi.ChangeSatisfaction(20);
+                InfoFeedUI.Instance?.ShowSatisfaction(ugi, ugi.satisfaction - before);
                 return $"주사위 결과: 4\n\n{ugi.employeeName}의 만족도가 +20 상승했습니다!";
+            }
             case 5: // 모든 직원 만족도 +10 (즉시)
                 ApplyAllSatisfaction(10);
+                InfoFeedUI.Instance?.ShowGlobalSatisfaction(10);
                 return "주사위 결과: 5\n\n모든 직원의 만족도가 +10 상승했습니다!";
             case 6: // 매출 +10% (다음 축복까지)
                 ugi.godBlessingSalesActive = true;
+                InfoFeedUI.Instance?.ShowCustom(ugi, $"{InfoFeedUI.Colorize(ugi.employeeName, true)} 덕분에 매출이 {InfoFeedUI.Colorize("10%", true)} 상승했다.");
                 return "주사위 결과: 6\n\n다음 축복 때까지 게임 매출이 +10% 상승합니다!";
         }
         return null;

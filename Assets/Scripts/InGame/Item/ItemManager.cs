@@ -374,19 +374,22 @@ public class ItemManager : MonoBehaviour
         switch (row.effectType)
         {
             case "satisfaction":
+            {
                 target.ChangeSatisfaction(row.effectValue);
-                OfficeManager.Instance?.ShowStatPopup(
-                    target.id, $"만족도 +{row.effectValue}", new Color(1f, 0.4f, 0.4f));
+                // 클램프[1,100]에 막혀 실제 변화가 0이어도 AlertUI와 동일하게 아이템 고정값을 그대로 표시.
+                InfoFeedUI.Instance?.ShowSatisfaction(target, row.effectValue);
                 AlertUI.Instance?.ShowPortrait($"{target.employeeName}에게 {row.name}을 사용했습니다.\n만족도 +{row.effectValue}", target.portraitId, target.employeeName);
                 break;
+            }
             // 수상한 물약 — effectValue를 상한으로 1~effectValue 사이 랜덤 회복.
             case "satisfactionRandom":
+            {
                 int randomGain = Random.Range(1, row.effectValue + 1);
                 target.ChangeSatisfaction(randomGain);
-                OfficeManager.Instance?.ShowStatPopup(
-                    target.id, $"만족도 +{randomGain}", new Color(1f, 0.4f, 0.4f));
+                InfoFeedUI.Instance?.ShowSatisfaction(target, randomGain);
                 AlertUI.Instance?.ShowPortrait($"{target.employeeName}에게 {row.name}을 사용했습니다.\n만족도 +{randomGain}", target.portraitId, target.employeeName);
                 break;
+            }
             // 초심 회복기 — 강화 굴림과 무관한 즉시효과. 강화 버튼을 누를 필요 없이 사용 즉시 강화 단계를
             // 1 낮추고(일반 하락과 동일하게 EmployeeManager.ReverseEnhancement로 그 레벨의 스탯 증가분도
             // 되돌림) 만족도를 100으로 회복한다(+100 델타는 클램프[1,100]에 의해 항상 정확히 100이 됨).
@@ -399,8 +402,7 @@ public class ItemManager : MonoBehaviour
                     target.enhancementLevel = oldLevel - 1;
                 }
                 target.ChangeSatisfaction(100);
-                OfficeManager.Instance?.ShowStatPopup(
-                    target.id, "만족도 100 회복", new Color(1f, 0.4f, 0.4f));
+                InfoFeedUI.Instance?.ShowSatisfaction(target, 100);
                 AlertUI.Instance?.ShowPortrait(
                     $"{target.employeeName}에게 {row.name}을 사용했습니다.\n강화 단계가 1 하락하고 만족도가 100으로 회복되었습니다.",
                     target.portraitId, target.employeeName);
@@ -413,8 +415,7 @@ public class ItemManager : MonoBehaviour
         if (itemId == "relax")
         {
             target.ClearAllStatDebuffs();
-            OfficeManager.Instance?.ShowStatPopup(
-                target.id, "디버프 회복", new Color(0.5f, 1f, 0.5f));
+            InfoFeedUI.Instance?.ShowCustom(target, $"{InfoFeedUI.Colorize(target.employeeName, true)}의 디버프가 모두 회복됐다.");
             AlertUI.Instance?.ShowPortrait($"{target.employeeName}의 능력치 디버프가\n모두 회복됐습니다.", target.portraitId, target.employeeName);
         }
 
@@ -423,8 +424,7 @@ public class ItemManager : MonoBehaviour
         {
             int weeks = Random.Range(4, 9);
             target.ApplyStatBuff(weeks, 10);
-            OfficeManager.Instance?.ShowStatPopup(
-                target.id, $"능력치 +10% ({weeks}주)", new Color(1f, 0.9f, 0.3f));
+            InfoFeedUI.Instance?.ShowStatBuff(target, weeks, 10, true);
             AlertUI.Instance?.ShowPortrait($"{target.employeeName}에게 각성의 물약을 사용했습니다.\n능력치 +10% ({weeks}주간)", target.portraitId, target.employeeName);
         }
 

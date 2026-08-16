@@ -183,9 +183,10 @@ public static class TraitEffectApplier
     public static int GetYearlySatRecoverChancePct() => SumEquipped("yearlySatRecover");
 
     // 예약된 주차 도달 시 실제 적용 — 랜덤 직원 1명 만족도 풀 회복. 적용 시 true + 직원 반환.
-    public static bool DoYearlySatRecover(out EmployeeData recovered)
+    public static bool DoYearlySatRecover(out EmployeeData recovered, out int satisfactionDelta)
     {
         recovered = null;
+        satisfactionDelta = 0;
         var emp = PickRandomEmployee();
         if (emp == null) return false;
 
@@ -193,6 +194,7 @@ public static class TraitEffectApplier
         emp.ChangeSatisfaction(100); // +100 → 1~100 클램프로 풀 회복
         EmployeeManager.Instance?.UpdateEmployee(emp);
         recovered = emp;
+        satisfactionDelta = emp.satisfaction - before;
         Debug.Log($"[TraitEffect] yearlySatRecover 발동 - {emp.employeeName} 만족도 {before}→{emp.satisfaction}");
         return true;
     }
