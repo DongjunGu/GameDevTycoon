@@ -6,8 +6,10 @@ using UnityEngine.UI;
 // 슬라이드 인 → 잠시 표시 → 슬라이드 아웃 되는 짧은 알림 UI
 // - 사용 예: InfoUI.Instance?.Show("판매 완료!");
 // - 매 Show() 마다 InfoPrefab을 container(InfoPanel)에 Instantiate 해서 쓰고 끝나면 Destroy — InfoFeedUI와 동일한 생성 방식.
-//   VerticalLayoutGroup이 붙은 container 안에서 직접 슬라이드하려면 위치를 자유롭게 움직여야 하므로
-//   생성 직후 LayoutElement.ignoreLayout = true 로 레이아웃 제어에서 제외한다.
+//   LayoutElement는 InfoFeedUI 쪽과 마찬가지로 건드리지 않는다(VerticalLayoutGroup이 세로 위치를 그대로 제어) —
+//   대신 슬라이드는 루트가 아니라 한 단계 아래 자식 "Content"의 anchoredPosition을 움직여서 낸다.
+//   LayoutGroup은 직계 자식만 건드리므로 손자뻘인 Content는 그 영향을 받지 않는다.
+//   [[feedback_layoutgroup_child_position_animation]] 참고.
 // - GameTimeManager.IsRunning 을 봐서 진행 — 직원리스트 등 모달이 떠서 시간이 멈추면 같이 멈췄다가
 //   모달이 닫혀 시간이 재개되면 이어서 진행된다(Time.unscaledDeltaTime 로 애니메이션 자체는 프레임 단위로 부드럽게).
 public class InfoUI : MonoBehaviour
@@ -66,8 +68,6 @@ public class InfoUI : MonoBehaviour
         }
 
         var go = Instantiate(infoPrefab, container);
-        var layoutElement = go.GetComponent<LayoutElement>();
-        if (layoutElement != null) layoutElement.ignoreLayout = true;
 
         var portrait = go.transform.Find("Content/InfoPortrait/InfoPortraitImage");
         if (portrait != null)
@@ -81,7 +81,8 @@ public class InfoUI : MonoBehaviour
 
         _activeInstance = go;
         _pendingCallback = onComplete;
-        _co = StartCoroutine(ShowRoutine(go.transform as RectTransform));
+        var content = go.transform.Find("Content") as RectTransform;
+        _co = StartCoroutine(ShowRoutine(content));
     }
 
     IEnumerator ShowRoutine(RectTransform rect)
