@@ -415,7 +415,7 @@ public class TrainingPanelUI : MonoBehaviour
     // ResolveResultRefs(최초 1회)에서 캡처해두고, 매 PlaySuccessAnim마다 rest-riseOffset → rest로 되돌린다.
     RectTransform _successRootRT, _shinePanelRT;
     CanvasGroup _successRootCG, _shinePanelCG;
-    Vector2 _successRootRestPos, _shinePanelRestPos, _portraitEllipseRestPos, _successPortraitRestPos;
+    Vector2 _successRootRestPos, _shinePanelRestPos, _portraitEllipseRestPos, _successPortraitRestPos, _failPortraitRestPos;
     GameObject _nameTextGo, _enhBeforeGo, _enhArrowGo, _enhAfterGo;
     RectTransform _resultImageRT, _detailRT;
     TextMeshProUGUI _nameText, _enhBefore, _enhAfter, _touchText, _failDetailText;
@@ -444,6 +444,7 @@ public class TrainingPanelUI : MonoBehaviour
         _portraitEllipseImg = portraitEllipseT != null ? portraitEllipseT.GetComponent<Image>() : null;
         if (_portraitEllipseRT != null) _portraitEllipseRestPos = _portraitEllipseRT.anchoredPosition;
         if (successPortraitImage != null) _successPortraitRestPos = successPortraitImage.rectTransform.anchoredPosition;
+        if (failPortraitImage != null) _failPortraitRestPos = failPortraitImage.rectTransform.anchoredPosition;
 
         // SuccessPanel — 등장 시 "하단에서 올라오며 페이드" 연출용 CanvasGroup 확보 + rest 위치 캡처.
         if (_successRoot != null)
@@ -577,6 +578,19 @@ public class TrainingPanelUI : MonoBehaviour
         SetActiveSafe(_shinePanel, false);
         SetConfirmInteractable(true);
 
+        // PortraitImage — SuccessPanel과 동일하게 생성되고 제자리로 올라오는 동안 alpha 0→255로 페이드 인.
+        if (failPortraitImage != null)
+        {
+            failPortraitImage.rectTransform.DOKill();
+            failPortraitImage.DOKill();
+            failPortraitImage.gameObject.SetActive(true);
+            var fc = failPortraitImage.color; fc.a = 0f; failPortraitImage.color = fc;
+            failPortraitImage.rectTransform.anchoredPosition = _failPortraitRestPos - new Vector2(0f, riseOffset);
+            failPortraitImage.DOFade(1f, portraitEllipseRevealDuration).SetUpdate(true);
+            failPortraitImage.rectTransform
+                .DOAnchorPos(_failPortraitRestPos, portraitEllipseRevealDuration).SetEase(Ease.OutCubic).SetUpdate(true);
+        }
+
         TextMeshProUGUI touch;
         switch (outcome)
         {
@@ -638,8 +652,8 @@ public class TrainingPanelUI : MonoBehaviour
         if (successPortraitImage != null)
         {
             var pc = successPortraitImage.color; pc.a = 0f; successPortraitImage.color = pc;
-            // 위에서 아래로 내려오며 페이드 인 — rest보다 riseOffset만큼 위에서 시작.
-            successPortraitImage.rectTransform.anchoredPosition = _successPortraitRestPos + new Vector2(0f, riseOffset);
+            // SuccessPanel/EllipseImage와 동일하게 아래에서 위로 올라오며 페이드 인 — rest보다 riseOffset만큼 아래에서 시작.
+            successPortraitImage.rectTransform.anchoredPosition = _successPortraitRestPos - new Vector2(0f, riseOffset);
         }
         SetActiveSafe(_nameTextGo, false);
         SetActiveSafe(_enhBeforeGo, false);
@@ -658,14 +672,15 @@ public class TrainingPanelUI : MonoBehaviour
 
         _animSeq = DOTween.Sequence().SetUpdate(true);
 
-        // 1) 0.05초 후 SuccessPanel/EllipseImage/ShinePanel 동시 등장 — 셋 다 rest 위치보다 riseOffset만큼
-        // 아래에서 올라오며(anchoredPosition) 동시에 alpha 0→목표값으로 페이드 인.
+        // 1) 0.05초 후 SuccessPanel/EllipseImage/ShinePanel/PortraitImage 동시 등장 — 전부 rest 위치보다
+        // riseOffset만큼 아래에서 올라오며(anchoredPosition) 동시에 alpha 0→목표값으로 페이드 인.
         _animSeq.AppendInterval(0.05f);
         _animSeq.AppendCallback(() =>
         {
             SetActiveSafe(_ellipse, true);
             SetActiveSafe(_shinePanel, true);
             if (_portraitEllipseRT != null) _portraitEllipseRT.gameObject.SetActive(true);
+            SetActiveSafe(successPortraitImage?.gameObject, true);
         });
         if (_successRootRT != null)
             _animSeq.Join(_successRootRT.DOAnchorPos(_successRootRestPos, portraitEllipseRevealDuration).SetEase(Ease.OutCubic).SetUpdate(true));
@@ -679,9 +694,8 @@ public class TrainingPanelUI : MonoBehaviour
             _animSeq.Join(_portraitEllipseRT.DOAnchorPos(_portraitEllipseRestPos, portraitEllipseRevealDuration).SetEase(Ease.OutCubic).SetUpdate(true));
         if (_portraitEllipseImg != null)
             _animSeq.Join(_portraitEllipseImg.DOFade(Mathf.Clamp01(portraitEllipseRestAlpha255 / 255f), portraitEllipseRevealDuration).SetUpdate(true));
-
-        // PortraitImage — 위에서 아래로 내려오면서(anchoredPosition) 동시에 alpha 0→1로 페이드 인.
-        _animSeq.AppendCallback(() => SetActiveSafe(successPortraitImage?.gameObject, true));
+        // PortraitImage — EllipseImage/SuccessPanel과 동일 타이밍(같은 그룹)으로 아래에서 위로 올라오면서
+        // (anchoredPosition) 동시에 alpha 0→1로 페이드 인. 따로 기다렸다가 나중에 켜지지 않도록 위 그룹과 Join.
         if (successPortraitImage != null)
         {
             _animSeq.Join(successPortraitImage.DOFade(1f, portraitEllipseRevealDuration).SetUpdate(true));

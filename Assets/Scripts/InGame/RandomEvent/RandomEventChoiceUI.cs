@@ -100,6 +100,12 @@ public class RandomEventChoiceUI : MonoBehaviour
     private bool _awaitingChoiceReveal;
     private List<RandomEventChoiceOption> _pendingChoices;
 
+    // 대사1(description) 타이핑이 끝난 뒤 "클릭해야" 대사2(dialogue2)가 시작되도록 하는 대기 상태.
+    // 화자는 절대 전환하지 않는다(같은 화자가 이어서 말하는 것으로 취급) — 클릭 한 번으로 대사가
+    // 두 줄로 나뉘어 표시된다.
+    private bool _awaitingDialogue2;
+    private RandomEventChoiceData _pendingDialogue2Data;
+
     // 답변1(reply1) 타이핑이 끝난 뒤 "클릭해야" 답변2(reply2) 타이핑이 시작되도록 하는 대기 상태.
     private bool _awaitingReply2;
     private RandomEventChoiceOption _pendingReply2Choice;
@@ -149,6 +155,13 @@ public class RandomEventChoiceUI : MonoBehaviour
             var choices = _pendingChoices;
             _pendingChoices = null;
             SpawnChoiceButtons(choices);
+        }
+        else if (_awaitingDialogue2)
+        {
+            _awaitingDialogue2 = false;
+            var data = _pendingDialogue2Data;
+            _pendingDialogue2Data = null;
+            StartTyping(data.dialogue2, onComplete: () => ShowQuestionThenRevealChoices(data));
         }
         else if (_awaitingReply2)
         {
@@ -231,18 +244,29 @@ public class RandomEventChoiceUI : MonoBehaviour
         ModalGate.I.Register(this);
         _shownFrame = Time.frameCount;
 
-        // 대사1(description) 타이핑 → (대사2 있으면 화자 전환 후 이어서 타이핑) → 질문 즉시 표시 →
+        // 대사1(description) 타이핑 → (대사2 있으면 "클릭해야" 이어서 타이핑) → 질문 즉시 표시 →
         // "클릭해야" 선택지 버튼 표시 (Update 의 reveal 클릭이 SpawnChoiceButtons 호출).
-        StartTyping(data.description, onComplete: () => TypeDialogue2ThenQuestion(data));
+        StartTyping(data.description, onComplete: () => AwaitDialogue2OrQuestion(data));
     }
 
-    // 대사2(dialogue2) 가 있으면 화자를 전환해 이어서 타이핑, 없으면 바로 질문 단계로.
-    void TypeDialogue2ThenQuestion(RandomEventChoiceData data)
+    // 대사2(dialogue2)가 있으면 클릭 대기 상태로 전환(Update/OnSkipClicked 에서 클릭 시 타이핑 시작),
+    // 없으면 바로 질문 단계로. 화자는 절대 전환하지 않는다 — 같은 화자가 이어서 말하는 두 번째 대사로
+    // 취급(예: AntiMintchoc처럼 한 사람 대사를 두 줄로 나눌 때). TwoEmpFight 계열은 onSetup에서 emp1/emp2
+    // 포트레이트를 둘 다 채워 _twoPerson이 true가 되지만, 그건 "화자가 둘"이라는 뜻이 아니라 그냥 두
+    // 직원의 초상화가 둘 다 존재한다는 뜻이라 dialogue2에서 SetSpeaker(2)를 하면 안 됨.
+    void AwaitDialogue2OrQuestion(RandomEventChoiceData data)
     {
-        if (!string.IsNullOrEmpty(data.dialogue2) && _twoPerson)
+        if (!string.IsNullOrEmpty(data.dialogue2))
         {
-            SetSpeaker(2);
-            StartTyping(data.dialogue2, onComplete: () => ShowQuestionThenRevealChoices(data));
+            if (_skipMode)
+            {
+                StartTyping(data.dialogue2, onComplete: () => ShowQuestionThenRevealChoices(data));
+            }
+            else
+            {
+                _pendingDialogue2Data = data;
+                _awaitingDialogue2 = true; // 클릭 대기 — Update 에서 클릭 시 대사2 타이핑 시작
+            }
         }
         else
         {
@@ -289,6 +313,16 @@ public class RandomEventChoiceUI : MonoBehaviour
         if (!_isTypingDone)
         {
             if (ClickedThisFrame()) SkipTyping();
+            return;
+        }
+
+        // 타이핑 완료 후: 대사2 대기 중이면 클릭해야 대사2 타이핑 시작.
+        if (_awaitingDialogue2 && ClickedThisFrame())
+        {
+            _awaitingDialogue2 = false;
+            var dialogue2Data = _pendingDialogue2Data;
+            _pendingDialogue2Data = null;
+            StartTyping(dialogue2Data.dialogue2, onComplete: () => ShowQuestionThenRevealChoices(dialogue2Data));
             return;
         }
 
@@ -540,6 +574,10 @@ public class RandomEventChoiceUI : MonoBehaviour
         const float duration = 0.2f;
 
         if (_choiceFadeInCoroutine != null) { StopCoroutine(_choiceFadeInCoroutine); _choiceFadeInCoroutine = null; }
+
+        // 선택지가 사라지는 시점에 배경 딤도 같이 끔 — SpawnChoiceButtons가 다시 선택지를 띄울 때
+        // choiceDim.SetActive(true)로 재활성화되므로 다음 선택지 단계에선 자연히 다시 켜진다.
+        if (choiceDim != null) choiceDim.SetActive(false);
 
         foreach (var go in _spawnedButtons)
         {

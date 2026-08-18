@@ -77,10 +77,11 @@ public class CharacterEventTester : MonoBehaviour
 
     void OnGUI()
     {
-        // 토글 버튼 (항상 우상단)
-        if (GUI.Button(new Rect(Screen.width - 170, 10, 160, 32), _open ? "이벤트 테스트 ▲" : "이벤트 테스트 ▼"))
-            _open = !_open;
+        // 기본적으로 화면에 아무것도 안 그림 — F9(Update() 참고)로 열어야만 보이게.
         if (!_open) return;
+
+        if (GUI.Button(new Rect(Screen.width - 170, 10, 160, 32), "이벤트 테스트 ▲"))
+            _open = !_open;
 
         var area = new Rect(Screen.width - 470, 50, 460, Screen.height - 80);
         GUILayout.BeginArea(area, GUI.skin.box);

@@ -122,13 +122,16 @@ UpdateProgress 호출 → targetValue 도달
 ## 7. 현재 차트 데이터
 
 (2026-08-03) 기존 콘텐츠(quest_003/004, main_quest_001~004) 전부 제거 후 튜토리얼 퀘스트 2개로 새로 시작.
+(2026-08-18) 튜토리얼이 아닌 일반 런에서 처음 뜨는 퀘스트(`quest_revenue_50000`) 추가 — 런 종류에 따라
+`tutorial_quest_001`/`quest_revenue_50000`가 서로 배타적으로 노출되도록 `QuestManager`에 분기 추가.
 **백엔드 콘솔의 `Quest` 차트도 로컬 `Quest.csv`와 동일하게 맞춰야** 실제 게임에 반영된다(로컬 CSV
 수정만으로는 `Backend.CDN.Content`가 갱신되지 않음).
 
 ```csv
 questId,title,description,type,targetValue,rewardGold,isMainQuest,unlockAfter,isVisible
-tutorial_quest_001,"매출 50,000 G 달성하기",첫 번째 게임을 개발해 판매까지 완료하세요.,CompleteFirstProject,1,0,1,,1
+tutorial_quest_001,첫 번째 게임 개발하기,첫 번째 게임을 개발해 판매까지 완료하세요.,CompleteFirstProject,1,0,1,,1
 tutorial_quest_002,스스로 게임 개발하기,이번엔 도움 없이 스스로 게임을 개발해보세요.,CompleteSecondProject,1,0,1,tutorial_quest_001,0
+quest_revenue_50000,"매출 50,000 G 달성하기","누적 매출 50,000G를 달성하세요.",TotalRevenue,50000,5000,0,,1
 ```
 
 - `tutorial_quest_001`: 온보딩 진입 시점부터 공개(`isVisible=1`). `SalesUI.OnSalesComplete`에서
@@ -138,3 +141,25 @@ tutorial_quest_002,스스로 게임 개발하기,이번엔 도움 없이 스스�
 - `tutorial_quest_002`: 처음엔 숨김(`isVisible=0`), 퀘스트1 완료 시 자동 공개. **완료 조건은 아직
   미정** — `QuestType.CompleteSecondProject`는 enum에만 존재하고 `UpdateProgress` 호출부가 아직
   없으므로, 조건이 정해지면 그 시점 코드에 한 줄 추가하면 된다.
+- `quest_revenue_50000`: 튜토리얼이 아닌 일반 런에서 처음부터 공개되는 일반 퀘스트. 누적 매출
+  50,000G 달성 시 완료(`SalesUI`가 주차별 수익 지급 때마다 부르는 `QuestType.TotalRevenue`
+  누산으로 자동 진행). 일반 퀘스트라 완료 즉시 `OnQuestCompleted`에서 보상 5,000G 자동 지급.
+
+### 튜토리얼/비튜토리얼 배타 노출 (`QuestManager.ResolveTutorialVisibility`)
+
+`tutorial_quest_001`과 `quest_revenue_50000`는 차트의 `isVisible`을 그대로 쓰지 않고, 현재 런이
+튜토리얼인지에 따라 코드에서 강제로 뒤집는다(questId 하드코딩 — `QuestUI.cs`가 이미 같은 방식으로
+이 두 튜토리얼 퀘스트를 특별 취급하고 있는 것과 동일한 패턴):
+
+- `tutorial_quest_001` → 튜토리얼 런일 때만 보임
+- `quest_revenue_50000` → 튜토리얼이 아닌 런일 때만 보임
+- 나머지 퀘스트는 차트 `isVisible` 그대로
+
+두 지점에서 적용된다 — **같은 값을 두 군데서 읽는 이유는 타이밍 때문**:
+1. `LoadQuests()` — 앱 세션 진입 시 차트 로드 직후, `RunStateManager.Instance.IsTutorial`(이미 로드된
+   "현재" 런의 값)을 읽어 초기 `isVisible`을 정한다. 재접속 등으로 아직 `UserQuest`에 저장된 행이
+   없는 퀘스트의 안전망 역할.
+2. `ResetForNewRun(onComplete, tutorial)` — 새 런 시작 시 `NewRunInitializer`가 `RunState.tutorial`을
+   서버에 저장하기 **전에** 호출되므로, 이 시점의 `RunStateManager.Instance.IsTutorial`은 아직 "이전"
+   런 값이다. 그래서 `tutorial` bool을 인자로 직접 받아서 판정한다(`MoneyManager.ResetForNewRun`가
+   시작 자금을 `tutorial` 인자로 분기하는 것과 동일한 이유).

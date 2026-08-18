@@ -71,7 +71,7 @@ public static class NewRunInitializer
         if (ProjectSaveManager.Instance != null)      Issue(ProjectSaveManager.Instance.ResetForNewRun);
         if (TechTreeManager.Instance != null)         Issue(TechTreeManager.Instance.ResetForNewRun);
         if (LoanManager.Instance != null)             Issue(LoanManager.Instance.ResetForNewRun);
-        if (QuestManager.Instance != null)            Issue(QuestManager.Instance.ResetForNewRun);
+        if (QuestManager.Instance != null)            Issue(cb => QuestManager.Instance.ResetForNewRun(cb, tutorial));
 
         issuedAll = true;
         if (pending == 0) FinalizeRun(onComplete, tutorial);

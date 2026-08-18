@@ -1,10 +1,11 @@
 fileFormatVersion: 2
-guid: bc446145eb40ad347ac40f750849cafa
+guid: eb7d0163a071e38458d1ea7f09245972
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: -6828796326193148453
-    second: BG_Office_UnderGround 1_0
+      213: -773975861173046040
+    second: yuken_bright_creative_company_office_interior_during_late_mor_ef523b49-d757-4582-82e5-e21dbf18ed10_0
+      1_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -46,7 +47,7 @@ TextureImporter:
   nPOTScale: 0
   lightmap: 0
   compressionQuality: 50
-  spriteMode: 1
+  spriteMode: 2
   spriteExtrude: 1
   spriteMeshType: 1
   alignment: 0
@@ -139,7 +140,8 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: BG_Office_UnderGround 1_0
+      name: yuken_bright_creative_company_office_interior_during_late_mor_ef523b49-d757-4582-82e5-e21dbf18ed10_0
+        1_0
       rect:
         serializedVersion: 2
         x: 0
@@ -154,8 +156,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: bddc3cdfbed3b31a0800000000000000
-      internalID: -6828796326193148453
+      spriteID: 8e4bd021e094245f0800000000000000
+      internalID: -773975861173046040
       vertices: []
       indices: 
       edges: []
@@ -164,7 +166,7 @@ TextureImporter:
     customData: 
     physicsShape: []
     bones: []
-    spriteID: 5e97eb03825dee720800000000000000
+    spriteID: 
     internalID: 0
     vertices: []
     indices: 
@@ -174,7 +176,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      BG_Office_UnderGround 1_0: -6828796326193148453
+      yuken_bright_creative_company_office_interior_during_late_mor_ef523b49-d757-4582-82e5-e21dbf18ed10_0 1_0: -773975861173046040
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

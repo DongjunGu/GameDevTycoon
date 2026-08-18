@@ -47,6 +47,6 @@ public class ExistEmployeePanelUI : MonoBehaviour
         if (artText != null)        artText.text         = owned.ArtText();
         if (creativityText != null) creativityText.text = owned.CreativityText();
 
-        if (salaryValueText != null) salaryValueText.text = owned.SalaryText();
+        if (salaryValueText != null) salaryValueText.text = $"{owned.salary:N0} G";
     }
 }
