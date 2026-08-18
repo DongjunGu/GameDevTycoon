@@ -521,6 +521,7 @@ public static class RandomEvents_Choice
 
                 fightEvt.title            = chosen.title;
                 fightEvt.description      = chosen.description;
+                fightEvt.dialogue2        = chosen.dialogue2;
                 fightEvt.question         = chosen.question;
                 fightEvt.portraitId       = chosen.portraitId;
                 fightEvt.portraitId2      = chosen.portraitId2;

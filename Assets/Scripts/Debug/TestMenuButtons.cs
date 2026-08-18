@@ -44,14 +44,16 @@ public class TestMenuButtons : MonoBehaviour
             foreach (var p in panelsToDeactivate) if (p != null) p.SetActive(false);
 
         // 이름에 "(Clone)"이 붙은 오브젝트(잔여 인스턴스화 산물)도 함께 정리.
-        // 단, 스폰된 직원 캐릭터(OfficeCharacter)와 EmployeeStatusBarUI 하단 슬롯(EmployeeSatisfactionSlider)도
-        // Instantiate 산물이라 이름에 "(Clone)"이 붙으므로 제외해야 함 — 안 그러면 직원 캐릭터는 남아있는데
-        // 하단 상태바 슬롯만 꺼져서 "직원이 없어진" 것처럼 보이는 버그가 생긴다.
+        // 단, 스폰된 직원 캐릭터(OfficeCharacter)와 EmployeeStatusBarUI 하단 슬롯(EmployeeSatisfactionSlider),
+        // 퀘스트 목록 아이템(QuestItemSimple)도 Instantiate 산물이라 이름에 "(Clone)"이 붙으므로 제외해야
+        // 함 — 안 그러면 직원 캐릭터는 남아있는데 하단 상태바 슬롯만 꺼져서 "직원이 없어진" 것처럼 보이거나,
+        // 퀘스트 목록이 워프할 때마다 비어보이는 버그가 생긴다.
         foreach (var go in FindObjectsByType<GameObject>(FindObjectsInactive.Include, FindObjectsSortMode.None))
         {
             if (!go.name.Contains("(Clone)")) continue;
             if (go.GetComponent<OfficeCharacter>() != null) continue;
             if (go.GetComponent<EmployeeSatisfactionSlider>() != null) continue;
+            if (go.name.StartsWith("QuestItemSimple")) continue;
             go.SetActive(false);
         }
 

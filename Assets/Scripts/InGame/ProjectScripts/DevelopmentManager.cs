@@ -223,17 +223,19 @@ public class DevelopmentManager : MonoBehaviour
         }
         _challenge.OnLeaderScoreFinalized(type);
 
-        // 팀장점수(95/99존) 도전과제 성공 알림은 4회차 점수가 다 오르는 연출이 끝나고 LeaderScoreUI 패널을
-        // 닫아야만(OnConfirmClosed) MissionAlertUI를 띄운다 — 연출 도중에 패널이 뜨는 문제 방지. 이 함수는
-        // 세션(신규/재접속 재생 공용)마다 정확히 1회 호출되므로 매번 재구독(중복 방지 위해 -= 먼저)해 안전하게 커버.
+        // 팀장점수(95/99존) 도전과제 성공 알림은 4회차 점수가 다 오르는 연출이 끝나 confirmBtn이 활성화되는
+        // 시점(OnRoundsVisualComplete)에 곧바로 MissionAlertUI를 띄운다 — LeaderScoreUI 패널이 아직 열려있는
+        // 채로 그 위에 뜬다(예전엔 패널을 닫아야만 뜨는 OnConfirmClosed를 썼음). 이 함수는 세션(신규/재접속
+        // 재생 공용)마다 정확히 1회 호출되므로 매번 재구독(중복 방지 위해 -= 먼저)해 안전하게 커버.
         if (LeaderScoreUI.Instance != null)
         {
-            LeaderScoreUI.Instance.OnConfirmClosed -= OnLeaderScoreClosedCheckChallengeClaim;
-            LeaderScoreUI.Instance.OnConfirmClosed += OnLeaderScoreClosedCheckChallengeClaim;
+            LeaderScoreUI.Instance.OnRoundsVisualComplete -= OnLeaderScoreClosedCheckChallengeClaim;
+            LeaderScoreUI.Instance.OnRoundsVisualComplete += OnLeaderScoreClosedCheckChallengeClaim;
         }
     }
 
-    // 방금 닫힌 팀장점수 세션이 도전과제 도전 파트와 일치하고, 성공했는데 아직 보상 미수령이면 MissionAlertUI를 띄운다.
+    // 4회차 연출이 끝나 confirmBtn이 활성화된 팀장점수 세션이 도전과제 도전 파트와 일치하고, 성공했는데
+    // 아직 보상 미수령이면 MissionAlertUI를 띄운다(LeaderScoreUI 패널이 열려있는 채로 위에 겹쳐 뜸).
     void OnLeaderScoreClosedCheckChallengeClaim()
     {
         if (CurrentLeaderScoreType.HasValue
@@ -375,7 +377,16 @@ public class DevelopmentManager : MonoBehaviour
                 IsPendingLeaderSelect = true;
                 // 도전과제 확정 — SaveProject에 포함되도록 먼저 롤. 공지 알림을 닫으면 기획 팀장 선택으로 이어간다.
                 _challenge.RollNew(() => DispatchPanelUI.Instance.OpenForLeaderSelect(LeaderType.Planner, null));
+                // 이 시점 CurrentStage가 아직 None이면 SaveProject가 "진행 중인 프로젝트 없음"으로 스킵해버려
+                // (isInProgress=false) 재접속 시 프로젝트 자체가 통째로 복원 안 된다 — 도전과제 공지가 뜨자마자
+                // (팀장 선택 시작 전) 종료해도, 또는 팀장 선택 화면에 들어가 있다가(1~3회차 굴리는 도중) 종료해도
+                // 안전하게 이어할 수 있도록 여기서 미리 Developing으로 승격해둔다(BuildAndShowLeaderScore가
+                // 4회차 완료 시점에 하는 것과 동일한 이유/패턴 — "CurrentStage가 None이면 Developing 승격").
+                if (CurrentStage == ProjectStage.None) CurrentStage = ProjectStage.Developing;
+                MoneyManager.Instance.SaveMoney();
                 ProjectSaveManager.Instance.SaveProject();
+                GameTimeManager.Instance.SaveGameTime();
+                EmployeeManager.Instance.SaveAllEmployees();
 
                 // onComplete=null — 개발 재개(ForceStartTime+DevelopmentCoroutine)는 팀장 선택 직후가 아니라
                 // 팀장점수(LeaderScoreUI) 확정 후 ContinueAfterLeaderScore.StartDeveloping()에서 처리된다.
@@ -808,17 +819,8 @@ public class DevelopmentManager : MonoBehaviour
             _tutorialCreativityPool.Clear();
         }
 
-        // 파트총점 도전과제 성공 시 — "창의성을 올리세요!" 얼럿보다 먼저 MissionAlertUI를 띄워 보상을 받게
-        // 하고, ReceiveRewardBtn(또는 이미 수령 상태면 그냥 닫힘)으로 패널이 닫힌 뒤에야 다음 단계로 진행한다.
-        // 재접속 재개도 pendingCreativityGame 복원 시 이 함수를 다시 타므로 자연히 커버됨.
-        bool needsPartTotalClaim = _challenge.IsActive && _challenge.Kind == ChallengeKind.PartTotal
-            && _challenge.Resolved && _challenge.Succeeded && !_challenge.RewardApplied;
-        if (needsPartTotalClaim && MissionAlertUI.Instance != null)
-        {
-            MissionAlertUI.Instance.Show(ShowCreativityPrompt);
-            return;
-        }
-
+        // 파트총점 도전과제 MissionAlertUI는 이제 AccumulateByType의 TryResolvePartTotalEarly가 달성
+        // 즉시(개발 도중) 띄우므로, "개발 완료!" 이후 여기서 다시 띄우던 트리거는 제거.
         ShowCreativityPrompt();
     }
 
@@ -2560,6 +2562,10 @@ public class DevelopmentManager : MonoBehaviour
         // 기여도: 양수 개발 산출(기획/개발/아트)을 직원별 누적 (버그/창의성 제외)
         AddEmployeeContribution(employee.id, planning + develop + art);
         UpdateInvestmentProgress();
+
+        // 파트총점 도전과제 — 개발 완료까지 기다리지 않고 목표 달성 즉시 MissionAlertUI를 띄워 보상받게 한다.
+        if (_challenge.TryResolvePartTotalEarly())
+            MissionAlertUI.Instance?.Show();
     }
     public void ResetProject()
     {

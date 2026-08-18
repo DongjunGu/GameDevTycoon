@@ -118,9 +118,13 @@ public class ChallengeManager
         _ => ""
     };
     // 도전 파트의 현재 실제값 — 리더존은 팀장점수 총합, 파트총점은 DevelopmentPanelUI 누적치(진행 중에도 조회 가능).
-    public float GetChallengeCurrentValue() => _kind == ChallengeKind.PartTotal
-        ? GetActualPartTotal(_challengePart)
-        : GetActualLeaderTotal(_challengePart);
+    public float GetChallengeCurrentValue() => GetCurrentValueForPart(_challengePart);
+
+    // 임의 파트의 현재 실제값 — 도전 파트가 아닌 다른 두 파트도 같은 기준(현재 Kind)으로 조회할 때 사용
+    // (예: MissionAlertUI가 3파트를 한번에 나란히 보여줄 때).
+    public float GetCurrentValueForPart(LeaderType part) => _kind == ChallengeKind.PartTotal
+        ? GetActualPartTotal(part)
+        : GetActualLeaderTotal(part);
 
     // 프로젝트 개발 시작(기획 팀장 선택 직전) — 종류/도전 파트/보상 파트를 랜덤 확정하고 공지 알림을 띄운다.
     // onClosed: 알림을 닫은 뒤 이어갈 콜백(기획 팀장 선택 패널 오픈 등).
@@ -313,6 +317,17 @@ public class ChallengeManager
         _ => 0f
     };
 
+    // 파트총점 도전과제는 원래 개발 100% 완료 시점(OnDevelopmentComplete)에만 판정했지만, 목표를 개발
+    // 도중에 이미 넘겼다면 완료까지 기다리지 않고 그 즉시 확정한다 — 매 틱(AccumulateByType) 뒤에 호출.
+    // 반환값 true = "이번 호출로 새로 성공 확정"됨(호출자가 MissionAlertUI를 그 자리에서 띄우는 신호).
+    public bool TryResolvePartTotalEarly()
+    {
+        if (!_active || _resolved || _kind != ChallengeKind.PartTotal) return false;
+        if (GetActualPartTotal(_challengePart) < _targetValue) return false;
+        Resolve(true);
+        return true;
+    }
+
     // 해당 파트 팀장점수 총합이 실제로 확정된 직후(DevelopmentManager 가 호출) — 팀장점수(95/99존) 도전과제만
     // 여기서 판정한다(목표는 RollNew에서 판 시작 시점에 이미 확정돼 있음). 파트총점은 OnDevelopmentComplete에서 판정.
     public void OnLeaderScoreFinalized(LeaderType type)
@@ -333,8 +348,9 @@ public class ChallengeManager
     }
 
     // 성공/실패 판정만 조용히 확정. MissionAlertUI를 언제 띄울지는 DevelopmentManager가 결정한다 —
-    // 팀장점수(95/99존)는 4회차 연출이 끝나고 LeaderScoreUI 패널을 닫아야(OnConfirmClosed) 띄우고,
-    // 파트총점은 "개발 완료!" 얼럿 이후·"창의성을 올리세요!" 얼럿 이전(ShowCreativityGame)에 띄운다.
+    // 팀장점수(95/99존)는 4회차 연출이 끝나 confirmBtn이 활성화되는 시점(OnRoundsVisualComplete)에
+    // LeaderScoreUI 패널이 열려있는 채로 띄우고, 파트총점은 "개발 완료!" 얼럿 이후·"창의성을 올리세요!"
+    // 얼럿 이전(ShowCreativityGame)에 띄운다.
     // 보상은 더 이상 자동 지급되지 않고 MissionAlertUI의 ReceiveRewardBtn을 눌러야만(ClaimReward) 지급된다.
     void Resolve(bool succeeded)
     {

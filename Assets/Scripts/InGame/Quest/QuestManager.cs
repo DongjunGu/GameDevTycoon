@@ -7,7 +7,22 @@ public class QuestManager : MonoBehaviour
 {
     public static QuestManager Instance { get; private set; }
 
+    // 튜토리얼 런에서만 첫 화면에 뜨는 퀘스트 / 그 외(일반) 런에서만 뜨는 첫 퀘스트.
+    // tutorial_quest_002는 tutorial_quest_001의 unlockAfter 체인으로만 공개되므로 별도 분기가
+    // 필요 없다 — 001이 튜토리얼 런에서만 보이고 완료되니, 002도 자연히 튜토리얼 런에서만 열린다.
+    const string TutorialFirstQuestId    = "tutorial_quest_001";
+    const string NonTutorialFirstQuestId = "quest_revenue_50000";
+
     private List<QuestData> _quests = new();
+
+    // 차트 isVisible(defaultVisible)을 기준으로, 튜토리얼/비튜토리얼 전용 첫 퀘스트만 런 종류에 따라
+    // 강제로 뒤집는다. 나머지 퀘스트는 차트 값 그대로.
+    static bool ResolveTutorialVisibility(string questId, bool defaultVisible, bool isTutorial)
+    {
+        if (questId == TutorialFirstQuestId) return isTutorial;
+        if (questId == NonTutorialFirstQuestId) return !isTutorial;
+        return defaultVisible;
+    }
 
     void Awake()
     {
@@ -56,15 +71,18 @@ public class QuestManager : MonoBehaviour
                     JsonData rows = LitJson.JsonMapper.ToObject(item.contentString);
                     foreach (JsonData row in rows)
                     {
+                        string questId = row["questId"]?.ToString();
                         string typeStr = row["type"]?.ToString();
                         if (!System.Enum.TryParse(typeStr, out QuestType questType)) continue;
 
                         bool isMain = SafeInt(row, "isMainQuest", 0) == 1;
                         string unlockAfter = row.ContainsKey("unlockAfter") ? row["unlockAfter"]?.ToString() : "";
                         bool chartVisible = SafeInt(row, "isVisible", 0) == 1;
+                        bool isTutorial = RunStateManager.Instance != null && RunStateManager.Instance.IsTutorial;
+                        bool resolvedVisible = ResolveTutorialVisibility(questId, chartVisible, isTutorial);
                     _quests.Add(new QuestData
                         {
-                            questId     = row["questId"]?.ToString(),
+                            questId     = questId,
                             title       = row["title"]?.ToString(),
                             description = row["description"]?.ToString(),
                             type        = questType,
@@ -72,8 +90,8 @@ public class QuestManager : MonoBehaviour
                             rewardGold  = SafeInt(row, "rewardGold", 0),
                             isMainQuest = isMain,
                             unlockAfter = unlockAfter,
-                            isVisible   = chartVisible, // 차트 isVisible 컬럼으로 직접 제어
-                            defaultIsVisible = chartVisible,
+                            isVisible   = resolvedVisible, // 차트 isVisible + 튜토리얼/비튜토리얼 분기
+                            defaultIsVisible = chartVisible, // 리셋 시 기준값은 차트 원본(분기는 ResetForNewRun에서 다시 적용)
                         });
                     }
                 }
@@ -84,8 +102,11 @@ public class QuestManager : MonoBehaviour
         });
     }
 
-    // 새 런 시작 — UserQuest 테이블 모든 row 삭제 + 퀘스트 진행 상태 초기화
-    public void ResetForNewRun(System.Action onComplete = null)
+    // 새 런 시작 — UserQuest 테이블 모든 row 삭제 + 퀘스트 진행 상태 초기화.
+    // tutorial: 이번에 시작하는 런이 튜토리얼인지 — NewRunInitializer가 RunState.tutorial 저장 "전"에
+    // 이 함수를 호출하므로(RunStateManager.Instance.IsTutorial이 아직 "이전" 런 값), 반드시 인자로
+    // 직접 받아야 한다(LoadQuests()의 RunStateManager.Instance.IsTutorial 참조와는 다름).
+    public void ResetForNewRun(System.Action onComplete = null, bool tutorial = false)
     {
         // rowInDate 를 별도 문자열 리스트로 스냅샷 — 아래에서 q.rowInDate=null 로 초기화하면
         // _quests 와 같은 객체 참조라 캡처가 손상되기 때문
@@ -99,7 +120,7 @@ public class QuestManager : MonoBehaviour
             q.currentValue = 0;
             q.isCompleted = false;
             q.isRewarded = false;
-            q.isVisible = q.defaultIsVisible;
+            q.isVisible = ResolveTutorialVisibility(q.questId, q.defaultIsVisible, tutorial);
             q.rowInDate = null;
         }
 
@@ -131,9 +152,9 @@ public class QuestManager : MonoBehaviour
                     if (quest == null) continue;
 
                     quest.currentValue = SafeInt(row, "currentValue", 0);
-                    quest.isCompleted  = row["isCompleted"]?.ToString() == "True";
-                    quest.isRewarded   = row["isRewarded"]?.ToString() == "True";
-                    quest.isVisible    = row["isVisible"]?.ToString() == "True";
+                    quest.isCompleted  = SafeBool(row, "isCompleted");
+                    quest.isRewarded   = SafeBool(row, "isRewarded");
+                    quest.isVisible    = SafeBool(row, "isVisible");
                     quest.rowInDate    = row["inDate"]?.ToString();
                 }
             }
@@ -278,5 +299,15 @@ public class QuestManager : MonoBehaviour
         if (row.ContainsKey(key) && int.TryParse(row[key]?.ToString(), out int val))
             return val;
         return fallback;
+    }
+
+    // 뒤끝 SDK가 bool 컬럼을 "True"/"true"/"1"로 섞어서 내려줄 수 있어(RunStateManager.ParseBool과
+    // 동일한 이유), 대문자 "True" 완전일치만 보던 예전 코드는 재접속 시 저장된 행을 다시 읽을 때
+    // isVisible/isCompleted/isRewarded가 전부 false로 잘못 파싱돼 QuestUI에서 사라지는 버그가 있었다.
+    static bool SafeBool(JsonData row, string key)
+    {
+        if (!row.ContainsKey(key)) return false;
+        var s = row[key]?.ToString();
+        return s == "True" || s == "true" || s == "1";
     }
 }

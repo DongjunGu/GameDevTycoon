@@ -28,6 +28,13 @@ public class LeaderScoreAimButtons : MonoBehaviour
     public float riseDistance = 30f;
     public float riseDuration = 0.3f;
     public float riseStagger = 0.15f;
+    // Ease.OutBack의 overshoot는 riseDistance(30f처럼 작은 값)에 비례해서 튕기는 양이 정해지기 때문에,
+    // 배율을 아무리 올려도 실제 튕기는 픽셀량은 몇 px 수준이라 눈에 거의 안 보였다(riseDistance가 작을수록
+    // 더 심함). 그래서 "원위치를 몇 px 지나쳤다가 돌아오는지"를 절대값으로 직접 지정하는 2단계 트윈으로 교체.
+    [Tooltip("원위치를 지나쳐 더 올라가는 절대 픽셀량(\"띠용\" 반동 크기) — riseDistance와 무관하게 항상 이만큼 튕김")]
+    public float riseOvershootAmount = 15f;
+    [Tooltip("오버슈트 지점에서 원위치로 다시 내려오는 데 걸리는 시간(초)")]
+    public float riseSettleDuration = 0.15f;
 
     Vector2 _lowRestPos, _midRestPos, _highRestPos;
     Sequence _riseSeq;
@@ -99,8 +106,9 @@ public class LeaderScoreAimButtons : MonoBehaviour
     }
 
     // 도미노처럼: 자기 차례가 되기 전까지는 버튼 자체를 꺼서 완전히 안 보이게 해두고, 차례가 되는 순간
-    // SetActive(true)와 동시에 아래(riseDistance만큼)에서 원래 자리까지 위로 슬라이드만 시킨다(스케일
-    // 애니메이션 없음 — "뽀잉" 하고 커지는 느낌 대신 순수하게 아래에서 위로 올라오는 느낌).
+    // SetActive(true)와 동시에 아래(riseDistance만큼)에서 원래 자리까지 위로 슬라이드한다(스케일 애니메이션
+    // 없음 — 순수하게 아래에서 위로 올라오는 느낌). 2단계 트윈 — ① 원위치보다 riseOvershootAmount(절대
+    // 픽셀)만큼 더 위로 올라갔다가 ② riseSettleDuration 동안 원위치로 내려오며 "띠용" 반동을 낸다.
     void InsertRise(Button btn, RectTransform rt, Vector2 restPos, float delay)
     {
         if (rt == null) return;
@@ -108,8 +116,11 @@ public class LeaderScoreAimButtons : MonoBehaviour
         rt.anchoredPosition = restPos + new Vector2(0f, -riseDistance);
         rt.localScale = Vector3.one;
 
+        Vector2 overshootPos = restPos + new Vector2(0f, riseOvershootAmount);
+
         if (btn != null) _riseSeq.InsertCallback(delay, () => btn.gameObject.SetActive(true));
-        _riseSeq.Insert(delay, rt.DOAnchorPos(restPos, riseDuration).SetEase(Ease.OutCubic).SetUpdate(true));
+        _riseSeq.Insert(delay, rt.DOAnchorPos(overshootPos, riseDuration).SetEase(Ease.OutCubic).SetUpdate(true));
+        _riseSeq.Insert(delay + riseDuration, rt.DOAnchorPos(restPos, riseSettleDuration).SetEase(Ease.OutQuad).SetUpdate(true));
     }
 
     void RefreshLabels()

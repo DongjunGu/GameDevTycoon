@@ -118,6 +118,8 @@ public class LeaderScoreUI : MonoBehaviour
     public float popFloorY = -140f;   // 떨어져서 착지하는 바닥 Y 좌표(로컬)
     public float popArcHeight = 220f; // 포물선 정점 높이감
     public float suckDuration = 0.15f; // 아이콘 1개가 categoryIcon으로 빨려들어가는 데 걸리는 시간(개별 기준)
+    [Tooltip("첫 아이콘의 흡입 진행률(0~1)이 이 값에 도달하면 총점 커짐 펄스 발동. 0=흡수 시작 즉시, 1=RoleIcon에 도착하는 순간")]
+    [Range(0f, 1f)] public float growTriggerRatio = 0.8f;
     // 아이콘들이 순차적으로 빨려들어가기 "시작"하는 전체 목표 시간(초). 개수가 몇 개든 이 시간 안에 전부
     // 시작되도록 간격을 자동 계산(간격 = 이 값 / 개수)해서, 개수가 많아져도 총 재생시간이 무한정 늘어나지 않는다.
     // 0이면 기존처럼 일괄 동시 시작.
@@ -128,15 +130,12 @@ public class LeaderScoreUI : MonoBehaviour
     [Tooltip("TopPanel/DownImage — burst로 전 회차 점수가 깎이는 동안(ApplyCutCoroutine) 활성화, 끝나면 비활성화. 활성화되어 있는 동안 alpha로 downBlinkCount번 깜빡인다.")]
     public GameObject downImage;
     public int downBlinkCount = 2; // downImage가 켜져 있는 동안(ApplyCutCoroutine 지속시간 기준) 깜빡이는 횟수
-    // topIcon/totalText 흡입 펄스 — 흡수되는 첫 아이콘이 도착하는 순간 커지고, 그 그룹의 아이콘들이
-    // 계속 흡수되는 동안은 커진 상태를 유지하다가, 전부 다 흡수되고 나면 빠르게 원래 크기로 돌아온다
-    // (아이콘 하나 도착할 때마다 매번 콩콩 튀는 펀치 방식 아님). 회차 팝콘(PopAndFlyCoroutine)과 보너스
-    // 흡입(BonusFlyCoroutine, 90/95/99 동시 진행 가능)이 _pulseActiveCount를 공유해서, 여러 그룹이
-    // 겹쳐 돌아도 전부 끝나야만 축소된다.
-    public float suckPulseScale = 1.2f;   // 커졌을 때 도달하는 배율
-    public float pulseGrowDuration = 0.15f;   // 커지는 데 걸리는 시간
-    public float pulseShrinkDuration = 0.12f; // 다 끝나고 원래 크기로 돌아오는 시간(빠르게)
-    private int _pulseActiveCount;
+    // topIcon/totalText 흡입 펄스 — 아이콘이 하나씩 도착할 때마다 punchStrength를 그 그룹의 아이콘
+    // 개수로 나눈 만큼씩 조금씩 누적해서 커진다(PulseSession 참고). punchStrength는 그 그룹의 아이콘이
+    // 전부 도착했을 때 도달하는 최종 배율(1+punchStrength)이고, punchDuration은 각 단계 트윈 시간.
+    // private int _pulseActiveCount; // [기존 방식 전용 필드 — 주석 처리]
+    public float punchStrength = 0.35f;
+    public float punchDuration = 0.35f;
     public float burstSpitDuration = 0.4f; // 스트레스 100 오버플로 시 총점 위치에서 아이콘을 역방향으로 뱉어내는 시간
 
     [Header("보너스 아이콘 흡수 (4회차 끝나고 90/95/99BG의 roleIcon → TopPanel RoleIcon, 3점당 1개)")]
@@ -146,14 +145,19 @@ public class LeaderScoreUI : MonoBehaviour
              "보너스 아이콘을 이 안쪽에 붙여야 같은 정렬을 상속해 패널 뒤로 그려지지 않는다(이 컴포넌트 자신의 transform은 " +
              "이 패널의 형제라 정렬 대상 밖이라 뒤에 그려짐). 비워두면 그냥 이 컴포넌트의 transform으로 대체.")]
     public Transform flyingIconLayer;
-    public float bonusDipRadius = 150f;       // roleIcon에서 사방(전 방향)으로 퍼지는 최대 거리
-    public float bonusDipDuration = 0.25f;    // "펑" 터지며 사방으로 퍼지는 데 걸리는 시간
-    public float bonusFlyDuration = 0.35f;    // 아이콘 1개가 dip 위치에서 categoryIcon까지 빨려들어가는 시간
-    // 아이콘이 몇 개든 dip 시작부터 마지막 1개가 흡수되기까지 항상 이 시간 안에 끝나도록, 아이콘 사이
-    // 시작 간격(stagger)을 개수에 반비례해서 자동으로 줄인다 — round 아이콘의 suckStaggerWindow와 동일한
-    // 방식. bonusDipDuration+bonusFlyDuration이 이 값보다 크면 stagger가 0이 되어(전부 동시 시작) 그
-    // 합만큼은 걸린다.
-    public float bonusTotalAbsorbDuration = 1.5f;
+    public float bonusDipRadius = 260f;       // roleIcon에서 아래쪽으로 퍼지는 최대 거리
+    public float bonusDipArcDegrees = 150f;   // 아래(-90°)를 중심으로 부채꼴로 퍼지는 각도 폭 — 클수록 옆으로도 넓게 퍼짐
+    public float bonusDipDuration = 0.2f;    // ① 아래쪽으로 여유있게 미끄러지며 퍼지는 데 걸리는 시간(전부 동시 진행) — 끝나면 멈추지 않고 바로 ②로 이어진다
+    [Tooltip("bonusDipDuration(초반 퍼짐)이 끝난 뒤, 아직 차례가 안 된 아이콘이 계속 같은 방향으로 흩어지는 속도를 " +
+             "초반 평균 속도(bonusDipRadius/bonusDipDuration) 대비 몇 배로 늦출지. 1이면 초반과 동일 속도로 계속, " +
+             "0에 가까울수록 초반 퍼짐이 끝난 뒤엔 거의 멈춘 것처럼 아주 천천히 흩어진다.")]
+    [Range(0f, 1f)] public float bonusDriftSpeedFactor = 0.15f;
+    public float bonusFlyDuration = 0.2f;    // ② 아이콘 1개가 흩어진 위치에서 categoryIcon까지 빨려들어가는 시간
+    // 아이콘이 몇 개든 ③단계 첫 아이콘 시작부터 마지막 1개가 흡수되기까지 항상 이 시간 안에 끝나도록,
+    // 아이콘 사이 시작 간격(stagger)을 개수에 반비례해서 자동으로 줄인다 — round 아이콘의
+    // suckStaggerWindow와 동일한 방식. bonusFlyDuration이 이 값보다 크면 stagger가 0이 되어(전부 동시
+    // 시작) 그만큼은 걸린다.
+    public float bonusTotalAbsorbDuration = 0.5f;
 
     [Header("팀장 캐릭터 프리뷰 (working 애니메이션)")]
     public Image characterImage;              // Resources/Characters/{portraitId} 프리팹의 working 스프라이트를 그대로 미러링
@@ -324,10 +328,12 @@ public class LeaderScoreUI : MonoBehaviour
     }
 
     // count개의 bonusIconPrefab(전용 Image 프리팹, 없으면 iconPrefab으로 대체)을 roleIcon(90/95/99BG 자식)
-    // 위치에서 생성 → 먼저 하단으로 살짝 내려가며(여러 개면 옆으로 퍼지면서) 잠깐 머무른 뒤 →
-    // categoryIcon(TopPanel RoleIcon) 위치로 빠르게 빨려들어가며 축소되어 사라진다. 아이콘 하나가 도착할
-    // 때마다 totalAmount/count(이 임계선 개별 금액을 아이콘 수만큼 등분)씩 총점(totalText)을 밀어올린다
-    // — _bonusDisplayedTotal은 90/95/99 코루틴이 동시에 돌아도 서로 자기 몫만 더하는 공유 누산값.
+    // 위치에서 생성 → 각자 배정된 방향(아래쪽 부채꼴)으로 "차례가 될 때까지" 멈추지 않고 계속 흩어지다가
+    // → 자기 차례(stagger로 순서가 매겨짐)가 되면 그 순간 있던 자리에서 categoryIcon(TopPanel RoleIcon)
+    // 으로 빨려들어가며 축소되어 사라진다. 아이콘이 몇 개든 뒤 순번일수록 그만큼 더 오래, 더 멀리
+    // 흩어지다가 흡수된다(멈춰서 대기하는 구간 없음). 아이콘 하나가 도착할 때마다 totalAmount/count
+    // (이 임계선 개별 금액을 아이콘 수만큼 등분)씩 총점(totalText)을 밀어올린다 — _bonusDisplayedTotal은
+    // 90/95/99 코루틴이 동시에 돌아도 서로 자기 몫만 더하는 공유 누산값.
     IEnumerator BonusFlyCoroutine(Image roleIcon, int count, float totalAmount)
     {
         GameObject prefab = bonusIconPrefab != null ? bonusIconPrefab : iconPrefab;
@@ -343,7 +349,14 @@ public class LeaderScoreUI : MonoBehaviour
         Transform parent = flyingIconLayer != null ? flyingIconLayer : transform;
 
         var icons = new System.Collections.Generic.List<RectTransform>(count);
-        var scatterOffsets = BuildRadialScatterOffsets(count, bonusDipRadius); // 사방(전 방향)으로 골고루 퍼짐
+        var scatterOffsets = BuildDownwardFanScatterOffsets(count, bonusDipRadius, bonusDipArcDegrees); // 아래쪽으로 부채꼴로 퍼짐
+
+        // scatterOffsets는 픽셀(캔버스 로컬) 단위인데 originPos는 월드 좌표(.position)라 캔버스 스케일
+        // (lossyScale)을 곱해서 변환해야 한다 — 안 곱하면 화면 크기 몇 배에 달하는 거리로 튕겨나가
+        // 엉뚱한 곳에 나타난다. 방향(directions)은 크기와 무관한 단위벡터만 뽑아서, 아래에서 "차례가 될
+        // 때까지" 그 방향으로 계속 더 멀리 흩어지는 데 쓴다(scatterOffsets 자체는 더 이상 목표 지점이 아님).
+        float worldScale = roleIcon.transform.lossyScale.x;
+        var directions = new System.Collections.Generic.List<Vector2>(count);
 
         for (int i = 0; i < count; i++)
         {
@@ -351,7 +364,7 @@ public class LeaderScoreUI : MonoBehaviour
             var rt = go.GetComponent<RectTransform>();
             if (rt == null) { Destroy(go); continue; }
             rt.position = originPos;
-            rt.localScale = Vector3.zero; // 0에서 시작 — "펑" 터지듯 커지면서 사방으로 퍼짐
+            rt.localScale = Vector3.zero; // 0에서 시작 — 커지면서 미끄러져 나옴
 
             // iconPrefab으로 대체됐을 땐 그 안의 "iconImage" 자식이 아이콘이므로 먼저 찾고, bonusIconPrefab
             // (루트 자신이 순수 Image 1장)처럼 그 자식이 없으면 루트의 Image를 그대로 쓴다.
@@ -360,58 +373,33 @@ public class LeaderScoreUI : MonoBehaviour
             if (iconImg != null) iconImg.sprite = roleIcon.sprite;
 
             icons.Add(rt);
+            var dir = scatterOffsets[i];
+            directions.Add(dir.sqrMagnitude > 0.0001f ? dir.normalized : Vector2.down);
         }
 
-        // Phase 1 — 생성된 자리에서 사방(전 방향)으로 골고루 퍼지기.
-        // scatterOffsets는 픽셀(캔버스 로컬) 단위인데 originPos는 월드 좌표(.position)라 캔버스 스케일
-        // (lossyScale)을 곱해서 변환해야 한다 — 안 곱하면 화면 크기 몇 배에 달하는 거리로 튕겨나가
-        // 엉뚱한 곳에 나타난다.
-        float worldScale = roleIcon.transform.lossyScale.x;
-        var dipStartPositions = new System.Collections.Generic.List<Vector3>(icons.Count);
-        var dipTargetPositions = new System.Collections.Generic.List<Vector3>(icons.Count);
-        for (int i = 0; i < icons.Count; i++)
-        {
-            Vector3 start = icons[i] != null ? icons[i].position : originPos;
-            dipStartPositions.Add(start);
-            dipTargetPositions.Add(originPos + (Vector3)(scatterOffsets[i] * worldScale));
-        }
+        float dipDur = Mathf.Max(0.01f, bonusDipDuration);          // 흩어지기 시작 → 최초 bonusDipRadius 지점까지 도달하는 데 걸리는 시간
+        float baseDist = bonusDipRadius * worldScale;
+        float continuousSpeed = (baseDist / dipDur) * bonusDriftSpeedFactor; // dipDur 이후엔 훨씬 느린 속도로 계속 더 멀리 흩어짐(대기 없음)
 
-        // "펑" 터지는 느낌 — 위치는 강한 ease-out(초반에 확 튀어나갔다 감속)으로 퍼지고, 스케일은
-        // 0 → 오버슈트(1.3배) → 1로 정착하는 펑 터짐 곡선을 같이 태운다.
-        float dipDur = Mathf.Max(0.01f, bonusDipDuration);
-        float dipElapsed = 0f;
-        while (dipElapsed < dipDur)
-        {
-            dipElapsed += Time.deltaTime;
-            float t = Mathf.Clamp01(dipElapsed / dipDur);
-            float eased = 1f - Mathf.Pow(1f - t, 3f); // ease-out — 확 퍼졌다가 감속
-            float scaleT = t < 0.6f ? Mathf.Lerp(0f, 1.3f, t / 0.6f) : Mathf.Lerp(1.3f, 1f, (t - 0.6f) / 0.4f);
-            for (int i = 0; i < icons.Count; i++)
-            {
-                if (icons[i] == null) continue;
-                icons[i].position = Vector3.Lerp(dipStartPositions[i], dipTargetPositions[i], eased);
-                icons[i].localScale = Vector3.one * scaleT;
-            }
-            yield return null;
-        }
-        for (int i = 0; i < icons.Count; i++)
-        {
-            if (icons[i] == null) continue;
-            icons[i].position = dipTargetPositions[i];
-            icons[i].localScale = Vector3.one;
-        }
-
-        // Phase 2 — 흩어진 위치에서 categoryIcon으로 빠르게 빨려들어가기. 아이콘 하나가 도착할 때마다
-        // totalAmount를 아이콘 수만큼 등분한 몫을 총점에 더한다(합쳐서 정확히 totalAmount).
-        // stagger(아이콘 사이 시작 간격)는 개수에 반비례해서 자동으로 줄어든다 — dip(bonusDipDuration)부터
-        // 마지막 아이콘 도착까지 총합이 bonusTotalAbsorbDuration을 넘지 않도록 보장(개수가 몇 개든 동일).
+        // stagger(아이콘 사이 차례 간격)는 개수에 반비례해서 자동으로 줄어든다 — 흡수 구간 자체의 길이가
+        // 개수와 무관하게 대략 bonusTotalAbsorbDuration을 넘지 않도록 보장.
         float perIconDur = Mathf.Max(0.01f, bonusFlyDuration);
-        float staggerWindow = Mathf.Max(0f, bonusTotalAbsorbDuration - bonusDipDuration - perIconDur);
+        float staggerWindow = Mathf.Max(0f, bonusTotalAbsorbDuration - perIconDur);
         float stagger = icons.Count > 0 ? staggerWindow / icons.Count : 0f;
-        float totalDur = perIconDur + stagger * Mathf.Max(0, icons.Count - 1);
-        float amountPerIcon = totalAmount / icons.Count;
+
+        // 아이콘 i의 "차례"(흡수 시작 시각) — 전부 최소 dipDur만큼은 흩어진 뒤(0번 포함), 뒤 순번일수록
+        // stagger만큼씩 더 늦게(=그만큼 더 오래, 더 멀리 흩어지다가) 차례가 온다.
+        var absorbStart = new float[icons.Count];
+        for (int i = 0; i < icons.Count; i++) absorbStart[i] = dipDur + i * stagger;
+        var absorbStartPos = new Vector3[icons.Count];
+        var absorbStartCaptured = new bool[icons.Count];
+
+        float totalDur = icons.Count > 0 ? absorbStart[icons.Count - 1] + perIconDur : 0f;
+        float amountPerIcon = totalAmount / Mathf.Max(1, icons.Count);
         var iconArrived = new bool[icons.Count];
-        bool grown = false;
+        // bool grown = false; // [기존, 주석 처리] — 아래 PulseSession으로 교체
+        var pulseSession = icons.Count > 0 ? BeginPulseSession() : null;
+        float pulseStepAmount = punchStrength / Mathf.Max(1, icons.Count);
 
         float elapsed = 0f;
         while (elapsed < totalDur)
@@ -420,24 +408,55 @@ public class LeaderScoreUI : MonoBehaviour
             for (int i = 0; i < icons.Count; i++)
             {
                 if (icons[i] == null) continue;
-                float localElapsed = Mathf.Clamp(elapsed - i * stagger, 0f, perIconDur);
-                float t = localElapsed / perIconDur;
-                float eased = t * t * t * t; // 강한 ease-in — 빨려들어가는 느낌
-                icons[i].position = Vector3.Lerp(dipTargetPositions[i], targetPos, eased);
-                icons[i].localScale = Vector3.one * (1f - eased * 0.7f);
 
-                if (!iconArrived[i] && t >= 1f)
+                if (elapsed < absorbStart[i])
                 {
-                    iconArrived[i] = true;
-                    _bonusDisplayedTotal += amountPerIcon;
-                    if (totalText) totalText.text = Mathf.RoundToInt(_bonusBaselineTotal + _bonusDisplayedTotal).ToString();
-                    if (!grown) { grown = true; GrowPulseIfNeeded(); } // 이 그룹의 첫 아이콘 도착 — 커진 상태 유지 시작
+                    // 아직 차례가 안 됨 — 배정된 방향으로 계속 흩어지는 중(멈추지 않음).
+                    float dist;
+                    if (elapsed <= dipDur)
+                    {
+                        float ratio = elapsed / dipDur;
+                        dist = baseDist * (1f - Mathf.Pow(1f - ratio, 2f)); // 완만한 ease-out으로 여유있게 미끄러지며 펼쳐짐
+                    }
+                    else
+                    {
+                        dist = baseDist + (elapsed - dipDur) * continuousSpeed; // 그 이후로도 같은 속도로 계속 더 멀리
+                    }
+                    icons[i].position = originPos + (Vector3)(directions[i] * dist);
+
+                    float scaleRatio = Mathf.Clamp01(elapsed / dipDur);
+                    icons[i].localScale = Vector3.one * (scaleRatio < 0.6f
+                        ? Mathf.Lerp(0f, 1.15f, scaleRatio / 0.6f)
+                        : Mathf.Lerp(1.15f, 1f, (scaleRatio - 0.6f) / 0.4f));
+                }
+                else
+                {
+                    // 차례가 되어 categoryIcon으로 빨려들어가는 중 — 흩어지던 그 자리에서 시작.
+                    if (!absorbStartCaptured[i])
+                    {
+                        absorbStartCaptured[i] = true;
+                        absorbStartPos[i] = icons[i].position;
+                    }
+                    float t = Mathf.Clamp01((elapsed - absorbStart[i]) / perIconDur);
+                    float eased = t * t * t * t; // 강한 ease-in — 빨려들어가는 느낌
+                    icons[i].position = Vector3.Lerp(absorbStartPos[i], targetPos, eased);
+                    icons[i].localScale = Vector3.one * (1f - eased * 0.7f);
+
+                    if (!iconArrived[i] && t >= 1f)
+                    {
+                        iconArrived[i] = true;
+                        _bonusDisplayedTotal += amountPerIcon;
+                        if (totalText) totalText.text = Mathf.RoundToInt(_bonusBaselineTotal + _bonusDisplayedTotal).ToString();
+                        // if (!grown) { grown = true; GrowPulseIfNeeded(); } // [기존, 주석 처리]
+                        StepPulseSession(pulseSession, pulseStepAmount); // 아이콘 하나 도착 — punchStrength/개수만큼 조금씩 커짐
+                    }
                 }
             }
             yield return null;
         }
 
-        if (grown) ShrinkPulseIfDone(); // 이 그룹(이 임계선) 아이콘 전부 흡수 완료 — 다른 그룹도 없으면 원상복구
+        // if (grown) ShrinkPulseIfDone(); // [기존, 주석 처리]
+        EndPulseSession(pulseSession); // 이 그룹(이 임계선) 아이콘 전부 흡수 완료 — 다른 그룹도 없으면 원상복구
 
         foreach (var rt in icons)
             if (rt != null) Destroy(rt.gameObject);
@@ -726,6 +745,7 @@ public class LeaderScoreUI : MonoBehaviour
         yield return new WaitForSeconds(0.5f);
         // 4회차(또는 오버플로) 결과가 화면에 다 나온 지금에야 confirmBtn을 켠다 — 위 InitPanel 주석 참고.
         if (confirmButton) { confirmButton.gameObject.SetActive(true); confirmButton.interactable = true; }
+        if (burstText != null) burstText.gameObject.SetActive(false); // confirmBtn과 함께 꺼짐 — dimImage 등 나머지 결과 표시는 유지
         OnRoundsVisualComplete?.Invoke();
     }
 
@@ -794,6 +814,11 @@ public class LeaderScoreUI : MonoBehaviour
     IEnumerator BurstFlashCoroutine()
     {
         if (burstFlashImage == null) yield break;
+
+        // 안전망 — lastSpurtImage는 1~3회차와 4회차 사이(PlayLastSpurtCoroutine)에만 잠깐 켜졌다 꺼져야
+        // 하는데, 그 코루틴이 중간에 끊기면(재접속 등) 꺼지지 않은 채 남을 수 있다. 이 시점(burst 발동)엔
+        // 이미 4회차까지 진행된 뒤라 lastSpurtImage가 켜져있을 이유가 없으므로 여기서 확실히 꺼둔다.
+        if (lastSpurtImage != null) lastSpurtImage.SetActive(false);
 
         burstFlashImage.gameObject.SetActive(true);
         var c = burstFlashImage.color;
@@ -1099,10 +1124,14 @@ public class LeaderScoreUI : MonoBehaviour
 
         if (upImage != null) upImage.SetActive(true); // 점수가 흡수되는(빨려들어가는) 동안만 활성화
 
-        // topIcon/totalText 흡입 펄스 — 첫 아이콘이 도착하는 순간 커지고, 이 회차의 아이콘들이 계속
-        // 흡수되는 동안은 커진 상태 유지, 전부 끝나면 GrowPulseIfNeeded/ShrinkPulseIfDone이 알아서 원복.
-        var iconArrived = new bool[icons.Count];
-        bool grown = false;
+        // topIcon/totalText 흡입 펄스 — [기존] 첫 아이콘이 growTriggerRatio에 도달하는 순간 GrowPulseIfNeeded()
+        // 1회 호출해 한번에 확 키웠던 방식은 주석 처리. 지금은 아이콘 각자가 자기 진행률이 growTriggerRatio
+        // (기본 0.8 — RoleIcon 도착 직전)에 도달할 때마다 punchStrength/아이콘개수 만큼씩 조금씩 누적해서 커진다.
+        // bool grown = false;
+        // bool growTriggered = false;
+        var pulseSession = icons.Count > 0 ? BeginPulseSession() : null;
+        float pulseStepAmount = punchStrength / Mathf.Max(1, icons.Count);
+        var iconStepDone = new bool[icons.Count];
 
         float elapsed = 0f;
         while (elapsed < totalDur)
@@ -1118,10 +1147,11 @@ public class LeaderScoreUI : MonoBehaviour
                 icons[i].position = Vector3.Lerp(startPositions[i], targetPos, eased);
                 icons[i].localScale = Vector3.one * (1f - eased * 0.7f);
 
-                if (!iconArrived[i] && it >= 1f)
+                // if (!growTriggered && i == 0 && it >= growTriggerRatio) { growTriggered = true; grown = true; GrowPulseIfNeeded(); } // [기존, 주석 처리]
+                if (!iconStepDone[i] && it >= growTriggerRatio)
                 {
-                    iconArrived[i] = true;
-                    if (!grown) { grown = true; GrowPulseIfNeeded(); }
+                    iconStepDone[i] = true;
+                    StepPulseSession(pulseSession, pulseStepAmount);
                 }
             }
 
@@ -1133,7 +1163,8 @@ public class LeaderScoreUI : MonoBehaviour
             yield return null;
         }
 
-        if (grown) ShrinkPulseIfDone();
+        // if (grown) ShrinkPulseIfDone(); // [기존, 주석 처리]
+        EndPulseSession(pulseSession);
 
         SetRoundText(roundIndex, targetRound);
         if (totalText) totalText.text = Mathf.RoundToInt(startTotal + targetRound).ToString();
@@ -1143,41 +1174,88 @@ public class LeaderScoreUI : MonoBehaviour
             if (rt != null) Destroy(rt.gameObject);
     }
 
-    // _pulseActiveCount가 0에서 1 이상으로 처음 올라갈 때만(=흡입 그룹이 하나도 없다가 새로 시작할 때만)
-    // topIcon/totalText를 suckPulseScale까지 키운다 — 이미 다른 그룹이 흡입 중이면(카운트>0) 그대로 유지.
-    void GrowPulseIfNeeded()
+    // ════════ [기존 방식 — 주석 처리] 흡입 시작/도착 시점에 1→(1+punchStrength)로 한번에 확 커졌다가,
+    // 그 그룹의 아이콘이 전부 끝나야만(_pulseActiveCount가 0으로 돌아와야만) 원래 크기로 줄어들었다.
+    // 아이콘 개수가 많을수록 "커진 채로 오래 유지"되는 느낌이라, 아래 incremental 방식(아이콘이 하나씩
+    // 도착할 때마다 punchStrength/개수만큼 조금씩 누적해서 커짐)으로 교체.
+    // void GrowPulseIfNeeded()
+    // {
+    //     if (_pulseActiveCount == 0)
+    //     {
+    //         GrowHold(topIcon);
+    //         GrowHold(totalText != null ? totalText.transform as RectTransform : null);
+    //     }
+    //     _pulseActiveCount++;
+    // }
+    //
+    // void ShrinkPulseIfDone()
+    // {
+    //     _pulseActiveCount = Mathf.Max(0, _pulseActiveCount - 1);
+    //     if (_pulseActiveCount == 0)
+    //     {
+    //         ShrinkHold(topIcon);
+    //         ShrinkHold(totalText != null ? totalText.transform as RectTransform : null);
+    //     }
+    // }
+    //
+    // void GrowHold(RectTransform rt)
+    // {
+    //     if (rt == null) return;
+    //     rt.DOKill();
+    //     rt.DOScale(Vector3.one * (1f + punchStrength), punchDuration).SetEase(Ease.OutBack).SetUpdate(true);
+    // }
+    //
+    // void ShrinkHold(RectTransform rt)
+    // {
+    //     if (rt == null) return;
+    //     rt.DOKill();
+    //     rt.DOScale(Vector3.one, punchDuration).SetEase(Ease.OutQuad).SetUpdate(true);
+    // }
+
+    // ════════ 새 방식: 아이콘이 하나씩 도착할 때마다 punchStrength를 그 그룹의 아이콘 개수로 나눈 만큼씩
+    // 조금씩 누적해서 커진다(한번에 확 커지지 않음). 회차 팝콘(PopAndFlyCoroutine)과 보너스 흡입
+    // (BonusFlyCoroutine, 90/95/99 동시 진행 가능)이 동시에 돌 수 있어, 그룹마다 PulseSession을 하나씩
+    // 발급받아 자기 누적치를 따로 들고 있고, 실제 적용 스케일은 모든 세션 중 가장 큰 누적치(MAX) 기준 —
+    // 여러 그룹이 겹쳐도 값이 서로 더해져서 과하게 커지지 않는다. 세션이 하나도 안 남으면 1로 복귀.
+    class PulseSession { public float accum; }
+    readonly System.Collections.Generic.List<PulseSession> _pulseSessions = new();
+
+    PulseSession BeginPulseSession()
     {
-        if (_pulseActiveCount == 0)
-        {
-            GrowScale(topIcon);
-            GrowScale(totalText != null ? totalText.transform as RectTransform : null);
-        }
-        _pulseActiveCount++;
+        var s = new PulseSession();
+        _pulseSessions.Add(s);
+        return s;
     }
 
-    // 흡입 그룹 하나가 끝날 때마다 카운트를 내리고, 0까지 내려가면(모든 그룹 완료) 원래 크기로 되돌린다.
-    void ShrinkPulseIfDone()
+    void StepPulseSession(PulseSession session, float stepAmount)
     {
-        _pulseActiveCount = Mathf.Max(0, _pulseActiveCount - 1);
-        if (_pulseActiveCount == 0)
-        {
-            ShrinkScale(topIcon);
-            ShrinkScale(totalText != null ? totalText.transform as RectTransform : null);
-        }
+        if (session == null) return;
+        session.accum += stepAmount;
+        ApplyPulseScale();
     }
 
-    void GrowScale(RectTransform rt)
+    void EndPulseSession(PulseSession session)
+    {
+        if (session == null) return;
+        _pulseSessions.Remove(session);
+        ApplyPulseScale();
+    }
+
+    void ApplyPulseScale()
+    {
+        float maxAccum = 0f;
+        foreach (var s in _pulseSessions)
+            if (s.accum > maxAccum) maxAccum = s.accum;
+        float target = 1f + maxAccum;
+        AnimatePulseScale(topIcon, target);
+        AnimatePulseScale(totalText != null ? totalText.transform as RectTransform : null, target);
+    }
+
+    void AnimatePulseScale(RectTransform rt, float target)
     {
         if (rt == null) return;
         rt.DOKill();
-        rt.DOScale(suckPulseScale, pulseGrowDuration).SetEase(Ease.OutBack).SetUpdate(true);
-    }
-
-    void ShrinkScale(RectTransform rt)
-    {
-        if (rt == null) return;
-        rt.DOKill();
-        rt.DOScale(1f, pulseShrinkDuration).SetEase(Ease.InQuad).SetUpdate(true);
+        rt.DOScale(Vector3.one * target, punchDuration).SetEase(Ease.OutBack).SetUpdate(true);
     }
 
     // count개를 popScatterRangeX 범위 안에서 "골고루" 흩어지도록 미리 배정하는 오프셋 목록.
@@ -1206,23 +1284,40 @@ public class LeaderScoreUI : MonoBehaviour
         return offsets;
     }
 
-    // count개를 360도 전 방향으로 골고루 흩어지도록 배정하는 2D 오프셋 목록(보너스 아이콘 사방 퍼짐용).
-    // BuildStratifiedScatterOffsets(X축 1차원)와 같은 원리 — 완전 랜덤이면 한쪽으로 쏠릴 수 있어서,
-    // 360도를 count개 구간으로 균등 분할해 구간마다 하나씩 각도를 배정하고, 구간 내부 각도와 반지름만
-    // 랜덤하게 흔든다. count가 1이면 방향은 완전 랜덤(어느 한쪽으로 튀어도 자연스러움).
-    static System.Collections.Generic.List<Vector2> BuildRadialScatterOffsets(int count, float radius)
+    // count개를 아래(-90°) 방향을 중심으로 arcDegrees 폭의 부채꼴 안에서 골고루 흩어지도록 배정하는
+    // 2D 오프셋 목록(보너스 아이콘이 roleIcon 아래로 확 퍼지듯 미끄러지는 연출용). BuildStratifiedScatterOffsets
+    // (X축 1차원)와 같은 원리 — arcDegrees를 count-1개 구간으로 균등 분할해 구간마다 하나씩 각도를
+    // 배정하고, 구간 내부 각도와 반지름만 랜덤하게 흔든다. count가 1이면 아래 방향 기준으로 살짝만 흔든다.
+    static System.Collections.Generic.List<Vector2> BuildDownwardFanScatterOffsets(int count, float radius, float arcDegrees)
     {
         var offsets = new System.Collections.Generic.List<Vector2>(count);
         if (count <= 0) return offsets;
 
-        float baseAngle = Random.Range(0f, 360f);
-        float angleStep = 360f / count;
+        const float DownAngle = -90f; // Unity 좌표계 기준 정확히 아래 방향(0=오른쪽, 90=위쪽)
+
+        if (count == 1)
+        {
+            float angle1 = DownAngle + Random.Range(-arcDegrees * 0.5f, arcDegrees * 0.5f);
+            float rad1 = angle1 * Mathf.Deg2Rad;
+            offsets.Add(new Vector2(Mathf.Cos(rad1), Mathf.Sin(rad1)) * radius * Random.Range(0.6f, 1f));
+            return offsets;
+        }
+
+        float startAngle = DownAngle - arcDegrees * 0.5f;
+        float angleStep = arcDegrees / (count - 1);
         for (int i = 0; i < count; i++)
         {
-            float angle = baseAngle + angleStep * i + Random.Range(-angleStep * 0.4f, angleStep * 0.4f);
-            float r = radius * Random.Range(0.6f, 1f);
+            float angle = startAngle + angleStep * i + Random.Range(-angleStep * 0.25f, angleStep * 0.25f);
+            float r = radius * Random.Range(0.7f, 1f);
             float rad = angle * Mathf.Deg2Rad;
             offsets.Add(new Vector2(Mathf.Cos(rad), Mathf.Sin(rad)) * r);
+        }
+
+        // Fisher-Yates 셔플 — 각도 구간 순서와 생성 순서(아이콘 index)를 무작위로 매칭
+        for (int i = offsets.Count - 1; i > 0; i--)
+        {
+            int j = Random.Range(0, i + 1);
+            (offsets[i], offsets[j]) = (offsets[j], offsets[i]);
         }
         return offsets;
     }

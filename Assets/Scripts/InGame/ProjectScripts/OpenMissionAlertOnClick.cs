@@ -6,8 +6,11 @@ using UnityEngine.UI;
 [RequireComponent(typeof(Button))]
 public class OpenMissionAlertOnClick : MonoBehaviour
 {
+    [Tooltip("MissionAlertUI의 CurrentScorePanel(3파트 현재 점수) 노출 여부 — MissionPanel은 true, QuestPanel은 false로 설정")]
+    public bool showCurrentScorePanel = true;
+
     void Start()
     {
-        GetComponent<Button>().onClick.AddListener(() => MissionAlertUI.Instance?.Show());
+        GetComponent<Button>().onClick.AddListener(() => MissionAlertUI.Instance?.Show(null, showCurrentScorePanel));
     }
 }

@@ -70,6 +70,12 @@ public class EmployeeCardUI : MonoBehaviour
     [Tooltip("trainingEmployeeBtn 위에 덮이는 잠금 표시(터치 차단) — 18-1 전까지 활성")]
     public GameObject trainingLockBG;
 
+    [Header("바깥 클릭 닫기 제외 — 카드가 열려있어도 메뉴 버튼/상단 메뉴는 클릭 가능해야 함")]
+    [Tooltip("MenuBtn — 클릭해도 카드가 안 닫힘")]
+    public RectTransform menuBtn;
+    [Tooltip("TopMenuUI — 이 아래 모든 자식을 클릭해도 카드가 안 닫힘")]
+    public RectTransform topMenuUI;
+
     [Header("선택 캐릭터 머리 위 화살표 (월드스페이스, 카드와 동시에 표시)")]
     [Tooltip("SpriteRenderer가 붙은 월드스페이스 오브젝트. 카드가 열릴 때 선택된 캐릭터 머리 위(12px)로 이동해 표시")]
     public Transform selectedArrow;
@@ -413,7 +419,7 @@ public class EmployeeCardUI : MonoBehaviour
         Vector2 mousePos;
         if (!TryGetPressedPointerPosition(out mousePos)) return;
 
-        // 카드 패널 자체(또는 그 자식) 위 클릭만 닫지 않음. 다른 UI는 닫음.
+        // 카드 패널 자체(또는 그 자식)와 메뉴 버튼/상단 메뉴(그 자식 포함) 위 클릭만 닫지 않음. 다른 UI는 닫음.
         if (EventSystem.current != null)
         {
             var ped = new PointerEventData(EventSystem.current) { position = mousePos };
@@ -421,8 +427,10 @@ public class EmployeeCardUI : MonoBehaviour
             EventSystem.current.RaycastAll(ped, _raycastResults);
             foreach (var r in _raycastResults)
             {
-                if (r.gameObject.transform.IsChildOf(cardPanel.transform))
-                    return;
+                var t = r.gameObject.transform;
+                if (t.IsChildOf(cardPanel.transform)) return;
+                if (menuBtn != null && t.IsChildOf(menuBtn)) return;
+                if (topMenuUI != null && t.IsChildOf(topMenuUI)) return;
             }
         }
 

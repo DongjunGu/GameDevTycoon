@@ -20,8 +20,10 @@ public class ChallengeTestDisplay : MonoBehaviour
         string spriteName  = ChallengeManager.PartSpriteName(c.ChallengePart);
         string partName    = ChallengeManager.PartDisplayName(c.ChallengePart);
         // 목표는 RollNew(판 시작)에서 이미 확정돼 있으므로(GetBestCandidate 기준) 종류명 대신 실제 목표 점수를 바로 보여준다.
-        string label = $"<sprite=\"{spriteAsset}\" name=\"{spriteName}\"> {partName} {Mathf.RoundToInt(c.TargetValue)}점 달성";
-        if (c.Resolved) label += c.Succeeded ? " (성공)" : " (실패)";
+        // 파트총점은 "총점 N점 이상 달성"(MissionAlertUI와 동일 문구), 팀장점수(리더존)는 "{파트}팀장 N점 이상 달성".
+        string label = c.Kind == ChallengeKind.PartTotal
+            ? $"<sprite=\"{spriteAsset}\" name=\"{spriteName}\"> {partName} 총점 {Mathf.RoundToInt(c.TargetValue)}점 이상 달성"
+            : $"<sprite=\"{spriteAsset}\" name=\"{spriteName}\"> {partName}팀장 {Mathf.RoundToInt(c.TargetValue)}점 이상 달성";
         if (descText != null) descText.text = label;
     }
 }

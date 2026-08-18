@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
@@ -27,6 +28,18 @@ public class QuestUI : MonoBehaviour
 
     void Start()
     {
+        // 정상 플로우(LoadingScene → GameScene)는 이 시점에 이미 BackendManager 로드가 끝나 있어
+        // 한 프레임도 안 밀리고 바로 통과한다. 에디터에서 GameScene 을 직접 실행(EditorSceneBootstrap)
+        // 할 때만 QuestManager.LoadQuests()가 아직 비동기로 진행 중일 수 있어 — 그 상태에서 바로
+        // Refresh()하면 빈 목록으로 표시된 뒤 다시는 갱신되지 않아 "재접속하면 안 보인다"처럼 보였다.
+        // GameSceneInitializer가 HasInitializedThisSession을 기다리는 것과 동일한 패턴.
+        StartCoroutine(ShowWhenDataReady());
+    }
+
+    IEnumerator ShowWhenDataReady()
+    {
+        while (!BackendManager.HasInitializedThisSession)
+            yield return null;
         Show();
     }
 
@@ -62,14 +75,8 @@ public class QuestUI : MonoBehaviour
 
             descText.text = quest.title;
 
-            // 튜토리얼 퀘스트 2종은 진행도(0/1) 노출 안 함 — 나머지는 그대로 표시.
-            bool hideProgress = quest.questId == "tutorial_quest_001" || quest.questId == "tutorial_quest_002";
-            progressRow.gameObject.SetActive(!hideProgress);
-            if (!hideProgress)
-            {
-                var progressValue = progressRow.Find("ProgressValueText").GetComponent<TextMeshProUGUI>();
-                progressValue.text = $"{quest.currentValue:N0} / {quest.targetValue:N0}";
-            }
+            // 진행도(0/50,000 같은 숫자) 노출 전면 비활성화 — 모든 퀘스트 공통.
+            progressRow.gameObject.SetActive(false);
 
             // 배경 이미지
             var itemImage = item.GetComponent<Image>();

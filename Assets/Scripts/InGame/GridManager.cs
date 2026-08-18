@@ -64,12 +64,15 @@ public class GridManager : MonoBehaviour
         CurrentOfficeLevel = level;
     }
 
-    // 사무실 레벨별 다이얼로그 배경 스프라이트 — Resources/Dialog/BG_Office_Lv{level}.
-    // GridManager.Instance 가 없으면(테스트/에디터 등) 레벨 1 취급.
+    // 사무실 레벨별 다이얼로그 배경 — 원래 계획은 Resources/Dialog/BG_Office_Lv{CurrentOfficeLevel}이지만
+    // 아직 Lv1/Lv4용 이미지 2장만 있고 레벨별 확장이 미확정이라(레벨2/3 리소스 없음), 임시로 이 2장을
+    // 호출될 때마다 번갈아 보여준다. Lv2/Lv3 이미지가 준비되면 CurrentOfficeLevel 기반으로 되돌릴 것.
+    static bool _altBgToggle;
+    static readonly string[] _tempBgNames = { "BG_Office_Lv1", "BG_Office_Lv4" };
     public static Sprite LoadDialogBackgroundSprite()
     {
-        int level = Instance != null ? Instance.CurrentOfficeLevel : 1;
-        return Resources.Load<Sprite>($"Dialog/BG_Office_Lv{level}");
+        _altBgToggle = !_altBgToggle;
+        return Resources.Load<Sprite>($"Dialog/{_tempBgNames[_altBgToggle ? 0 : 1]}");
     }
 
     // cell이 엘리베이터 링크의 한쪽 끝이면 반대쪽 셀을 반환 (없으면 null)

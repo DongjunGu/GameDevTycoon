@@ -2,8 +2,9 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 
-// LeaderSelectUI/.../LSRightPanel/MissionPanel 부착 — 지금 보고 있는 팀장점수 화면이 이번 프로젝트
-// 도전과제의 도전 파트와 같을 때만 목표를 보여준다("N점 이상 달성", 진행률 표시 없음). 달성 시 SuccessPanel 활성화.
+// LeaderSelectUI/.../LSRightPanel/MissionPanel 부착 — 도전과제가 총점/팀장점수(리더존) 무관, 도전 파트가
+// 지금 보고 있는 팀장점수 화면과 달라도 항상 목표를 보여준다("N점 이상 달성", 진행률 표시 없음).
+// 달성 시 SuccessPanel 활성화.
 // 표시·숨김은 CanvasGroup으로만 처리한다 — 자기 자신을 SetActive로 껐다 켜면 이 스크립트의 Update 루프
 // 자체가 멈춰 다시 켜질 방법이 없어진다(비활성 오브젝트는 Update가 안 돎). MissionText/MissionDetail/SuccessPanel은
 // MissionPanel의 자식이라 이것들을 SetActive해도 이 스크립트 자신은 영향받지 않는다.
@@ -32,16 +33,8 @@ public class MissionPanelDisplay : MonoBehaviour
             canvasGroup.blocksRaycasts = active;
             canvasGroup.interactable = active;
         }
-        if (!active)
-        {
-            SetChildrenActive(false);
-            return;
-        }
-
-        // 지금 보고 있는 팀장점수 화면의 파트가 도전 파트와 다르면 아무것도 안 보여준다.
-        bool relevant = dm.CurrentLeaderScoreType.HasValue && dm.CurrentLeaderScoreType.Value == c.ChallengePart;
-        SetChildrenActive(relevant);
-        if (!relevant) return;
+        SetChildrenActive(active);
+        if (!active) return;
 
         if (missionText2 != null) missionText2.text = "도전과제";
 
@@ -61,7 +54,9 @@ public class MissionPanelDisplay : MonoBehaviour
         }
 
         if (missionDetailText != null)
-            missionDetailText.text = $"점수 {Mathf.RoundToInt(c.TargetValue)}점 이상 달성";
+            missionDetailText.text = c.Kind == ChallengeKind.PartTotal
+                ? $"총점 {Mathf.RoundToInt(c.TargetValue)}점 이상 달성"
+                : $"팀장 {Mathf.RoundToInt(c.TargetValue)}점 이상 달성";
 
         if (successPanel != null)
             successPanel.SetActive(c.Resolved && c.Succeeded);
