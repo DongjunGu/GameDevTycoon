@@ -209,15 +209,21 @@ public class CharacterEventTester : MonoBehaviour
         GUILayout.Label($"3:{OnboardingState.Tutorial3Done} 5:{OnboardingState.Tutorial5Done}(pend:{OnboardingState.Tutorial5Pending}) 6:{OnboardingState.Tutorial6Done} 7:{OnboardingState.Tutorial7Done} 8:{OnboardingState.Tutorial8Done} 9:{OnboardingState.Tutorial9Done} 10:{OnboardingState.Tutorial10Done} 12:{OnboardingState.Tutorial12Done}");
 #if UNITY_EDITOR
         if (GUILayout.Button("온보딩 리셋 (컷씬/튜토리얼 재노출)")) { OnboardingState.ResetAll(); Set("온보딩 리셋 — LoadingScene부터 다시 실행"); }
-        if (GUILayout.Button("온보딩 들어가기 (리셋 + RunState.tutorial=true + 씬 재시작)"))
+        if (GUILayout.Button("온보딩 들어가기 (리셋 + RunState.tutorial=true + tutorialFullyDone=false + 씬 재시작)"))
         {
             OnboardingState.ResetAll();
             if (RunStateManager.Instance != null)
             {
-                RunStateManager.Instance.SetTutorial(true, success =>
+                // tutorialFullyDone(계정 영구 서버 플래그)을 먼저 false로 안 풀면, 씬 재시작 시
+                // RunStateManager.LoadAsync가 서버에서 true를 다시 읽어와 OnboardingState.MarkAllTutorialStepsDone()을
+                // 또 호출해서 방금 한 ResetAll()이 무효화된다 — 반드시 이 순서(FullyDone=false → tutorial=true)로.
+                RunStateManager.Instance.SetTutorialFullyDone(false, fdSuccess =>
                 {
-                    if (success) { Set("RunState.tutorial=true 저장 완료 — 씬 재시작"); SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex); }
-                    else Set("RunState.tutorial 저장 실패");
+                    RunStateManager.Instance.SetTutorial(true, success =>
+                    {
+                        if (success) { Set("RunState 리셋 완료(tutorial=true, tutorialFullyDone=false) — 씬 재시작"); SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex); }
+                        else Set("RunState.tutorial 저장 실패");
+                    });
                 });
             }
             else
@@ -343,7 +349,14 @@ public class CharacterEventTester : MonoBehaviour
         TutorialController.Instance?.ForceResetToNormal();
 
         if (RunStateManager.Instance != null)
-            RunStateManager.Instance.SetTutorial(false, success => Set(success ? "튜토리얼 완전 해제 완료 (RunState.tutorial=false)" : "온보딩 플래그는 껐지만 RunState 저장 실패"));
+        {
+            // "완전 해제"는 의미상 "이 계정은 튜토리얼을 영구히 다 끝난 걸로 취급" 이므로 tutorialFullyDone도
+            // 같이 true로 — 안 그러면 이 버튼을 쓴 뒤 캐시 삭제/재설치 테스트를 하면 튜토리얼이 도로 살아난다.
+            RunStateManager.Instance.SetTutorialFullyDone(true, _ =>
+            {
+                RunStateManager.Instance.SetTutorial(false, success => Set(success ? "튜토리얼 완전 해제 완료 (RunState.tutorial=false, tutorialFullyDone=true)" : "온보딩 플래그는 껐지만 RunState 저장 실패"));
+            });
+        }
         else
             Set("온보딩 플래그는 전부 완료 처리함 (RunStateManager 없음 — tutorial 플래그는 못 끔)");
     }

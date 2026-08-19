@@ -29,6 +29,11 @@ public class RunStateManager : MonoBehaviour
     public bool FirstSaleConsumed  { get; private set; }
     public bool BrokeRescueFired   { get; private set; }
     public bool IsTutorial         { get; private set; }
+    // 계정 영구 플래그 — IsTutorial(이번 런이 튜토리얼 런인지)과 달리 StartRun/EndRun에서 절대 리셋되지 않는다.
+    // 튜토리얼 24단계(마지막 대사+파산 화면)가 끝나는 순간 한 번 true로 저장되고 그 뒤로는 영원히 true.
+    // PlayerPrefs(OnboardingState) 기반 완료 플래그는 기기 초기화/재설치로 사라지지만 이건 서버에 남아있어서,
+    // TutorialController.Start()가 이 값을 최우선으로 체크해 재설치 후에도 튜토리얼이 다시 재생되지 않게 한다.
+    public bool TutorialFullyDone  { get; private set; }
 
     private string _rowInDate;
 
@@ -51,6 +56,7 @@ public class RunStateManager : MonoBehaviour
             FirstSaleConsumed  = false;
             BrokeRescueFired   = false;
             IsTutorial         = false;
+            TutorialFullyDone  = false;
             _rowInDate         = null;
 
             if (bro.IsSuccess())
@@ -65,7 +71,16 @@ public class RunStateManager : MonoBehaviour
                     FirstSaleConsumed  = ParseBool(row, "firstSaleConsumed");
                     BrokeRescueFired   = ParseBool(row, "brokeRescueFired");
                     IsTutorial         = ParseBool(row, "tutorial");
-                    Debug.Log($"[RunState] 로드: playing={IsPlaying}, resetInProgress={ResetInProgress}, firstSaleConsumed={FirstSaleConsumed}, brokeRescueFired={BrokeRescueFired}, tutorial={IsTutorial}");
+                    TutorialFullyDone  = ParseBool(row, "tutorialFullyDone");
+                    Debug.Log($"[RunState] 로드: playing={IsPlaying}, resetInProgress={ResetInProgress}, firstSaleConsumed={FirstSaleConsumed}, brokeRescueFired={BrokeRescueFired}, tutorial={IsTutorial}, tutorialFullyDone={TutorialFullyDone}");
+
+                    // 서버는 튜토리얼이 끝났다는데 이 기기의 PlayerPrefs는 비어있는 경우(재설치/기기변경) —
+                    // TutorialController.Start()의 자멸 가드 하나만으론 부족하다(다른 매니저들이 각자
+                    // OnboardingState.TutorialXDone을 직접 보고 TutorialController.Instance.PlayTutorialX()를
+                    // ?. 없이 호출하는 지점이 여러 곳이라, Instance가 null이면 그쪽에서 NRE가 남). 로드 즉시
+                    // (GameScene 진입/그 어떤 소비처보다 먼저) 로컬 캐시를 서버 진실과 동기화해 원천 차단.
+                    if (TutorialFullyDone)
+                        OnboardingState.MarkAllTutorialStepsDone();
                 }
                 else
                 {
@@ -108,6 +123,13 @@ public class RunStateManager : MonoBehaviour
         Save(onComplete);
     }
 
+    // 튜토리얼 24단계(마지막) 완료 시 TutorialController가 1회 호출 — StartRun/EndRun과 달리 절대 리셋 안 됨(계정 영구 플래그).
+    public void SetTutorialFullyDone(bool value, Action<bool> onComplete = null)
+    {
+        TutorialFullyDone = value;
+        Save(onComplete);
+    }
+
     public void SetResetInProgress(bool value, Action<bool> onComplete = null)
     {
         ResetInProgress = value;
@@ -141,6 +163,7 @@ public class RunStateManager : MonoBehaviour
         param.Add("firstSaleConsumed", FirstSaleConsumed);
         param.Add("brokeRescueFired",  BrokeRescueFired);
         param.Add("tutorial",          IsTutorial);
+        param.Add("tutorialFullyDone", TutorialFullyDone);
 
         if (!string.IsNullOrEmpty(_rowInDate))
             Backend.GameData.UpdateV2("RunState", _rowInDate, Backend.UserInDate, param, bro => result = bro);
@@ -153,7 +176,7 @@ public class RunStateManager : MonoBehaviour
         {
             if (string.IsNullOrEmpty(_rowInDate))
                 _rowInDate = result.GetInDate();
-            Debug.Log($"[RunState] Save 성공: playing={IsPlaying}, resetInProgress={ResetInProgress}, firstSaleConsumed={FirstSaleConsumed}, brokeRescueFired={BrokeRescueFired}, tutorial={IsTutorial}");
+            Debug.Log($"[RunState] Save 성공: playing={IsPlaying}, resetInProgress={ResetInProgress}, firstSaleConsumed={FirstSaleConsumed}, brokeRescueFired={BrokeRescueFired}, tutorial={IsTutorial}, tutorialFullyDone={TutorialFullyDone}");
             onComplete?.Invoke(true);
         }
         else if (retriesLeft <= 0)

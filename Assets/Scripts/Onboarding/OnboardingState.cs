@@ -480,6 +480,53 @@ public static class OnboardingState
         PlayerPrefs.Save();
     }
 
+    // RunStateManager가 서버의 tutorialFullyDone(계정 영구 플래그)을 로드했는데 true일 때 호출 — 이 기기의
+    // PlayerPrefs가 초기화/재설치로 비어있어도(=모든 TutorialXDone이 false) 온보딩 전체를 완료 처리해서
+    // 다시 채워넣는다. TutorialController.Start()의 재생 판정뿐 아니라, HiringUI/DispatchPanelUI/MarketingUI/
+    // MerchantShopPanelUI/DevelopmentManager/EmployeeListUI/SalesUI/CreativityGameUI 등 곳곳에 흩어진
+    // "!OnboardingState.TutorialXDone이면 TutorialController.Instance.PlayTutorialX() 호출"(대부분 ?. 없이
+    // 직접 호출) 지점들도 전부 이 플래그를 각자 따로 체크하므로, TutorialController 하나만 자멸시키는 걸로는
+    // 부족하다 — Instance가 null인 채로 그 직접 호출들이 실행되면 NullReferenceException이 난다. 그래서
+    // 개별 소비처를 전부 고치는 대신 로컬 캐시 자체를 서버 진실과 동기화하는 방식으로 한 번에 막는다.
+    // CharacterEventTester.DisableTutorial()과 동일한 전체 목록(검증된 "IsFullyDone/IsMenuUnlockReady 둘 다
+    // 통과" 목록)을 그대로 재사용 — 새 튜토리얼 단계를 추가하면 여기도 같이 늘릴 것.
+    public static void MarkAllTutorialStepsDone()
+    {
+        MarkIntroDone();
+        MarkTutorialDone();
+        MarkFirstHireDone();
+        MarkTutorial3Done();
+        MarkTutorial5Done();
+        MarkTutorial6Done();
+        MarkTutorial7Done();
+        MarkTutorial8Done();
+        MarkTutorial9Done();
+        MarkTutorial10Done();
+        MarkTutorial12Done();
+        MarkTutorial13Done();
+        MarkTutorial13_4Done();
+        MarkTutorial13_5Done();
+        MarkTutorial14_1Done();
+        MarkTutorial15Done();
+        MarkTutorial16_1Done();
+        MarkTutorial17_1Done();
+        MarkTutorial17_2Done();
+        MarkTutorial17_7ShopDone();
+        MarkTutorial17_8UsedDone();
+        MarkTutorial17_8UnlockDone();
+        MarkTutorial17_7Done();
+        MarkTutorial18Done();
+        MarkTutorial19Done();
+        MarkTutorial20Done();
+        MarkTutorial21Done();
+        MarkTutorial21_1Done();
+        MarkTutorial22Done();
+        MarkTutorial22_1Done();
+        MarkTutorial23Done();
+        MarkTutorial23_1Done();
+        MarkTutorial24Done();
+    }
+
     // 테스트용 — 24 Done 플래그만 원복.
     public static void ResetTutorial24()
     {
