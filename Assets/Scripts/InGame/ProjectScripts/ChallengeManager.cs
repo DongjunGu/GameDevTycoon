@@ -194,8 +194,7 @@ public class ChallengeManager
         if (_kind == ChallengeKind.LeaderZone95 || _kind == ChallengeKind.LeaderZone99)
             return $"{PartName(_challengePart)}팀장 점수 {Mathf.RoundToInt(_targetValue)}점 달성하기";
 
-        return $"이번 프로젝트 도전과제!\n[{PartName(_challengePart)}] {KindName()} 도전\n" +
-            $"성공 시 [{PartName(_rewardPart)}] 파트에 보상 지급";
+        return $"{PartName(_challengePart)} 총점{Mathf.RoundToInt(_targetValue)}점 이상 달성하기";
     }
 
     static EmployeeRole ToRole(LeaderType t) => t switch

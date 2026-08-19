@@ -2,6 +2,7 @@ using UnityEngine;
 using TMPro;
 using UnityEngine.UI;
 using System.Collections.Generic;
+using DG.Tweening;
 
 public class DevelopmentResultUI : MonoBehaviour
 {
@@ -42,6 +43,12 @@ public class DevelopmentResultUI : MonoBehaviour
     private readonly List<GameObject> _rowPool = new();
     const string ContributionCheckLabel = "기여도 확인";
     const string ContributionBackLabel  = "돌아가기";
+    [Header("Row 등장 연출 (기여도 상세 - 오른쪽에서 왼쪽으로)")]
+    public float rowSlideDistance = 1100f;
+    public float rowSlideDuration = 0.35f;
+    public float rowSlideStagger = 0.08f;
+    private VerticalLayoutGroup _contentLayoutGroup;
+    private Sequence _rowSlideSeq;
     [Header("Project Name")]
     public TextMeshProUGUI projectNameText;
     public TMP_InputField projectNameInput;
@@ -122,6 +129,11 @@ public class DevelopmentResultUI : MonoBehaviour
         if (projectNameWarningText != null) projectNameWarningText.SetActive(false);
     }
 
+    void OnDestroy()
+    {
+        _rowSlideSeq?.Kill();
+    }
+
     // characterLimit에 걸려 9글자를 못 넘어가는 순간(=입력이 꽉 찬 순간) 경고 문구를 띄운다.
     void OnProjectNameInputChanged(string value)
     {
@@ -168,7 +180,45 @@ public class DevelopmentResultUI : MonoBehaviour
             else row.SetActive(false); // 이전에 더 많은 행을 표시했을 때 풀에 남아있던 여분
         }
 
+        // Content가 RightPanelDetail 아래 비활성 상태에서는 ForceRebuildLayoutImmediate가 아무것도 계산하지
+        // 않아(비활성 계층은 리빌드 대상에서 제외됨) 목표 위치를 잘못 캡처하게 된다 — 반드시 먼저 활성화한 뒤
+        // 슬라이드를 재생해야 한다.
         SetContributionDetailShown(true);
+        PlayRowSlideIn();
+    }
+
+    // RowPanel들이 Content(VerticalLayoutGroup)의 직계 자식으로 쌓여있는 한, 리빌드가 매번 anchoredPosition을
+    // 강제로 되돌려서 위치 애니메이션이 통하지 않는다([[feedback_layoutgroup_child_position_animation]]).
+    // 그래서 먼저 리빌드로 정상 배치(목표 위치)를 확정 → 캡처 → LayoutGroup을 잠깐 꺼서 리빌드를 막은 채로
+    // 오른쪽 바깥(rowSlideDistance만큼)에서 목표 위치까지 순차적으로 슬라이드시킨다. 카드 개수/순서는 매번
+    // 달라질 수 있으므로 여기서만 껐다가, 다음 열람 시 다시 켜고 리빌드해서 늘 최신 배치를 따라간다.
+    void PlayRowSlideIn()
+    {
+        if (contributionContent == null) return;
+        var contentRect = contributionContent as RectTransform;
+        if (_contentLayoutGroup == null) _contentLayoutGroup = contributionContent.GetComponent<VerticalLayoutGroup>();
+
+        if (_contentLayoutGroup != null) _contentLayoutGroup.enabled = true;
+        LayoutRebuilder.ForceRebuildLayoutImmediate(contentRect);
+
+        var targets = new List<(RectTransform rt, Vector2 pos)>();
+        foreach (var row in _rowPool)
+        {
+            if (row == null || !row.activeSelf) continue;
+            var rt = row.GetComponent<RectTransform>();
+            if (rt != null) targets.Add((rt, rt.anchoredPosition));
+        }
+
+        if (_contentLayoutGroup != null) _contentLayoutGroup.enabled = false;
+
+        _rowSlideSeq?.Kill();
+        _rowSlideSeq = DOTween.Sequence().SetUpdate(true);
+        for (int i = 0; i < targets.Count; i++)
+        {
+            var (rt, target) = targets[i];
+            rt.anchoredPosition = target + new Vector2(rowSlideDistance, 0f);
+            _rowSlideSeq.Insert(i * rowSlideStagger, rt.DOAnchorPos(target, rowSlideDuration).SetEase(Ease.OutCubic));
+        }
     }
 
     // Content 아래 행 풀을 count 개 이상 확보 (모자라면 프리팹 생성)

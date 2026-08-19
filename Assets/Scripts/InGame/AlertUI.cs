@@ -76,6 +76,11 @@ public class AlertUI : MonoBehaviour
 
     private Queue<Entry> _queue      = new();
     private bool         _isShowing  = false;
+    // ShowNext()가 큐 맨 앞을 "처리 시작"했다고 _isShowing=true 로 표시한 시점과, 그게 실제로 화면에 뜬 시점은
+    // 다르다 — ModalGate.WhenFree 대기 중이면 그 사이에 아직 아무것도 안 보인다. bypassGate 알림이 그 "대기
+    // 중이라 아직 안 보이는" 앞선 알림 뒤에 그냥 큐잉되면, 앞선 알림이 뜰 때까지(다른 패널이 다 닫힐 때까지)
+    // 덩달아 묶여서 훨씬 나중에 엉뚱한 타이밍에 튀어나온다 — bypassGate 의도(즉시 표시)가 깨짐.
+    private bool         _isDisplayed = false;
     private System.Action _onConfirm;
     private AlertType     _currentType;
 
@@ -103,7 +108,9 @@ public class AlertUI : MonoBehaviour
     // bypassGate: true면 다른 패널(ItemPanel 등)이 이미 열려 게이트를 쥐고 있어도 대기 없이 바로 표시.
     public void Show(string message, System.Action onConfirm = null, bool bypassGate = false)
     {
-        _queue.Enqueue(new Entry { message = message, onConfirm = onConfirm, type = AlertType.Default, bypassGate = bypassGate });
+        var entry = new Entry { message = message, onConfirm = onConfirm, type = AlertType.Default, bypassGate = bypassGate };
+        if (bypassGate && _isShowing && !_isDisplayed) { DisplayEntry(entry); return; }
+        _queue.Enqueue(entry);
         if (!_isShowing) ShowNext();
     }
 
@@ -111,14 +118,20 @@ public class AlertUI : MonoBehaviour
     // bypassGate: true면 다른 패널(ProjectSetupUI 등)이 이미 열려 게이트를 쥐고 있어도 대기 없이 바로 표시.
     public void ShowMoney(string message, int? goldAmount = null, System.Action onConfirm = null, bool bypassGate = false)
     {
-        _queue.Enqueue(new Entry { message = message, onConfirm = onConfirm, type = AlertType.Money, goldAmount = goldAmount, bypassGate = bypassGate });
+        var entry = new Entry { message = message, onConfirm = onConfirm, type = AlertType.Money, goldAmount = goldAmount, bypassGate = bypassGate };
+        if (bypassGate && _isShowing && !_isDisplayed) { DisplayEntry(entry); return; }
+        _queue.Enqueue(entry);
         if (!_isShowing) ShowNext();
     }
 
     // label: 특성명 / 이벤트명이면 그 이름, 아이템 발동이면 직원 이름
+    // Portrait는 항상 ModalGate 대기 없이 즉시 표시되는 타입이라(ShowNext 참고) Show/ShowMoney의 bypassGate와
+    // 동일하게, 앞서 대기 중인(아직 안 뜬) 알림에 밀리지 않도록 같은 새치기 처리를 적용한다.
     public void ShowPortrait(string message, string portraitId, string label, System.Action onConfirm = null)
     {
-        _queue.Enqueue(new Entry { message = message, onConfirm = onConfirm, type = AlertType.Portrait, portraitId = portraitId, label = label });
+        var entry = new Entry { message = message, onConfirm = onConfirm, type = AlertType.Portrait, portraitId = portraitId, label = label };
+        if (_isShowing && !_isDisplayed) { DisplayEntry(entry); return; }
+        _queue.Enqueue(entry);
         if (!_isShowing) ShowNext();
     }
 
@@ -148,6 +161,7 @@ public class AlertUI : MonoBehaviour
 
     void ShowNext()
     {
+        _isDisplayed = false;
         if (_queue.Count == 0) { _isShowing = false; return; }
         _isShowing = true;
 
@@ -163,7 +177,16 @@ public class AlertUI : MonoBehaviour
     void DisplayDequeued()
     {
         if (_queue.Count == 0) { _isShowing = false; return; }
-        var entry = _queue.Dequeue();
+        DisplayEntry(_queue.Dequeue());
+    }
+
+    // Show/ShowMoney/ShowPortrait의 "새치기" 경로와 DisplayDequeued 양쪽이 공유하는 실제 표시 로직.
+    // 큐 상태(_queue/_isShowing)는 건드리지 않는다 — 새치기로 불렸을 때 큐에 이미 대기 중인(아직 안 뜬)
+    // 앞선 알림은 그대로 큐에 남아 나중에 자기 차례(ModalGate 해제)가 오면 정상적으로 뒤이어 표시된다.
+    void DisplayEntry(Entry entry)
+    {
+        _isShowing   = true;
+        _isDisplayed = true;
         GameTimeManager.Instance?.StopTime();
         _onConfirm   = entry.onConfirm;
         _currentType = entry.type;

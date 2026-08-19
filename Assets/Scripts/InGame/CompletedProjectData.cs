@@ -19,6 +19,7 @@ public class CompletedProjectData
     public float  qualityScore;
     public int    criticTotalScore;
     public int    bestRank;          // Sales 중 도달한 가장 높은(작은 숫자) 순위. 0 = 순위권 밖
+    public bool   isSequel;          // CompletedProjectsUI.NextProjectButton(차기작)으로 시작된 프로젝트인지 — 리스트에 [차기작] 표시용
 
     public BackEnd.Param ToParam()
     {
@@ -39,6 +40,7 @@ public class CompletedProjectData
         param.Add("qualityScore",     qualityScore);
         param.Add("criticTotalScore", criticTotalScore);
         param.Add("bestRank",         bestRank);
+        param.Add("isSequel",         isSequel ? 1 : 0);
         return param;
     }
 
@@ -62,6 +64,7 @@ public class CompletedProjectData
         data.qualityScore     = SafeFloat(row, "qualityScore",     0f);
         data.criticTotalScore = SafeInt(row,   "criticTotalScore", 0);
         data.bestRank         = SafeInt(row,   "bestRank",         0);
+        data.isSequel         = SafeInt(row,   "isSequel",         0) == 1;
         return data;
     }
 

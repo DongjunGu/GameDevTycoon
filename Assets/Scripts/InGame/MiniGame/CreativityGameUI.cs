@@ -463,7 +463,10 @@ public class CreativityGameUI : MonoBehaviour
 
         foreach (Transform child in _blockTray) Destroy(child.gameObject);
 
-        if (CompletedProjectManager.Instance != null && CompletedProjectManager.Instance.completedProjects.Count == 0)
+        // completedProjects.Count==0만 보면 튜토리얼을 벗어난 뒤(메인메뉴 왕복 등)에도 계속 고정 블록
+        // 순서가 나오므로, 다른 튜토리얼 first-project 가드들과 동일하게 IsFullyDone으로 한 번 더 막는다.
+        if (!TutorialController.IsFullyDone()
+            && CompletedProjectManager.Instance != null && CompletedProjectManager.Instance.completedProjects.Count == 0)
             SortEarnedBlocksForTutorial();
 
         int count = _earnedBlocks.Count;

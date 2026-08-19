@@ -234,7 +234,10 @@ public static class RandomEvents_Choice
                     new RandomEventChoiceOption
                     {
                         onChoose = () =>
-                            EmployeeManager.Instance.ChangeAllSatisfaction(-5)
+                        {
+                            EmployeeManager.Instance.ChangeAllSatisfaction(-5);
+                            InfoFeedUI.Instance?.ShowGlobalSatisfaction(-5);
+                        }
                     },
                     // ── 선택지 2: 삼겹살 (50% 확률로 만족도 +5, happy/meh 결과팝업도 함께 분기) ──
                     new RandomEventChoiceOption
@@ -246,7 +249,10 @@ public static class RandomEvents_Choice
 
                             bool happy = UnityEngine.Random.value < 0.5f;
                             if (happy)
+                            {
                                 EmployeeManager.Instance.ChangeAllSatisfaction(5);
+                                InfoFeedUI.Instance?.ShowGlobalSatisfaction(5);
+                            }
 
                             var c1 = dinnerEvt.choices[1];
                             // 괄호까지 색상 태그 안에 포함 — "(-3000G)" 형태로 괄호도 같이 노란색(#F3C01D)으로. 앞에 코인 아이콘 인라인.
@@ -268,6 +274,7 @@ public static class RandomEvents_Choice
                             int goldAfter = MoneyManager.Instance.Gold - dinnerCost10;
                             MoneyManager.Instance.ForceSpendGold(dinnerCost10, saveImmediately: false);
                             EmployeeManager.Instance.ChangeAllSatisfaction(10);
+                            InfoFeedUI.Instance?.ShowGlobalSatisfaction(10);
                             if (goldAfter < 0) GameTimeManager.Instance?.TriggerBankruptcy();
                         }
                     }
@@ -344,7 +351,11 @@ public static class RandomEvents_Choice
                     // ── 선택지 1: 간식 ───────────────────────────
                     new RandomEventChoiceOption
                     {
-                        onChoose = () => EmployeeManager.Instance.ChangeAllSatisfaction(5)
+                        onChoose = () =>
+                        {
+                            EmployeeManager.Instance.ChangeAllSatisfaction(5);
+                            InfoFeedUI.Instance?.ShowGlobalSatisfaction(5);
+                        }
                     },
                     // ── 선택지 2: 면담 ───────────────────────────
                     new RandomEventChoiceOption

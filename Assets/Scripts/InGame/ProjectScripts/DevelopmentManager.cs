@@ -445,7 +445,11 @@ public class DevelopmentManager : MonoBehaviour
         // 튜토리얼(=한 번도 프로젝트를 출시 안 한 첫 판) 한정 — 첫 번째 직원의 마지막(12번째) 틱은 12개
         // 구간 중 [11/12, 12/12)=진행도 약 91.7~100% 구간에 랜덤 배치되므로("95%") 그 틱을 무조건
         // 창의성(tickType=2)으로 고정해, 크리에이티비티 미니게임을 최소 1회는 보장 체험시킨다.
-        bool forceCreativityTick = CompletedProjectManager.Instance != null
+        // completedProjects.Count==0만 보면 튜토리얼을 벗어난 뒤에도(메인메뉴 왕복, 디버그 완전해제 등)
+        // 여전히 "첫 판"이라는 이유만으로 계속 고정 블록 풀이 쓰인다 — IsTutorialFirstSale과 동일한 버그라
+        // 같은 방식(TutorialController.IsFullyDone())으로 튜토리얼 진행 중일 때만 적용되게 가드.
+        bool forceCreativityTick = !TutorialController.IsFullyDone()
+            && CompletedProjectManager.Instance != null
             && CompletedProjectManager.Instance.completedProjects.Count == 0;
 
         // 튜토리얼 전용 창의성 블록 풀 — 지정 5종을 seed로 결정적 셔플(재접속 시 같은 seed면 같은 순서로
@@ -886,7 +890,9 @@ public class DevelopmentManager : MonoBehaviour
 
         // 튜토리얼(첫 프로젝트) 한정 — 디버깅이 확률에 막혀 늘어지지 않도록 매 틱 100% 성공 + 정확히
         // 3틱 안에(각 틱마다 "남은 버그 / 남은 틱수"만큼 균등 제거) 버그가 0이 되도록 보정.
-        bool isTutorialBugFix = CompletedProjectManager.Instance != null
+        // completedProjects.Count==0만 보면 튜토리얼을 벗어난 뒤에도 계속 적용되므로 IsFullyDone으로 가드.
+        bool isTutorialBugFix = !TutorialController.IsFullyDone()
+            && CompletedProjectManager.Instance != null
             && CompletedProjectManager.Instance.completedProjects.Count == 0;
         int tutorialTicksLeft = 3;
 
@@ -2563,7 +2569,18 @@ public class DevelopmentManager : MonoBehaviour
         AddEmployeeContribution(employee.id, planning + develop + art);
         UpdateInvestmentProgress();
 
-        // 파트총점 도전과제 — 개발 완료까지 기다리지 않고 목표 달성 즉시 MissionAlertUI를 띄워 보상받게 한다.
+        // 파트총점 도전과제 판정은 여기서 하지 않는다 — AddValues는 실제값(_planning 등)만 즉시 올릴 뿐,
+        // 화면 표시값은 StatTickPopup이 패널로 흡입돼 RevealValues가 불릴 때까지 그대로다. 여기서 바로
+        // 판정하면 패널 숫자가 아직 안 올라간 채(예: 36) 팝업이 날아가는 도중에 도전과제가 먼저 성공
+        // 처리되는 버그가 생긴다 — 그래서 CheckPartTotalChallenge()는 DevelopmentPanelUI.RevealValues가
+        // 실제로 흡수를 반영한 직후에만 호출한다.
+    }
+
+    // 파트총점 도전과제 판정 — 개발 완료까지 기다리지 않고 목표 달성 즉시 MissionAlertUI를 띄워 보상받게 한다.
+    // DevelopmentPanelUI.RevealValues(개발틱 팝업이 패널로 흡수된 시점)에서 호출 — AccumulateByType의
+    // 실제값 증가 시점이 아니라 화면에 반영된 시점 기준으로 판정해야 "패널은 36인데 벌써 성공떴다" 버그가 없다.
+    public void CheckPartTotalChallenge()
+    {
         if (_challenge.TryResolvePartTotalEarly())
             MissionAlertUI.Instance?.Show();
     }
