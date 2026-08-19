@@ -228,6 +228,11 @@ public class DevelopmentPanelUI : MonoBehaviour
             case "bug":        _bugReveal        += amount; _bugSpeed        = Mathf.Abs(_bugReveal        - _bugDisplay)        / ft; break;
             case "creativity": _creativityReveal += amount; _creativitySpeed = Mathf.Abs(_creativityReveal - _creativityDisplay) / ft; break;
         }
+
+        // 파트총점 도전과제는 실제값(_planning 등, AccumulateByType에서 즉시 증가)이 아니라 여기서 패널에
+        // "흡수"된 시점을 기준으로 판정해야 한다 — 안 그러면 팝업이 아직 날아가는 중(패널 숫자는 예전 값)인데
+        // 도전과제가 먼저 성공 처리되는 버그가 생긴다.
+        DevelopmentManager.Instance?.CheckPartTotalChallenge();
     }
 
     // 호출자가 직접 1씩 틱하는 경우(LeaderScoreUI 등) — 실제값/공개값/표시값 즉시 동기화

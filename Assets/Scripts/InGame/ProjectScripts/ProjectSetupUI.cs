@@ -61,6 +61,10 @@ public class ProjectSetupUI : MonoBehaviour
     public static int SelectedGenrePopularity { get; set; } = 1;
     public static int SelectedGenreFatigue { get; set; } = 0;
 
+    // 차기작 — CompletedProjectsUI.NextProjectButton으로 진입 시 그 원작을 담아둔다. null이면 일반 신작.
+    // SalesUI가 매출 계산 시 1회 소비(null로 되돌림) — 원작 대비 기획/개발/아트/창의성 비교 보너스/패널티에 쓰임.
+    public static CompletedProjectData SequelBaseProject { get; set; }
+
     // ── 내부 상태 ─────────────────────────────
     private ProjectData _projectData = new();
     private bool _genreChosen;
@@ -153,11 +157,56 @@ public class ProjectSetupUI : MonoBehaviour
         _projectData = new ProjectData { scale = ProjectScale.Small };
         _genreChosen = false;
         _platformChosen = false;
+        SequelBaseProject = null; // 일반 신작 진입 — 혹시 남아있던 차기작 상태 해제
+        SetGenrePlatformLocked(false);
         LoadLastSelection();
 
         UpdateGenreButtonLabels();
         RefreshMain();
         ShowOnly(mainPanel);
+    }
+
+    // 완료작 목록(CompletedProjectsUI)의 "차기작" 버튼 → 게임개발 버튼과 동일하게 SummaryPanel로 진입하되,
+    // 장르/플랫폼은 원작 값으로 고정(수정 불가)하고 규모만 바꿀 수 있게 한다.
+    public void OnClickNextProject(CompletedProjectData baseProject)
+    {
+        if (baseProject == null) return;
+
+        var stage = DevelopmentManager.Instance.CurrentStage;
+        if (DevelopmentManager.Instance.IsStarted &&
+            (stage == ProjectStage.Developing || stage == ProjectStage.BugFixing || stage == ProjectStage.Marketing))
+        {
+            AlertUI.Instance.Show("진행중인 프로젝트가 있습니다.");
+            return;
+        }
+        GameTimeManager.Instance.StopTime();
+        ModalGate.I.Register(this);
+
+        SequelBaseProject = baseProject;
+        _projectData = new ProjectData
+        {
+            scale    = (ProjectScale)baseProject.scale,
+            genre    = (ProjectGenre)baseProject.genre,
+            platform = (ProjectPlatform)baseProject.platform
+        };
+        _genreChosen = true;
+        _platformChosen = true;
+        SelectedGenrePopularity = GenrePopularityManager.Instance != null
+            ? GenrePopularityManager.Instance.GetPopularity(_projectData.genre) : 1;
+        SelectedGenreFatigue = GenreFatigueManager.Instance != null
+            ? GenreFatigueManager.Instance.GetFatigue(_projectData.genre) : 0;
+
+        UpdateGenreButtonLabels();
+        SetGenrePlatformLocked(true);
+        RefreshMain();
+        ShowOnly(mainPanel);
+    }
+
+    // 차기작 모드 — 장르/플랫폼 선택 버튼 자체를 눌러도 반응하지 않게 잠근다(규모만 변경 가능).
+    void SetGenrePlatformLocked(bool locked)
+    {
+        if (genreButton    != null) genreButton.interactable    = !locked;
+        if (platformButton != null) platformButton.interactable = !locked;
     }
 
     // 메인 패널 표시값 일괄 갱신
@@ -374,6 +423,8 @@ public class ProjectSetupUI : MonoBehaviour
         _projectData = new ProjectData();
         _genreChosen = false;
         _platformChosen = false;
+        SequelBaseProject = null; // 차기작 설정 도중 취소 — 다음 진입은 일반 신작으로
+        SetGenrePlatformLocked(false);
 
         ShowOnly(null);
         GameTimeManager.Instance.StartTime();

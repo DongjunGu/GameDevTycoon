@@ -46,6 +46,15 @@ public class CompletedProjectsUI : MonoBehaviour
     public Sprite[] genreIcons;    // ProjectGenre 순서
     public Sprite[] platformIcons; // ProjectPlatform 순서
 
+    [Header("Detail — 차기작 (조건 충족 시에만 활성화)")]
+    public Button nextProjectButton;
+    [Tooltip("차기작 가능 사무실 최소 단계")]
+    public int nextProjectMinStage = 3;
+    [Tooltip("차기작 가능 최소 평론가 점수")]
+    public int nextProjectMinCriticScore = 80;
+    [Tooltip("출시 시점 기준 차기작 가능 기간(주). 1년=48주 기준 2년=96주")]
+    public int nextProjectMaxWeeksSinceRelease = 96;
+
     void Awake()
     {
         if (Instance != null) { Destroy(gameObject); return; }
@@ -92,7 +101,8 @@ public class CompletedProjectsUI : MonoBehaviour
             foreach (var project in sorted)
             {
                 var item = Instantiate(projectListItemPrefab, listContent);
-                item.transform.Find("NameText").GetComponent<TextMeshProUGUI>().text = project.projectName;
+                string namePrefix = project.isSequel ? "[차기작] " : "";
+                item.transform.Find("NameText").GetComponent<TextMeshProUGUI>().text = namePrefix + project.projectName;
                 item.transform.Find("RevenueText").GetComponent<TextMeshProUGUI>().text = $"{project.totalRevenue:N0} G";
 
                 var captured = project;
@@ -105,7 +115,7 @@ public class CompletedProjectsUI : MonoBehaviour
 
     void ShowDetail(CompletedProjectData data)
     {
-        detailNameText.text = data.projectName;
+        detailNameText.text = (data.isSequel ? "[차기작] " : "") + data.projectName;
         detailScaleText.text = ScaleToString((ProjectScale)data.scale);
         detailGenreText.text = GenreToString((ProjectGenre)data.genre);
         detailPlatformText.text = PlatformToString((ProjectPlatform)data.platform);
@@ -142,6 +152,8 @@ public class CompletedProjectsUI : MonoBehaviour
         SetIcon(detailGenreIcon,    genreIcons,    data.genre);
         SetIcon(detailPlatformIcon, platformIcons, data.platform);
 
+        UpdateNextProjectButton(data);
+
         // 최고 순위 1위면 전용 뱃지(rank1stBadge)로 대체 — 평소 텍스트(detailBestRankText)는 숨김.
         bool isFirstRank = data.bestRank == 1;
         if (rank1stBadge != null) rank1stBadge.SetActive(isFirstRank);
@@ -161,6 +173,48 @@ public class CompletedProjectsUI : MonoBehaviour
     {
         if (img == null || icons == null || index < 0 || index >= icons.Length) return;
         if (icons[index] != null) img.sprite = icons[index];
+    }
+
+    // 차기작 조건: 사무실 3단계 이상 + 평론가 점수 80점 이상 + 출시 시점 기준 2년 이내. 다 만족해야 버튼 노출.
+    // 리스너는 조건 충족 여부와 무관하게 항상 연결한다 — 조건 미충족일 땐 SetActive(false)로만 숨기므로,
+    // 인스펙터 등으로 GameObject를 강제로 켜서 테스트할 때도 클릭이 실제로 반응해야 하기 때문.
+    void UpdateNextProjectButton(CompletedProjectData data)
+    {
+        if (nextProjectButton == null) return;
+
+        bool available = IsNextProjectAvailable(data);
+        nextProjectButton.gameObject.SetActive(available);
+
+        var captured = data;
+        nextProjectButton.onClick.RemoveAllListeners();
+        nextProjectButton.onClick.AddListener(() => OnClickNextProject(captured));
+    }
+
+    bool IsNextProjectAvailable(CompletedProjectData data)
+    {
+        bool stageOk = StageManager.Instance != null && StageManager.Instance.CurrentStage >= nextProjectMinStage;
+        bool scoreOk = data.criticTotalScore >= nextProjectMinCriticScore;
+        bool timeOk  = IsWithinReleaseWindow(data);
+        return stageOk && scoreOk && timeOk;
+    }
+
+    // 게임 내부 시간 기준(1년=48주=12개월×4주) 경과 주수 — 출시 시점부터 지금까지 nextProjectMaxWeeksSinceRelease 이내인지.
+    bool IsWithinReleaseWindow(CompletedProjectData data)
+    {
+        if (GameTimeManager.Instance == null) return false;
+        int weeksElapsed = (GameTimeManager.Instance.Year  - data.year)  * 48
+                          + (GameTimeManager.Instance.Month - data.month) * 4
+                          + (GameTimeManager.Instance.Week  - data.week);
+        return weeksElapsed >= 0 && weeksElapsed <= nextProjectMaxWeeksSinceRelease;
+    }
+
+    // 차기작 버튼 클릭 — 완료작 패널을 닫고 "게임개발"과 동일하게 ProjectSetupUI(SummaryPanel)로 진입,
+    // 단 장르/플랫폼은 이 원작 값으로 고정한다(ProjectSetupUI.OnClickNextProject 내부 처리).
+    // 조건 재검증은 일부러 안 함 — 인스펙터로 버튼을 강제 활성화해 조건 미충족 상태를 테스트할 수 있어야 함.
+    void OnClickNextProject(CompletedProjectData baseProject)
+    {
+        OnClickClose();
+        ProjectSetupUI.Instance.OnClickNextProject(baseProject);
     }
 
     public void OnClickBack()

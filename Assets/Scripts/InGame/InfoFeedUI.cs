@@ -92,6 +92,11 @@ public class InfoFeedUI : MonoBehaviour
     void Spawn(EmployeeData emp, string richMessage)
     {
         if (infoPrefab == null || container == null) return;
+        // 이 오브젝트(또는 조상)가 비활성이면 StartCoroutine 자체가 예외를 던져 아래 코루틴이 시작되지 못하고
+        // 방금 만든 InfoPrefab이 슬라이드아웃/Destroy 없이 영구히 남는다 — 예: ConfirmPanelMoneyElevator가
+        // HUD를 통째로 숨기는 패널(EmployeePanel 등)이 열려 있는 동안 아이템 사용 등으로 호출된 경우.
+        // 아무도 못 보는 상태라 표시할 이유도 없으므로 조용히 스킵한다.
+        if (!isActiveAndEnabled) return;
 
         var go = Instantiate(infoPrefab, container);
         go.transform.SetAsFirstSibling(); // 새로 생긴 게 맨 위로

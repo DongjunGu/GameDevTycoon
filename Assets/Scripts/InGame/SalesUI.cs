@@ -188,6 +188,7 @@ public class SalesUI : MonoBehaviour
                 week             = GameTimeManager.Instance.Week,
                 qualityScore     = qualityScore,
                 criticTotalScore = CriticReviewUI.Instance != null ? CriticReviewUI.Instance.LastCriticTotal : 0,
+                isSequel         = ProjectSetupUI.SequelBaseProject != null,
             };
             CompletedProjectManager.Instance.SaveCompletedProject(_currentSalesProject);
         }
@@ -281,8 +282,30 @@ public class SalesUI : MonoBehaviour
                 // 장착 특성 's8'(perfectScoreSaleBonus) — 평론가 100점 시 매출 보너스 (테크트리 만점신화와 합산).
                 float perfectTraitBonus = (CriticReviewUI.Instance != null && CriticReviewUI.Instance.LastCriticTotal == 100)
                     ? TraitEffectApplier.GetPerfectScoreSaleBonus() : 0f;
-                // 매출 보너스는 합연산 — 유튜버 +5% + 장인정신 +10% + 만점 +15% + 오타쿠 +20% + 신의축복 +10% + 규모 +5% + 평론가만점 +5% (곱셈 아님).
-                float bonusSum         = (youtuberBonus - 1f) + (craftsmanBonus - 1f) + perfectBonus + otakuSalesBonus + godBlessingBonus + scaleSaleBonus + perfectTraitBonus;
+                // 차기작(CompletedProjectsUI.NextProjectButton) — 원작 대비 기획/개발/아트/창의성 중 이번 작이 더
+                // 높은 항목 수로 매출 보너스/패널티 결정: 0개 -25% / 1개 -10% / 2개 -5% / 3개 +10% / 4개 +25%.
+                // 1회 소비(null로 되돌림) — 이 판매에만 적용되고 다음 프로젝트로 새어나가지 않게.
+                float sequelBonus = 0f;
+                if (ProjectSetupUI.SequelBaseProject != null)
+                {
+                    var baseProj = ProjectSetupUI.SequelBaseProject;
+                    int higherCount = 0;
+                    if (_cachedPlanning   > baseProj.planning)   higherCount++;
+                    if (_cachedDevelop    > baseProj.develop)    higherCount++;
+                    if (_cachedArt        > baseProj.art)        higherCount++;
+                    if (_cachedCreativity > baseProj.creativity) higherCount++;
+                    sequelBonus = higherCount switch
+                    {
+                        0 => -0.25f,
+                        1 => -0.10f,
+                        2 => -0.05f,
+                        3 => 0.10f,
+                        _ => 0.25f, // 4
+                    };
+                    Debug.Log($"[차기작] 원작 대비 상회 항목 {higherCount}/4 → 매출 보정 {sequelBonus * 100f:F0}%");
+                }
+                // 매출 보너스는 합연산 — 유튜버 +5% + 장인정신 +10% + 만점 +15% + 오타쿠 +20% + 신의축복 +10% + 규모 +5% + 평론가만점 +5% + 차기작 -25~+25% (곱셈 아님).
+                float bonusSum         = (youtuberBonus - 1f) + (craftsmanBonus - 1f) + perfectBonus + otakuSalesBonus + godBlessingBonus + scaleSaleBonus + perfectTraitBonus + sequelBonus;
                 float totalMultiplier  = Mathf.Max(0f, 1f + bonusSum);
                 // 매출 = 규모배율 × 248 × (원천/100)^2  (원천 = 최종 변환 점수 qualityScore)
                 // 2026-08-14 — 공식에서 Random(0.9~1.1) 삭제. 변동성은 이제 주차별 분배 지터(아래
@@ -292,6 +315,7 @@ public class SalesUI : MonoBehaviour
                 );
                 if (RandomEventManager.Instance != null)
                     RandomEventManager.Instance.YoutuberSalesBonus = 1.0f; // 적용 후 초기화
+                ProjectSetupUI.SequelBaseProject = null; // 이번 매출 계산에 1회 소비 — 다음 프로젝트로 안 새어나가게 초기화
             }
 
             // 2026-08-14 — 각 주차 분배에 ±5% 변동을 주되, 예전처럼 합을 정확히 100%로 재정규화하지 않는다.
@@ -626,6 +650,10 @@ public class SalesUI : MonoBehaviour
     bool IsTutorialFirstSale()
     {
         if (DebugForceRealFormula) return false;
+        // 튜토리얼이 이미 끝났으면(정상 완주는 물론, 디버그 "튜토리얼 완전해제"로 스킵한 경우 포함) 첫 판매여도
+        // 고정값을 적용하지 않는다 — 그렇지 않으면 completedProjects 카운트만 보므로, 메인메뉴를 나갔다 오거나
+        // 튜토리얼을 벗어난 뒤에도 "아직 한 번도 안 팔았다"는 이유만으로 계속 튜토리얼 고정값이 적용됐다.
+        if (TutorialController.IsFullyDone()) return false;
         return CompletedProjectManager.Instance != null
             && CompletedProjectManager.Instance.completedProjects.FindAll(p => p.totalRevenue > 0).Count == 0;
     }

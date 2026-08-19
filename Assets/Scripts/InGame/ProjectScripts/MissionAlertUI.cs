@@ -68,9 +68,15 @@ public class MissionAlertUI : MonoBehaviour
     public void Show(System.Action onClosed = null, bool showCurrentScorePanel = true)
     {
         _onClosed = onClosed;
-        if (currentScorePanel != null) currentScorePanel.SetActive(showCurrentScorePanel);
         var dm = DevelopmentManager.Instance;
         var c = dm != null ? dm.Challenge : null;
+
+        // 파트총점(PartTotal) 도전과제는 CurrentScorePanel(팀장점수 리더존 3파트 비교용)을 안 보여주기로 함 —
+        // 직접 클릭해서 열든, 목표 달성으로 자동으로 뜨든, 보상 수령까지 이 패널이 열려있는 내내(RewardFlyCoroutine이
+        // 따로 안 건드리므로) 계속 꺼진 상태로 유지된다.
+        bool isPartTotal = c != null && c.IsActive && c.Kind == ChallengeKind.PartTotal;
+        if (currentScorePanel != null) currentScorePanel.SetActive(showCurrentScorePanel && !isPartTotal);
+
         if (c == null || !c.IsActive)
         {
             if (missionText != null) missionText.text = "없음";
