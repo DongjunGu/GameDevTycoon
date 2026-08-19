@@ -112,7 +112,7 @@ public class LeaderScoreAimButtons : MonoBehaviour
     void InsertRise(Button btn, RectTransform rt, Vector2 restPos, float delay)
     {
         if (rt == null) return;
-        if (btn != null) btn.gameObject.SetActive(false);
+        if (btn != null) { btn.gameObject.SetActive(false); btn.interactable = false; }
         rt.anchoredPosition = restPos + new Vector2(0f, -riseDistance);
         rt.localScale = Vector3.one;
 
@@ -121,6 +121,15 @@ public class LeaderScoreAimButtons : MonoBehaviour
         if (btn != null) _riseSeq.InsertCallback(delay, () => btn.gameObject.SetActive(true));
         _riseSeq.Insert(delay, rt.DOAnchorPos(overshootPos, riseDuration).SetEase(Ease.OutCubic).SetUpdate(true));
         _riseSeq.Insert(delay + riseDuration, rt.DOAnchorPos(restPos, riseSettleDuration).SetEase(Ease.OutQuad).SetUpdate(true));
+
+        // 오버슈트+정착 애니메이션이 끝나기 전(rt.anchoredPosition을 시퀀스가 계속 갱신 중)에 클릭되면,
+        // GlobalButtonClickBounce가 그 중간 위치를 기준으로 __ClickBounceWrapper를 끼워넣어 좌표계가
+        // 바뀌어버려서(부모/앵커/의미 전부 달라짐) 시퀀스가 여전히 밀어넣는 옛 좌표계 값 때문에 위치가
+        // 깨진다([[feedback_global_click_bounce_pitfalls]]와 동일 계열: 애니메이션 대상에 Button 달면
+        // 좌표계 깨짐). GlobalButtonClickBounce는 btn.interactable을 보고 개입 여부를 정하므로, 애니메이션이
+        // 완전히 끝날 때까지 꺼뒀다가 그 순간에만 켜서 레이스 자체를 막는다.
+        if (btn != null)
+            _riseSeq.InsertCallback(delay + riseDuration + riseSettleDuration, () => btn.interactable = true);
     }
 
     void RefreshLabels()

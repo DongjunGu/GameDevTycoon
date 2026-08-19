@@ -48,6 +48,9 @@ public class BackendManager : MonoBehaviour
 #if UNITY_EDITOR
             TestLogin();
 #elif UNITY_ANDROID
+            // 2026-08-19 — GuestLogin/TestLogin 둘 다 이 테스트 빌드에서 "bad google_hash"(401)로 막힘 확인.
+            // 로그인 방식과 무관하게 이 APK 서명 키스토어의 해시가 뒤끝 콘솔에 등록 안 된 게 원인이라
+            // 코드로 우회 불가 — 원래 로직(GPGS)으로 원복.
             FindAnyObjectByType<GPGSLogin>().StartLogin();
 #elif UNITY_IOS
             // Android(GPGS)와 동일하게 진입 즉시 자동 시도. iOS는 이미 로그인/기기 신뢰가 있으면

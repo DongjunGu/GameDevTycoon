@@ -515,6 +515,15 @@ public class TutorialController : MonoBehaviour
 
     void Start()
     {
+        // 서버 영구 플래그 — 튜토리얼 24단계가 끝나는 순간 1번 저장되고 이후 절대 안 풀림. PlayerPrefs
+        // (OnboardingState)는 기기 초기화/재설치로 사라지지만 이건 서버에 남아있어서, 그 경우에도 아래
+        // needStepN 판정(전부 PlayerPrefs 기반)까지 안 가고 여기서 바로 자멸시켜 튜토리얼 재생을 막는다.
+        if (RunStateManager.Instance != null && RunStateManager.Instance.TutorialFullyDone)
+        {
+            Destroy(gameObject);
+            return;
+        }
+
         // 1-1~1-2(버튼강조까지)는 아직 안 했고 + 스크립트된 튜토리얼 런일 때만.
         bool needStep1 = !OnboardingState.TutorialDone
             && RunStateManager.Instance != null && RunStateManager.Instance.IsTutorial;
@@ -2005,6 +2014,9 @@ public class TutorialController : MonoBehaviour
         EndDimTimeStop();
 
         OnboardingState.MarkTutorial24Done();
+        // 튜토리얼 전체가 여기서 끝난다 — 서버에 영구 저장(EndRun/StartRun으로도 안 풀림)해서, 이후 파산 없이
+        // 계속 플레이하다 기기를 초기화/재설치해도 이 계정은 튜토리얼을 다시 안 겪게 한다.
+        RunStateManager.Instance?.SetTutorialFullyDone(true);
         ShowBankruptcyEnding();
     }
 
