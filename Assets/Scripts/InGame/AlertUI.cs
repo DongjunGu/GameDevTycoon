@@ -259,30 +259,46 @@ public class AlertUI : MonoBehaviour
         asset.name = $"AlertPill_{category}_Runtime";
         asset.spriteSheet = sprite.texture;
 
-        // glyphRect는 원본 텍스처의 UV 영역(픽셀 그대로) — 렌더 크기와는 별개. 렌더 크기(metrics)만 높이
-        // 62로 고정하고 원본 가로세로 비율을 유지해 너비를 비례 계산(뱃지마다 원본 해상도가 달라도 인라인
-        // 삽입됐을 때 전부 같은 높이로 보이게).
-        const float PillRenderHeight = 62f;
-        float pillRenderWidth = sprite.rect.height > 0f
-            ? sprite.rect.width * (PillRenderHeight / sprite.rect.height)
-            : PillRenderHeight;
+        // TMP는 인라인 스프라이트를 "그 스프라이트 에셋 자신의 faceInfo.pointSize" 기준으로 스케일한다
+        // (messageText에 배정된 본문 폰트의 pointSize가 아니라 스프라이트 에셋 자체의 것). 이 에셋을
+        // 새로 만들 때 faceInfo를 안 채우면 전부 0으로 남아서(구조체 기본값) 의도한 크기보다 훨씬 작게
+        // 나온다 — TMP가 기본 Sprite Asset을 만들 때 쓰는 표준값(pointSize=90, scale=1)을 그대로 맞춰서
+        // 스케일 계산이 항상 예측 가능하게 한다.
+        const float SpritePointSize = 90f;
+        var faceInfo = asset.faceInfo;
+        faceInfo.pointSize = SpritePointSize;
+        faceInfo.scale     = 1f;
+        asset.faceInfo = faceInfo;
 
-        // bearingY(베이스라인 기준 아이콘 상단 높이)를 그냥 PillRenderHeight로 두면 아이콘이 베이스라인
-        // 바로 위에서부터 전부 위로만 쌓여서 글자 세로 중앙보다 위쪽으로 떠 보인다. 텍스트 폰트의
-        // ascent/descent 중간선(= 줄의 세로 중앙)에 아이콘의 세로 중앙이 오도록 bearingY를 계산해
-        // 실제로 텍스트 줄 한가운데 정렬되게 한다. 폰트 정보를 못 구하면 기존 방식(위 정렬)으로 대체.
-        float bearingY = PillRenderHeight;
+        // glyphRect는 원본 텍스처의 UV 영역(픽셀 그대로) — 렌더 크기와는 별개. 렌더 크기(metrics)는 화면에
+        // 실제로 보이는 목표 높이(PillRenderHeight, 유저 지정 62)를 위 SpritePointSize 기준 좌표계로
+        // 환산해서 정하고, 원본 가로세로 비율을 유지해 너비를 비례 계산한다(뱃지마다 원본 해상도가 달라도
+        // 인라인 삽입됐을 때 전부 같은 높이로 보이게).
+        const float PillRenderHeight = 62f;
+        float currentFontSize = messageText != null && messageText.fontSize > 0f ? messageText.fontSize : SpritePointSize;
+        float heightInSpriteUnits = PillRenderHeight * SpritePointSize / currentFontSize;
+        float pillRenderWidth = sprite.rect.height > 0f
+            ? sprite.rect.width * (heightInSpriteUnits / sprite.rect.height)
+            : heightInSpriteUnits;
+
+        // bearingY(베이스라인 기준 아이콘 상단 높이)를 그냥 heightInSpriteUnits로 두면 아이콘이 베이스라인
+        // 바로 위에서부터 전부 위로만 쌓여서 글자 세로 중앙보다 위쪽으로 떠 보인다. 본문 폰트의
+        // ascent/descent 중간선(= 줄의 세로 중앙)을 이 스프라이트 에셋의 좌표계(SpritePointSize 기준)로
+        // 환산해서, 그 중간선에 아이콘의 세로 중앙이 오도록 bearingY를 계산한다. 폰트 정보를 못 구하면
+        // 기존 방식(위 정렬)으로 대체.
+        float bearingY = heightInSpriteUnits;
         var font = messageText != null ? messageText.font : null;
-        if (font != null)
+        if (font != null && font.faceInfo.pointSize > 0f)
         {
-            float midline = (font.faceInfo.ascentLine + font.faceInfo.descentLine) / 2f;
-            bearingY = midline + PillRenderHeight / 2f;
+            float pointSizeRatio = SpritePointSize / font.faceInfo.pointSize;
+            float midline = (font.faceInfo.ascentLine + font.faceInfo.descentLine) / 2f * pointSizeRatio;
+            bearingY = midline + heightInSpriteUnits / 2f;
         }
 
         var glyph = new TMP_SpriteGlyph
         {
             index = 0,
-            metrics = new UnityEngine.TextCore.GlyphMetrics(pillRenderWidth, PillRenderHeight, 0f, bearingY, pillRenderWidth),
+            metrics = new UnityEngine.TextCore.GlyphMetrics(pillRenderWidth, heightInSpriteUnits, 0f, bearingY, pillRenderWidth),
             glyphRect = new UnityEngine.TextCore.GlyphRect((int)sprite.rect.x, (int)sprite.rect.y, (int)sprite.rect.width, (int)sprite.rect.height),
             scale = 1f,
             sprite = sprite,

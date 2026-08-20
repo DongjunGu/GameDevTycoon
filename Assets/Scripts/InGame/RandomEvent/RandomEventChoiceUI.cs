@@ -438,14 +438,20 @@ public class RandomEventChoiceUI : MonoBehaviour
     // 결과 팝업 종류 1=AlertUI4(제목+3줄) / 2=AlertUI5(제목+1줄) / 3=AlertUI6(제목+2줄). 제목은 항상
     // 이벤트 이름(eventTitle, RandomEventChoiceData.title) — 2026-08-20부터 결과멘트1을 더 이상 제목
     // 자리에 안 쓰고 전부 본문으로 내림([[project_alertui_consolidation]]).
-    // resultMent1 이 비어있으면(예: 유튜버 선공개 "애매한 반응" 분기 — 원래 팝업 없음) 그냥 넘어간다.
+    // resultMent1/2/3 전부 비어있으면(예: 유튜버 선공개 "애매한 반응" 분기 — 원래 팝업 없음) 그냥 넘어간다.
+    // resultMent1만 보고 판단하면 안 됨 — 2026-08-20 CSV 개편으로 ment1이 서사/묘사용 줄이라 비어있고
+    // ment2/3에 실제 결과만 있는 경우(생일/커피/투자 등 다수)가 생겼는데, ment1만 비었다고 팝업 전체를
+    // 건너뛰면 그 결과 줄까지 통째로 안 뜨는 버그가 됨.
     // 1차 팝업 확인 후 resultPopupType2 가 지정돼 있으면 이어서 2차 팝업(예: 패자 효과)을 띄운다.
     // employeeId: ResolvePlaceholders 안전망용 — "{직원이름}"이 남아있을 때만 사용됨.
     static void ShowResultPopup(RandomEventChoiceOption choice, string eventTitle, string employeeId, System.Action resume)
     {
         System.Action afterFirst = () => ShowResultPopup2(choice, eventTitle, employeeId, resume);
 
-        if (string.IsNullOrEmpty(choice.resultMent1)) { afterFirst(); return; }
+        bool hasAnyResult = !string.IsNullOrEmpty(choice.resultMent1)
+                          || !string.IsNullOrEmpty(choice.resultMent2)
+                          || !string.IsNullOrEmpty(choice.resultMent3);
+        if (!hasAnyResult) { afterFirst(); return; }
 
         string ment1 = ResolvePlaceholders(choice.resultMent1, employeeId);
         string ment2 = ResolvePlaceholders(choice.resultMent2, employeeId);
@@ -463,7 +469,10 @@ public class RandomEventChoiceUI : MonoBehaviour
 
     static void ShowResultPopup2(RandomEventChoiceOption choice, string eventTitle, string employeeId, System.Action resume)
     {
-        if (string.IsNullOrEmpty(choice.resultMent1_2)) { resume(); return; }
+        bool hasAnyResult = !string.IsNullOrEmpty(choice.resultMent1_2)
+                          || !string.IsNullOrEmpty(choice.resultMent2_2)
+                          || !string.IsNullOrEmpty(choice.resultMent3_2);
+        if (!hasAnyResult) { resume(); return; }
 
         string ment1 = ResolvePlaceholders(choice.resultMent1_2, employeeId);
         string ment2 = ResolvePlaceholders(choice.resultMent2_2, employeeId);
