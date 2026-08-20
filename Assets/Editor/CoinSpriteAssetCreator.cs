@@ -94,6 +94,16 @@ public static class CoinSpriteAssetCreator
     {
         if (!Application.isPlaying) { Debug.LogWarning("[CoinSpriteAssetCreator] Play 모드에서만 실행 가능"); return; }
         if (AlertUI.Instance == null) { Debug.LogWarning("[CoinSpriteAssetCreator] AlertUI.Instance 없음"); return; }
-        AlertUI.Instance.ShowResult4("테스트", "<sprite=\"CoinSpriteAsset\" name=\"coin\"> <color=#F3C01D>(-3000G)</color>", "");
+        AlertUI.Instance.ShowResult4("테스트", "<sprite=\"CoinSpriteAsset\" name=\"coin\"> <color=#F3C01D>-3000G</color>", "", "");
+    }
+
+    // 임시 검증용 — 서로 다른 pill 카테고리(개발기간+돈) 2개가 한 메시지에 섞였을 때 fallbackSpriteAssets
+    // 체인이 제대로 동작하는지(다른 텍스처를 가리키는 두 번째 아이콘이 깨지지 않는지) 확인. 확인 후 삭제해도 무방.
+    [MenuItem("Tools/GameDevTycoon/Test AlertUI Pill Mix (Play Mode)")]
+    public static void TestAlertPillMix()
+    {
+        if (!Application.isPlaying) { Debug.LogWarning("[CoinSpriteAssetCreator] Play 모드에서만 실행 가능"); return; }
+        if (AlertUI.Instance == null) { Debug.LogWarning("[CoinSpriteAssetCreator] AlertUI.Instance 없음"); return; }
+        AlertUI.Instance.ShowResult6("의문의 투자 제안", "{개발기간} +2주 연장됐습니다.", "{돈}+총 연봉 *10% G 증가했습니다");
     }
 }

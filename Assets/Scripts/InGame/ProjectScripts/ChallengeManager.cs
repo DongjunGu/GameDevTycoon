@@ -117,14 +117,15 @@ public class ChallengeManager
         LeaderType.Artist => "artL",
         _ => ""
     };
-    // 도전 파트의 현재 실제값 — 리더존은 팀장점수 총합, 파트총점은 DevelopmentPanelUI 누적치(진행 중에도 조회 가능).
+    // 도전 파트의 현재 실제값 — DevelopmentPanelUI 파트 점수(진행 중에도 조회 가능).
     public float GetChallengeCurrentValue() => GetCurrentValueForPart(_challengePart);
 
-    // 임의 파트의 현재 실제값 — 도전 파트가 아닌 다른 두 파트도 같은 기준(현재 Kind)으로 조회할 때 사용
-    // (예: MissionAlertUI가 3파트를 한번에 나란히 보여줄 때).
-    public float GetCurrentValueForPart(LeaderType part) => _kind == ChallengeKind.PartTotal
-        ? GetActualPartTotal(part)
-        : GetActualLeaderTotal(part);
+    // 임의 파트의 현재 실제값 — 도전 파트가 아닌 다른 두 파트도 조회할 때 사용(예: MissionAlertUI가 3파트를
+    // 한번에 나란히 보여줄 때). Kind와 무관하게 항상 DevelopmentPanelUI 쪽 값(GetActualPartTotal)만 본다 —
+    // ClaimReward()가 Kind 무관 항상 그쪽에만 보상을 더하므로, 여기서도 같은 값을 봐야 보상 수령 후
+    // CurrentScorePanel이 실제로 오른 걸 보여준다(2026-08-20, 리더존일 때 GetActualLeaderTotal을 따로
+    // 보던 걸 통일 — 보상이 반영 안 되는 값을 보여주고 있었음).
+    public float GetCurrentValueForPart(LeaderType part) => GetActualPartTotal(part);
 
     // 프로젝트 개발 시작(기획 팀장 선택 직전) — 종류/도전 파트/보상 파트를 랜덤 확정하고 공지 알림을 띄운다.
     // onClosed: 알림을 닫은 뒤 이어갈 콜백(기획 팀장 선택 패널 오픈 등).
@@ -371,6 +372,11 @@ public class ChallengeManager
         }
 
         ApplySatisfactionReward();
+
+        // [[feedback_save_4set_pattern]] — 점수(프로젝트)/만족도(직원) 상태가 바뀌었으므로 4-set 저장.
+        MoneyManager.Instance?.SaveMoney();
+        GameTimeManager.Instance?.SaveGameTime();   // 내부에서 SaveAllEmployees() 호출
+        ProjectSaveManager.Instance?.SaveProject(); // challengeSaveData(RewardApplied=true 포함)도 여기서 같이 저장됨
     }
 
     // 95수준=랜덤 1명 +5 / 파트총점수준=랜덤 1명 +10 / 99수준=전 직원 +5. 표시용 설명 문자열을 반환.

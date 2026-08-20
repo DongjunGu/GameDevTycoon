@@ -373,7 +373,7 @@ public static class CharacterUniqueEvents
         {
             case 1: // 꽝
                 InfoFeedUI.Instance?.ShowCustom(ugi, $"{ugi.employeeName}에게 아무 일도 일어나지 않았다. (꽝)");
-                return "주사위 결과: 1\n\n…이번 해에는 아무 일도 일어나지 않았습니다. (꽝)";
+                return "주사위 결과: 1\n\n...이번 해에는 아무 일도 일어나지 않았습니다. (꽝)";
             case 2: // 우기 능력치 100~130% 중 특정값 고정 (다음 축복까지, 우주의 기운 매주 재추첨 정지)
             {
                 int pct = Random.Range(100, 131); // 100~130
@@ -389,7 +389,7 @@ public static class CharacterUniqueEvents
                 if (target == null)
                 {
                     InfoFeedUI.Instance?.ShowCustom(ugi, "대상 직원이 없어 축복이 흩어졌다.");
-                    return "주사위 결과: 3\n\n…대상 직원이 없어 축복이 흩어졌습니다.";
+                    return "주사위 결과: 3\n\n...대상 직원이 없어 축복이 흩어졌습니다.";
                 }
                 target.godBlessingStatPercent = GOD_BLESSING_STAT_PERCENT;
                 InfoFeedUI.Instance?.ShowCustom(target,

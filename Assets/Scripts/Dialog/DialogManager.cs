@@ -18,6 +18,10 @@ public class DialogManager : MonoBehaviour
     // resultType(string), resultValue(int) 전달 → 각 Manager가 구독
     public event Action<string, int> OnChoiceResult;
     public event Action OnDialogEnd;
+    // 선택지 버튼이 실제로 화면에 뜬 시점(타이핑 완료 직후) — DialogUI.ShowChoices에서 호출.
+    // SalaryNegotiationManager처럼 "선택지 뜰 때 같이 보여줄 UI"가 필요한 호출자가 구독.
+    public event Action OnChoicesShown;
+    public void NotifyChoicesShown() => OnChoicesShown?.Invoke();
 
     // ─── 캐시 ────────────────────────────────────────────────────
     // key: dialogId
