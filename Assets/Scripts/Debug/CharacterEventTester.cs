@@ -133,6 +133,31 @@ public class CharacterEventTester : MonoBehaviour
         }
 
         GUILayout.Space(8);
+        GUILayout.Label("<b>━━ 연봉협상 테스트 ━━</b>", Rich());
+        if (GUILayout.Button("연봉협상 즉시 시작 (스케줄 무시, 랜덤 대상)"))
+        {
+            if (SalaryNegotiationManager.Instance == null) Set("SalaryNegotiationManager 인스턴스 없음");
+            else { SalaryNegotiationManager.Instance.TestStartNegotiation(); Set("연봉협상 테스트 시작 (대상 없으면 콘솔 경고 확인)"); }
+        }
+
+        GUILayout.Space(8);
+        GUILayout.Label("<b>━━ AlertUI pill 테스트 (통합 문구, [[project_alertui_consolidation]]) ━━</b>", Rich());
+        if (GUILayout.Button("pill 7종 전부 큐잉 (확인 눌러가며 순서대로 확인)")) TestAlertPills();
+        GUILayout.Label("랜덤이벤트 결과팝업(ShowResult4/5/6) — 제목=이벤트 이름, AlertPanel1로 통합된 것 확인용:");
+        GUILayout.BeginHorizontal();
+        if (GUILayout.Button("Result4 (제목+3줄)")) AlertUI.Instance?.ShowResult4("우기의 각성", "능력치 +10% 증가", "15주 동안 유지", "만족도도 함께 상승");
+        if (GUILayout.Button("Result5 (제목+1줄)")) AlertUI.Instance?.ShowResult5("장비 업그레이드", "완료됐습니다");
+        if (GUILayout.Button("Result6 (제목+2줄)")) AlertUI.Instance?.ShowResult6("투자 이벤트", "총 연봉 -906 G 감소했습니다", "다음 기회를 노려보세요");
+        GUILayout.EndHorizontal();
+        GUILayout.Label("pill 토큰 치환 확인 (CSV 신규 포맷 — 한 메시지에 서로 다른 카테고리 2개 섞인 케이스 포함):");
+        GUILayout.BeginHorizontal();
+        if (GUILayout.Button("Result4 pill (능력치+돈 혼합)")) AlertUI.Instance?.ShowResult4("장비 업그레이드 요청", "장비 업그레이드 완료", "테스트 직원의 {능력치}가\n5주 동안 +10% 증가됩니다", "-3000G 감소했습니다");
+        if (GUILayout.Button("Result5 pill (만족도)")) AlertUI.Instance?.ShowResult5("생일", "테스트 직원 {만족도} +10 증가했습니다");
+        if (GUILayout.Button("Result6 pill (개발기간+돈)")) AlertUI.Instance?.ShowResult6("의문의 투자 제안", "{개발기간} +2주 연장됐습니다.", "{돈}+총 연봉 *10% G 증가했습니다");
+        GUILayout.EndHorizontal();
+        if (GUILayout.Button("일반 Show(string) — AlertPanel7로 뜨는지 확인 (도전과제 공지 등)")) AlertUI.Instance?.Show("테스트: 이건 AlertPanel7이어야 함");
+
+        GUILayout.Space(8);
         GUILayout.Label("<b>━━ 이벤트 강제 발동 ━━</b>", Rich());
 
         if (GUILayout.Button("유리멘탈 회복 (만족도50→Trigger)")) ForceKim();
@@ -543,6 +568,30 @@ public class CharacterEventTester : MonoBehaviour
         // dim/시간정지/메뉴숨김이 고아로 남지 않고 확실히 정리된 뒤 19-1이 새로 시작된다.
         TutorialController.Instance.ForceResetAndStart(TutorialController.Instance.PlayTutorial19());
         Set("1~18단계 완료 처리 + 19-1 튜토리얼 대사 강제 재생");
+    }
+
+    // ── AlertUI pill 테스트 — b1~b8 목업 기준 7카테고리(Money/Item은 아직 이미지 없어서 제외)를 전부
+    // 큐잉해 순서대로(확인 버튼) 훑어볼 수 있게 함. 실제 게임 콜사이트는 아직 어디도 새 API로 안 옮겨졌으므로
+    // (project_alertui_consolidation 메모 참고) 지금 이 버튼이 사실상 유일한 시험 경로.
+    void TestAlertPills()
+    {
+        if (AlertUI.Instance == null) { Set("AlertUI 인스턴스 없음 (인게임에서 실행하세요)"); return; }
+
+        var samples = new List<List<AlertUI.AlertSegment>>
+        {
+            new() { AlertUI.AlertSegment.Text("훈수쟁이 "), AlertUI.AlertSegment.Pill(AlertPillCategory.Satisfaction), AlertUI.AlertSegment.Text(" -10 감소했습니다") },
+            new() { AlertUI.AlertSegment.Text("전 직원 "), AlertUI.AlertSegment.Pill(AlertPillCategory.Satisfaction), AlertUI.AlertSegment.Text(" -10 감소했습니다") },
+            new() { AlertUI.AlertSegment.Text("훈수쟁이의 "), AlertUI.AlertSegment.Pill(AlertPillCategory.Ability), AlertUI.AlertSegment.Text("가\n3주 동안 +10% 증가합니다") },
+            new() { AlertUI.AlertSegment.Pill(AlertPillCategory.DevPeriod), AlertUI.AlertSegment.Text(" +3주 연장됐습니다") },
+            new() { AlertUI.AlertSegment.Pill(AlertPillCategory.Planning), AlertUI.AlertSegment.Text(" 점수 -10 감소했습니다") },
+            new() { AlertUI.AlertSegment.Pill(AlertPillCategory.Programmer), AlertUI.AlertSegment.Text(" 점수 +10 증가했습니다") },
+            new() { AlertUI.AlertSegment.Pill(AlertPillCategory.Artist), AlertUI.AlertSegment.Text(" 점수 +10 증가했습니다") },
+            // Creativity — 아직 이미지 없음(pillSet 미배선) → pill 없이 텍스트만 나오는 게 정상(생략 동작 확인용).
+            new() { AlertUI.AlertSegment.Pill(AlertPillCategory.Creativity), AlertUI.AlertSegment.Text(" 점수 -5 감소했습니다 (이미지 없어서 pill은 안 보여야 정상)") },
+        };
+
+        foreach (var segs in samples) AlertUI.Instance.Show(segs);
+        Set($"AlertUI pill 테스트 {samples.Count}개 큐잉함 — 확인 버튼 눌러가며 순서대로 확인");
     }
 
     // ── 채용 ──

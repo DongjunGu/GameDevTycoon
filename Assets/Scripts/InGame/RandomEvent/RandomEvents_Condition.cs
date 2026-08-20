@@ -265,7 +265,7 @@ public static class RandomEvents_Condition
         mgr.ClearCoupleIfInvolved(empId1);
 
         RandomEventUI.Instance.Show(
-            row?.title ?? "사내 연애의 결말…",
+            row?.title ?? "사내 연애의 결말...",
             emp1.portraitId,
             row?.descriptions?.Length > 0 ? row.descriptions[0] : "",
             sysMsg,

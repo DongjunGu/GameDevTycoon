@@ -42,11 +42,19 @@ public class ExistEmployeePanelUI : MonoBehaviour
         if (gradeText != null)       gradeText.text       = owned.GradeToString();
         GradeSpriteSet.Apply(gradePanel, gradeSpriteSet, owned.grade);
 
-        if (planningText != null)   planningText.text   = owned.PlanningText();
-        if (developText != null)    developText.text    = owned.DevelopText();
-        if (artText != null)        artText.text         = owned.ArtText();
-        if (creativityText != null) creativityText.text = owned.CreativityText();
+        if (planningText != null)   planningText.text   = ValueOnly(owned.PlanningText());
+        if (developText != null)    developText.text    = ValueOnly(owned.DevelopText());
+        if (artText != null)        artText.text         = ValueOnly(owned.ArtText());
+        if (creativityText != null) creativityText.text = ValueOnly(owned.CreativityText());
 
         if (salaryValueText != null) salaryValueText.text = $"{owned.salary:N0} G";
+    }
+
+    // "기획: 50" → "50" 처럼 라벨(콜론 앞)을 떼고 값만 반환 — EmployeeResumePanel.ValueOnly와 동일 패턴.
+    static string ValueOnly(string labeled)
+    {
+        if (string.IsNullOrEmpty(labeled)) return labeled;
+        int i = labeled.IndexOf(':');
+        return i >= 0 ? labeled.Substring(i + 1).Trim() : labeled;
     }
 }

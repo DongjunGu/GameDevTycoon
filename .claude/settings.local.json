@@ -23,7 +23,8 @@
       "WebFetch(domain:community.thebackend.io)",
       "WebFetch(domain:developer.thebackend.io)",
       "Artifact",
-      "Bash(claude mcp *)"
+      "Bash(claude mcp *)",
+      "Bash(python3 -c ' *)"
     ],
     "ask": [
       "Bash(rm:*)",

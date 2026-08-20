@@ -38,7 +38,7 @@ public static class TutorialDialogChartLoader
     {
         ["1-1"] = new List<TutorialDialogLine>
         {
-            new() { dialogId = "tut_1_1_0", stepGroup = "1-1", order = 1, speakerName = "비서", portraitId = "portrait_secretary", text = "현재 우리 회사의 직원은… [[대표님 한 명]]이네요." },
+            new() { dialogId = "tut_1_1_0", stepGroup = "1-1", order = 1, speakerName = "비서", portraitId = "portrait_secretary", text = "현재 우리 회사의 직원은... [[대표님 한 명]]이네요." },
             new() { dialogId = "tut_1_1_1", stepGroup = "1-1", order = 2, speakerName = "나",   portraitId = "ceo_001",           text = "너는 누구지 그럼?" },
             new() { dialogId = "tut_1_1_2", stepGroup = "1-1", order = 3, speakerName = "비서", portraitId = "portrait_secretary", text = "저요? 저는 직원이 아니라 대표님의 [[만능 비서]]잖아요! 아직 잠이 덜깨신건가?" },
         },
@@ -48,7 +48,7 @@ public static class TutorialDialogChartLoader
         },
         ["3-1"] = new List<TutorialDialogLine>
         {
-            new() { dialogId = "tut_3_1_0", stepGroup = "3-1", order = 1, speakerName = "비서", portraitId = "portrait_secretary", text = "지원자들이 왔어요! 이렇게 반지하까지 와주다니…\n다들 사연이 있어 보이네요." },
+            new() { dialogId = "tut_3_1_0", stepGroup = "3-1", order = 1, speakerName = "비서", portraitId = "portrait_secretary", text = "지원자들이 왔어요! 이렇게 반지하까지 와주다니...\n다들 사연이 있어 보이네요." },
         },
         ["3-2"] = new List<TutorialDialogLine>
         {
@@ -66,7 +66,7 @@ public static class TutorialDialogChartLoader
         },
         ["3-5"] = new List<TutorialDialogLine>
         {
-            new() { dialogId = "tut_3_5_0", stepGroup = "3-5", order = 1, speakerName = "비서", portraitId = "portrait_secretary", text = "잠깐만요, 이 지원자… 스펙이 엄청난데요?\n이런 분은 얼른 저희 회사로 데려가버리죠" },
+            new() { dialogId = "tut_3_5_0", stepGroup = "3-5", order = 1, speakerName = "비서", portraitId = "portrait_secretary", text = "잠깐만요, 이 지원자... 스펙이 엄청난데요?\n이런 분은 얼른 저희 회사로 데려가버리죠" },
         },
         ["4-1"] = new List<TutorialDialogLine>
         {
@@ -91,7 +91,7 @@ public static class TutorialDialogChartLoader
         },
         ["17-4"] = new List<TutorialDialogLine>
         {
-            new() { dialogId = "tut_17_4_0", stepGroup = "17-4", order = 1, speakerName = "비서", portraitId = "portrait_secretary", text = "4번연속 성공이라니… 대표님은 실력도 운도\n모두 재능이 있으시네요" },
+            new() { dialogId = "tut_17_4_0", stepGroup = "17-4", order = 1, speakerName = "비서", portraitId = "portrait_secretary", text = "4번연속 성공이라니... 대표님은 실력도 운도\n모두 재능이 있으시네요" },
         },
         ["17-5"] = new List<TutorialDialogLine>
         {

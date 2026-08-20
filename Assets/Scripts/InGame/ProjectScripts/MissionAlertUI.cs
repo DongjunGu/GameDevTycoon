@@ -13,7 +13,13 @@ public class MissionAlertUI : MonoBehaviour
 
     public GameObject mainPanel;      // MissionMainPanel
     public Image missionIcon;         // MissionPanel/MissionIcon — 도전 파트(ChallengePart) 아이콘
-    public TextMeshProUGUI missionText;
+    public TextMeshProUGUI missionText; // 파트총점(PartTotal) 및 "없음" 상태 전용
+
+    [Header("팀장점수(리더존 95/99) 전용 — \"{파트}팀장 [뱃지] 이상\", missionText 대신 표시")]
+    public GameObject missionBadgeRow;
+    public TextMeshProUGUI missionBadgePrefixText; // "{파트}팀장" (파트명만 색상)
+    public TextMeshProUGUI missionBadgeScoreText;  // 뱃지 안 목표점수 숫자
+
     public Image rewardIcon;
     public TextMeshProUGUI rewardText;
     public Button confirmButton;
@@ -79,7 +85,8 @@ public class MissionAlertUI : MonoBehaviour
 
         if (c == null || !c.IsActive)
         {
-            if (missionText != null) missionText.text = "없음";
+            if (missionText != null) { missionText.gameObject.SetActive(true); missionText.text = "없음"; }
+            if (missionBadgeRow != null) missionBadgeRow.SetActive(false);
             if (missionIcon != null) missionIcon.enabled = false;
             if (rewardIcon != null) rewardIcon.enabled = false;
             if (rewardText != null) rewardText.text = "";
@@ -88,18 +95,23 @@ public class MissionAlertUI : MonoBehaviour
             if (planningScoreText != null) planningScoreText.text = "0";
             if (developScoreText != null) developScoreText.text = "0";
             if (artScoreText != null) artScoreText.text = "0";
-            if (mainPanel != null) mainPanel.SetActive(true);
+            ShowMainPanel();
             return;
         }
 
-        // 95존/99존은 내부 명칭을 그대로 노출하지 않고 "{파트}팀장 N점 이상 달성"으로 통일 표시(파트총점만 별도 문구).
-        // "[파트]" 같은 대괄호 접두 형식은 안 붙인다. 파트명({기획/개발/아트}) 부분만 파트별 색상으로 강조.
-        if (missionText != null)
+        // 파트총점은 기존 텍스트 한 줄, 팀장점수(95/99존)는 MissionDetail(MissionPanelDisplay)과 동일하게
+        // 목표점수를 뱃지 이미지 안에 숫자로 표시("{파트}팀장 [N] 이상", "달성" 문구는 뺌).
+        bool isLeaderZone = c.Kind != ChallengeKind.PartTotal;
+        if (missionText != null) missionText.gameObject.SetActive(!isLeaderZone);
+        if (missionBadgeRow != null) missionBadgeRow.SetActive(isLeaderZone);
+
+        string coloredChallengePart = ColorizePartName(c.ChallengePart);
+        if (!isLeaderZone && missionText != null)
+            missionText.text = $"{coloredChallengePart}의 총 점수 <color=#E63356>{Mathf.RoundToInt(c.TargetValue)}</color>이상";
+        if (isLeaderZone)
         {
-            string coloredChallengePart = ColorizePartName(c.ChallengePart);
-            missionText.text = c.Kind == ChallengeKind.PartTotal
-                ? $"{coloredChallengePart} 총점 <color=#E63356>{Mathf.RoundToInt(c.TargetValue)}</color>점 이상 달성"
-                : $"{coloredChallengePart}팀장 <color=#E63356>{Mathf.RoundToInt(c.TargetValue)}</color>점 이상 달성";
+            if (missionBadgePrefixText != null) missionBadgePrefixText.text = $"{coloredChallengePart}팀장 점수";
+            if (missionBadgeScoreText != null) missionBadgeScoreText.text = Mathf.RoundToInt(c.TargetValue).ToString();
         }
         if (missionIcon != null)
         {
@@ -126,7 +138,18 @@ public class MissionAlertUI : MonoBehaviour
         bool succeeded = c.Resolved && c.Succeeded;
         if (successPanel != null) successPanel.SetActive(succeeded);
         SetButtonState(succeeded && !c.RewardApplied, succeeded && c.RewardApplied);
-        if (mainPanel != null) mainPanel.SetActive(true);
+        ShowMainPanel();
+    }
+
+    // mainPanel(ModalLayer 부착)을 켠다. 이미 켜져 있는 상태(예: QuestPanel로 미리보기 중이던 패널 위에
+    // 자동 팝업이 다시 Show()를 부르는 경우)면 SetActive(true)가 already-active no-op이라 ModalLayer.OnEnable
+    // (ModalBlocker 재등록 → 스택 맨 위로 재배치)이 안 불려서, 그 사이 다른 모달이 위에 얹혔으면 이 패널이
+    // 계속 가려진 채로 "안 뜬 것"처럼 보일 수 있었다 — 껐다 다시 켜서 항상 OnEnable을 강제로 재발화시킨다.
+    void ShowMainPanel()
+    {
+        if (mainPanel == null) return;
+        if (mainPanel.activeSelf) mainPanel.SetActive(false);
+        mainPanel.SetActive(true);
     }
 
     // 파트별 아이콘(L 사이즈) — missionIcon(도전 파트)/rewardIcon(보상 파트) 공용.
@@ -177,8 +200,13 @@ public class MissionAlertUI : MonoBehaviour
     }
 
     // RewardIcon에서 미끄러져 나와(펼쳐짐 → 대기 → 흡수) 보상이 실제로 반영되는 곳으로 빨려들어간다 —
-    // 팀장점수(리더존) 보상은 CurrentScorePanel의 해당 RoleIcon으로, 총점(파트총점) 보상은
-    // DevelopmentPanelUI의 해당 파트 패널로(ChallengeManager.ClaimReward가 실제로 그쪽 값을 올리므로).
+    // ChallengeManager.ClaimReward()는 팀장점수(리더존) 보상이든 파트총점 보상이든 Kind 무관하게 항상
+    // DevelopmentPanelUI 쪽 파트 점수만 올리므로(리더 점수 총합엔 절대 안 더해짐), 애니메이션 목표도
+    // 항상 DevelopmentPanelUI의 해당 파트 패널로 통일한다. (2026-08-20 수정 — 예전엔 리더존 타입일 때
+    // CurrentScorePanel의 RoleIcon/ScoreText로 날아가 그 텍스트를 beforeValue+RewardScore로 임의 덮어썼는데,
+    // 실제로 오르는 값은 그쪽이 아니라서 패널을 다시 열면 원래(리더 점수 총합) 값으로 되돌아가 "보상이 안
+    // 들어간 것처럼" 보이는 버그가 있었음 — 실제 값이 오르는 DevelopmentPanelUI로 보내면 재조회해도 항상
+    // 일치한다.)
     // LeaderScoreUI.BonusFlyCoroutine과 동일한 3단계 구조를 아이콘 1개짜리로 옮긴 것 — 보상 지급(ClaimReward)은
     // 아이콘이 도착하는 순간에 실행해, 그 직후 갱신하는 표시값이 실제 반영된 최신값과 정확히 맞도록 한다.
     // 흡수+펀치가 끝나고 0.2초 뒤 onComplete(=Hide)를 불러 자동으로 닫힌다.
@@ -188,40 +216,15 @@ public class MissionAlertUI : MonoBehaviour
         if (challenge == null) { onComplete?.Invoke(); yield break; }
 
         LeaderType rewardPart = challenge.RewardPart;
-        bool isPartTotal = challenge.Kind == ChallengeKind.PartTotal;
 
-        RectTransform targetIcon;
-        TextMeshProUGUI targetText; // 총점은 AddValuesInstant가 DevelopmentPanelUI 텍스트를 자동 갱신하므로 null로 둠
-        if (isPartTotal)
+        var devPanelUI = DevelopmentPanelUI.Instance;
+        RectTransform targetIcon = rewardPart switch
         {
-            var devPanelUI = DevelopmentPanelUI.Instance;
-            targetIcon = rewardPart switch
-            {
-                LeaderType.Planner => devPanelUI != null ? devPanelUI.planningPanel : null,
-                LeaderType.Programmer => devPanelUI != null ? devPanelUI.devPanel : null,
-                LeaderType.Artist => devPanelUI != null ? devPanelUI.artPanel : null,
-                _ => null
-            };
-            targetText = null;
-        }
-        else
-        {
-            Image roleIcon = rewardPart switch
-            {
-                LeaderType.Planner => planningScoreRoleIcon,
-                LeaderType.Programmer => developScoreRoleIcon,
-                LeaderType.Artist => artScoreRoleIcon,
-                _ => null
-            };
-            targetIcon = roleIcon != null ? roleIcon.transform as RectTransform : null;
-            targetText = rewardPart switch
-            {
-                LeaderType.Planner => planningScoreText,
-                LeaderType.Programmer => developScoreText,
-                LeaderType.Artist => artScoreText,
-                _ => null
-            };
-        }
+            LeaderType.Planner => devPanelUI != null ? devPanelUI.planningPanel : null,
+            LeaderType.Programmer => devPanelUI != null ? devPanelUI.devPanel : null,
+            LeaderType.Artist => devPanelUI != null ? devPanelUI.artPanel : null,
+            _ => null
+        };
 
         // 연출에 필요한 참조가 없으면 보상만 조용히 지급하고 끝 — 씬 배선 누락이 보상 자체를 막으면 안 됨.
         if (rewardIcon == null || rewardIcon.sprite == null || targetIcon == null || mainPanel == null)
@@ -289,22 +292,10 @@ public class MissionAlertUI : MonoBehaviour
 
         Destroy(go);
 
-        // ClaimReward()는 팀장점수(리더존) 보상이든 파트총점 보상이든 항상 DevelopmentPanelUI 쪽 값만
-        // 올린다(ChallengeManager.ClaimReward 참고) — CurrentScorePanel이 리더존일 때 보여주는
-        // GetCurrentValueForPart(=리더 점수 총합)는 그 값을 안 읽으므로, ClaimReward 후 다시 조회해도
-        // 그대로라 화면이 안 올라가는 것처럼 보였다. 그래서 지급 "전" 값을 미리 잡아두고 RewardScore를
-        // 직접 더해 표시한다 — 실제로 어느 필드가 올랐는지와 무관하게 흡수된 만큼 눈에 보이게 반영.
-        float beforeValue = targetText != null ? challenge.GetCurrentValueForPart(rewardPart) : 0f;
-
-        // 흡수 임팩트 — 보상을 실제로 지급한 뒤, 목표(RoleIcon 또는 DevelopmentPanel 파트 패널)를
-        // 펀치 스케일하고(총점이 아니면) 최신값으로 갱신.
+        // 흡수 임팩트 — 보상을 실제로 지급한 뒤 DevelopmentPanel 파트 패널을 펀치 스케일. 그 패널 텍스트
+        // 자체는 AddValuesInstant가 자동 갱신하므로 여기서 따로 값을 덮어쓸 필요 없음.
         challenge.ClaimReward();
         FirePunch(targetIcon);
-        if (targetText != null)
-        {
-            FirePunch(targetText.transform as RectTransform);
-            targetText.text = Mathf.RoundToInt(beforeValue + challenge.RewardScore).ToString();
-        }
 
         yield return new WaitForSeconds(0.2f);
         onComplete?.Invoke();

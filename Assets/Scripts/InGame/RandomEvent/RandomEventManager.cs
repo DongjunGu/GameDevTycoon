@@ -258,7 +258,7 @@ public class RandomEventManager : MonoBehaviour
     void OnWeekChanged()
     {
         while (_nextWeekPopups.Count > 0)
-            AlertUI.Instance.Show(_nextWeekPopups.Dequeue());
+            AlertUI.Instance.ShowRandomEventResult(_nextWeekPopups.Dequeue());
 
         HandleYearlyRecovers();
 
@@ -370,7 +370,7 @@ public class RandomEventManager : MonoBehaviour
                 _pendingRunAlerts.RemoveAt(i);
                 EmployeeManager.Instance.ReduceAllSatisfaction(5);
                 string capturedMsg = alert.alertMessage;
-                AlertUI.Instance.Show(capturedMsg, () =>
+                AlertUI.Instance.ShowRandomEventResult(capturedMsg, () =>
                 {
                     // 튜토리얼 중엔 회사 평점 1점 후속 이벤트가 확률적으로 끼어들지 않게 막는다.
                     if (TutorialController.IsFullyDone() && UnityEngine.Random.value < 0.3f)
@@ -1004,7 +1004,7 @@ public class RandomEventManager : MonoBehaviour
         if (value >= InvestmentThreshold)
         {
             MoneyManager.Instance.AddGold(reward);
-            AlertUI.Instance.Show(
+            AlertUI.Instance.ShowRandomEventResult(
                 $"투자 이벤트 성공!\n리워드 {reward:N0} G를 얻었습니다",
                 () => onComplete?.Invoke());
         }
@@ -1012,7 +1012,7 @@ public class RandomEventManager : MonoBehaviour
         {
             int goldAfter = MoneyManager.Instance.Gold - penalty;
             MoneyManager.Instance.ForceSpendGold(penalty);
-            AlertUI.Instance.Show(
+            AlertUI.Instance.ShowRandomEventResult(
                 $"투자 이벤트 실패\n위약금 {penalty:N0} G를 잃었습니다",
                 () =>
                 {

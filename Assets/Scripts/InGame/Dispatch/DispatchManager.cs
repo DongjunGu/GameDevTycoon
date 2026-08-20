@@ -208,14 +208,14 @@ public class DispatchManager : MonoBehaviour
         else if (!win && enhanced)
             pool = new[]
             {
-                "기술 포인트는 조금 아쉽지만… 대신 제가 엄청 성장해서 왔잖아요!",
+                "기술 포인트는 조금 아쉽지만... 대신 제가 엄청 성장해서 왔잖아요!",
                 "가져온 정보가 적어서 실망하셨죠? 대신 제가 성장했으니까 이제 캐리할게요!"
             };
         else
             pool = new[]
             {
-                "이번 출장은 진짜 대실패였네요… 죄송합니다ㅠㅠ",
-                "분명 성공 직전이었는데 너무 아쉽네요…"
+                "이번 출장은 진짜 대실패였네요... 죄송합니다ㅠㅠ",
+                "분명 성공 직전이었는데 너무 아쉽네요..."
             };
 
         return pool[Random.Range(0, pool.Length)];

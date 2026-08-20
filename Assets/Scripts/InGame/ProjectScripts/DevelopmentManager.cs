@@ -2110,6 +2110,10 @@ public class DevelopmentManager : MonoBehaviour
             case LeaderType.Programmer: programmerLeader = emp; break;
             case LeaderType.Artist:     artistLeader = emp;     break;
         }
+        // SetLeader()와 동일하게 여기서도 세팅해야 함 — 안 하면 OnLeaderScoreClosedCheckChallengeClaim의
+        // CurrentLeaderScoreType.HasValue 체크가 항상 실패해, 팀장점수(95/99존) 도전과제를 재접속 세션 중에
+        // 달성해도 MissionAlertUI 자동 팝업이 안 뜨는 버그가 있었음(2026-08-20 발견+수정).
+        CurrentLeaderScoreType = type;
 
         if (d.hasValues)
         {

@@ -17,7 +17,11 @@ public class MissionPanelDisplay : MonoBehaviour
 
     public TextMeshProUGUI missionText2;
     public Image missionDetailIcon;
-    public TextMeshProUGUI missionDetailText;
+    public TextMeshProUGUI missionDetailText; // 파트총점(PartTotal) 전용 — "총점 N점 이상 달성"
+
+    [Header("팀장점수(리더존 95/99) 전용 — \"팀장점수 [뱃지] 이상\", missionDetailText 대신 표시")]
+    public GameObject missionDetailBadgeRow;
+    public TextMeshProUGUI scoreBadgeText; // 뱃지 안 목표점수 숫자
 
     LeaderType? _lastIconPart;
 
@@ -53,14 +57,31 @@ public class MissionPanelDisplay : MonoBehaviour
             missionDetailIcon.enabled = sprite != null;
         }
 
-        if (missionDetailText != null)
-            missionDetailText.text = c.Kind == ChallengeKind.PartTotal
-                ? $"총점 {Mathf.RoundToInt(c.TargetValue)}점 이상 달성"
-                : $"팀장 {Mathf.RoundToInt(c.TargetValue)}점 이상 달성";
+        // 파트총점은 기존 텍스트 한 줄, 팀장점수(95/99존)는 목표점수를 뱃지 이미지 안에 숫자로 표시("팀장점수 [N] 이상").
+        bool isLeaderZone = c.Kind != ChallengeKind.PartTotal;
+        if (missionDetailText != null) missionDetailText.gameObject.SetActive(!isLeaderZone);
+        if (missionDetailBadgeRow != null) missionDetailBadgeRow.SetActive(isLeaderZone);
+
+        // 파트총점(PartTotal) — MissionAlertUI.rewardText와 동일한 조립 방식: "{파트}(파트별 색상) 총 점수 {N}(#E63356) 이상".
+        if (!isLeaderZone && missionDetailText != null)
+            missionDetailText.text = $"{ColorizePartName(c.ChallengePart)} 총 점수 <color=#E63356>{Mathf.RoundToInt(c.TargetValue)}</color> 이상";
+        if (isLeaderZone && scoreBadgeText != null)
+            scoreBadgeText.text = Mathf.RoundToInt(c.TargetValue).ToString();
 
         if (successPanel != null)
             successPanel.SetActive(c.Resolved && c.Succeeded);
     }
+
+    // 파트명({기획/개발/아트})을 파트별 고정 색상으로 감싼 리치텍스트 — MissionAlertUI.ColorizePartName과 동일 색상표.
+    static string ColorizePartName(LeaderType part) => $"<color=#{PartColorHex(part)}>{ChallengeManager.PartDisplayName(part)}</color>";
+
+    static string PartColorHex(LeaderType part) => part switch
+    {
+        LeaderType.Planner => "FFC552",
+        LeaderType.Programmer => "A9A9C0",
+        LeaderType.Artist => "DBAC7C",
+        _ => "FFFFFF"
+    };
 
     void SetChildrenActive(bool value)
     {

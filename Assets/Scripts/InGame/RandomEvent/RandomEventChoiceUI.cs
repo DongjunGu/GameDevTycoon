@@ -400,6 +400,7 @@ public class RandomEventChoiceUI : MonoBehaviour
         var    chosen      = _chosenOption;
         string sysMsg      = _chosenSystemMessage;
         string targetEmpId = _currentData?.targetEmployeeId;
+        string eventTitle  = _currentData?.title; // AlertPanel1 통합 결과팝업의 제목(이벤트 이름)으로 씀
 
         eventPanel.SetActive(false);
         if (moneyElevatorTrigger != null) moneyElevatorTrigger.SetActive(false);
@@ -414,11 +415,11 @@ public class RandomEventChoiceUI : MonoBehaviour
         System.Action resume = onConf ?? (() => DevelopmentManager.Instance.ResumeFromEvent());
 
         // 결과 팝업 종류(resultPopupType)가 지정돼 있으면 AlertUI4/5/6 신규 라우팅, 없으면 기존 방식
-        // (resultSystemMessage → 일반 AlertUI1) 로 fallback — 기존 이벤트 하위호환.
+        // (resultSystemMessage → 랜덤이벤트 결과 통합 패널) 로 fallback — 기존 이벤트 하위호환.
         if (chosen != null && chosen.resultPopupType > 0)
-            ShowResultPopup(chosen, targetEmpId, resume);
+            ShowResultPopup(chosen, eventTitle, targetEmpId, resume);
         else if (!string.IsNullOrEmpty(sysMsg))
-            AlertUI.Instance.Show(ResolvePlaceholders(sysMsg, targetEmpId), resume);
+            AlertUI.Instance.ShowRandomEventResult(ResolvePlaceholders(eventTitle, targetEmpId), ResolvePlaceholders(sysMsg, targetEmpId), resume);
         else
             resume();
     }
@@ -434,42 +435,46 @@ public class RandomEventChoiceUI : MonoBehaviour
         return text.Replace("{직원이름}", name);
     }
 
-    // 결과 팝업 종류 1=AlertUI4(Title+result1+result2) / 2=AlertUI5(TitleText만) / 3=AlertUI6(Title+Bottom).
+    // 결과 팝업 종류 1=AlertUI4(제목+3줄) / 2=AlertUI5(제목+1줄) / 3=AlertUI6(제목+2줄). 제목은 항상
+    // 이벤트 이름(eventTitle, RandomEventChoiceData.title) — 2026-08-20부터 결과멘트1을 더 이상 제목
+    // 자리에 안 쓰고 전부 본문으로 내림([[project_alertui_consolidation]]).
     // resultMent1 이 비어있으면(예: 유튜버 선공개 "애매한 반응" 분기 — 원래 팝업 없음) 그냥 넘어간다.
     // 1차 팝업 확인 후 resultPopupType2 가 지정돼 있으면 이어서 2차 팝업(예: 패자 효과)을 띄운다.
     // employeeId: ResolvePlaceholders 안전망용 — "{직원이름}"이 남아있을 때만 사용됨.
-    static void ShowResultPopup(RandomEventChoiceOption choice, string employeeId, System.Action resume)
+    static void ShowResultPopup(RandomEventChoiceOption choice, string eventTitle, string employeeId, System.Action resume)
     {
-        System.Action afterFirst = () => ShowResultPopup2(choice, employeeId, resume);
+        System.Action afterFirst = () => ShowResultPopup2(choice, eventTitle, employeeId, resume);
 
         if (string.IsNullOrEmpty(choice.resultMent1)) { afterFirst(); return; }
 
         string ment1 = ResolvePlaceholders(choice.resultMent1, employeeId);
         string ment2 = ResolvePlaceholders(choice.resultMent2, employeeId);
         string ment3 = ResolvePlaceholders(choice.resultMent3, employeeId);
+        string title = ResolvePlaceholders(eventTitle, employeeId);
 
         switch (choice.resultPopupType)
         {
-            case 1: AlertUI.Instance.ShowResult4(ment1, ment2, ment3, afterFirst); break;
-            case 2: AlertUI.Instance.ShowResult5(ment1, afterFirst); break;
-            case 3: AlertUI.Instance.ShowResult6(ment1, ment2, afterFirst); break;
+            case 1: AlertUI.Instance.ShowResult4(title, ment1, ment2, ment3, afterFirst); break;
+            case 2: AlertUI.Instance.ShowResult5(title, ment1, afterFirst); break;
+            case 3: AlertUI.Instance.ShowResult6(title, ment1, ment2, afterFirst); break;
             default: afterFirst(); break;
         }
     }
 
-    static void ShowResultPopup2(RandomEventChoiceOption choice, string employeeId, System.Action resume)
+    static void ShowResultPopup2(RandomEventChoiceOption choice, string eventTitle, string employeeId, System.Action resume)
     {
         if (string.IsNullOrEmpty(choice.resultMent1_2)) { resume(); return; }
 
         string ment1 = ResolvePlaceholders(choice.resultMent1_2, employeeId);
         string ment2 = ResolvePlaceholders(choice.resultMent2_2, employeeId);
         string ment3 = ResolvePlaceholders(choice.resultMent3_2, employeeId);
+        string title = ResolvePlaceholders(eventTitle, employeeId);
 
         switch (choice.resultPopupType2)
         {
-            case 1: AlertUI.Instance.ShowResult4(ment1, ment2, ment3, resume); break;
-            case 2: AlertUI.Instance.ShowResult5(ment1, resume); break;
-            case 3: AlertUI.Instance.ShowResult6(ment1, ment2, resume); break;
+            case 1: AlertUI.Instance.ShowResult4(title, ment1, ment2, ment3, resume); break;
+            case 2: AlertUI.Instance.ShowResult5(title, ment1, resume); break;
+            case 3: AlertUI.Instance.ShowResult6(title, ment1, ment2, resume); break;
             default: resume(); break;
         }
     }

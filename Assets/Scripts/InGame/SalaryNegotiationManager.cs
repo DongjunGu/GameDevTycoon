@@ -7,8 +7,8 @@ public class SalaryNegotiationManager : MonoBehaviour
 {
     [Header("UI")]
     public string employeeSlotAreaName = "EmployeeSlotArea";
-    public GameObject ownedEmployeeSlotPrefab;
     private GameObject _employeeSlotArea;
+    private ExistEmployeePanelUI _existEmployeePanel; // EmployeeSlotArea/ExistEmployeeSalaryPanel — HiringUI.existEmployeePanel과 동일 패턴
 
     public static SalaryNegotiationManager Instance { get; private set; }
 
@@ -29,7 +29,6 @@ public class SalaryNegotiationManager : MonoBehaviour
     private bool _negotiatedThisYear = false;
     private int  _scheduledMonth     = 0;
     private int  _scheduledWeek      = 0;
-    private GameObject _currentSlot;
 
     public int  ScheduledMonth     => _scheduledMonth;
     public int  ScheduledWeek      => _scheduledWeek;
@@ -56,15 +55,17 @@ public class SalaryNegotiationManager : MonoBehaviour
 
     void Start()
     {
-        DialogManager.Instance.OnChoiceResult += HandleDialogResult;
-        DialogManager.Instance.OnDialogEnd    += OnDialogEnd;
+        DialogManager.Instance.OnChoiceResult  += HandleDialogResult;
+        DialogManager.Instance.OnDialogEnd     += OnDialogEnd;
+        DialogManager.Instance.OnChoicesShown  += OnChoicesShown;
     }
 
     void OnDestroy()
     {
         if (DialogManager.Instance == null) return;
-        DialogManager.Instance.OnChoiceResult -= HandleDialogResult;
-        DialogManager.Instance.OnDialogEnd    -= OnDialogEnd;
+        DialogManager.Instance.OnChoiceResult  -= HandleDialogResult;
+        DialogManager.Instance.OnDialogEnd     -= OnDialogEnd;
+        DialogManager.Instance.OnChoicesShown  -= OnChoicesShown;
     }
 
     // 새 런 시작 — 협상 스케줄/진행 상태 전부 초기화 (메모리 only, GameTime 저장 시 자동 반영)
@@ -108,6 +109,20 @@ public class SalaryNegotiationManager : MonoBehaviour
         if (target == null) return;
 
         _negotiatedThisYear = true;
+        StartNegotiation(target, criteria);
+    }
+
+    // ── 테스트 전용 — 스케줄뿐 아니라 SelectNegotiationTarget의 대상 조건(입사 1년 이상/금수저 제외/
+    // 파견중 제외)까지 전부 무시하고 보유 직원 중 아무나 랜덤으로 즉시 협상 시작 (CharacterEventTester) ──
+    public void TestStartNegotiation()
+    {
+        if (_phase != NegotiationPhase.Idle) { Debug.LogWarning("[연봉협상] 테스트: 이미 협상 진행 중"); return; }
+
+        var pool = EmployeeManager.Instance.ownedEmployees; // CEO는 애초에 이 리스트에 없음
+        if (pool.Count == 0) { Debug.LogWarning("[연봉협상] 테스트: 보유 직원 없음"); return; }
+
+        var target = pool[UnityEngine.Random.Range(0, pool.Count)];
+        var criteria = (NegotiationCriteria)UnityEngine.Random.Range(0, 3);
         StartNegotiation(target, criteria);
     }
 
@@ -175,12 +190,13 @@ public class SalaryNegotiationManager : MonoBehaviour
         Debug.Log($"연봉협상 시작: {emp.employeeName} / 기준: {criteria} / 인상율: {raisePercent}%");
         GameTimeManager.Instance.StopTime();
         ModalGate.I.Register(this); // 협상 중 다른 모달(랜덤이벤트 등) 차단·큐잉 — Finish 에서 해제
-        ShowEmployeeSlot(emp);
+        // EmployeeSlotArea는 플레이버 대사가 끝나 제안(선택지)이 뜨는 시점에 OnChoicesShown에서 표시.
 
         DialogManager.Instance.SetPlaceholder("employeeName", emp.employeeName);
         DialogManager.Instance.SetPlaceholder("portraitId",   emp.portraitId);
         DialogManager.Instance.SetPlaceholder("salary",       emp.salary.ToString("N0"));
         DialogManager.Instance.SetPlaceholder("newSalary",    _proposedSalary.ToString("N0"));
+        DialogManager.Instance.SetPlaceholder("raiseAmount",  (_proposedSalary - emp.salary).ToString("N0")); // "연봉 {raiseAmount}G 올려주기" 선택지용
         DialogManager.Instance.Play(flavorGroupId, false);
     }
 
@@ -226,6 +242,7 @@ public class SalaryNegotiationManager : MonoBehaviour
             _currentEmployee.ChangeSatisfaction(+20);
             EmployeeManager.Instance.UpdateEmployee(_currentEmployee);
             HUDUI.Instance?.RefreshAll();
+            InfoFeedUI.Instance?.ShowSatisfaction(_currentEmployee, +20);
             _responseGroupId = _selectedAcceptGroupId;
             _pendingSatisfactionAlert = $"{_currentEmployee.employeeName}의 만족도가 20 상승했습니다.";
             Debug.Log($"{_currentEmployee.employeeName} 연봉 수락: {_proposedSalary:N0}G / 만족도 +20");
@@ -238,6 +255,7 @@ public class SalaryNegotiationManager : MonoBehaviour
                 _currentEmployee.ChangeSatisfaction(-20);
                 EmployeeManager.Instance.UpdateEmployee(_currentEmployee);
                 HUDUI.Instance?.RefreshAll();
+                InfoFeedUI.Instance?.ShowSatisfaction(_currentEmployee, -20);
                 _pendingSatisfactionAlert = $"{_currentEmployee.employeeName}의 만족도가 20 하락했습니다.";
                 Debug.Log($"{_currentEmployee.employeeName} 연봉 동결 거부: 만족도 -20");
             }
@@ -247,6 +265,15 @@ public class SalaryNegotiationManager : MonoBehaviour
             }
             _responseGroupId = _selectedFreezeGroupId;
         }
+    }
+
+    // DialogManager.OnChoicesShown — 선택지 버튼이 실제로 뜬 시점(제안 대사 타이핑 완료 직후).
+    // 연봉협상 진행 중(_phase==Proposal, 플레이버+제안 대사 구간 전체)일 때만 반응해 EmployeeSlotArea를
+    // 이 시점에 노출 — 다른 시스템(랜덤이벤트 등)의 선택지엔 무관해야 하므로 phase 가드 필수.
+    void OnChoicesShown()
+    {
+        if (_phase != NegotiationPhase.Proposal || _currentEmployee == null) return;
+        ShowEmployeeSlot(_currentEmployee);
     }
 
     void OnDialogEnd()
@@ -289,30 +316,32 @@ public class SalaryNegotiationManager : MonoBehaviour
     }
 
     // ── 직원 슬롯 UI ──────────────────────────────────────────────
+    // HiringUI.existEmployeePanel.Setup(_conflictingOwned)와 동일 패턴 — ExistEmployeeSalaryPanel
+    // (EmployeeSlotArea 자식, 이미 씬에 배치+배선된 ExistEmployeePanelUI)에 협상 대상 직원 정보를 채운다.
     void ShowEmployeeSlot(EmployeeData employee)
     {
-        if (_currentSlot != null) Destroy(_currentSlot);
-        if (_employeeSlotArea == null || ownedEmployeeSlotPrefab == null) return;
-
+        if (_employeeSlotArea == null) return;
         _employeeSlotArea.SetActive(true);
-        _currentSlot = Instantiate(ownedEmployeeSlotPrefab, _employeeSlotArea.transform);
-        _currentSlot.SetActive(true);
 
-        var slotUI = _currentSlot.GetComponent<OwnedEmployeeSlotUI>();
-        if (slotUI.fireButton != null)
-            slotUI.fireButton.gameObject.SetActive(false);
-        slotUI.Setup(employee, null);
+        if (_existEmployeePanel != null)
+        {
+            _existEmployeePanel.Setup(employee);
+            _existEmployeePanel.gameObject.SetActive(true);
+        }
     }
 
     public void SetEmployeeSlotArea(GameObject area)
     {
         _employeeSlotArea = area;
-        if (_employeeSlotArea != null) _employeeSlotArea.SetActive(false);
+        if (_employeeSlotArea != null)
+        {
+            _existEmployeePanel = _employeeSlotArea.GetComponentInChildren<ExistEmployeePanelUI>(true);
+            _employeeSlotArea.SetActive(false);
+        }
     }
 
     void HideEmployeeSlot()
     {
-        if (_currentSlot != null) { Destroy(_currentSlot); _currentSlot = null; }
         if (_employeeSlotArea != null) _employeeSlotArea.SetActive(false);
     }
 }

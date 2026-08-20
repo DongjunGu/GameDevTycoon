@@ -67,7 +67,7 @@ public static class RandomEvents_Choice
 
                     int cost = Mathf.Max(1, (int)(EmployeeManager.Instance.GetTotalSalary() * 0.03f));
                     // 결과 팝업 전용(코인 아이콘 인라인 + 노란색) — 버튼 라벨에는 안 붙임, 대신 ConditionText로.
-                    string costTagResult = $"<sprite=\"CoinSpriteAsset\" name=\"coin\"> <color=#F3C01D>(-{cost} G)</color>";
+                    string costTagResult = $"<sprite=\"CoinSpriteAsset\" name=\"coin\"> <color=#F3C01D>-{cost} G</color>";
                     birthdayEvt.choices[1].buttonLabel =
                         birthdayEvt.choices[1].buttonLabel?.Replace("\n(-{N}G)", "").Replace("(-{N}G)", "");
                     birthdayEvt.choices[1].conditionText = $"자금 -{cost:N0} G";
@@ -96,7 +96,7 @@ public static class RandomEvents_Choice
         // choice1: label="그래.. 알겠어 바꿔줘야지(-{N}G)"
         //          result="이정도면 확실히 업그레이드네요 기대하세요"
         //          sys="{해당직원이름} 능력치 {주수}주 동안 +20%"
-        // choice2: label="지금은 예산초과야… 이번 게임 대박나면 꼭 바꿔줄게"
+        // choice2: label="지금은 예산초과야... 이번 게임 대박나면 꼭 바꿔줄게"
         //          result="이런 장비로 뭘 얼마나 잘만들겠어요~"
         {
             EmployeeData equipEmp = null;
@@ -182,7 +182,7 @@ public static class RandomEvents_Choice
 
                 equipCostSnapshot = Mathf.Max(1, (int)(EmployeeManager.Instance.GetTotalSalary() * 0.03f));
                 // 결과 팝업 전용(코인 아이콘 인라인 + 노란색) — 버튼 라벨에는 안 붙임, 대신 ConditionText로.
-                string costTagResult = $"<sprite=\"CoinSpriteAsset\" name=\"coin\"> <color=#F3C01D>(-{equipCostSnapshot} G)</color>";
+                string costTagResult = $"<sprite=\"CoinSpriteAsset\" name=\"coin\"> <color=#F3C01D>-{equipCostSnapshot} G</color>";
 
                 equipEvt.choices[0].buttonLabel =
                     equipLabel0Template.Replace("\n(-{N}G)", "").Replace("(-{N}G)", "");
@@ -190,7 +190,6 @@ public static class RandomEvents_Choice
                 equipEvt.choices[0].reply1 = (isArtist && !string.IsNullOrEmpty(equipReplyArtistTemplate))
                     ? equipReplyArtistTemplate
                     : equipReplyDefaultTemplate;
-                equipEvt.choices[0].resultMent1 = "장비 업그레이드 완료";
                 equipEvt.choices[0].resultMent2 = equipMent2Template
                     .Replace("{해당직원이름}", equipEmp.employeeName);
                 equipEvt.choices[0].resultMent3 = equipMent3Template
@@ -205,12 +204,12 @@ public static class RandomEvents_Choice
         // desc:  "직원들이 회식을 요구하고 있어요 어떻게 할까요?"
         // portrait: "portrait_secretary"
         // choice1: label="회식은 뭔 회식이야 게임이나 만들자"
-        //          result="아 네… 알겠습니다…"    sys="전 직원 만족도 -5"
+        //          result="아 네... 알겠습니다..."    sys="전 직원 만족도 -5"
         // choice2: label="오늘은 삼겹살로 가자!(-{N}G)"
         //          result_happy="와아! 삼겹살에 소주! 오늘 스트레스 다 날려버려요!"
         //          result_meh="소고기도 아니고 삼겹살이라니... 뭐 안 먹는 것보단 낫겠네요."
         //          sys_happy="전 직원 만족도 +5 / -{비용}G"    sys_meh="-{비용}G"
-        // choice3: label="고생하는데 무리좀 해야지… 오늘은 소고기다(-{N}G)"
+        // choice3: label="고생하는데 무리좀 해야지... 오늘은 소고기다(-{N}G)"
         //          result="진짜 소고기요? 꽃등심? 와... 사장님 만세!"
         //          sys="전 직원 만족도 +10 / -{비용}G"
         {
@@ -255,8 +254,8 @@ public static class RandomEvents_Choice
                             }
 
                             var c1 = dinnerEvt.choices[1];
-                            // 괄호까지 색상 태그 안에 포함 — "(-3000G)" 형태로 괄호도 같이 노란색(#F3C01D)으로. 앞에 코인 아이콘 인라인.
-                            string costTag = $"<sprite=\"CoinSpriteAsset\" name=\"coin\"> <color=#F3C01D>(-{dinnerCost5} G)</color>";
+                            // "-3000G" 형태로 노란색(#F3C01D)으로. 앞에 코인 아이콘 인라인.
+                            string costTag = $"<sprite=\"CoinSpriteAsset\" name=\"coin\"> <color=#F3C01D>-{dinnerCost5} G</color>";
                             c1.reply1         = happy ? dinnerDesc2Happy : dinnerDesc2Meh;
                             c1.resultPopupType = happy ? 1 : 3;
                             // happy 결과팝업멘트1="전 직원 만족도 +5"(choice2_ment1 원본) / meh 멘트1은
@@ -284,7 +283,7 @@ public static class RandomEvents_Choice
 
             // [CDN fallback] "오늘은 삼겹살로 가자!(-{N}G)"
             string dinnerLabel1Template  = dinnerEvt.choices[1].buttonLabel ?? "";
-            // [CDN fallback] "고생하는데 무리좀 해야지… 오늘은 소고기다(-{N}G)"
+            // [CDN fallback] "고생하는데 무리좀 해야지... 오늘은 소고기다(-{N}G)"
             string dinnerLabel2Template  = dinnerEvt.choices[2].buttonLabel ?? "";
             // [CDN fallback] "전 직원 만족도 +10 / -{비용}G"
             string dinnerSystem2Template = dinnerEvt.choices[2].resultSystemMessage ?? "";
@@ -316,10 +315,10 @@ public static class RandomEvents_Choice
                 dinnerEvt.choices[1].resultDescriptions.Clear();
                 if (!string.IsNullOrEmpty(dinnerDesc2Happy)) dinnerEvt.choices[1].resultDescriptions.Add(dinnerDesc2Happy);
                 if (!string.IsNullOrEmpty(dinnerDesc2Meh))   dinnerEvt.choices[1].resultDescriptions.Add(dinnerDesc2Meh);
-                dinnerEvt.choices[2].resultSystemMessage = dinnerSystem2Template.Replace("-{비용}G", $"<color=#F3C01D>(-{dinnerCost10} G)</color>");
+                dinnerEvt.choices[2].resultSystemMessage = dinnerSystem2Template.Replace("-{비용}G", $"<color=#F3C01D>-{dinnerCost10} G</color>");
 
-                // 괄호까지 색상 태그 안에 포함 — "(-3000G)" 형태로 괄호도 같이 노란색(#F3C01D)으로. 앞에 코인 아이콘 인라인.
-                string cost10Tag = $"<sprite=\"CoinSpriteAsset\" name=\"coin\"> <color=#F3C01D>(-{dinnerCost10} G)</color>";
+                // "-3000G" 형태로 노란색(#F3C01D)으로. 앞에 코인 아이콘 인라인.
+                string cost10Tag = $"<sprite=\"CoinSpriteAsset\" name=\"coin\"> <color=#F3C01D>-{dinnerCost10} G</color>";
                 dinnerEvt.choices[2].resultMent1 = dinnerMent1_3Template;
                 dinnerEvt.choices[2].resultMent2 = dinnerMent2_3Template.Replace("-{비용}G", cost10Tag);
             };
@@ -410,9 +409,9 @@ public static class RandomEvents_Choice
         // choice1: label="난 우리 직원들이 만든게임을 믿고 있어!"
         //          result_high(pop≥3)="인기있는 장르여서 좋은 반응이 나오고 있습니다."
         //          sys_high="이번 게임의 기대감이 오르고 있습니다."
-        //          result_mid(pop=2)="흐음 애매한 반응이네요 이걸 좋아해야 할지 안 좋아해야 할지…"
+        //          result_mid(pop=2)="흐음 애매한 반응이네요 이걸 좋아해야 할지 안 좋아해야 할지..."
         //          sys_mid=""
-        //          result_low(pop≤1)="인기없는 장르라서 그런가… 다들 노잼이라는 반응이 나오고 있습니다."
+        //          result_low(pop≤1)="인기없는 장르라서 그런가... 다들 노잼이라는 반응이 나오고 있습니다."
         //          sys_low="이번 게임의 기대감이 떨어지고 있습니다."
         // choice2: label="미완성 상태에서 보여주는건 너무 도박인 것 같아 패스하자"
         //          result="괜찮은 선택이에요. 완성된 게임으로 승부하죠!"
@@ -500,7 +499,7 @@ public static class RandomEvents_Choice
         //          result3="거봐요! 내가 맞다니까! 사장님 역시 보는 눈이 정확하시네요"
         //          sys="{직원1파트} 팀장점수 10% 증가 / {직원1이름} 만족도 +10 / {직원2파트} 팀장점수 10% 감소 / {직원2이름} 만족도 -10"
         // choice2: 동일 구조 (반대 직원 편)
-        //          result1="말 걸지 마세요"    result2="평생 기억하겠습니다…"
+        //          result1="말 걸지 마세요"    result2="평생 기억하겠습니다..."
         //          sys="{직원2파트} 팀장점수 10% 증가 / ..."
         {
             var fightSubs = new List<RandomEventChoiceData>
@@ -551,7 +550,7 @@ public static class RandomEvents_Choice
         //          result="사장님 지금 '저장' 이랑 '삭제' 버튼을 자꾸 헷갈려 하는데... 이대로 계속 일해 볼게요"
         //          sys="해당직원 만족도 -5"
         // choice2: label="이거 허락 안해주면 또 난리치겠지? 그냥 해줘야겠다"
-        //          result="이미 말이 끝나기도 전에 짐을 싸고 사라져있었다…"
+        //          result="이미 말이 끝나기도 전에 짐을 싸고 사라져있었다..."
         //          sys="해당직원 만족도 +5 / 개발 기간 +{주수}주"
         {
             EmployeeData earlyLeaveEmp = null;
@@ -641,7 +640,7 @@ public static class RandomEvents_Choice
         //          result="나중에 서버 터져도 저한테만 뭐라하면 안 돼요?"
         //          sys="" (디버프는 나중에 발동)
         // choice2: label="오래 걸리더라도 무조건 완벽하게 개발하자"
-        //          result="후… 일단 {주수}주는 더 걸릴 것 같네요"
+        //          result="후... 일단 {주수}주는 더 걸릴 것 같네요"
         //          sys="개발 기간 +{주수}주 연장"
         {
             EmployeeData hackyEmp = null;
@@ -702,7 +701,7 @@ public static class RandomEvents_Choice
             };
             Apply(hackyEvt, chart);
 
-            // [CDN fallback] "후… 일단 {주수}주는 더 걸릴 것 같네요"
+            // [CDN fallback] "후... 일단 {주수}주는 더 걸릴 것 같네요"
             string hackyReply1Template = hackyEvt.choices[1].reply1 ?? "";
             // [CDN fallback] "개발 기간 +{주수}주"
             string hackyMent2Template  = hackyEvt.choices[1].resultMent2 ?? "";
@@ -744,8 +743,8 @@ public static class RandomEvents_Choice
     // [CDN fallback — RandomEventChoice_Chart.csv 의 Tut1Event 행]
     // title: "Tut1Event" / desc: "사장님, 시키신 일이 많아서 다 못끝냈는데.. 주말에도 출근해서 끝내야겠죠?"
     // question: "직원의 주말 출근... 어떻게할까?"
-    // choice1: label="그 일은 너밖에 못하는거라… 부탁할게"
-    //          reply1="하긴, 이건 제가 아니면 못 하는 일이긴 하죠. … 믿을만한 사람은 또 저밖에 없네요!"
+    // choice1: label="그 일은 너밖에 못하는거라... 부탁할게"
+    //          reply1="하긴, 이건 제가 아니면 못 하는 일이긴 하죠. ... 믿을만한 사람은 또 저밖에 없네요!"
     //          popupType=1, ment1="{직원이름} 만족도 +25"
     // choice2: label="그래도 주말엔 쉬어야지 노트북 두고 가"
     //          reply1="네? 진짜 가도 돼요..? 저 월요일에 두 배로 할게요. 진짜로요."
@@ -811,14 +810,14 @@ public static class RandomEvents_Choice
 
     // ── 튜토리얼 전용 — 표절 논란 (Tut2Event) ────────────────────────
     // [CDN fallback — RandomEventChoice_Chart.csv 의 Tut2Event 행]
-    // title: "Tut2Event" / desc: "사장님, 커뮤니티에 우리 게임 얘기가 올라왔는데… 좀 안 좋은 쪽이에요."
+    // title: "Tut2Event" / desc: "사장님, 커뮤니티에 우리 게임 얘기가 올라왔는데... 좀 안 좋은 쪽이에요."
     // dialogue2: "어떤 사람이 저희 게임이 자기 아이디어를 베꼈다고 글을 올렸습니다. 댓글이 벌써 300개를 넘었어요."
-    // question: "표절이라는 주장… 어떻게 할까?" / portrait: portrait_secretary(비서가 보고)
+    // question: "표절이라는 주장... 어떻게 할까?" / portrait: portrait_secretary(비서가 보고)
     // choice1: label="사실이 아니잖아. 정면으로 반박해."
-    //          reply1="반박문 올렸는데… 댓글이 두 배가 됐어요. 이제 기사까지 났고요."
+    //          reply1="반박문 올렸는데... 댓글이 두 배가 됐어요. 이제 기사까지 났고요."
     //          reply2="논란으로 인해 매출이 하락하고 있습니다."
     // choice2: label="혹시 모르니 억울해지기 전에 조용히 합의하자." (자금 -100의 자리까지)
-    //          reply1="합의는 했는데요… 그 사람이 합의금 받은 걸 인증샷으로 올렸어요."
+    //          reply1="합의는 했는데요... 그 사람이 합의금 받은 걸 인증샷으로 올렸어요."
     //          reply2="논란으로 인해 매출이 하락하고 있습니다."
     // 능력치 디버프는 제거됨 — 선택지1/2 둘 다 결과는 동일하게 보유 골드를 100의 자리까지 차감
     // (예: 780 보유 → -700, 4890 보유 → -4800 / 10~99의 자리는 남김, AlertUI2/moneyPanel 로 표시).
@@ -974,7 +973,7 @@ public static class RandomEvents_Choice
         string ment2_1b_Template = evt.choices[1].resultMent2_2 ?? "";
         // [CDN fallback] ["사장님! 진짜 제 마음을 어쩜 그렇게 잘 알아주세요?...", "사장님이 제 편 안 들어주셨으면 저 오늘 진짜 사직서 쓸 뻔했잖아요...", "거봐요! 내가 맞다니까!"]
         var    happyDescs      = new List<string>(evt.choices[0].resultDescriptions);
-        // [CDN fallback] ["말 걸지 마세요", "평생 기억하겠습니다…"]
+        // [CDN fallback] ["말 걸지 마세요", "평생 기억하겠습니다..."]
         var    angryDescs      = new List<string>(evt.choices[1].resultDescriptions);
         // [CDN fallback] "이건 육아일까 회사일까"
         string happyTitle      = evt.choices[0].resultTitle ?? "";

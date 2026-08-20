@@ -14,7 +14,7 @@ public static class RandomEvents_Condition_Choice
     // 선택지2(안준다) — 답변만 오프닝에 따라 페어링, 결과팝업은 고정.
     // [CDN fallback]
     // title:                   "커피가 필요해"
-    // description:             "사장님… 이제 한계입니다… 커피를 주세요"
+    // description:             "사장님... 이제 한계입니다... 커피를 주세요"
     // description2:            "사장님... 지금 딱 졸음이 쏟아지는 시간이라 그런데, 혹시 남는 커피 있으신가요?"
     // question:                "직원에게 커피를?"
     // choice1_label:           "준다"
@@ -71,7 +71,7 @@ public static class RandomEvents_Condition_Choice
         var c1Row = coffeeRow?.choices.Count > 0 ? coffeeRow.choices[0] : null;
         var c2Row = coffeeRow?.choices.Count > 1 ? coffeeRow.choices[1] : null;
 
-        // [CDN fallback] "사장님… 이제 한계입니다… 커피를 주세요"
+        // [CDN fallback] "사장님... 이제 한계입니다... 커피를 주세요"
         string descA = coffeeRow?.description  ?? "";
         // [CDN fallback] "사장님... 지금 딱 졸음이 쏟아지는 시간이라 그런데, 혹시 남는 커피 있으신가요?"
         string descB = coffeeRow?.description2 ?? "";
