@@ -106,4 +106,32 @@ public static class CoinSpriteAssetCreator
         if (AlertUI.Instance == null) { Debug.LogWarning("[CoinSpriteAssetCreator] AlertUI.Instance 없음"); return; }
         AlertUI.Instance.ShowResult6("의문의 투자 제안", "{개발기간} +2주 연장됐습니다.", "{돈}+총 연봉 *10% G 증가했습니다");
     }
+
+    // 임시 검증용 — EquipmentUpgrade 실제 시나리오 재현: result1이 빈 문자열(ment1을 CSV에서 지운 상태),
+    // result2=능력치 pill, result3=코인 아이콘(이미 <color= 포함, 자체 색상). 확인 후 삭제해도 무방.
+    [MenuItem("Tools/GameDevTycoon/Test AlertUI Empty Result1 (Play Mode)")]
+    public static void TestAlertEmptyResult1()
+    {
+        if (!Application.isPlaying) { Debug.LogWarning("[CoinSpriteAssetCreator] Play 모드에서만 실행 가능"); return; }
+        if (AlertUI.Instance == null) { Debug.LogWarning("[CoinSpriteAssetCreator] AlertUI.Instance 없음"); return; }
+        AlertUI.Instance.ShowResult4(
+            "장비 업그레이드 요청",
+            "",
+            "테스트 직원의 {능력치}가\n5주 동안 +10% 증가됩니다",
+            "<sprite=\"CoinSpriteAsset\" name=\"coin\"> <color=#F3C01D>-3000 G</color> 감소했습니다");
+    }
+
+    // 임시 검증용 — TangsuYukFight류 시나리오 재현: ment1은 pill 없는 순수 텍스트("팀장점수..."), ment2는
+    // {만족도} pill 단독. 확인 후 삭제해도 무방.
+    [MenuItem("Tools/GameDevTycoon/Test AlertUI Satisfaction Only (Play Mode)")]
+    public static void TestAlertSatisfactionOnly()
+    {
+        if (!Application.isPlaying) { Debug.LogWarning("[CoinSpriteAssetCreator] Play 모드에서만 실행 가능"); return; }
+        if (AlertUI.Instance == null) { Debug.LogWarning("[CoinSpriteAssetCreator] AlertUI.Instance 없음"); return; }
+        AlertUI.Instance.ShowResult4(
+            "탕수육 부먹 찍먹 싸움",
+            "기획 팀장점수 10% 증가",
+            "테스트 직원 {만족도} +10 증가했습니다",
+            "");
+    }
 }
