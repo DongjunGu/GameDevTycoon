@@ -109,7 +109,21 @@ public class AlertUI : MonoBehaviour
     }
 
     // pillSet 카테고리별로 런타임에 조립한 TMP_SpriteAsset 캐시 — GetOrBuildSpriteAsset 참고.
-    readonly Dictionary<AlertPillCategory, TMP_SpriteAsset> _pillSpriteAssetCache = new();
+    // ⚠️ 키에 "대상 텍스트의 fontSize"가 들어간다. TMP는 인라인 스프라이트를 대상 텍스트의 fontSize에
+    // 비례해 렌더하므로, 에셋을 조립할 때 쓴 fontSize와 실제 표시되는 텍스트의 fontSize가 다르면
+    // 의도한 높이(PillRenderHeight)로 안 나온다. 예: AlertText(40)용 에셋을 ResultText(30)에 그대로
+    // 쓰면 62px가 아니라 46.5px로 작아진다 — 그래서 폰트 크기별로 따로 만들어 캐싱한다.
+    readonly Dictionary<(AlertPillCategory category, int fontSize, int pillHeight), TMP_SpriteAsset> _pillSpriteAssetCache = new();
+
+    // pill 아이콘이 화면에서 차지할 높이(px). 패널마다 본문 크기가 달라 목표 높이도 달라진다
+    // — AlertPanel1 본문은 62, RandomEventUI의 ResultText는 45.
+    public const float DefaultPillHeight = 62f;
+    public const float ResultPillHeight  = 45f;
+
+    // 강조 수치(#E63356)에 씌우는 폰트/머티리얼 — 둘 다 Resources/Fonts & Materials 아래에 있어야
+    // TMP의 <font>/<material> 태그가 이름으로 찾아준다.
+    const string EmphasisFontName     = "DNFBitBitv2 Outline";
+    const string EmphasisMaterialName = "DNFBitBitv2 Outline MaterialWhite";
 
     private Queue<Entry> _queue      = new();
     private bool         _isShowing  = false;
@@ -162,7 +176,11 @@ public class AlertUI : MonoBehaviour
     // title(이벤트 이름)을 아는 호출부는 4-인자 오버로드로 넘길 것 — AlertTitleText에 그대로 표시된다.
     public void ShowRandomEventResult(string title, string message, System.Action onConfirm = null, bool bypassGate = false)
     {
-        var entry = new Entry { message = message, onConfirm = onConfirm, type = AlertType.Default, bypassGate = bypassGate, title = title };
+        // ShowResult4/5/6과 같은 AlertPanel1을 쓰므로 결과 문구 렌더 규칙도 동일하게 태운다 —
+        // {만족도}/{능력치} 등 pill 토큰 치환 + 수치 강조색. 안 태우면 차트에 적힌 토큰이 화면에
+        // 그대로 노출된다(EmployeeRun의 systemMessage가 이 경로로 온다).
+        var (body, asset) = ProcessMentLines(messageText, DefaultPillHeight, message);
+        var entry = new Entry { message = body, onConfirm = onConfirm, type = AlertType.Default, bypassGate = bypassGate, title = title, segmentSpriteAsset = asset };
         if (bypassGate && _isShowing && !_isDisplayed) { DisplayEntry(entry); return; }
         _queue.Enqueue(entry);
         if (!_isShowing) ShowNext();
@@ -227,7 +245,7 @@ public class AlertUI : MonoBehaviour
             {
                 if (seg.pill != AlertPillCategory.None)
                 {
-                    var asset = GetOrBuildSpriteAsset(seg.pill);
+                    var asset = GetOrBuildSpriteAsset(seg.pill, messageText, DefaultPillHeight);
                     if (asset != null)
                     {
                         spriteAsset = asset;
@@ -248,12 +266,15 @@ public class AlertUI : MonoBehaviour
     // 별도 에셋으로 만드는 이유: 배지 이미지들이 서로 다른(패킹 안 된) 개별 텍스처라, 하나의 spriteSheet를
     // 공유하는 아틀라스 방식(카테고리 여러 개를 한 TMP_SpriteAsset에 욱여넣는 방식)은 텍스처가 안 맞아서
     // 못 씀 — 카테고리당 텍스처 1장짜리 전용 에셋이면 이 문제가 애초에 안 생긴다.
-    TMP_SpriteAsset GetOrBuildSpriteAsset(AlertPillCategory category)
+    TMP_SpriteAsset GetOrBuildSpriteAsset(AlertPillCategory category, TMP_Text target, float pillHeight)
     {
-        if (_pillSpriteAssetCache.TryGetValue(category, out var cached)) return cached;
+        if (target == null) target = messageText;
+        int fontSizeKey = target != null && target.fontSize > 0f ? Mathf.RoundToInt(target.fontSize) : 0;
+        var cacheKey = (category, fontSizeKey, Mathf.RoundToInt(pillHeight));
+        if (_pillSpriteAssetCache.TryGetValue(cacheKey, out var cached)) return cached;
 
         var sprite = pillSet != null ? pillSet.Get(category) : null;
-        if (sprite == null) { _pillSpriteAssetCache[category] = null; return null; }
+        if (sprite == null) { _pillSpriteAssetCache[cacheKey] = null; return null; }
 
         var asset = ScriptableObject.CreateInstance<TMP_SpriteAsset>();
         asset.name = $"AlertPill_{category}_Runtime";
@@ -271,12 +292,11 @@ public class AlertUI : MonoBehaviour
         asset.faceInfo = faceInfo;
 
         // glyphRect는 원본 텍스처의 UV 영역(픽셀 그대로) — 렌더 크기와는 별개. 렌더 크기(metrics)는 화면에
-        // 실제로 보이는 목표 높이(PillRenderHeight, 유저 지정 62)를 위 SpritePointSize 기준 좌표계로
+        // 실제로 보이는 목표 높이(pillHeight — AlertPanel1 본문 62 / ResultText 45)를 위 SpritePointSize 기준 좌표계로
         // 환산해서 정하고, 원본 가로세로 비율을 유지해 너비를 비례 계산한다(뱃지마다 원본 해상도가 달라도
         // 인라인 삽입됐을 때 전부 같은 높이로 보이게).
-        const float PillRenderHeight = 62f;
-        float currentFontSize = messageText != null && messageText.fontSize > 0f ? messageText.fontSize : SpritePointSize;
-        float heightInSpriteUnits = PillRenderHeight * SpritePointSize / currentFontSize;
+        float currentFontSize = target != null && target.fontSize > 0f ? target.fontSize : SpritePointSize;
+        float heightInSpriteUnits = pillHeight * SpritePointSize / currentFontSize;
         float pillRenderWidth = sprite.rect.height > 0f
             ? sprite.rect.width * (heightInSpriteUnits / sprite.rect.height)
             : heightInSpriteUnits;
@@ -287,7 +307,7 @@ public class AlertUI : MonoBehaviour
         // 환산해서, 그 중간선에 아이콘의 세로 중앙이 오도록 bearingY를 계산한다. 폰트 정보를 못 구하면
         // 기존 방식(위 정렬)으로 대체.
         float bearingY = heightInSpriteUnits;
-        var font = messageText != null ? messageText.font : null;
+        var font = target != null ? target.font : null;
         if (font != null && font.faceInfo.pointSize > 0f)
         {
             float pointSizeRatio = SpritePointSize / font.faceInfo.pointSize;
@@ -326,7 +346,7 @@ public class AlertUI : MonoBehaviour
         versionField?.SetValue(asset, "1.1.0");
 
         asset.UpdateLookupTables();
-        _pillSpriteAssetCache[category] = asset;
+        _pillSpriteAssetCache[cacheKey] = asset;
         return asset;
     }
 
@@ -336,14 +356,14 @@ public class AlertUI : MonoBehaviour
     // <sprite name="X"> 태그가 체인을 따라가며 이름으로 찾아준다. 매 호출마다 다른 카테고리를 기본으로
     // 고르면 A.fallback에 B가, B.fallback에 A가 들어가는 순환참조가 생길 수 있어서, 항상 enum 순서가
     // 가장 낮은 카테고리를 기본으로 고정한다.
-    TMP_SpriteAsset GetOrBuildSpriteAsset(List<AlertPillCategory> categories)
+    TMP_SpriteAsset GetOrBuildSpriteAsset(List<AlertPillCategory> categories, TMP_Text target, float pillHeight)
     {
         var sorted = new List<AlertPillCategory>(categories);
         sorted.Sort();
         TMP_SpriteAsset primary = null;
         foreach (var cat in sorted)
         {
-            var asset = GetOrBuildSpriteAsset(cat);
+            var asset = GetOrBuildSpriteAsset(cat, target, pillHeight);
             if (asset == null) continue;
             if (primary == null) { primary = asset; continue; }
             if (primary.fallbackSpriteAssets == null) primary.fallbackSpriteAssets = new List<TMP_SpriteAsset>();
@@ -352,10 +372,14 @@ public class AlertUI : MonoBehaviour
         return primary;
     }
 
-    // ShowResult4/5/6 전용 — 여러 결과멘트 줄에서 PillTokens 토큰을 <sprite name="카테고리"> 인라인
-    // 아이콘으로 바꾸고(그 메시지에 실제 쓰인 카테고리들만 모아 fallback 체인 조립), 각 줄을
-    // ColorizeMentRich로 감싼 뒤 줄바꿈으로 이어붙인다. 빈 줄은 건너뜀.
-    (string body, TMP_SpriteAsset spriteAsset) ProcessMentLines(params string[] lines)
+    // 여러 결과멘트 줄에서 PillTokens 토큰을 <sprite name="카테고리"> 인라인 아이콘으로 바꾸고(그 메시지에
+    // 실제 쓰인 카테고리들만 모아 fallback 체인 조립), 각 줄을 ColorizeMentRich로 감싼 뒤 줄바꿈으로
+    // 이어붙인다. 빈 줄은 건너뜀.
+    //
+    // target: 이 문구를 실제로 표시할 TMP — pill 스케일이 그 텍스트의 fontSize에 맞춰 조립된다.
+    // 반환한 spriteAsset은 반드시 그 target의 .spriteAsset에 넣어야 <sprite name="...">이 해석된다.
+    // AlertUI 밖(RandomEventUI의 ResultText 등)에서도 같은 pill 규칙을 그대로 쓰라고 public으로 열어둠.
+    public (string body, TMP_SpriteAsset spriteAsset) ProcessMentLines(TMP_Text target, float pillHeight, params string[] lines)
     {
         var used = new List<AlertPillCategory>();
         foreach (var line in lines)
@@ -364,7 +388,7 @@ public class AlertUI : MonoBehaviour
             foreach (var kv in PillTokens)
                 if (line.Contains(kv.Key) && !used.Contains(kv.Value)) used.Add(kv.Value);
         }
-        var asset = used.Count > 0 ? GetOrBuildSpriteAsset(used) : null;
+        var asset = used.Count > 0 ? GetOrBuildSpriteAsset(used, target, pillHeight) : null;
 
         var parts = new List<string>();
         foreach (var line in lines)
@@ -391,7 +415,7 @@ public class AlertUI : MonoBehaviour
     // 색이 다를 수 있어 SetMentText(텍스트 오브젝트 전체 .color)가 아니라 줄마다 <color> 리치텍스트로 감쌈.
     public void ShowResult4(string eventTitle, string result1, string result2, string result3, System.Action onConfirm = null)
     {
-        var (body, asset) = ProcessMentLines(result1, result2, result3);
+        var (body, asset) = ProcessMentLines(messageText, DefaultPillHeight, result1, result2, result3);
         _queue.Enqueue(new Entry { message = body, onConfirm = onConfirm, type = AlertType.Default, title = eventTitle, segmentSpriteAsset = asset });
         if (!_isShowing) ShowNext();
     }
@@ -399,7 +423,7 @@ public class AlertUI : MonoBehaviour
     // 결과 팝업 종류 2 — 제목(이벤트 이름) + 본문 한 줄.
     public void ShowResult5(string eventTitle, string result1, System.Action onConfirm = null)
     {
-        var (body, asset) = ProcessMentLines(result1);
+        var (body, asset) = ProcessMentLines(messageText, DefaultPillHeight, result1);
         _queue.Enqueue(new Entry { message = body, onConfirm = onConfirm, type = AlertType.Default, title = eventTitle, segmentSpriteAsset = asset });
         if (!_isShowing) ShowNext();
     }
@@ -407,7 +431,7 @@ public class AlertUI : MonoBehaviour
     // 결과 팝업 종류 3 — 제목(이벤트 이름) + 본문 두 줄.
     public void ShowResult6(string eventTitle, string result1, string result2, System.Action onConfirm = null)
     {
-        var (body, asset) = ProcessMentLines(result1, result2);
+        var (body, asset) = ProcessMentLines(messageText, DefaultPillHeight, result1, result2);
         _queue.Enqueue(new Entry { message = body, onConfirm = onConfirm, type = AlertType.Default, title = eventTitle, segmentSpriteAsset = asset });
         if (!_isShowing) ShowNext();
     }
@@ -558,7 +582,11 @@ public class AlertUI : MonoBehaviour
     {
         if (string.IsNullOrEmpty(content)) return content ?? "";
         if (content.Contains("<color=")) return content;
-        return NumericDeltaRegex.Replace(content, m => $"<color=#{ColorUtility.ToHtmlStringRGB(BuffMentColor)}>{m.Value}</color>");
+        // 색만 바꾸는 게 아니라 전용 비트맵 폰트(+화이트 아웃라인 머티리얼)까지 씌운다.
+        // <font>에 material을 같이 지정하면 </font> 하나로 폰트/머티리얼이 함께 복원된다.
+        return NumericDeltaRegex.Replace(content, m =>
+            $"<font=\"{EmphasisFontName}\" material=\"{EmphasisMaterialName}\">" +
+            $"<color=#{ColorUtility.ToHtmlStringRGB(BuffMentColor)}>{m.Value}</color></font>");
     }
 
     static Color? DetectMentColor(string text)

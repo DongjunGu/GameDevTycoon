@@ -24,6 +24,17 @@ using UnityEngine;
 
 public static class RandomEvents_Dev
 {
+    // CSV의 systemMessage에는 pill 토큰({만족도}/{능력치} 등, AlertUI.PillTokens)이 섞여 들어온다.
+    // string.Format을 쓰면 그 토큰까지 "형식 항목"으로 파싱하려다 FormatException이 나므로,
+    // 인덱스 자리표시자({0},{1},…)만 순서대로 직접 치환한다.
+    static string FillArgs(string template, params object[] args)
+    {
+        if (string.IsNullOrEmpty(template)) return template ?? "";
+        for (int i = 0; i < args.Length; i++)
+            template = template.Replace("{" + i + "}", args[i]?.ToString() ?? "");
+        return template;
+    }
+
     public static void Register(List<RandomEventData> pool, RandomEventManager mgr,
                                 System.Collections.Generic.Dictionary<string, RandomEventChartRow> chart = null)
     {
@@ -41,11 +52,12 @@ public static class RandomEvents_Dev
             onApply = () =>
             {
                 foreach (var emp in EmployeeManager.Instance.ownedEmployees)
-                {
-                    int before = emp.satisfaction;
                     emp.ChangeSatisfaction(-5);
-                    InfoFeedUI.Instance?.ShowSatisfaction(emp, emp.satisfaction - before);
-                }
+
+                // 전 직원 대상이므로 알림도 한 줄로 묶는다("모든 직원의 만족도가 5 하락했다.").
+                // 직원마다 ShowSatisfaction을 부르면 인원수만큼 InfoUI가 쌓여 피드가 도배된다 —
+                // 다른 전체 대상 이벤트들과 동일하게 ShowGlobalSatisfaction 하나만 쓴다.
+                InfoFeedUI.Instance?.ShowGlobalSatisfaction(-5);
             }
         });
 
@@ -70,7 +82,7 @@ public static class RandomEvents_Dev
                     avoidEmp = employees[UnityEngine.Random.Range(0, employees.Count)];
                     avoidEvt.portraitId      = avoidEmp.portraitId;
                     avoidEvt.targetEmployeeId = avoidEmp.id;
-                    avoidEvt.systemMessage   = string.Format(avoidEvt.systemMessage, avoidEmp.employeeName);
+                    avoidEvt.systemMessage   = FillArgs(avoidEvt.systemMessage, avoidEmp.employeeName);
                 },
                 onApply = () =>
                 {
@@ -106,7 +118,7 @@ public static class RandomEvents_Dev
                     coldEvt.portraitId    = coldEmp.portraitId;
                     coldEvt.targetEmployeeId = coldEmp.id;
                     if (!string.IsNullOrEmpty(coldEvt.systemMessage))
-                        coldEvt.systemMessage = string.Format(coldEvt.systemMessage, coldEmp.employeeName, coldWeeks);
+                        coldEvt.systemMessage = FillArgs(coldEvt.systemMessage, coldEmp.employeeName, coldWeeks);
                 },
                 onApply = () =>
                 {
@@ -138,7 +150,7 @@ public static class RandomEvents_Dev
                     badReviewEmp = employees[UnityEngine.Random.Range(0, employees.Count)];
                     badReviewEvt.targetEmployeeId = badReviewEmp.id;
                     if (!string.IsNullOrEmpty(badReviewEvt.systemMessage))
-                        badReviewEvt.systemMessage = string.Format(badReviewEvt.systemMessage, badReviewEmp.employeeName);
+                        badReviewEvt.systemMessage = FillArgs(badReviewEvt.systemMessage, badReviewEmp.employeeName);
                 },
                 onApply = () =>
                 {
@@ -183,7 +195,7 @@ public static class RandomEvents_Dev
                     networkEvt.targetEmployeeId = emp.id;
                     // description은 차트에서 관리 — 하드코딩 제거
                     // systemMessage는 차트 템플릿({0})에 주수 대입
-                    networkEvt.systemMessage = string.Format(networkEvt.systemMessage, delayWeeks);
+                    networkEvt.systemMessage = FillArgs(networkEvt.systemMessage, delayWeeks);
                 },
                 onApply = () =>
                 {
@@ -225,7 +237,7 @@ public static class RandomEvents_Dev
                     drillEvt.portraitId       = drillEmp.portraitId;
                     drillEvt.targetEmployeeId = drillEmp.id;
                     if (!string.IsNullOrEmpty(drillEvt.systemMessage))
-                        drillEvt.systemMessage = string.Format(drillEvt.systemMessage, drillEmp.employeeName, drillWeeks);
+                        drillEvt.systemMessage = FillArgs(drillEvt.systemMessage, drillEmp.employeeName, drillWeeks);
                 },
                 onApply = () =>
                 {
@@ -328,7 +340,7 @@ public static class RandomEvents_Dev
         {
             evt.portraitId       = targetEmp.portraitId;
             evt.targetEmployeeId = targetEmp.id;
-            evt.systemMessage    = string.Format(systemMessageTemplate, targetEmp.employeeName);
+            evt.systemMessage    = FillArgs(systemMessageTemplate, targetEmp.employeeName);
         };
         return evt;
     }

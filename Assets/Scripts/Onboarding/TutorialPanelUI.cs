@@ -113,6 +113,11 @@ public class TutorialPanelUI : MonoBehaviour
 
     IEnumerator PlayLine(TutorialDialogLine line, bool isFirst)
     {
+        // ⚠ 반드시 등장 연출을 시작하기 "전"에 리셋한다. nextButton은 RevealElement의 SetActive(true)
+        // 순간부터 클릭을 받으므로, 리셋이 연출 뒤에 있으면 연출 도중(0.25초)에 누른 클릭이 곧바로
+        // 지워져 씹힌다 — 대사를 빠르게 넘기려고 연타할 때 "가끔 안 눌리는" 현상의 원인이었다.
+        _clicked = false;
+
         bool hasPortrait = ApplyPortrait(line.portraitId);
 
         if (isFirst)
@@ -151,7 +156,6 @@ public class TutorialPanelUI : MonoBehaviour
                 yield return RevealNextButtonGroup();
         }
 
-        _clicked = false;
         yield return new WaitUntil(() => _clicked);
     }
 
@@ -184,8 +188,22 @@ public class TutorialPanelUI : MonoBehaviour
 
     Vector2 GetNextButtonRestPos()
     {
-        _nextButtonRestPos ??= ((RectTransform)nextButton.transform).anchoredPosition;
+        _nextButtonRestPos ??= ResolveMoveTarget((RectTransform)nextButton.transform).anchoredPosition;
         return _nextButtonRestPos.Value;
+    }
+
+    // GlobalButtonClickBounce는 클릭된 버튼을 __ClickBounceWrapper의 "풀스트레치 자식"으로 재배치한다
+    // (anchor 0~1 / pivot 중앙 / anchoredPosition 0). 그러면 버튼 자신의 제자리는 (0,0)이 되는데,
+    // 여기서 캐싱해둔 restPos는 래핑 전 좌표(예: (74,-13))라 그대로 버튼에 넣으면 그 값만큼 통째로
+    // 밀려버린다 — 버튼이 눈에 보이는 자리에서 어긋나 "눌러도 안 눌리는" 상태가 된다.
+    // 래퍼가 버튼의 원래 앵커/피벗/위치를 그대로 물려받으므로, 래핑된 뒤에는 래퍼를 움직이면 된다.
+    const string ClickBounceWrapperName = "__ClickBounceWrapper";
+
+    static RectTransform ResolveMoveTarget(RectTransform rt)
+    {
+        if (rt != null && rt.parent is RectTransform parent && parent.name == ClickBounceWrapperName)
+            return parent;
+        return rt;
     }
 
     Vector2 GetRestPos(RectTransform rt, ref Vector2? cache)
@@ -213,17 +231,20 @@ public class TutorialPanelUI : MonoBehaviour
 
         rt.gameObject.SetActive(true);
 
+        // 활성화는 원본에, 위치 애니메이션은 (래핑됐다면) 래퍼에 적용한다.
+        var moveRt = ResolveMoveTarget(rt);
+
         // PortraitImage/TutorialTextPanel은 TutorialPanel의 HorizontalLayoutGroup 자식이라 SetActive
         // 직후 레이아웃이 지연 리빌드되며 밑에서 설정할 시작 위치를 되돌려버릴 수 있다 — 그 전에 즉시
         // 강제 리빌드해 레이아웃을 먼저 확정시킨 뒤 시작 위치를 덮어쓴다.
-        if (rt.parent is RectTransform parentRect)
+        if (moveRt.parent is RectTransform parentRect)
             LayoutRebuilder.ForceRebuildLayoutImmediate(parentRect);
 
         var cg = rt.GetComponent<CanvasGroup>();
         if (cg == null) cg = rt.gameObject.AddComponent<CanvasGroup>();
 
         Vector2 startPos = restPos + new Vector2(0f, -revealRiseDistance);
-        rt.anchoredPosition = startPos;
+        moveRt.anchoredPosition = startPos;
         cg.alpha = 0f;
 
         float dur = Mathf.Max(0.0001f, revealDuration);
@@ -234,11 +255,11 @@ public class TutorialPanelUI : MonoBehaviour
             float k = Mathf.Clamp01(t / dur);
             float eased = 1f - (1f - k) * (1f - k); // ease-out
             cg.alpha = eased;
-            rt.anchoredPosition = Vector2.Lerp(startPos, restPos, eased);
+            moveRt.anchoredPosition = Vector2.Lerp(startPos, restPos, eased);
             yield return null;
         }
         cg.alpha = 1f;
-        rt.anchoredPosition = restPos;
+        moveRt.anchoredPosition = restPos;
     }
 
     // 초상화 스프라이트만 갱신 — 활성/비활성 토글은 호출부(PlayLine)가 담당.

@@ -48,6 +48,8 @@ public class RandomEventUI : MonoBehaviour
     public TextMeshProUGUI resultText;       // 결과 (systemMessage)
     public RectTransform resultBG2;          // 결과2 배경 (슬라이드 대상)
     public TextMeshProUGUI resultText2;      // 결과2 (systemMessage2)
+    [Tooltip("ResultText에 인라인으로 박히는 pill 아이콘의 화면 높이(px). AlertPanel1 본문(62)보다 작게 잡는다")]
+    public float resultPillHeight = AlertUI.ResultPillHeight;
 
     [Header("Click")]
     public Button clickButton;               // 전체화면 진행/닫기 (IndicatorBtn)
@@ -255,8 +257,8 @@ public class RandomEventUI : MonoBehaviour
         if (descriptionText != null) { descriptionText.text = ""; descriptionText.maxVisibleCharacters = 0; }
         if (nameText   != null) nameText.text  = "";
         if (titleText  != null) titleText.text = "";
-        if (resultText  != null) resultText.text  = "";
-        if (resultText2 != null) resultText2.text = "";
+        ApplyResultText(resultText,  "");
+        ApplyResultText(resultText2, "");
         if (indicatorImage != null) indicatorImage.gameObject.SetActive(false);
         _skipMode = false; // 스킵은 이번 이벤트 표시 한정 — 새 이벤트마다 초기화
 
@@ -287,8 +289,10 @@ public class RandomEventUI : MonoBehaviour
         if (emergencyImageGood != null) emergencyImageGood.SetActive(!isBadTitle);
 
         // 결과 (미리 채워두되 ResultBG 가 숨겨져 있어 보이지 않음)
-        if (resultText  != null) resultText.text  = _resultMessage  ?? "";
-        if (resultText2 != null) resultText2.text = _resultMessage2 ?? "";
+        // AlertPanel1의 결과 문구와 동일한 규칙으로 렌더 — {만족도}/{능력치} 같은 토큰은 pill 아이콘으로,
+        // "+10%"/"-5" 같은 수치는 강조색으로 바뀐다.
+        ApplyResultText(resultText,  _resultMessage);
+        ApplyResultText(resultText2, _resultMessage2);
 
         // 초상
         if (portraitImage != null)
@@ -320,6 +324,27 @@ public class RandomEventUI : MonoBehaviour
         _step = Step.Intro;
         if (_flowCo != null) StopCoroutine(_flowCo);
         _flowCo = StartCoroutine(IntroRoutine(description));
+    }
+
+    // ResultBG1/2의 결과 문구를 AlertPanel1과 똑같은 방식으로 렌더한다. pill 토큰 치환 + 수치 강조색 +
+    // TMP_SpriteAsset 조립을 AlertUI가 한 곳에서 담당하므로 그대로 위임한다 — 규칙이 두 군데로 갈라지지
+    // 않게. AlertUI.Instance가 아직 없으면 평문으로 폴백.
+    //
+    // ⚠️ 넘겨받은 spriteAsset은 반드시 그 TMP에 세팅해야 <sprite name="...">이 해석된다. pill이 없는
+    // 문구일 땐 null이 오는데, 이전 이벤트에서 세팅된 에셋이 남아 있으면 안 되므로 null도 그대로 대입한다.
+    void ApplyResultText(TextMeshProUGUI tmp, string message)
+    {
+        if (tmp == null) return;
+
+        if (AlertUI.Instance == null)
+        {
+            tmp.text = message ?? "";
+            return;
+        }
+
+        var (body, spriteAsset) = AlertUI.Instance.ProcessMentLines(tmp, resultPillHeight, message);
+        tmp.spriteAsset = spriteAsset;
+        tmp.text        = body;
     }
 
     // 슬라이드될 BG 들이 LayoutGroup 자식이면 표시 위치를 캡처한 뒤 그룹을 꺼 직접 제어.

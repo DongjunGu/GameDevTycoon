@@ -115,10 +115,10 @@ public static class RandomEvents_Condition
 
         string sysMsg = !string.IsNullOrEmpty(row?.systemMessage)
             ? row.systemMessage.Replace("{직원이름}", emp.employeeName)
-            : $"{emp.employeeName} 만족도 -5";
+            : $"{emp.employeeName} {{만족도}} -5";
         string sysMsg2 = !string.IsNullOrEmpty(row?.systemMessage2)
             ? row.systemMessage2.Replace("{직원이름}", emp.employeeName).Replace("n주", $"{n}주")
-            : $"{emp.employeeName} 능력치 {n}주 동안 -10%";
+            : $"{emp.employeeName} {{능력치}} {n}주 동안 -10%";
 
         RandomEventUI.Instance.Show(
             row?.title ?? "불안감 조성",
@@ -195,7 +195,7 @@ public static class RandomEvents_Condition
                 .Replace("{이름1}", existingEmp.employeeName)
                 .Replace("{이름2}", newEmp.employeeName)
                 .Replace("n주", $"{n}주")
-            : $"{n}주간 능력치 +10%";
+            : $"{n}주간 {{능력치}} +10%";
 
         mgr.SetActiveCouple(newEmpId, existingEmpId);
 
