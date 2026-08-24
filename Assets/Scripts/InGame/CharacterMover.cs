@@ -76,6 +76,9 @@ public class CharacterMover : MonoBehaviour
             {
                 _anim?.SetMoving(false);
 
+                // 지금 서 있는 셀(fromCell)이 엘리베이터 입구 — 그 층 문에 열림 연출을 걸어준다.
+                ElevatorDoorAnimator.Notify(fromCell);
+
                 float remaining = elevatorRideDuration;
                 while (remaining > 0f)
                 {
