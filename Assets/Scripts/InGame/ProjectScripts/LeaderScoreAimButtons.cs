@@ -8,11 +8,24 @@ using UnityEngine.UI;
 // 좌우되지 않도록(LeaderScoreUI.Instance 세팅 타이밍 문제 회피).
 public class LeaderScoreAimButtons : MonoBehaviour
 {
+    // TutorialController가 Inspector 연결 없이 접근하기 위한 참조.
+    public static LeaderScoreAimButtons Instance { get; private set; }
+
+    // 튜토리얼(7-3~7-5)이 버튼을 강제로 잠가둔 동안, 등장 애니메이션이 끝나며 자동으로
+    // interactable을 되돌리는 걸 막는다 — 이게 없으면 아래 InsertRise의 자동 언락이 튜토리얼의
+    // 잠금을 몇백 ms 뒤에 조용히 풀어버려서, 대사가 아직 떠 있는 도중에 클릭이 먹혀버린다.
+    public bool suppressAutoUnlock;
+
     [Tooltip("버튼 3개를 감싸는 부모 (평소엔 비활성 상태로 둘 것)")]
     public GameObject aimButtonsRoot;
     public Button lowButton;
     public Button midButton;
     public Button highButton;
+
+    void Awake()
+    {
+        Instance = this;
+    }
 
     [Header("라벨 (UText — 명칭만 표시, 비워두면 버튼 자식의 TextMeshProUGUI를 자동으로 찾아서 씀)")]
     public TextMeshProUGUI lowLabel;
@@ -129,7 +142,10 @@ public class LeaderScoreAimButtons : MonoBehaviour
         // 좌표계 깨짐). GlobalButtonClickBounce는 btn.interactable을 보고 개입 여부를 정하므로, 애니메이션이
         // 완전히 끝날 때까지 꺼뒀다가 그 순간에만 켜서 레이스 자체를 막는다.
         if (btn != null)
-            _riseSeq.InsertCallback(delay + riseDuration + riseSettleDuration, () => btn.interactable = true);
+            _riseSeq.InsertCallback(delay + riseDuration + riseSettleDuration, () =>
+            {
+                if (!suppressAutoUnlock) btn.interactable = true;
+            });
     }
 
     void RefreshLabels()

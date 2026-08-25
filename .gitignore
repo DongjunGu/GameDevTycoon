@@ -98,3 +98,16 @@ InitTestScene*.unity*
 
 # Auto-generated scenes by play mode tests
 /[Aa]ssets/[Ii]nit[Tt]est[Ss]cene*.unity*
+
+# Firebase Unity SDK — 커스텀 코드 없는 순수 플러그인이라 git에 안 올림(용량 큼).
+# 재설치: firebase.google.com/download/unity 에서 dotnet4/FirebaseAnalytics.unitypackage +
+# FirebaseCrashlytics.unitypackage 임포트 → EDM4U Force Resolve (project_firebase_admob_setup 참고).
+# google-services.json/GoogleService-Info.plist는 공개 식별자라 여기서 제외 안 함 — 계속 커밋됨.
+/[Aa]ssets/Firebase/
+/[Aa]ssets/Firebase.meta
+/[Aa]ssets/GeneratedLocalRepo/Firebase/
+/[Aa]ssets/GeneratedLocalRepo/Firebase.meta
+/[Aa]ssets/Plugins/Android/FirebaseApp.androidlib/
+/[Aa]ssets/Plugins/Android/FirebaseApp.androidlib.meta
+/[Aa]ssets/Plugins/iOS/Firebase/
+/[Aa]ssets/Plugins/iOS/Firebase.meta

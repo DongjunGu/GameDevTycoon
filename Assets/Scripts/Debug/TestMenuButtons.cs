@@ -134,4 +134,44 @@ public class TestMenuButtons : MonoBehaviour
         OfficeManager.Instance.ForceCharacterToPatrolPoint(emp.id, patrolPointId);
         Debug.Log($"[Test] {emp.employeeName} → {patrolPointId} patrol");
     }
+
+    // TestAdsBtn — 보상형 광고 시청 테스트. 끝까지 보면 5,000G 지급.
+    // 광고를 닫아버리거나(중도 이탈) 로드가 안 됐으면 보상 없음.
+    // 에디터/개발빌드에서는 AdsManager가 구글 테스트 단위를 쓰므로 실제 수익과 무관하고 계정도 안전하다.
+    const int TEST_AD_REWARD_GOLD = 5000;
+
+    public void OnClickTestAds()
+    {
+        if (AdsManager.Instance == null)
+        {
+            AlertUI.Instance?.Show("광고 모듈이 아직 준비되지 않았습니다.");
+            return;
+        }
+
+        AdsManager.Instance.ShowRewarded(AdPlacement.Test,
+            onRewarded: () =>
+            {
+                // AddGold가 SaveMoney + HUDUI.RefreshMoney까지 처리한다.
+                MoneyManager.Instance?.AddGold(TEST_AD_REWARD_GOLD);
+                AlertUI.Instance?.ShowMoney("광고 시청 보상을 받았습니다.", TEST_AD_REWARD_GOLD);
+            },
+            onUnavailable: () =>
+            {
+                AlertUI.Instance?.Show("광고를 불러오지 못했습니다.\n잠시 후 다시 시도해주세요.");
+            });
+    }
+
+    // TestCrashBtn — Firebase Crashlytics 파이프라인 테스트.
+    // LogException은 앱을 죽이지 않으면서 Crashlytics 콘솔의 "비치명적 오류(Non-fatals)"에 리포트를
+    // 기록한다 — UnityEngine.Diagnostics.Utils.ForceCrash 같은 진짜 네이티브 강제종료는 에디터
+    // 자체를 죽일 위험이 있어(저장 안 된 씬 작업 유실) 여기서는 쓰지 않는다.
+    // 리포트는 이 세션에 바로 안 뜨고, 앱을 완전히 종료했다가 "다음에 재시작"할 때 업로드된다
+    // (Crashlytics 표준 동작 — 크래시 직후엔 프로세스가 죽어있어 네트워크로 못 보내므로).
+    public void OnClickTestCrash()
+    {
+        var ex = new System.Exception($"[Test] 강제 테스트 크래시 — {System.DateTime.Now:HH:mm:ss}");
+        Firebase.Crashlytics.Crashlytics.LogException(ex);
+        Debug.Log("[Test] Crashlytics 테스트 리포트 기록 — 앱을 재시작해야 콘솔에 업로드됩니다.");
+        AlertUI.Instance?.Show("테스트 크래시 리포트를 기록했습니다.\n앱을 재시작하면 Firebase 콘솔에 업로드됩니다.");
+    }
 }

@@ -359,6 +359,12 @@ public class SalesUI : MonoBehaviour
         if (revenueNewRecordText != null) revenueNewRecordText.SetActive(false);
         if (rankNewRecordText != null)    rankNewRecordText.SetActive(false);
 
+        // 직원 카드가 열려있으면 판매 패널을 가린다 — 특히 튜토리얼 구간에선 카드가 LockClose로
+        // 고정돼 있어 바깥 클릭으로도 안 닫히므로, 여기서 한 번 강제로 내린다.
+        // Hide()는 _closeLocked를 무시하고 즉시 비활성화하며, 카드가 꺼지면 EmployeeCardUI.Update가
+        // 첫 줄에서 early-return 하므로 잠금이 남아있어도 부작용이 없다.
+        if (EmployeeCardUI.Instance != null) EmployeeCardUI.Instance.Hide();
+
         // 폴드 잔재 복원 후 활성화
         panelRT.DOKill();
         panelRT.localPosition = _panelOpenLocalPos;

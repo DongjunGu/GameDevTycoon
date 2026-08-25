@@ -971,6 +971,11 @@ public class TutorialController : MonoBehaviour
         // 유저가 안내(7-3~7-5-1) 끝나기 전에 조준 버튼을 못 누르게 즉시 잠금 — aimButtonsRoot 자체는
         // LeaderScoreAimButtons.Update()가 자동으로 활성화하지만(폴링), interactable은 별도라 여기서
         // 직접 꺼야 한다. 7-5-2에서 aimHighButton만 다시 켬(그 외엔 계속 잠김 — "강" 강제 유도).
+        //
+        // ⚠️ suppressAutoUnlock을 같이 켜야 한다 — 등장(rise) 애니메이션이 끝나면 LeaderScoreAimButtons가
+        // 몇백 ms 뒤 스스로 interactable을 true로 되돌리는데(정상 플레이용 동작), 그게 이 잠금을 무시하고
+        // 7-4/7-5 대사가 떠 있는 도중에 조용히 풀어버려서 유저가 대사 중간에 클릭해버리는 원인이었다.
+        if (LeaderScoreAimButtons.Instance != null) LeaderScoreAimButtons.Instance.suppressAutoUnlock = true;
         if (aimLowButton  != null) aimLowButton.interactable  = false;
         if (aimMidButton  != null) aimMidButton.interactable  = false;
         if (aimHighButton != null) aimHighButton.interactable = false;
@@ -998,6 +1003,10 @@ public class TutorialController : MonoBehaviour
         // BeginHighlight로 계속 돌던 pulse를 먼저 접어야(CollapseAndResetOrigin) 새 Highlight의 pulse와
         // 안 겹친다(3-4→3-5, 6-2→6-3과 동일한 이유). 같은 자리라 슬라이드 없이 그대로 다시 나타남.
         _highlighter.CollapseAndResetOrigin();
+        // 여기서부터는 정상 동작(등장 애니메이션 종료 시 자동 언락)으로 되돌려도 안전 — rise 시퀀스는
+        // waiting=true 직후 이미 다 끝난 상태라 더 실행될 콜백이 없고, 다음 4회차(9-1 등) 재사용을
+        // 위해 원상복귀만 시켜두는 것.
+        if (LeaderScoreAimButtons.Instance != null) LeaderScoreAimButtons.Instance.suppressAutoUnlock = false;
         if (aimHighButton != null) aimHighButton.interactable = true;
         yield return _highlighter.Highlight(aimHighButton, showHand: true); // 클릭 → LeaderScoreAimButtons.Select(High) → SelectRound4Aim
 

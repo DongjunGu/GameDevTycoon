@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "823026448917",
+    "project_id": "gamedevtycoon-1",
+    "storage_bucket": "gamedevtycoon-1.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:823026448917:android:98e12f87fff420cfb36c1c",
+        "android_client_info": {
+          "package_name": "com.es.get"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAh51aOCNUd06JzUnHXr6pzzAEx2J8bgUk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -113,34 +113,81 @@ public static class OnboardingState
         set => _tutorialActiveFlag = value;
     }
 
+    // ── 진척도 로깅 ────────────────────────────────────────────────
+    // 모든 Mark*Done()이 여기를 통과한다. 튜토리얼 단계가 처음 완료될 때만 1회 분석 이벤트를 보낸다
+    // (이미 완료된 단계를 다시 마크하는 호출이 있어서 — 재접속 재조립 등 — 중복 로깅을 막아야 함).
+    static bool _suppressStepAnalytics;
+
+    static void MarkDone(string key)
+    {
+        bool already = PlayerPrefs.GetInt(key, 0) == 1;
+
+        PlayerPrefs.SetInt(key, 1);
+        PlayerPrefs.Save();
+
+        if (already || _suppressStepAnalytics) return;
+        GameAnalytics.TutorialStep(key);
+    }
+
+    // 진행 순서 — MarkAllTutorialStepsDone()의 호출 순서와 동일하게 유지할 것.
+    // 이 배열의 인덱스가 분석 이벤트의 step_index 로 나가서 GA4에서 단계 정렬 기준이 된다.
+    public static readonly string[] OrderedStepKeys =
+    {
+        KEY_INTRO, KEY_TUTORIAL, KEY_FIRST_HIRE, KEY_TUT3, KEY_TUT5, KEY_TUT6, KEY_TUT7,
+        KEY_TUT8, KEY_TUT9, KEY_TUT10, KEY_TUT12, KEY_TUT13, KEY_TUT13_4, KEY_TUT13_5,
+        KEY_TUT14_1, KEY_TUT15, KEY_TUT16_1, KEY_TUT17_1, KEY_TUT17_2, KEY_TUT17_7_SHOP,
+        KEY_TUT17_8_USED, KEY_TUT17_8_UNLOCK, KEY_TUT17_7, KEY_TUT18, KEY_TUT19, KEY_TUT20,
+        KEY_TUT21, KEY_TUT21_1, KEY_TUT22, KEY_TUT22_1, KEY_TUT23, KEY_TUT23_1, KEY_TUT24,
+    };
+
+    public static int TotalStepCount => OrderedStepKeys.Length;
+
+    // "onboarding_tutorial13_4_done" → "tutorial13_4"
+    // GA4 파라미터 값 길이 제한(100자)에 한참 못 미치므로 그대로 써도 안전하다.
+    public static string StepIdFromKey(string key)
+    {
+        string id = key;
+        if (id.StartsWith("onboarding_")) id = id.Substring("onboarding_".Length);
+        if (id.EndsWith("_done")) id = id.Substring(0, id.Length - "_done".Length);
+        return id;
+    }
+
+    public static int StepIndexOf(string key) => System.Array.IndexOf(OrderedStepKeys, key);
+
+    // 지금까지 완료한 가장 마지막 단계의 인덱스. 아무것도 없으면 -1.
+    // 중간에 건너뛴 단계가 있어도(분기 때문에 항상 순차는 아님) "가장 멀리 간 지점"을 반환한다.
+    public static int FurthestDoneIndex()
+    {
+        int furthest = -1;
+        for (int i = 0; i < OrderedStepKeys.Length; i++)
+            if (PlayerPrefs.GetInt(OrderedStepKeys[i], 0) == 1) furthest = i;
+        return furthest;
+    }
+
     public static bool IntroDone => PlayerPrefs.GetInt(KEY_INTRO, 0) == 1;
     public static void MarkIntroDone()
     {
-        PlayerPrefs.SetInt(KEY_INTRO, 1);
-        PlayerPrefs.Save();
+        MarkDone(KEY_INTRO);
     }
 
     public static bool TutorialDone => PlayerPrefs.GetInt(KEY_TUTORIAL, 0) == 1;
     public static void MarkTutorialDone()
     {
-        PlayerPrefs.SetInt(KEY_TUTORIAL, 1);
-        PlayerPrefs.Save();
+        MarkDone(KEY_TUTORIAL);
     }
 
     // 첫 채용(온보딩) — 면접 대기를 3주가 아닌 1주로 단축, 1회만.
     public static bool FirstHireDone => PlayerPrefs.GetInt(KEY_FIRST_HIRE, 0) == 1;
     public static void MarkFirstHireDone()
     {
-        PlayerPrefs.SetInt(KEY_FIRST_HIRE, 1);
-        PlayerPrefs.Save();
+        MarkDone(KEY_FIRST_HIRE);
     }
 
     // 튜토리얼 3-1 — 첫 ConfirmHirePanel 노출 시 1회. 버튼 강조 없이 TutorialPanel 대사만 재생.
     public static bool Tutorial3Done => PlayerPrefs.GetInt(KEY_TUT3, 0) == 1;
     public static void MarkTutorial3Done()
     {
-        PlayerPrefs.SetInt(KEY_TUT3, 1);
-        PlayerPrefs.Save();
+        MarkDone(KEY_TUT3);
     }
 
     // 튜토리얼 5-1~5-4 — 두 번째(진짜) 채용이 확정되고 2초 뒤 시작, 프로젝트 개발 시작 확정까지.
@@ -148,8 +195,7 @@ public static class OnboardingState
     public static bool Tutorial5Done => PlayerPrefs.GetInt(KEY_TUT5, 0) == 1;
     public static void MarkTutorial5Done()
     {
-        PlayerPrefs.SetInt(KEY_TUT5, 1);
-        PlayerPrefs.Save();
+        MarkDone(KEY_TUT5);
     }
 
     // 두 번째(진짜) 채용 확정 시 HiringUI.DoHire가 호출 — 5-1 재생 시작 "전"에 무장해 둬야 그 사이에
@@ -171,7 +217,7 @@ public static class OnboardingState
     public static bool Tutorial6Done => PlayerPrefs.GetInt(KEY_TUT6, 0) == 1;
     public static void MarkTutorial6Done()
     {
-        PlayerPrefs.SetInt(KEY_TUT6, 1);
+        MarkDone(KEY_TUT6);
         PlayerPrefs.DeleteKey(KEY_TUT5_PEND); // 5-1 재생 무장 해제 — 이제부터는 재접속해도 5-1로 안 돌아감(7단계 자체 재생 로직으로 이어짐)
         PlayerPrefs.Save();
     }
@@ -181,8 +227,7 @@ public static class OnboardingState
     public static bool Tutorial7Done => PlayerPrefs.GetInt(KEY_TUT7, 0) == 1;
     public static void MarkTutorial7Done()
     {
-        PlayerPrefs.SetInt(KEY_TUT7, 1);
-        PlayerPrefs.Save();
+        MarkDone(KEY_TUT7);
     }
 
     // 튜토리얼 8-1 — 팀장점수 패널을 실제로 닫은(confirm) 직후, 개발 화면의 SupriseQuestUI(도전 과제)
@@ -190,47 +235,41 @@ public static class OnboardingState
     public static bool Tutorial8Done => PlayerPrefs.GetInt(KEY_TUT8, 0) == 1;
     public static void MarkTutorial8Done()
     {
-        PlayerPrefs.SetInt(KEY_TUT8, 1);
-        PlayerPrefs.Save();
+        MarkDone(KEY_TUT8);
     }
 
     public static bool Tutorial9Done => PlayerPrefs.GetInt(KEY_TUT9, 0) == 1;
     public static void MarkTutorial9Done()
     {
-        PlayerPrefs.SetInt(KEY_TUT9, 1);
-        PlayerPrefs.Save();
+        MarkDone(KEY_TUT9);
     }
 
     // 튜토리얼 10단계 — 직원 카드/만족도 소개 + AcWar 이벤트 체험(10-1~10-3).
     public static bool Tutorial10Done => PlayerPrefs.GetInt(KEY_TUT10, 0) == 1;
     public static void MarkTutorial10Done()
     {
-        PlayerPrefs.SetInt(KEY_TUT10, 1);
-        PlayerPrefs.Save();
+        MarkDone(KEY_TUT10);
     }
 
     // 튜토리얼 12-1 — 아트팀장 선택(75% 진행도, 아트 직원이 없어 CEO만 후보인 상황) 안내 완료.
     public static bool Tutorial12Done => PlayerPrefs.GetInt(KEY_TUT12, 0) == 1;
     public static void MarkTutorial12Done()
     {
-        PlayerPrefs.SetInt(KEY_TUT12, 1);
-        PlayerPrefs.Save();
+        MarkDone(KEY_TUT12);
     }
 
     // 튜토리얼 13-1/13-2 — 진행도 ~95% 확정 창의성 틱 발동 직후, 창의성 점수/블록 안내 완료.
     public static bool Tutorial13Done => PlayerPrefs.GetInt(KEY_TUT13, 0) == 1;
     public static void MarkTutorial13Done()
     {
-        PlayerPrefs.SetInt(KEY_TUT13, 1);
-        PlayerPrefs.Save();
+        MarkDone(KEY_TUT13);
     }
 
     // 튜토리얼 13-4 — 창의성 미니게임 Sq/T_U 블록 지정 위치 유도 완료.
     public static bool Tutorial13_4Done => PlayerPrefs.GetInt(KEY_TUT13_4, 0) == 1;
     public static void MarkTutorial13_4Done()
     {
-        PlayerPrefs.SetInt(KEY_TUT13_4, 1);
-        PlayerPrefs.Save();
+        MarkDone(KEY_TUT13_4);
     }
 
     // 튜토리얼 13-5 — 디버깅 시작 직후, 창의성 능력치가 버그 제거에도 쓰인다는 안내 완료.
@@ -241,32 +280,28 @@ public static class OnboardingState
     public static bool Tutorial13_5Done => PlayerPrefs.GetInt(KEY_TUT13_5, 0) == 1;
     public static void MarkTutorial13_5Done()
     {
-        PlayerPrefs.SetInt(KEY_TUT13_5, 1);
-        PlayerPrefs.Save();
+        MarkDone(KEY_TUT13_5);
     }
 
     // 튜토리얼 14-1 — 디버깅 끝나고 DevelopmentResultPanel 활성화 직후, 첫 게임 완성 + 기여도 확인 안내 완료.
     public static bool Tutorial14_1Done => PlayerPrefs.GetInt(KEY_TUT14_1, 0) == 1;
     public static void MarkTutorial14_1Done()
     {
-        PlayerPrefs.SetInt(KEY_TUT14_1, 1);
-        PlayerPrefs.Save();
+        MarkDone(KEY_TUT14_1);
     }
 
     // 튜토리얼 15-1/15-2 — 마케팅 패널 열릴 때, 마케팅 중요성 + LeftPanel 두 번째 슬롯 안내 완료.
     public static bool Tutorial15Done => PlayerPrefs.GetInt(KEY_TUT15, 0) == 1;
     public static void MarkTutorial15Done()
     {
-        PlayerPrefs.SetInt(KEY_TUT15, 1);
-        PlayerPrefs.Save();
+        MarkDone(KEY_TUT15);
     }
 
     // 튜토리얼 16-1 — 판매 패널 열리고 1주차 매출 bar가 오르는 동안(시간 정지 없이), 대박 반응 완료.
     public static bool Tutorial16_1Done => PlayerPrefs.GetInt(KEY_TUT16_1, 0) == 1;
     public static void MarkTutorial16_1Done()
     {
-        PlayerPrefs.SetInt(KEY_TUT16_1, 1);
-        PlayerPrefs.Save();
+        MarkDone(KEY_TUT16_1);
     }
 
     // 테스트용 — 16-1 Done 플래그만 원복(ResetAll처럼 다른 단계까지 통째로 리셋하지 않음). 실제로
@@ -281,8 +316,7 @@ public static class OnboardingState
     public static bool Tutorial17_1Done => PlayerPrefs.GetInt(KEY_TUT17_1, 0) == 1;
     public static void MarkTutorial17_1Done()
     {
-        PlayerPrefs.SetInt(KEY_TUT17_1, 1);
-        PlayerPrefs.Save();
+        MarkDone(KEY_TUT17_1);
     }
 
     // 테스트용 — 17-1 Done 플래그만 원복.
@@ -296,8 +330,7 @@ public static class OnboardingState
     public static bool Tutorial17_2Done => PlayerPrefs.GetInt(KEY_TUT17_2, 0) == 1;
     public static void MarkTutorial17_2Done()
     {
-        PlayerPrefs.SetInt(KEY_TUT17_2, 1);
-        PlayerPrefs.Save();
+        MarkDone(KEY_TUT17_2);
     }
 
     // 테스트용 — 17-2~17-5 Done 플래그만 원복(ResetAll처럼 다른 단계까지 통째로 리셋하지 않음).
@@ -311,8 +344,7 @@ public static class OnboardingState
     public static bool Tutorial17_7Done => PlayerPrefs.GetInt(KEY_TUT17_7, 0) == 1;
     public static void MarkTutorial17_7Done()
     {
-        PlayerPrefs.SetInt(KEY_TUT17_7, 1);
-        PlayerPrefs.Save();
+        MarkDone(KEY_TUT17_7);
     }
 
     // 테스트용 — 17-7~17-9-2 Done 플래그만 원복(서브 플래그 포함 — 전부 처음부터 다시 볼 수 있게).
@@ -328,24 +360,21 @@ public static class OnboardingState
     public static bool Tutorial17_7ShopDone => PlayerPrefs.GetInt(KEY_TUT17_7_SHOP, 0) == 1;
     public static void MarkTutorial17_7ShopDone()
     {
-        PlayerPrefs.SetInt(KEY_TUT17_7_SHOP, 1);
-        PlayerPrefs.Save();
+        MarkDone(KEY_TUT17_7_SHOP);
     }
 
     // 17-8 서브 — 아이템을 실제로 사용해 소비/효과가 서버에 커밋된 시점 완료.
     public static bool Tutorial17_8UsedDone => PlayerPrefs.GetInt(KEY_TUT17_8_USED, 0) == 1;
     public static void MarkTutorial17_8UsedDone()
     {
-        PlayerPrefs.SetInt(KEY_TUT17_8_USED, 1);
-        PlayerPrefs.Save();
+        MarkDone(KEY_TUT17_8_USED);
     }
 
     // 17-8 내부 잠금 해제 신호 — 실제 콘텐츠는 17-8 흐름 자체(EmployeeCardUI.ApplyItemTrainingLock 참고).
     public static bool Tutorial17_8UnlockDone => PlayerPrefs.GetInt(KEY_TUT17_8_UNLOCK, 0) == 1;
     public static void MarkTutorial17_8UnlockDone()
     {
-        PlayerPrefs.SetInt(KEY_TUT17_8_UNLOCK, 1);
-        PlayerPrefs.Save();
+        MarkDone(KEY_TUT17_8_UNLOCK);
     }
 
     // 테스트용 — 17-8 잠금 해제(아이템/강화 버튼) 플래그만 원복.
@@ -359,8 +388,7 @@ public static class OnboardingState
     public static bool Tutorial18Done => PlayerPrefs.GetInt(KEY_TUT18, 0) == 1;
     public static void MarkTutorial18Done()
     {
-        PlayerPrefs.SetInt(KEY_TUT18, 1);
-        PlayerPrefs.Save();
+        MarkDone(KEY_TUT18);
     }
 
     // 테스트용 — 18-1~18-4 Done 플래그만 원복.
@@ -374,8 +402,7 @@ public static class OnboardingState
     public static bool Tutorial19Done => PlayerPrefs.GetInt(KEY_TUT19, 0) == 1;
     public static void MarkTutorial19Done()
     {
-        PlayerPrefs.SetInt(KEY_TUT19, 1);
-        PlayerPrefs.Save();
+        MarkDone(KEY_TUT19);
     }
 
     // 테스트용 — 19-1 Done 플래그만 원복.
@@ -389,8 +416,7 @@ public static class OnboardingState
     public static bool Tutorial20Done => PlayerPrefs.GetInt(KEY_TUT20, 0) == 1;
     public static void MarkTutorial20Done()
     {
-        PlayerPrefs.SetInt(KEY_TUT20, 1);
-        PlayerPrefs.Save();
+        MarkDone(KEY_TUT20);
     }
 
     // 테스트용 — 20-1/20-2 Done 플래그만 원복.
@@ -404,16 +430,14 @@ public static class OnboardingState
     public static bool Tutorial21Done => PlayerPrefs.GetInt(KEY_TUT21, 0) == 1;
     public static void MarkTutorial21Done()
     {
-        PlayerPrefs.SetInt(KEY_TUT21, 1);
-        PlayerPrefs.Save();
+        MarkDone(KEY_TUT21);
     }
 
     // 21 서브 — Tut2Event 확정 커밋(골드/직원 디버프 서버 반영) 완료 여부.
     public static bool Tutorial21_1Done => PlayerPrefs.GetInt(KEY_TUT21_1, 0) == 1;
     public static void MarkTutorial21_1Done()
     {
-        PlayerPrefs.SetInt(KEY_TUT21_1, 1);
-        PlayerPrefs.Save();
+        MarkDone(KEY_TUT21_1);
     }
 
     // 테스트용 — 21(서브 포함) Done 플래그 원복.
@@ -428,16 +452,14 @@ public static class OnboardingState
     public static bool Tutorial22Done => PlayerPrefs.GetInt(KEY_TUT22, 0) == 1;
     public static void MarkTutorial22Done()
     {
-        PlayerPrefs.SetInt(KEY_TUT22, 1);
-        PlayerPrefs.Save();
+        MarkDone(KEY_TUT22);
     }
 
     // 22 서브 — Tut3Event 확정 커밋(직원 만족도 디버프 서버 반영) 완료 여부.
     public static bool Tutorial22_1Done => PlayerPrefs.GetInt(KEY_TUT22_1, 0) == 1;
     public static void MarkTutorial22_1Done()
     {
-        PlayerPrefs.SetInt(KEY_TUT22_1, 1);
-        PlayerPrefs.Save();
+        MarkDone(KEY_TUT22_1);
     }
 
     // 테스트용 — 22(서브 포함) Done 플래그 원복.
@@ -452,16 +474,14 @@ public static class OnboardingState
     public static bool Tutorial23Done => PlayerPrefs.GetInt(KEY_TUT23, 0) == 1;
     public static void MarkTutorial23Done()
     {
-        PlayerPrefs.SetInt(KEY_TUT23, 1);
-        PlayerPrefs.Save();
+        MarkDone(KEY_TUT23);
     }
 
     // 23 서브 — 사직서 이벤트 확정 커밋 완료 여부.
     public static bool Tutorial23_1Done => PlayerPrefs.GetInt(KEY_TUT23_1, 0) == 1;
     public static void MarkTutorial23_1Done()
     {
-        PlayerPrefs.SetInt(KEY_TUT23_1, 1);
-        PlayerPrefs.Save();
+        MarkDone(KEY_TUT23_1);
     }
 
     // 테스트용 — 23(서브 포함) Done 플래그 원복.
@@ -476,8 +496,7 @@ public static class OnboardingState
     public static bool Tutorial24Done => PlayerPrefs.GetInt(KEY_TUT24, 0) == 1;
     public static void MarkTutorial24Done()
     {
-        PlayerPrefs.SetInt(KEY_TUT24, 1);
-        PlayerPrefs.Save();
+        MarkDone(KEY_TUT24);
     }
 
     // RunStateManager가 서버의 tutorialFullyDone(계정 영구 플래그)을 로드했는데 true일 때 호출 — 이 기기의
@@ -492,6 +511,11 @@ public static class OnboardingState
     // 통과" 목록)을 그대로 재사용 — 새 튜토리얼 단계를 추가하면 여기도 같이 늘릴 것.
     public static void MarkAllTutorialStepsDone()
     {
+        // 디버그/서버동기화용 일괄 마크 — 실제 플레이가 아니므로 단계별 분석 이벤트는 보내지 않는다.
+        // (안 막으면 33개 이벤트가 한꺼번에 나가서 퍼널 통계가 오염된다)
+        _suppressStepAnalytics = true;
+        try
+        {
         MarkIntroDone();
         MarkTutorialDone();
         MarkFirstHireDone();
@@ -525,6 +549,8 @@ public static class OnboardingState
         MarkTutorial23Done();
         MarkTutorial23_1Done();
         MarkTutorial24Done();
+        }
+        finally { _suppressStepAnalytics = false; }
     }
 
     // 테스트용 — 24 Done 플래그만 원복.

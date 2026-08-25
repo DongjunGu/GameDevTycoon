@@ -30,6 +30,8 @@ using DG.Tweening;
 // ═══════════════════════════════════════════════════════════════════════════
 public class MenuController : MonoBehaviour
 {
+    public static MenuController Instance { get; private set; }
+
     [System.Serializable]
     public class TopMenu
     {
@@ -97,6 +99,8 @@ public class MenuController : MonoBehaviour
 
     void Awake()
     {
+        Instance = this;
+
         // 인스펙터에 배치된 위치를 "열림" 기준으로 캐시
         if (topMenuContainer != null) _topOpenPos = topMenuContainer.anchoredPosition;
         if (topMenus != null)
@@ -135,7 +139,19 @@ public class MenuController : MonoBehaviour
                     // sub 메뉴 안의 모든 버튼: 클릭하면 메뉴 전체 닫힘 (기존 onClick 실행 후)
                     var subButtons = tm.subMenu.GetComponentsInChildren<Button>(true);
                     foreach (var b in subButtons)
-                        b.onClick.AddListener(CloseTopMenu);
+                    {
+                        // PointerDown: 화면에서만 즉시 지운다(레이캐스트는 유지 — 클릭 시퀀스가
+                        // 끊기면 안 됨). onClick(런타임): 이 버튼의 persistent call(패널 열기 등)이
+                        // 이미 실행된 뒤이므로 이제 실제로 꺼도 안전 — FinishCloseTopMenu가 처리.
+                        // (순서 보장 원리는 CloseTopMenuImmediate/FinishCloseTopMenu 주석 참고)
+                        b.onClick.AddListener(FinishCloseTopMenu);
+
+                        var trigger = b.gameObject.GetComponent<EventTrigger>();
+                        if (trigger == null) trigger = b.gameObject.AddComponent<EventTrigger>();
+                        var down = new EventTrigger.Entry { eventID = EventTriggerType.PointerDown };
+                        down.callback.AddListener(_ => CloseTopMenuImmediate());
+                        trigger.triggers.Add(down);
+                    }
                 }
                 if (tm.button != null)
                 {
@@ -292,8 +308,10 @@ public class MenuController : MonoBehaviour
         if (_topOpen || topMenuContainer == null) return;
         _topOpen = true;
         if (_topAnim != null) { StopCoroutine(_topAnim); _topAnim = null; }
+        _pendingHideTop = null; // 혹시 못 끝난 FinishCloseTopMenu 예약이 있어도 재오픈이 우선
         topMenuContainer.DOKill();
         topMenuContainer.gameObject.SetActive(true);
+        ResetVisual(topMenuContainer);
         topMenuContainer.anchoredPosition = _topOpenPos;
         // 촤르륵 펼침 — 세로로 접힌 상태에서 OutBack 으로 펴짐
         topMenuContainer.localScale = new Vector3(1f, 0f, 1f);
@@ -324,14 +342,105 @@ public class MenuController : MonoBehaviour
             });
     }
 
+    // 애니메이션 없이 즉시 "화면에서만" 지운다 — 서브메뉴 버튼이 여는 모달(강화 패널 등)이
+    // ModalBlocker의 useBlur로 배경을 캡처하기 "직전"에, 그 버튼의 PointerDown 시점(onClick보다
+    // 항상 먼저 발생)에 호출하는 용도.
+    //
+    // ⚠️ CloseTopMenu()(트윈)로는 안 된다: 인스펙터에 미리 연결된 리스너(예: TrainingPanelUI.OpenPanel)가
+    // 항상 먼저 실행되고 CloseTopMenu는 런타임 AddListener라 그 다음이라, 트윈이 끝나기 전에 캡처가
+    // 메뉴 펼쳐진 모습을 그대로 찍어버린다.
+    //
+    // ⚠️ 여기서 SetActive(false)를 바로 호출해도 안 된다: 지금 이 클릭을 유발한 버튼 자신이 이
+    // topMenuContainer/서브메뉴의 자식인데, 그 부모를 비활성화하면 이어질 PointerUp/PointerClick이
+    // "대상이 비활성화됨"으로 무효화된다(Button.OnPointerClick의 IsActive() 체크) — 클릭 자체가 씹혀
+    // 아무 패널도 안 열린다.
+    //
+    // ⚠️ "한 프레임 뒤에 SetActive(false)"도 안 된다(실제로 겪은 버그): PointerDown과 PointerUp은
+    // 서로 다른 프레임에 걸쳐 일어나는 게 보통이다(사람이 누르고 떼는 데 실제 시간이 걸림) —
+    // yield return null은 "정확히 1프레임 후"라서, 유저가 아직 손을 떼기도 전에 대상이 사라져
+    // 버려서 똑같이 클릭이 무효화된다.
+    //
+    // 그래서 여기서는 CanvasGroup.alpha 로 화면에서만 즉시 지우고(레이캐스트는 살려둬 클릭 시퀀스를
+    // 끝까지 진행시킨다) 상태(_topOpen 등)만 정리한다. 실제 GameObject.SetActive(false)는
+    // FinishCloseTopMenu()가 맡는데, 그건 "이 클릭의 onClick 처리가 실제로 끝난 시점"(런타임
+    // AddListener로 등록되어 persistent call보다 나중에 실행됨, 또는 OnTopClick처럼 이미 onClick
+    // 콜백 내부인 경우 그 자리에서 바로)에 호출해야 안전하다 — 프레임 수가 아니라 이벤트 순서로
+    // 맞춰야 사람마다 다른 클릭 길이에 흔들리지 않는다.
+    public void CloseTopMenuImmediate()
+    {
+        if (!_topOpen || topMenuContainer == null) return;
+        _topOpen = false;
+
+        _pendingHideTop = topMenuContainer;
+        HideVisualOnly(topMenuContainer);
+
+        if (_activeSub != null)
+        {
+            _pendingHideSub = _activeSub.subMenu;
+            if (_pendingHideSub != null) HideVisualOnly(_pendingHideSub);
+
+            if (_subAnims.TryGetValue(_activeSub, out var subAnim) && subAnim != null) StopCoroutine(subAnim);
+            _activeSub = null;
+            EventSystem.current?.SetSelectedGameObject(null);
+            RefreshAllTopMenuTextStyles();
+        }
+
+        if (_topAnim != null) { StopCoroutine(_topAnim); _topAnim = null; }
+        topMenuContainer.DOKill();
+        _pendingHideSub?.DOKill();
+    }
+
+    RectTransform _pendingHideTop, _pendingHideSub;
+
+    // CloseTopMenuImmediate()가 화면에서 지워둔 걸 실제로 비활성화한다 — 서브메뉴 버튼의 onClick
+    // (런타임 AddListener, persistent call 다음)에서, 또는 OnTopClick처럼 이미 onClick 콜백 안에
+    // 있는 코드에서 직접 호출한다. 두 경우 다 "패널을 열고 있는(또는 이미 연 뒤인) onClick 처리
+    // 도중"이라, 여기서 SetActive(false)를 해도 이 클릭의 판정에는 더 이상 영향이 없다.
+    void FinishCloseTopMenu()
+    {
+        if (_pendingHideTop != null)
+        {
+            _pendingHideTop.gameObject.SetActive(false);
+            _pendingHideTop.localScale = Vector3.one;
+            ResetVisual(_pendingHideTop);
+            _pendingHideTop = null;
+        }
+        if (_pendingHideSub != null)
+        {
+            _pendingHideSub.gameObject.SetActive(false);
+            ResetVisual(_pendingHideSub);
+            _pendingHideSub = null;
+        }
+    }
+
+    void HideVisualOnly(RectTransform rt)
+    {
+        var cg = rt.GetComponent<CanvasGroup>();
+        if (cg == null) cg = rt.gameObject.AddComponent<CanvasGroup>();
+        cg.alpha = 0f; // blocksRaycasts/interactable은 건드리지 않음 — 진행 중인 클릭을 막으면 안 됨
+    }
+
+    // 다시 열릴 때 대비한 방어적 원복 — 정상 흐름이면 FinishCloseTopMenu가 이미 복구해두지만,
+    // 혹시라도 그게 아직 안 불린 채로(예외 경로) 재오픈되는 경우에도 확실히 보이게 한다.
+    void ResetVisual(RectTransform rt)
+    {
+        var cg = rt.GetComponent<CanvasGroup>();
+        if (cg != null) cg.alpha = 1f;
+    }
+
     // ── 내부 ─────────────────────────────────────────────────────────────────
     void OnTopClick(TopMenu tm)
     {
         // sub가 없으면 직접 패널 오픈 + 메뉴 전체 닫음
         if (tm.subMenu == null)
         {
+            // directPanel이 블러로 배경을 캡처하는 모달이면, 그 캡처 시점엔 메뉴가 이미 사라져
+            // 있어야 한다. 이 함수 자체가 이미 onClick 콜백 안이라(버튼의 IsActive 판정은 이미
+            // 끝난 뒤) CloseTopMenuImmediate + FinishCloseTopMenu를 여기서 바로 순서대로 불러도
+            // 클릭 판정에 영향이 없다 — PointerDown 훅이 필요한 서브메뉴 버튼과 다른 점.
+            CloseTopMenuImmediate();
             if (tm.directPanel != null) tm.directPanel.SetActive(true);
-            CloseTopMenu();
+            FinishCloseTopMenu();
             return;
         }
 
@@ -390,9 +499,11 @@ public class MenuController : MonoBehaviour
     {
         if (tm.subMenu == null) return;
         if (_subAnims.TryGetValue(tm, out var prev) && prev != null) StopCoroutine(prev);
+        if (_pendingHideSub == tm.subMenu) _pendingHideSub = null; // 혹시 못 끝난 예약이 있어도 재오픈이 우선
 
         var openPos = _subOpenPos[tm];
         tm.subMenu.gameObject.SetActive(true);
+        ResetVisual(tm.subMenu);
         tm.subMenu.anchoredPosition = openPos + subClosedOffset;
         _subAnims[tm] = StartCoroutine(SlideTo(tm.subMenu, openPos, slideDuration, null));
     }

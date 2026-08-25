@@ -76,6 +76,8 @@ public class TrainingPanelUI : MonoBehaviour
     }
 
     // ── 열기/닫기 ─────────────────────────────
+    // TopMenuUI 서브메뉴(trainingMenuBtn) 경유 시 메뉴를 닫는 처리는 MenuController.Start()의
+    // PointerDown 훅이 전역으로 처리한다(패널 열림보다 항상 먼저 실행되도록) — 여기서 따로 안 해도 됨.
     public void OpenPanel()
     {
         _onClosed = null;
@@ -89,6 +91,9 @@ public class TrainingPanelUI : MonoBehaviour
     public void OpenForEmployee(EmployeeData emp, System.Action onClosed = null)
     {
         if (emp == null) return;
+
+        MenuController.Instance?.CloseTopMenuImmediate();
+
         _onClosed = onClosed;
         GameTimeManager.Instance?.StopTime();
         ModalGate.I.Register(this);
