@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a187246822bbb47529482707f3e0eff8, type: 3}
+  m_Name: GoogleMobileAdsSettings
+  m_EditorClassIdentifier: GoogleMobileAds.Editor::GoogleMobileAds.Editor.GoogleMobileAdsSettings
+  adMobAndroidAppId: ca-app-pub-4551340166428636~1655125304
+  adMobIOSAppId: ca-app-pub-4551340166428636~5301514821
+  enableKotlinXCoroutinesPackagingOption: 1
+  enableGradleBuildPreProcessor: 1
+  disableOptimizeInitialization: 0
+  disableOptimizeAdLoading: 0
+  userTrackingUsageDescription: 개인에게 맞는 광고를 제공하기 위해 이 기기의 광고 식별자를 사용합니다. 허용하지 않아도 게임 플레이에는 영향이 없습니다.
+  userLanguage: en
+  overrideDefaultGmaAndroidSdk: 0
+  selectedGmaAndroidSdk: 0
