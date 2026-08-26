@@ -198,6 +198,32 @@ public class DevelopmentManager : MonoBehaviour
     public void SetLeaderDevelopBonusTotal(float val)  => _leaderDevelopBonusTotal  = val;
     public void SetLeaderPlanningBonusTotal(float val) => _leaderPlanningBonusTotal = val;
     public void SetLeaderArtBonusTotal(float val)      => _leaderArtBonusTotal      = val;
+
+    // 평론가 리뷰(CriticReviewUI) "화면유형" 판정용 — 파트별 팀장점수 세션이 최종적으로 도달한 누적ds(스트레스).
+    // 세션 미기록(-1, 새 프로젝트 시작 직후)은 GetTeamStressScore 브라켓 판정에서 0점 처리된다.
+    public float LeaderFinalDsPlanning => _leaderFinalDsPlanning;
+    public float LeaderFinalDsDevelop  => _leaderFinalDsDevelop;
+    public float LeaderFinalDsArt      => _leaderFinalDsArt;
+    public void SetLeaderFinalDsPlanning(float val) => _leaderFinalDsPlanning = val;
+    public void SetLeaderFinalDsDevelop(float val)  => _leaderFinalDsDevelop  = val;
+    public void SetLeaderFinalDsArt(float val)      => _leaderFinalDsArt      = val;
+
+    // 누적ds(스트레스) 구간별 점수 — 0~89:0 / 90~94:1 / 95~98:2 / 99~100:3 / 100초과(burst):-1
+    public static int LeaderDsBracketScore(float ds)
+    {
+        if (ds > 100f) return -1;
+        if (ds >= 99f) return 3;
+        if (ds >= 95f) return 2;
+        if (ds >= 90f) return 1;
+        return 0;
+    }
+
+    // 파트 3곳(기획/개발/아트) 브라켓 점수 합 — CriticReviewUI가 이 값으로 좋은/안좋은 화면을 가른다(>=5 좋음).
+    public int GetTeamStressScore()
+        => LeaderDsBracketScore(_leaderFinalDsPlanning)
+         + LeaderDsBracketScore(_leaderFinalDsDevelop)
+         + LeaderDsBracketScore(_leaderFinalDsArt);
+
     public float GetLeaderBonusByRole(EmployeeRole role) => role switch
     {
         EmployeeRole.Planner    => _leaderPlanningBonusTotal,
@@ -234,6 +260,16 @@ public class DevelopmentManager : MonoBehaviour
         }
     }
 
+    void SetLeaderFinalDs(LeaderType type, float ds)
+    {
+        switch (type)
+        {
+            case LeaderType.Programmer: _leaderFinalDsDevelop  = ds; break;
+            case LeaderType.Planner:    _leaderFinalDsPlanning = ds; break;
+            case LeaderType.Artist:     _leaderFinalDsArt      = ds; break;
+        }
+    }
+
     // 4회차 연출이 끝나 confirmBtn이 활성화된 팀장점수 세션이 도전과제 도전 파트와 일치하고, 성공했는데
     // 아직 보상 미수령이면 MissionAlertUI를 띄운다(LeaderScoreUI 패널이 열려있는 채로 위에 겹쳐 뜸).
     void OnLeaderScoreClosedCheckChallengeClaim()
@@ -261,6 +297,9 @@ public class DevelopmentManager : MonoBehaviour
     private float _leaderDevelopBonusTotal;
     private float _leaderPlanningBonusTotal;
     private float _leaderArtBonusTotal;
+    private float _leaderFinalDsPlanning = -1f;
+    private float _leaderFinalDsDevelop  = -1f;
+    private float _leaderFinalDsArt      = -1f;
 
     // 게임 카테고리 아이템 (upgradeRandom/Develop/Art/Plan) 의 프로젝트당 1회 사용 추적.
     // ProjectSaveManager 가 CSV 로 직렬화 → 새 프로젝트(StartDevelopment) 진입 시 클리어.
@@ -1722,6 +1761,8 @@ public class DevelopmentManager : MonoBehaviour
         }
 
         SetLeaderBonusTotal(type, total);
+        // 이 지점은 overflowRound != -1(1~3회차 중 조기 오버플로 또는 재접속 재생) 일 때만 도달한다.
+        SetLeaderFinalDs(type, cumDsAfter[overflowRound]);
 
         bool hasValues = overflowRound != -1; // overflow 면 값 잠금 저장, 아니면 직원만 저장(재추첨 허용)
 
@@ -1840,6 +1881,7 @@ public class DevelopmentManager : MonoBehaviour
         total += _leaderBonusTotal; // 90/95/99 임계선 보너스 (1~3회차분 포함 누적치)
 
         SetLeaderBonusTotal(ctx.type, total);
+        SetLeaderFinalDs(ctx.type, cumDs); // 4회차까지 끝난 이 세션의 최종 누적ds(스트레스)
 
         int hunsuBonus = 0;
         LeaderType hunsuBonusTarget = LeaderType.Planner;
@@ -2608,6 +2650,9 @@ public class DevelopmentManager : MonoBehaviour
         _leaderDevelopBonusTotal  = 0f;
         _leaderPlanningBonusTotal = 0f;
         _leaderArtBonusTotal      = 0f;
+        _leaderFinalDsPlanning    = -1f;
+        _leaderFinalDsDevelop     = -1f;
+        _leaderFinalDsArt         = -1f;
         CurrentLeaderScoreType    = null;
         _challenge.ResetForNewRun();
         BugPenalty = 0f;

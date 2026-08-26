@@ -67,6 +67,9 @@ public class ProjectSaveManager : MonoBehaviour
     private float  _loadedLeaderDevelopBonusTotal;
     private float  _loadedLeaderPlanningBonusTotal;
     private float  _loadedLeaderArtBonusTotal;
+    private float  _loadedLeaderFinalDsPlanning = -1f;
+    private float  _loadedLeaderFinalDsDevelop  = -1f;
+    private float  _loadedLeaderFinalDsArt      = -1f;
     private float  _loadedPendingHackyCodePenalty;
     private string _loadedPendingHackyCodePortraitId = "";
     private int    _loadedPendingHackyCodeWeeksLeft;
@@ -154,6 +157,9 @@ public class ProjectSaveManager : MonoBehaviour
         param.Add("leaderDevelopBonusTotal", dm.LeaderDevelopBonusTotal);
         param.Add("leaderPlanningBonusTotal", dm.LeaderPlanningBonusTotal);
         param.Add("leaderArtBonusTotal", dm.LeaderArtBonusTotal);
+        param.Add("leaderFinalDsPlanning", dm.LeaderFinalDsPlanning);
+        param.Add("leaderFinalDsDevelop", dm.LeaderFinalDsDevelop);
+        param.Add("leaderFinalDsArt", dm.LeaderFinalDsArt);
         param.Add("pendingHackyCodePenalty", RandomEventManager.Instance.PendingHackyCodePenalty);
         param.Add("pendingHackyCodePortraitId", RandomEventManager.Instance.PendingHackyCodePortraitId);
         param.Add("pendingHackyCodeWeeksLeft", RandomEventManager.Instance.PendingHackyCodeWeeksLeft);
@@ -294,6 +300,9 @@ public class ProjectSaveManager : MonoBehaviour
             _loadedLeaderDevelopBonusTotal       = SafeFloat(row, "leaderDevelopBonusTotal", 0f);
             _loadedLeaderPlanningBonusTotal      = SafeFloat(row, "leaderPlanningBonusTotal", 0f);
             _loadedLeaderArtBonusTotal           = SafeFloat(row, "leaderArtBonusTotal", 0f);
+            _loadedLeaderFinalDsPlanning         = SafeFloat(row, "leaderFinalDsPlanning", -1f);
+            _loadedLeaderFinalDsDevelop          = SafeFloat(row, "leaderFinalDsDevelop", -1f);
+            _loadedLeaderFinalDsArt              = SafeFloat(row, "leaderFinalDsArt", -1f);
             _loadedPendingHackyCodePenalty       = SafeFloat(row, "pendingHackyCodePenalty", 0f);
             _loadedPendingHackyCodePortraitId    = SafeString(row, "pendingHackyCodePortraitId", "");
             _loadedPendingHackyCodeWeeksLeft     = SafeInt(row, "pendingHackyCodeWeeksLeft", 0);
@@ -353,6 +362,9 @@ public class ProjectSaveManager : MonoBehaviour
         DevelopmentManager.Instance.SetLeaderDevelopBonusTotal(_loadedLeaderDevelopBonusTotal);
         DevelopmentManager.Instance.SetLeaderPlanningBonusTotal(_loadedLeaderPlanningBonusTotal);
         DevelopmentManager.Instance.SetLeaderArtBonusTotal(_loadedLeaderArtBonusTotal);
+        DevelopmentManager.Instance.SetLeaderFinalDsPlanning(_loadedLeaderFinalDsPlanning);
+        DevelopmentManager.Instance.SetLeaderFinalDsDevelop(_loadedLeaderFinalDsDevelop);
+        DevelopmentManager.Instance.SetLeaderFinalDsArt(_loadedLeaderFinalDsArt);
         RandomEventManager.Instance.PendingHackyCodePenalty    = _loadedPendingHackyCodePenalty;
         RandomEventManager.Instance.PendingHackyCodePortraitId = _loadedPendingHackyCodePortraitId;
         RandomEventManager.Instance.PendingHackyCodeWeeksLeft  = _loadedPendingHackyCodeWeeksLeft;

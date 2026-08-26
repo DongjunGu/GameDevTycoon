@@ -219,6 +219,14 @@ public class DevelopmentResultUI : MonoBehaviour
             rt.anchoredPosition = target + new Vector2(rowSlideDistance, 0f);
             _rowSlideSeq.Insert(i * rowSlideStagger, rt.DOAnchorPos(target, rowSlideDuration).SetEase(Ease.OutCubic));
         }
+
+        // 슬라이드 끝나면 LayoutGroup을 다시 켜야 ContentSizeFitter가 갱신된 자식 배치를 반영한다 —
+        // 꺼둔 채로 두면 이후 크기 변화(행 추가/제거 등)에 Content 높이가 갱신되지 않는다.
+        _rowSlideSeq.OnComplete(() =>
+        {
+            if (_contentLayoutGroup != null) _contentLayoutGroup.enabled = true;
+            LayoutRebuilder.ForceRebuildLayoutImmediate(contentRect);
+        });
     }
 
     // Content 아래 행 풀을 count 개 이상 확보 (모자라면 프리팹 생성)
@@ -395,6 +403,14 @@ public class DevelopmentResultUI : MonoBehaviour
                     float criticScore = (rawScore * (1f - DevelopmentManager.Instance.BugPenalty)
                                       + DevelopmentManager.Instance.BugEventBonus) * (1f - casePenalty);
 
+                    // 평론가 리뷰 "쏠린 케이스" 조건 멘트용 — 1등/꼴등 파트명 (casePenalty와 동일한 p/d/a 기준).
+                    string topPart = "기획", bottomPart = "기획";
+                    float topVal = p, botVal = p;
+                    if (d > topVal) { topVal = d; topPart = "개발"; }
+                    if (a > topVal) { topVal = a; topPart = "아트"; }
+                    if (d < botVal) { botVal = d; bottomPart = "개발"; }
+                    if (a < botVal) { botVal = a; bottomPart = "아트"; }
+
                     // 숙련도(Mastery) — 이번 프로젝트의 최종 점수엔 "판정 전" 현재 등급의 배율을 적용(먼저 캡처),
                     // 승급 판정은 그 뒤에 굴려서 다음 프로젝트부터 반영되게 한다.
                     ProjectGenre masteryGenre = ProjectSetupUI.SelectedGenre;
@@ -408,7 +424,8 @@ public class DevelopmentResultUI : MonoBehaviour
                     }
 
         // ── 1. 평론가 패널 ──
-    CriticReviewUI.Instance.Show(criticScore, () =>
+    int teamStressScore = DevelopmentManager.Instance.GetTeamStressScore();
+    CriticReviewUI.Instance.Show(criticScore, teamStressScore, casePenalty, topPart, bottomPart, () =>
     {
         // ── 2. 마케팅 ──
         AlertUI.Instance.Show("마케팅을 시작합니다.", () =>

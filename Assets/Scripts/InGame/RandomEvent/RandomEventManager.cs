@@ -1226,7 +1226,7 @@ public class RandomEventManager : MonoBehaviour
         RandomEventConditionChartLoader.Cache?.TryGetValue("EmployeeRun", out runRow);
         string alertMsg = !string.IsNullOrEmpty(runRow?.systemMessage)
             ? runRow.systemMessage.Replace("{해당직원이름}", emp.employeeName)
-            : $"{emp.employeeName}이 도망쳤습니다!\n남은 팀원들의 만족도가 5 하락합니다.";
+            : $"{emp.employeeName}이 도망쳤습니다!\n남은 팀원들의 {{만족도}}가 5 하락합니다.";
 
         _pendingRunAlerts.Add(new RunEventPayload { alertMessage = alertMsg, weeksLeft = 2 });
     }

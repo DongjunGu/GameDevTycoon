@@ -244,7 +244,7 @@ public class SalaryNegotiationManager : MonoBehaviour
             HUDUI.Instance?.RefreshAll();
             InfoFeedUI.Instance?.ShowSatisfaction(_currentEmployee, +20);
             _responseGroupId = _selectedAcceptGroupId;
-            _pendingSatisfactionAlert = $"{_currentEmployee.employeeName}의 만족도가 20 상승했습니다.";
+            _pendingSatisfactionAlert = $"{_currentEmployee.employeeName}의 {{만족도}}가 20 상승했습니다.";
             Debug.Log($"{_currentEmployee.employeeName} 연봉 수락: {_proposedSalary:N0}G / 만족도 +20");
         }
         else if (resultType == "SalaryFreeze")
@@ -256,7 +256,7 @@ public class SalaryNegotiationManager : MonoBehaviour
                 EmployeeManager.Instance.UpdateEmployee(_currentEmployee);
                 HUDUI.Instance?.RefreshAll();
                 InfoFeedUI.Instance?.ShowSatisfaction(_currentEmployee, -20);
-                _pendingSatisfactionAlert = $"{_currentEmployee.employeeName}의 만족도가 20 하락했습니다.";
+                _pendingSatisfactionAlert = $"{_currentEmployee.employeeName}의 {{만족도}}가 20 하락했습니다.";
                 Debug.Log($"{_currentEmployee.employeeName} 연봉 동결 거부: 만족도 -20");
             }
             else
@@ -297,7 +297,9 @@ public class SalaryNegotiationManager : MonoBehaviour
         {
             string msg = _pendingSatisfactionAlert;
             _pendingSatisfactionAlert = null;
-            AlertUI.Instance?.Show(msg);
+            // AlertUI.Show(Legacy/AlertPanel7)는 pill 토큰을 처리하지 않아 {만족도}가 아이콘이 아니라
+            // 글자 그대로 노출된다 — pill 지원 패널(AlertPanel1)로 뜨는 이 메서드를 대신 쓴다.
+            AlertUI.Instance?.ShowRandomEventResult(msg);
         }
     }
 

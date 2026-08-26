@@ -262,7 +262,12 @@ public class DialogUI : MonoBehaviour
 
             var captured = choice;
             btnObj.GetComponent<Button>().onClick.AddListener(() =>
-                DialogManager.Instance.OnChoiceSelected(captured));
+            {
+                // 다음 노드(Show)가 뜨기 전까지 ChoicePanel이 계속 떠 있던 문제 — 선택 즉시 숨긴다.
+                // 버튼 자체 정리(Destroy)는 기존처럼 다음 Show()의 ClearChoices()가 담당.
+                _choicePanel.SetActive(false);
+                DialogManager.Instance.OnChoiceSelected(captured);
+            });
 
             _choiceButtons.Add(btnObj);
         }
