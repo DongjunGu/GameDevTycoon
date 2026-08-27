@@ -2008,8 +2008,8 @@ public class TutorialController : MonoBehaviour
 
     // ── 24 (23 종료 직후 자동 연결, 또는 재접속 시 Start()가 단독 재생) ──────────────
     // 대사 24-1(2줄) 재생 후 곧바로 파산 화면을 띄운다 — 이 튜토리얼 시나리오의 마지막 단계.
-    // GameTimeManager.TriggerBankruptcy()(AlertUI 확인 즉시 OutGameScene 직행)는 안 쓰고, LoanManager/
-    // SettingsUI가 실제 파산·메인메뉴 종료 때 쓰는 것과 동일한 패턴으로 EndingCanvas/EndingPanel
+    // GameTimeManager.TriggerBankruptcy()(AlertUI 확인 즉시 OutGameScene 직행)는 안 쓰고,
+    // SettingsUI가 메인메뉴 종료 때 쓰는 것과 동일한 패턴으로 EndingCanvas/EndingPanel
     // (EndingPanelUI.Show())을 씬 안에서 그대로 띄운다 — 확인 버튼을 눌러야 OutGameScene으로 넘어간다.
     public IEnumerator PlayTutorial24()
     {
@@ -2034,7 +2034,7 @@ public class TutorialController : MonoBehaviour
         AlertUI.Instance.Show("자본이 부족합니다.\n파산합니다.", EndRunThenShowEnding);
     }
 
-    // LoanManager.EndRunAndLoad / SettingsUI.GoToMainMenu와 동일한 "저장 성공 시 EndingPanel 표시,
+    // SettingsUI.GoToMainMenu와 동일한 "저장 성공 시 EndingPanel 표시,
     // 실패 시 재시도(확인 대사는 다시 안 띄우고 EndRun만 재시도)" 패턴.
     void EndRunThenShowEnding()
     {

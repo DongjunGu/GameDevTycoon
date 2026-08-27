@@ -43,7 +43,7 @@ public class MissionAlertUI : MonoBehaviour
     public Sprite devIconL;
     public Sprite artIconL;
 
-    [Header("보상 획득 연출 — RewardIcon에서 미끄러져 나와 CurrentScorePanel의 해당 RoleIcon으로 흡수")]
+    [Header("보상 획득 연출 — RewardIcon에서 미끄러져 나와 목표로 흡수 (팀장점수=CurrentScorePanel RoleIcon / 파트총점=DevelopmentPanel 파트패널)")]
     [Tooltip("LeaderScoreUI.BonusFlyCoroutine과 동일 패턴(아이콘 1개 버전) — 아래쪽 부채꼴로 여유있게 펼쳐졌다 잠깐 대기 후 목표로 빨려들어감")]
     public float rewardDipRadius = 150f;
     public float rewardDipArcDegrees = 150f;
@@ -199,14 +199,13 @@ public class MissionAlertUI : MonoBehaviour
         StartCoroutine(RewardFlyCoroutine(Hide));
     }
 
-    // RewardIcon에서 미끄러져 나와(펼쳐짐 → 대기 → 흡수) 보상이 실제로 반영되는 곳으로 빨려들어간다 —
-    // ChallengeManager.ClaimReward()는 팀장점수(리더존) 보상이든 파트총점 보상이든 Kind 무관하게 항상
-    // DevelopmentPanelUI 쪽 파트 점수만 올리므로(리더 점수 총합엔 절대 안 더해짐), 애니메이션 목표도
-    // 항상 DevelopmentPanelUI의 해당 파트 패널로 통일한다. (2026-08-20 수정 — 예전엔 리더존 타입일 때
-    // CurrentScorePanel의 RoleIcon/ScoreText로 날아가 그 텍스트를 beforeValue+RewardScore로 임의 덮어썼는데,
-    // 실제로 오르는 값은 그쪽이 아니라서 패널을 다시 열면 원래(리더 점수 총합) 값으로 되돌아가 "보상이 안
-    // 들어간 것처럼" 보이는 버그가 있었음 — 실제 값이 오르는 DevelopmentPanelUI로 보내면 재조회해도 항상
-    // 일치한다.)
+    // RewardIcon에서 미끄러져 나와(펼쳐짐 → 대기 → 흡수) 보상이 표시되는 곳으로 빨려들어간다.
+    // ClaimReward()는 Kind 무관 항상 DevelopmentPanelUI 파트 점수를 올린다. 흡수 목표는:
+    //  - 팀장점수(리더존): CurrentScorePanel의 해당 파트 RoleIcon. 이 패널은 리더존일 때만 표시되고,
+    //    표시값(GetCurrentValueForPart)이 2026-08-20부터 GetActualPartTotal(=DevelopmentPanel 값)로 통일돼
+    //    있어 ClaimReward가 올린 값을 그대로 반영한다 → 재조회해도 일치, 예전의 "보상 안 들어간 것처럼
+    //    보이던" 버그는 데이터소스 통일로 이미 해소됨. 흡수 직후 여기서 ScoreText도 갱신한다.
+    //  - 파트총점: CurrentScorePanel이 숨겨져 있으므로 DevelopmentPanelUI의 해당 파트 패널로 보낸다.
     // LeaderScoreUI.BonusFlyCoroutine과 동일한 3단계 구조를 아이콘 1개짜리로 옮긴 것 — 보상 지급(ClaimReward)은
     // 아이콘이 도착하는 순간에 실행해, 그 직후 갱신하는 표시값이 실제 반영된 최신값과 정확히 맞도록 한다.
     // 흡수+펀치가 끝나고 0.2초 뒤 onComplete(=Hide)를 불러 자동으로 닫힌다.
@@ -216,15 +215,31 @@ public class MissionAlertUI : MonoBehaviour
         if (challenge == null) { onComplete?.Invoke(); yield break; }
 
         LeaderType rewardPart = challenge.RewardPart;
+        bool isLeaderZone = challenge.Kind != ChallengeKind.PartTotal;
 
-        var devPanelUI = DevelopmentPanelUI.Instance;
-        RectTransform targetIcon = rewardPart switch
+        RectTransform targetIcon;
+        if (isLeaderZone)
         {
-            LeaderType.Planner => devPanelUI != null ? devPanelUI.planningPanel : null,
-            LeaderType.Programmer => devPanelUI != null ? devPanelUI.devPanel : null,
-            LeaderType.Artist => devPanelUI != null ? devPanelUI.artPanel : null,
-            _ => null
-        };
+            Image roleIcon = rewardPart switch
+            {
+                LeaderType.Planner => planningScoreRoleIcon,
+                LeaderType.Programmer => developScoreRoleIcon,
+                LeaderType.Artist => artScoreRoleIcon,
+                _ => null
+            };
+            targetIcon = roleIcon != null ? (RectTransform)roleIcon.transform : null;
+        }
+        else
+        {
+            var devPanelUI = DevelopmentPanelUI.Instance;
+            targetIcon = rewardPart switch
+            {
+                LeaderType.Planner => devPanelUI != null ? devPanelUI.planningPanel : null,
+                LeaderType.Programmer => devPanelUI != null ? devPanelUI.devPanel : null,
+                LeaderType.Artist => devPanelUI != null ? devPanelUI.artPanel : null,
+                _ => null
+            };
+        }
 
         // 연출에 필요한 참조가 없으면 보상만 조용히 지급하고 끝 — 씬 배선 누락이 보상 자체를 막으면 안 됨.
         if (rewardIcon == null || rewardIcon.sprite == null || targetIcon == null || mainPanel == null)
@@ -292,10 +307,18 @@ public class MissionAlertUI : MonoBehaviour
 
         Destroy(go);
 
-        // 흡수 임팩트 — 보상을 실제로 지급한 뒤 DevelopmentPanel 파트 패널을 펀치 스케일. 그 패널 텍스트
-        // 자체는 AddValuesInstant가 자동 갱신하므로 여기서 따로 값을 덮어쓸 필요 없음.
+        // 흡수 임팩트 — 보상을 실제로 지급한 뒤 목표 아이콘을 펀치 스케일.
         challenge.ClaimReward();
         FirePunch(targetIcon);
+
+        // 리더존: DevelopmentPanel 텍스트는 AddValuesInstant가 자동 갱신하지만 CurrentScorePanel의
+        // ScoreText는 Show() 때만 채워지므로, 흡수 직후 여기서 올린 값을 즉시 반영한다.
+        if (isLeaderZone)
+        {
+            if (planningScoreText != null) planningScoreText.text = Mathf.RoundToInt(challenge.GetCurrentValueForPart(LeaderType.Planner)).ToString();
+            if (developScoreText != null)  developScoreText.text  = Mathf.RoundToInt(challenge.GetCurrentValueForPart(LeaderType.Programmer)).ToString();
+            if (artScoreText != null)      artScoreText.text      = Mathf.RoundToInt(challenge.GetCurrentValueForPart(LeaderType.Artist)).ToString();
+        }
 
         yield return new WaitForSeconds(0.2f);
         onComplete?.Invoke();

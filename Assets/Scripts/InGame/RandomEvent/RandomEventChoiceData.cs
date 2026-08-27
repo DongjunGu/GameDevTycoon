@@ -8,6 +8,10 @@ public class RandomEventChoiceOption
     // 비어있지 않으면 버튼의 ConditionPanel/ConditionText에 표시(예: "자금 -300,000 G"). null/빈 문자열이면 ConditionPanel 비활성.
     public string conditionText;
 
+    // conditionText가 자금 비용이 아니라 아이템 보유 현황("커피 보유 (현재 2개)" 등)일 때 true.
+    // 이 경우 MoneyPanel 엘리베이터(잔액 표시)를 띄우지 않는다 — 아이템 소모 선택지엔 잔액이 무관.
+    public bool conditionIsItem = false;
+
     // true면 버튼을 표시하되 비활성(회색) 상태로 렌더 — onChoose는 호출되지 않음
     public bool disabled = false;
 

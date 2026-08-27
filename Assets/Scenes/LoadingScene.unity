@@ -4249,7 +4249,6 @@ GameObject:
   - component: {fileID: 2062941533}
   - component: {fileID: 2062941532}
   - component: {fileID: 2062941531}
-  - component: {fileID: 2062941530}
   - component: {fileID: 2062941529}
   - component: {fileID: 2062941528}
   - component: {fileID: 2062941527}
@@ -4348,20 +4347,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TechTreeManager
   allNodes: []
---- !u!114 &2062941530
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2062941524}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 21a096a70525c4c4dbbb2e8e8be305b6, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::LoanManager
-  interestRate: 0.04
-  activeLoans: []
 --- !u!114 &2062941531
 MonoBehaviour:
   m_ObjectHideFlags: 0

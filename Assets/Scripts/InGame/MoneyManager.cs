@@ -56,7 +56,8 @@ public class MoneyManager : MonoBehaviour
     // 재화 지급
     public void AddGold(int amount)
     {
-        if (amount <= 0) return;
+        if (amount < 0) { Debug.LogWarning($"[MoneyManager] AddGold 음수 인자 무시: {amount} (차감은 SpendGold 사용)"); return; }
+        if (amount == 0) return;
         _gold += amount;
         SaveMoney();
         HUDUI.Instance?.RefreshMoney();
@@ -71,41 +72,17 @@ public class MoneyManager : MonoBehaviour
         {
             Debug.Log($"재화 부족: 필요 {amount}G / 보유 {_gold}G");
 
-            // 가난한 회사 특성 — 잔액 부족 시 1회 발동. AlertUI 확인 후 보너스 G 지급 + 그래도 부족하면 대출 prompt.
+            // 가난한 회사 특성 — 잔액 부족 시 1회 발동. AlertUI 확인 후 보너스 G 지급.
             if (TraitEffectApplier.TryConsumeBrokeRescue(out int rescueSalary, out string rescueName))
             {
                 AlertUI.Instance?.ShowMoney(
                     $"가난한 회사 발동!\n{rescueName}의 연봉을 지급합니다.",
                     rescueSalary,
-                    () =>
-                    {
-                        AddGold(rescueSalary);
-                        // [대출 시스템 비활성화] 구제 후에도 부족하면 그대로 둔다(대출 prompt 제거).
-                        /*
-                        if (_gold < amount &&
-                            LoanManager.Instance != null && LoanManager.Instance.activeLoans.Count == 0)
-                        {
-                            ConfirmUI.Instance?.Show(
-                                "돈이 부족합니다.\n대출하시겠습니까?",
-                                onConfirm: () => LoanUI.Instance?.Open()
-                            );
-                        }
-                        */
-                    }
+                    () => AddGold(rescueSalary)
                 );
                 return false;
             }
 
-            // [대출 시스템 비활성화] 잔액 부족 시 대출 prompt 없이 실패 반환.
-            /*
-            if (LoanManager.Instance != null && LoanManager.Instance.activeLoans.Count == 0)
-            {
-                ConfirmUI.Instance?.Show(
-                    "돈이 부족합니다.\n대출하시겠습니까?",
-                    onConfirm: () => LoanUI.Instance?.Open()
-                );
-            }
-            */
             return false;
         }
         _gold -= amount;
@@ -167,7 +144,8 @@ public class MoneyManager : MonoBehaviour
     // 포인트 가산. 디버그/획득 경로 공용. 음수면 SpendPoint 사용.
     public void AddPoint(int amount, bool saveImmediately = true)
     {
-        if (amount <= 0) return;
+        if (amount < 0) { Debug.LogWarning($"[MoneyManager] AddPoint 음수 인자 무시: {amount} (차감은 SpendPoint 사용)"); return; }
+        if (amount == 0) return;
         _point += amount;
         if (saveImmediately) SaveMoney();
         OnPointChanged?.Invoke();
@@ -209,72 +187,4 @@ public class MoneyManager : MonoBehaviour
 
 
 
-    void Start()
-    {
-        DialogManager.Instance.OnChoiceResult += HandleDialogResult;
-    }
-
-    void HandleDialogResult(string resultType, int resultValue)
-    {
-        if (resultType == "GoldChange")
-        {
-            if (resultValue >= 0)
-                MoneyManager.Instance.AddGold(resultValue);
-            else
-                MoneyManager.Instance.SpendGold(-resultValue);
-
-            GameTimeManager.Instance?.SaveGameTime();
-            ProjectSaveManager.Instance?.SaveProject();
-            string msg = resultValue >= 0
-                ? $"+{resultValue:N0} G 지급됐습니다."
-                : $"{resultValue:N0} G 차감됐습니다.";
-            ShowAfterDialog(msg);
-        }
-        if (resultType == "OpenHiring")
-        {
-            HiringUI.Instance.OpenHiring();
-        }
-        if (resultType == "SatisfactionChange")
-        {
-            string empId = DialogManager.Instance.ContextEmployeeId;
-            if (!string.IsNullOrEmpty(empId))
-            {
-                var emp = EmployeeManager.Instance.GetEmployee(empId);
-                if (emp != null)
-                {
-                    emp.satisfaction = UnityEngine.Mathf.Clamp(emp.satisfaction + resultValue, 0, 100);
-                    EmployeeManager.Instance.UpdateEmployee(emp);
-
-                    GameTimeManager.Instance?.SaveGameTime();
-                    ProjectSaveManager.Instance?.SaveProject();
-                    string sign = resultValue >= 0 ? "+" : "";
-                    ShowAfterDialog($"{emp.employeeName}의 만족도가 {sign}{resultValue} 변했습니다.\n현재 만족도: {emp.satisfaction}");
-                }
-            }
-        }
-    }
-
-    void ShowAfterDialog(string message)
-    {
-        void OnEnd()
-        {
-            DialogManager.Instance.OnDialogEnd -= OnEnd;
-            AlertUI.Instance.Show(message);
-        }
-        DialogManager.Instance.OnDialogEnd += OnEnd;
-    }
-    public void OnTestDialogButton()
-    {
-        EventDialogTable.PlayManual("event_game_start");        // 단순 진행
-    }
-
-    public void OnTestHireDialogButton()
-    {
-        EventDialogTable.PlayManual("event_first_hire");        // 선택지 + 골드 차감
-    }
-
-    public void OnTestProjectDialogButton()
-    {
-        EventDialogTable.PlayManual("event_project_complete");  // 2단계 분기
-    }
 }

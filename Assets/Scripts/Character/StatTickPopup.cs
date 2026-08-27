@@ -215,17 +215,24 @@ public class StatTickPopup : MonoBehaviour
         }
     }
 
+    static bool _appQuitting;
+    void OnApplicationQuit() => _appQuitting = true;
+
     void OnDisable()
     {
         // 강제 비활성화(개발 시작 시 ClearAllPopups 등) 시에도 패널값 공개 누락 방지
         RevealToPanel();
 
-        // 강제 비활성화 시 콜백 누락 방지
+        // 강제 비활성화 시 콜백 누락 방지 — 단, 앱 종료/씬 언로드로 인한 비활성화면 흘리지 않는다.
+        // 이 콜백은 OfficeCharacter.OnPopupFinished로 이어져 큐의 다음 팝업을 풀에서 스폰하는데,
+        // teardown 중엔 풀 오브젝트가 이미 비활성이라 StartCoroutine이 "game object is inactive"로 터진다.
+        // (게임 중 강제 클리어일 때만 콜백이 유효 — 그땐 _appQuitting=false + scene.isLoaded=true)
         if (_onFinish != null)
         {
             var cb = _onFinish;
             _onFinish = null;
-            cb?.Invoke();
+            if (!_appQuitting && gameObject.scene.isLoaded)
+                cb.Invoke();
         }
     }
 

@@ -78,6 +78,10 @@ public class GameSceneInitializer : MonoBehaviour
         if (GameTimeManager.Instance != null && GameTimeManager.Instance.PendingNewYearStage > 0)
             ModalGate.I.WhenFree(() => GameTimeManager.Instance.ResumeNewYearPaymentOnReconnect());
 
+        // 재접속 복원 — 파트총점 도전과제 달성 후 보상 미수령 상태로 종료했으면 MissionAlertUI 재표시
+        // (팀장점수 도전과제의 자동 재표시와 동일하게 맞춤). 다른 복원 모달이 다 닫힌 뒤에 뜨도록 WhenFree.
+        ModalGate.I.WhenFree(() => DevelopmentManager.Instance?.TryShowUnclaimedPartTotalRewardOnReconnect());
+
         //         // 게임 시작 다이얼로그 (첫 시작 시)
         // if (DialogManager.Instance.HasGroup("event_game_start"))
         //     EventDialogTable.PlayManual("event_game_start");

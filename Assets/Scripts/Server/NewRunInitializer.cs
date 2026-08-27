@@ -70,7 +70,6 @@ public static class NewRunInitializer
         if (SalesSaveManager.Instance != null)        Issue(SalesSaveManager.Instance.ResetForNewRun);
         if (ProjectSaveManager.Instance != null)      Issue(ProjectSaveManager.Instance.ResetForNewRun);
         if (TechTreeManager.Instance != null)         Issue(TechTreeManager.Instance.ResetForNewRun);
-        if (LoanManager.Instance != null)             Issue(LoanManager.Instance.ResetForNewRun);
         if (QuestManager.Instance != null)            Issue(cb => QuestManager.Instance.ResetForNewRun(cb, tutorial));
 
         issuedAll = true;

@@ -46,9 +46,21 @@ public class AdsManager : MonoBehaviour
     Slot _showing;
     Action _pendingReward;
     Action _pendingUnavailable;
+    Action _pendingClosed;
 
     // 광고가 떠 있는 동안 게임 시간을 멈췄는지 — 중복 StartTime 방지용
     bool _timeStoppedByAd;
+
+    // ── 표시 워치독 ────────────────────────────────────────────────
+    // 저사양 기기에서 광고 액티비티가 OS 에 kill 되면 OnAdFullScreenContentClosed/Failed 콜백이
+    // 유실돼 _showing/_timeStoppedByAd 가 영구히 안 풀린다(게임 시간 영구 정지 + 이후 광고 전부 불가).
+    // 아래 두 신호로 자동 복구한다: (1) 표시 시작 후 절대 타임아웃, (2) 앱 포커스 복귀 후에도 무응답.
+    const float SHOW_TIMEOUT_SEC = 300f; // 보상형 최대 길이보다 훨씬 넉넉
+    const float FOCUS_GRACE_SEC  = 3f;   // 포커스 복귀 후 정상 콜백을 기다리는 유예
+    bool  _awaitingShowResult;
+    bool  _rewardGranted;                // 이번 표시에서 보상 콜백이 실제로 왔는지
+    float _showStartTime;
+    float _focusBackTime = -1f;          // 광고 표시 중 앱이 포커스를 되찾은 시각(-1 = 아직)
 
     // 동의 워치독
     bool _watchdogFired;
@@ -87,6 +99,16 @@ public class AdsManager : MonoBehaviour
 
         if (!IsInitialized) return;
 
+        // 표시 워치독 — 콜백 유실로 광고가 "떠 있는 상태"에 고착되면 강제 복구.
+        if (_awaitingShowResult)
+        {
+            float now = Time.realtimeSinceStartup;
+            bool hardTimeout  = now - _showStartTime > SHOW_TIMEOUT_SEC;
+            bool focusTimeout = _focusBackTime > 0f && now - _focusBackTime > FOCUS_GRACE_SEC;
+            if (hardTimeout || focusTimeout)
+                ForceRecoverStuckAd(hardTimeout ? "표시 타임아웃" : "포커스 복귀 후 무응답");
+        }
+
         // 위치별 재시도 (지수 백오프). 코루틴 대신 타임스탬프 — 시간정지/씬전환에 영향 안 받게.
         foreach (var slot in _slots.Values)
         {
@@ -96,6 +118,39 @@ public class AdsManager : MonoBehaviour
                 Load(slot);
             }
         }
+    }
+
+    // 광고 표시 중 앱이 포커스를 되찾았는데 정상 종료 콜백이 안 오면(FOCUS_GRACE_SEC 경과) 워치독이 복구한다.
+    void OnApplicationFocus(bool hasFocus)
+    {
+        if (hasFocus && _awaitingShowResult && _focusBackTime < 0f)
+            _focusBackTime = Time.realtimeSinceStartup;
+    }
+
+    // 콜백 유실로 고착된 광고 상태를 원복 — 시간 재개 + 슬롯 정리 + 후속 콜백 처리.
+    void ForceRecoverStuckAd(string reason)
+    {
+        Debug.LogWarning($"[Ads] 광고 표시 강제 복구 ({reason}) — placement: {_showing?.placement}");
+
+        _awaitingShowResult = false;
+        _focusBackTime = -1f;
+        ResumeGameTime();
+
+        var slot            = _showing;
+        var unavailableCb   = _pendingUnavailable;
+        var closedCb        = _pendingClosed;
+        bool rewardWasGiven = _rewardGranted;
+
+        if (_showing == slot) _showing = null;
+        _pendingReward = null;
+        _pendingUnavailable = null;
+        _pendingClosed = null;
+
+        if (slot != null) { DestroyAd(slot); Load(slot); }
+
+        // 보상 콜백이 이미 왔었으면(유저가 끝까지 봄) 저장 콜백은 정상 처리, 아니면 "표시 실패" 안내.
+        if (rewardWasGiven) closedCb?.Invoke();
+        else                unavailableCb?.Invoke();
     }
 
     // ── 1) UMP 동의 ─────────────────────────────────────────────────
@@ -255,25 +310,36 @@ public class AdsManager : MonoBehaviour
 
         ad.OnAdFullScreenContentClosed += () =>
         {
+            _awaitingShowResult = false;
+            _focusBackTime = -1f;
             ResumeGameTime();
             if (_showing == slot) _showing = null;
             _pendingReward = null;
             _pendingUnavailable = null;
 
+            var closedCb = _pendingClosed;
+            _pendingClosed = null;
+
             DestroyAd(slot);
             Load(slot); // 같은 위치의 다음 광고 미리 확보
+
+            // 앱이 포그라운드로 돌아온 뒤 실행 — 저장 등 네트워크 후속 처리는 여기서.
+            closedCb?.Invoke();
         };
 
         ad.OnAdFullScreenContentFailed += adError =>
         {
             Debug.LogWarning($"[Ads] {slot.placement} 표시 실패: " + adError.GetMessage());
 
+            _awaitingShowResult = false;
+            _focusBackTime = -1f;
             ResumeGameTime();
             if (_showing == slot) _showing = null;
 
             var cb = _pendingUnavailable;
             _pendingReward = null;
             _pendingUnavailable = null;
+            _pendingClosed = null;
 
             DestroyAd(slot);
             Load(slot);
@@ -295,9 +361,11 @@ public class AdsManager : MonoBehaviour
         return _slots.TryGetValue(placement, out var slot) && slot.IsReady;
     }
 
-    // onRewarded   : 시청 완료 시 1회 호출 (보상 지급)
+    // onRewarded   : 시청 완료 시 1회 호출 (보상 지급 — 인메모리 반영만 권장)
     // onUnavailable: 광고가 없거나 표시 실패 — 호출부가 안내 UI 를 띄운다. 보상은 주지 않는다.
-    public void ShowRewarded(AdPlacement placement, Action onRewarded, Action onUnavailable = null)
+    // onClosed     : 광고가 완전히 닫혀 앱이 포그라운드로 돌아온 뒤 1회 호출 — 저장 등 네트워크 후속 처리용.
+    //                (보상 콜백은 광고가 아직 떠 있는 백그라운드 시점에 오므로 그때 저장하면 유실 위험)
+    public void ShowRewarded(AdPlacement placement, Action onRewarded, Action onUnavailable = null, Action onClosed = null)
     {
         if (_showing != null)
         {
@@ -318,6 +386,12 @@ public class AdsManager : MonoBehaviour
         _showing = slot;
         _pendingReward = onRewarded;
         _pendingUnavailable = onUnavailable;
+        _pendingClosed = onClosed;
+
+        _awaitingShowResult = true;
+        _rewardGranted = false;
+        _showStartTime = Time.realtimeSinceStartup;
+        _focusBackTime = -1f;
 
         StopGameTime();
 
@@ -328,7 +402,7 @@ public class AdsManager : MonoBehaviour
             var cb = _pendingReward;
             _pendingReward = null;
             _pendingUnavailable = null;
-            if (cb != null) cb.Invoke();
+            if (cb != null) { _rewardGranted = true; cb.Invoke(); }
         });
     }
 

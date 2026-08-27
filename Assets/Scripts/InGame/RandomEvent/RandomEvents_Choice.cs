@@ -739,6 +739,20 @@ public static class RandomEvents_Choice
         return highTier ? UnityEngine.Random.Range(10, 21) : UnityEngine.Random.Range(5, 16);
     }
 
+    // 아이템을 소모하는 선택지의 ConditionText — "커피 보유 (현재 2개)" 형태.
+    // 보유 0개면 호출측에서 choice.disabled=true 로 회색+비활성 처리(최면술사의 시계 선택지와 동일 UX).
+    // 이름은 Item_Chart 의 name 컬럼, 로드 실패 시 itemId 그대로.
+    internal static string ItemStockConditionText(string itemId)
+    {
+        int count = ItemManager.Instance?.GetCount(itemId) ?? 0;
+        string name = (ItemChartLoader.Cache != null
+                       && ItemChartLoader.Cache.TryGetValue(itemId, out var row)
+                       && !string.IsNullOrEmpty(row.name))
+            ? row.name : itemId;
+        // "(현재 N개)" 부분만 #C5776A 로 강조 (TMP rich text — ConditionPanel TMP의 Rich Text 활성 필요).
+        return $"{name} 보유 <color=#C5776A>(현재 {count}개)</color>";
+    }
+
     // ── 튜토리얼 전용 — 주말 출근 (Tut1Event) ──────────────────────
     // [CDN fallback — RandomEventChoice_Chart.csv 의 Tut1Event 행]
     // title: "Tut1Event" / desc: "사장님, 시키신 일이 많아서 다 못끝냈는데.. 주말에도 출근해서 끝내야겠죠?"

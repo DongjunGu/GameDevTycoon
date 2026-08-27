@@ -364,7 +364,7 @@ public class HiringUI : MonoBehaviour
         int cost = discounted ? Mathf.RoundToInt(Tiers[tierIndex].cost * 0.8f) : Tiers[tierIndex].cost;
         if (!MoneyManager.Instance.CanAfford(cost))
         {
-            GameUIHelper.ShowLoanPrompt();
+            GameUIHelper.ShowInsufficientFunds();
             return;
         }
         MoneyManager.Instance.SpendGold(cost);
@@ -925,7 +925,7 @@ public class HiringUI : MonoBehaviour
         }
         if (_hireCost > 0 && !MoneyManager.Instance.CanAfford(_hireCost))
         {
-            GameUIHelper.ShowLoanPrompt();
+            GameUIHelper.ShowInsufficientFunds();
             return;
         }
 

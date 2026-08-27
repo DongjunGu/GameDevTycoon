@@ -319,6 +319,10 @@ public class OfficeCharacter : MonoBehaviour, IPointerClickHandler
 
     void SpawnPopup(PopupRequest req)
     {
+        // 씬 종료 중 이 캐릭터가 먼저 파괴된 뒤, 풀링된 StatTickPopup.OnDisable 콜백이 늦게 들어와
+        // 여기까지 도달하는 경우 방어 (transform 접근 시 MissingReferenceException). ?.로는 못 걸러짐.
+        if (this == null) return;
+
         _popupActive = true;
 
         if (req.isBlock)
@@ -333,10 +337,10 @@ public class OfficeCharacter : MonoBehaviour, IPointerClickHandler
         {
             Vector3 pos = transform.position
                         + new Vector3(statTickPopupOffset.x, statTickPopupOffset.y, 0f);
-            var p = StatTickPopupPool.Instance.Get(pos);
-            if (p == null)
+            var p = StatTickPopupPool.Instance != null ? StatTickPopupPool.Instance.Get(pos) : null;
+            if (p == null || !p.isActiveAndEnabled)
             {
-                // 풀 실패 — 즉시 콜백
+                // 풀 실패 또는 teardown 중(풀 오브젝트 비활성) — 스폰 포기, 큐만 소진.
                 OnPopupFinished();
                 return;
             }
@@ -348,6 +352,10 @@ public class OfficeCharacter : MonoBehaviour, IPointerClickHandler
 
     void OnPopupFinished()
     {
+        // 이미 파괴된 뒤 늦게 들어온 콜백 — OnDestroy가 큐/활성 카운터를 이미 정산했으므로 여기서
+        // 또 깎으면 ActiveCount가 어긋난다. 조용히 무시.
+        if (this == null) return;
+
         _popupActive = false;
         if (fireImage != null) fireImage.SetActive(false);
         _animator?.SetSpeedMultiplierOverride(null);

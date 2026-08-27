@@ -99,6 +99,7 @@ public class BackendManager : MonoBehaviour
         CharacterTraitChartLoader.Load();
         CharacterUniqueEventChartLoader.Load();
         TutorialDialogChartLoader.Load();
+        MailRewardChartLoader.Load();
         RandomEventManager.Instance.InitConditionEvents();
 
         Step("EmployeeManager");
@@ -140,23 +141,19 @@ public class BackendManager : MonoBehaviour
                             Step("CompletedProjectManager");
                             CompletedProjectManager.Instance.LoadCompletedProjects(() =>
                             {
-                                Step("LoanManager");
-                                LoanManager.Instance.LoadLoans(() =>
+                                Step("TechTreeManager");
+                                TechTreeManager.Instance.LoadTechTree(() =>
                                 {
-                                    Step("TechTreeManager");
-                                    TechTreeManager.Instance.LoadTechTree(() =>
+                                    Step("SalesSaveManager");
+                                    SalesSaveManager.Instance.LoadSales(() =>
                                     {
-                                        Step("SalesSaveManager");
-                                        SalesSaveManager.Instance.LoadSales(() =>
+                                        Step("ItemManager");
+                                        ItemManager.Instance.Load(() =>
                                         {
-                                            Step("ItemManager");
-                                            ItemManager.Instance.Load(() =>
-                                            {
-                                                Step("완료");
-                                                DialogManager.Instance.Initialize();
-                                                HasInitializedThisSession = true;
-                                                FindAnyObjectByType<Progress>()?.SetAllDataLoaded();
-                                            });
+                                            Step("완료");
+                                            DialogManager.Instance.Initialize();
+                                            HasInitializedThisSession = true;
+                                            FindAnyObjectByType<Progress>()?.SetAllDataLoaded();
                                         });
                                     });
                                 });

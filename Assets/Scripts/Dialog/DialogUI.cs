@@ -9,7 +9,8 @@
 //  - _dialogText       : 대사 TMP
 //  - _portraitImage    : 초상화 Image
 //  - _nextIndicator    : 다음 진행 표시 (화살표 등) GameObject
-//  - _choicePanel      : 선택지 버튼들 부모 GameObject
+//  - _choicePanel      : 선택지 표시 중 켜지는 래퍼 GameObject (딤 배경 포함, default 비활성)
+//  - _choiceContainer  : 선택지 버튼이 실제로 생성되는 부모 Transform (VerticalLayoutGroup, _choicePanel의 자식)
 //  - _choiceButtonPrefab : 선택지 버튼 프리팹 (TMP + Button 포함)
 // =====================================================
 
@@ -37,7 +38,10 @@ public class DialogUI : MonoBehaviour
     public GameObject employeeSlotArea;
 
     [Header("선택지")]
+    [Tooltip("선택지 표시 중에만 켜지는 래퍼(딤 배경 포함). default 비활성. 토글 대상.")]
     [SerializeField] private GameObject _choicePanel;
+    [Tooltip("선택지 버튼이 생성되는 부모(VerticalLayoutGroup). _choicePanel의 자식이라 항상 활성으로 둠.")]
+    [SerializeField] private Transform _choiceContainer;
     [SerializeField] private GameObject _choiceButtonPrefab;
 
     [Header("타이핑 속도 (초/글자)")]
@@ -257,7 +261,7 @@ public class DialogUI : MonoBehaviour
         DialogManager.Instance.NotifyChoicesShown();
         foreach (var choice in choices)
         {
-            var btnObj = Instantiate(_choiceButtonPrefab, _choicePanel.transform);
+            var btnObj = Instantiate(_choiceButtonPrefab, _choiceContainer);
             btnObj.GetComponentInChildren<TextMeshProUGUI>().text = DialogManager.Instance.ReplacePlaceholders(choice.choiceText);
 
             var captured = choice;

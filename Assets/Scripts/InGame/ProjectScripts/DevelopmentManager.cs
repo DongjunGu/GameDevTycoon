@@ -2630,6 +2630,18 @@ public class DevelopmentManager : MonoBehaviour
         if (_challenge.TryResolvePartTotalEarly())
             MissionAlertUI.Instance?.Show();
     }
+
+    // 재접속 복원 — 파트총점 도전과제를 달성(Resolved+Succeeded)했으나 보상 수령 전에 종료했으면
+    // MissionAlertUI를 다시 띄운다. 팀장점수(95/99존) 도전과제가 OnLeaderScoreClosedCheckChallengeClaim /
+    // ResumeLeaderScore로 자동 재표시되는 것과 동일하게 맞추는 것 — 미수령이면 미션패널 클릭으로도 받을
+    // 수 있지만 자동 프롬프트를 통일한다. GameSceneInitializer가 ModalGate.WhenFree로 호출.
+    public void TryShowUnclaimedPartTotalRewardOnReconnect()
+    {
+        if (_challenge == null || !_challenge.IsActive) return;
+        if (_challenge.Kind != ChallengeKind.PartTotal) return;
+        if (!_challenge.Resolved || !_challenge.Succeeded || _challenge.RewardApplied) return;
+        MissionAlertUI.Instance?.Show();
+    }
     public void ResetProject()
     {
         IsStarted = false;

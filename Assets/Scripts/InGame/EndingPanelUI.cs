@@ -1,7 +1,7 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-// 파산 / 자발적 메인메뉴 종료 공용 엔딩 화면 — LoanManager(파산), SettingsUI(메인메뉴 확인) 둘 다 여기서 Show() 호출.
+// 파산 / 자발적 메인메뉴 종료 공용 엔딩 화면 — TutorialController(튜토리얼 파산 엔딩), SettingsUI(메인메뉴 확인) 둘 다 여기서 Show() 호출.
 public class EndingPanelUI : MonoBehaviour
 {
     public static EndingPanelUI Instance { get; private set; }

@@ -76,6 +76,26 @@ public class RandomEventManager : MonoBehaviour
     // 패트롤 도착 후 1초 딜레이 + 이벤트 UI 표시 중 구간도 포함한 "이벤트 진행 중" 플래그
     private bool _eventInProgress = false;
 
+    // 대기 이벤트 워치독 — 타깃 직원이 요구 지점에 못 오면(파견/해고/경로차단 등) _pendingEvent/
+    // _pendingChoiceEvent 가 안 풀려 개발 마일스톤(25/75%)까지 hang + 이후 랜덤이벤트 전면 차단.
+    // patrol 대기 세팅 3곳은 StopTime/PauseForEvent 를 안 걸므로, 타임아웃 시 플래그만 비우면 안전하다.
+    private const float PENDING_EVENT_TIMEOUT_SEC = 45f; // 캐릭터 도보 이동은 수 초 — 이보다 오래면 고착으로 간주
+    private float _pendingSetTime = -1f;
+
+    void Update()
+    {
+        if (_pendingSetTime > 0f
+            && (_pendingEvent != null || _pendingChoiceEvent != null)
+            && Time.realtimeSinceStartup - _pendingSetTime > PENDING_EVENT_TIMEOUT_SEC)
+        {
+            Debug.LogWarning($"[RandomEvent] 대기 이벤트 타임아웃({PENDING_EVENT_TIMEOUT_SEC}s) 강제 해제 — " +
+                             $"pendingEvent={_pendingEvent?.type}, pendingChoice={_pendingChoiceEvent?.type}");
+            _pendingEvent       = null;
+            _pendingChoiceEvent = null;
+            _pendingSetTime     = -1f;
+        }
+    }
+
     // _pendingEvent 이동 중 OR 도착 후 UI가 닫힐 때까지 true
     public bool HasPendingEvent => _pendingEvent != null || _pendingChoiceEvent != null || _eventInProgress;
 
@@ -172,6 +192,7 @@ public class RandomEventManager : MonoBehaviour
         _nextScheduledIndex = 0;
         _pendingEvent = null;
         _pendingChoiceEvent = null;
+        _pendingSetTime = -1f;
         _eventInProgress = false;
         _resignationQueue.Clear();
         _resignationModalActive = false;
@@ -515,6 +536,7 @@ public class RandomEventManager : MonoBehaviour
                 // 영구히 남아 개발 마일스톤(25/75% 팀장점수)까지 hang. 그런 경우 이벤트를 스킵해 진행 보장.
                 if (IsTargetDispatched(choiceData.targetEmployeeId)) return;
                 _pendingChoiceEvent = choiceData;
+                _pendingSetTime = Time.realtimeSinceStartup;
                 if (!string.IsNullOrEmpty(choiceData.targetEmployeeId) &&
                     !string.IsNullOrEmpty(choiceData.requiredPatrolPointId))
                 {
@@ -550,6 +572,7 @@ public class RandomEventManager : MonoBehaviour
             // 파견중(부재) 직원 타깃이면 강제이동 no-op → 영구 hang. 스킵해 개발 마일스톤 진행 보장.
             if (IsTargetDispatched(evt.targetEmployeeId)) return;
             _pendingEvent = evt;
+            _pendingSetTime = Time.realtimeSinceStartup;
 
             // 특정 직원 + 특정 지점이 설정된 경우 즉시 강제 이동
             if (!string.IsNullOrEmpty(evt.targetEmployeeId) &&
@@ -826,6 +849,7 @@ public class RandomEventManager : MonoBehaviour
         if (choiceData.requiresPatrol)
         {
             _pendingChoiceEvent = choiceData;
+            _pendingSetTime = Time.realtimeSinceStartup;
             if (!string.IsNullOrEmpty(choiceData.targetEmployeeId) &&
                 !string.IsNullOrEmpty(choiceData.requiredPatrolPointId))
             {
@@ -1178,6 +1202,13 @@ public class RandomEventManager : MonoBehaviour
         };
 
         RandomEventChoiceChartLoader.Apply(evt, "EmployeeResignation", RandomEventChoiceChartLoader.Cache);
+
+        // 선택지2(최면술사의 시계 사용) — 보유 현황을 ConditionText로 노출. 0개면 회색+비활성(disabled는 위에서 이미 세팅).
+        if (evt.choices.Count > 1)
+        {
+            evt.choices[1].conditionText   = RandomEvents_Choice.ItemStockConditionText("hypnotizer");
+            evt.choices[1].conditionIsItem = true;
+        }
 
         // 시스템 메시지 {이름} 치환
         if (!string.IsNullOrEmpty(evt.choices[0].resultSystemMessage))

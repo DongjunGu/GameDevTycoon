@@ -504,8 +504,9 @@ public class RandomEventChoiceUI : MonoBehaviour
         if (dialogBoxImage2 != null) dialogBoxImage2.SetActive(false);
 
         // 돈이 드는 선택지가 하나라도 있으면 MoneyPanel을 다이얼로그 위로 끌어올려 잔액을 보여준다.
+        // 아이템 보유 현황(conditionIsItem)만 표시하는 선택지는 잔액과 무관하므로 엘리베이터를 띄우지 않는다.
         if (moneyElevatorTrigger != null)
-            moneyElevatorTrigger.SetActive(choices.Exists(c => !string.IsNullOrEmpty(c.conditionText)));
+            moneyElevatorTrigger.SetActive(choices.Exists(c => !string.IsNullOrEmpty(c.conditionText) && !c.conditionIsItem));
 
         // 선택지가 뜨는 동안 배경 딤 — 확인/닫힘 시점에 비활성화.
         if (choiceDim != null) choiceDim.SetActive(true);

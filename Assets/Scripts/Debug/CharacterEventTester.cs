@@ -226,7 +226,6 @@ public class CharacterEventTester : MonoBehaviour
         GUILayout.Label("<b>━━ 모달 차단 테스트 ━━</b>", Rich());
         if (GUILayout.Button("AlertUI 띄우기 (뒤 클릭 차단 확인)")) AlertUI.Instance?.Show("테스트 알림 — 이 뒤의 버튼/메뉴가 안 눌려야 정상");
         if (GUILayout.Button("ConfirmUI 띄우기")) ConfirmUI.Instance?.Show("테스트 확인", () => Set("확인됨"), () => Set("취소됨"));
-        if (GUILayout.Button("LoanUI 띄우기 (MenuCanvas 크로스 차단)")) LoanUI.Instance?.Open();
 
         GUILayout.Space(8);
         GUILayout.Label("<b>━━ 온보딩 ━━</b>", Rich());

@@ -30,7 +30,7 @@ public static class RandomEvents_Condition_Choice
     public static void TriggerCoffeeRequestEvent()
     {
         if (ItemManager.Instance == null) return;
-        if (ItemManager.Instance.GetCount("coffee") <= 0) return;
+        // 커피 0개여도 이벤트는 표시한다 — "준다" 선택지가 회색(비활성)으로 뜨고 보유 현황을 ConditionText로 안내.
 
         var employees = EmployeeManager.Instance?.ownedEmployees;
         if (employees == null || employees.Count == 0) return;
@@ -103,7 +103,6 @@ public static class RandomEvents_Condition_Choice
         {
             var emps = EmployeeManager.Instance?.ownedEmployees;
             if (emps == null || emps.Count == 0) { evt.cancelled = true; return; }
-            if (ItemManager.Instance.GetCount("coffee") <= 0) { evt.cancelled = true; return; }
 
             // 파견중 직원이 뽑히면 master_desk 로 강제이동이 no-op → _pendingChoiceEvent 가 영구히 안 풀려
             // 다른 랜덤이벤트 전체가 막힘(RandomEventManager.IsTargetDispatched 가드와 동일한 이유). 후보에서 제외.
@@ -113,6 +112,11 @@ public static class RandomEvents_Condition_Choice
             targetEmp = candidates[Random.Range(0, candidates.Count)];
             evt.portraitId       = targetEmp.portraitId;
             evt.targetEmployeeId = targetEmp.id;
+
+            // "준다" 선택지 — 커피 보유 현황을 ConditionText로 노출. 0개면 회색+비활성(최면술사의 시계와 동일 UX).
+            evt.choices[0].conditionText   = RandomEvents_Choice.ItemStockConditionText("coffee");
+            evt.choices[0].conditionIsItem = true;
+            evt.choices[0].disabled        = ItemManager.Instance.GetCount("coffee") <= 0;
 
             usedDescB[0] = !string.IsNullOrEmpty(descB) && Random.value >= 0.5f;
             evt.description = usedDescB[0] ? descB : descA;
@@ -196,7 +200,7 @@ public static class RandomEvents_Condition_Choice
     public static void TriggerEnergyDrinkRequestEvent()
     {
         if (ItemManager.Instance == null) return;
-        if (ItemManager.Instance.GetCount("energyDrink") <= 0) return;
+        // 에너지드링크 0개여도 이벤트는 표시 — "준다" 선택지가 회색(비활성)으로 뜨고 보유 현황을 ConditionText로 안내.
 
         var employees = EmployeeManager.Instance?.ownedEmployees;
         if (employees == null || employees.Count == 0) return;
@@ -266,7 +270,6 @@ public static class RandomEvents_Condition_Choice
         {
             var emps = EmployeeManager.Instance?.ownedEmployees;
             if (emps == null || emps.Count == 0) { evt.cancelled = true; return; }
-            if (ItemManager.Instance.GetCount("energyDrink") <= 0) { evt.cancelled = true; return; }
 
             // 파견중 직원이 뽑히면 master_desk 로 강제이동이 no-op → _pendingChoiceEvent 가 영구히 안 풀려
             // 다른 랜덤이벤트 전체가 막힘(RandomEventManager.IsTargetDispatched 가드와 동일한 이유). 후보에서 제외.
@@ -276,6 +279,11 @@ public static class RandomEvents_Condition_Choice
             targetEmp = candidates[Random.Range(0, candidates.Count)];
             evt.portraitId       = targetEmp.portraitId;
             evt.targetEmployeeId = targetEmp.id;
+
+            // "준다" 선택지 — 에너지드링크 보유 현황을 ConditionText로 노출. 0개면 회색+비활성.
+            evt.choices[0].conditionText   = RandomEvents_Choice.ItemStockConditionText("energyDrink");
+            evt.choices[0].conditionIsItem = true;
+            evt.choices[0].disabled        = ItemManager.Instance.GetCount("energyDrink") <= 0;
 
             evt.description = (!string.IsNullOrEmpty(descB) && Random.value >= 0.5f) ? descB : descA;
 

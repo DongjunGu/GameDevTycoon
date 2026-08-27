@@ -185,6 +185,9 @@ public class CompletedProjectsUI : MonoBehaviour
         bool available = IsNextProjectAvailable(data);
         nextProjectButton.gameObject.SetActive(available);
 
+        // 차기작 조건은 충족했더라도 진행중인 프로젝트가 있으면 버튼은 보이되 비활성(회색).
+        nextProjectButton.interactable = !IsProjectInProgress();
+
         var captured = data;
         nextProjectButton.onClick.RemoveAllListeners();
         nextProjectButton.onClick.AddListener(() => OnClickNextProject(captured));
@@ -196,6 +199,17 @@ public class CompletedProjectsUI : MonoBehaviour
         bool scoreOk = data.criticTotalScore >= nextProjectMinCriticScore;
         bool timeOk  = IsWithinReleaseWindow(data);
         return stageOk && scoreOk && timeOk;
+    }
+
+    // 진행중인 프로젝트(개발/디버깅/마케팅)가 있는지 — ProjectSetupUI.OnClickNextProject의
+    // "진행중인 프로젝트가 있습니다" 가드와 동일 조건. Sales 는 다음작 동시진행 가능이라 제외.
+    bool IsProjectInProgress()
+    {
+        var dm = DevelopmentManager.Instance;
+        return dm != null && dm.IsStarted &&
+            (dm.CurrentStage == ProjectStage.Developing
+          || dm.CurrentStage == ProjectStage.BugFixing
+          || dm.CurrentStage == ProjectStage.Marketing);
     }
 
     // 게임 내부 시간 기준(1년=48주=12개월×4주) 경과 주수 — 출시 시점부터 지금까지 nextProjectMaxWeeksSinceRelease 이내인지.

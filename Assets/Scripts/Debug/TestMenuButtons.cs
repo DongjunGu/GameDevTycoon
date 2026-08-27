@@ -151,6 +151,7 @@ public class TestMenuButtons : MonoBehaviour
         AdsManager.Instance.ShowRewarded(AdPlacement.Test,
             onRewarded: () =>
             {
+                // 광고가 아직 떠 있는(백그라운드) 시점 — 인메모리 반영만.
                 // AddGold가 SaveMoney + HUDUI.RefreshMoney까지 처리한다.
                 MoneyManager.Instance?.AddGold(TEST_AD_REWARD_GOLD);
                 AlertUI.Instance?.ShowMoney("광고 시청 보상을 받았습니다.", TEST_AD_REWARD_GOLD);
@@ -158,6 +159,13 @@ public class TestMenuButtons : MonoBehaviour
             onUnavailable: () =>
             {
                 AlertUI.Instance?.Show("광고를 불러오지 못했습니다.\n잠시 후 다시 시도해주세요.");
+            },
+            onClosed: () =>
+            {
+                // 광고가 완전히 닫혀 앱이 포그라운드로 돌아온 뒤 저장 — 백그라운드 저장 유실 방지.
+                // SaveGameTime 이 내부적으로 직원 저장까지 fan-out 하므로 SaveAllEmployees 는 생략.
+                GameTimeManager.Instance?.SaveGameTime();
+                ProjectSaveManager.Instance?.SaveProject();
             });
     }
 

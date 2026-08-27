@@ -449,6 +449,7 @@ public class LeaderScoreUI : MonoBehaviour
                         if (totalText) totalText.text = Mathf.RoundToInt(_bonusBaselineTotal + _bonusDisplayedTotal).ToString();
                         // if (!grown) { grown = true; GrowPulseIfNeeded(); } // [기존, 주석 처리]
                         StepPulseSession(pulseSession, pulseStepAmount); // 아이콘 하나 도착 — punchStrength/개수만큼 조금씩 커짐
+                        Haptics.LightTick(); // 보너스 점수 아이콘 흡수 — 갯수마다 약한 진동
                     }
                 }
             }
@@ -1557,6 +1558,15 @@ public class LeaderScoreUI : MonoBehaviour
         leaderscorePanel.SetActive(false);
         LeaderSelectUI.Instance.entireLeaderPanel.gameObject.SetActive(false);
         if (stressWarningImage != null) stressWarningImage.gameObject.SetActive(false);
+
+        // 파트총점 도전과제 판정 — 팀장점수 반영(AddValuesInstant)으로 총점이 목표를 넘었으면 다음
+        // 개발틱의 팝업 흡수(RevealValues)까지 기다리지 않고, 팀장점수 패널이 닫히는 이 프레임에 바로
+        // MissionAlertUI를 띄운다. AddValuesInstant가 실제값(_planning 등)을 즉시 올리므로 어긋남 없음.
+        // StartTime()보다 먼저 호출해야 MissionAlertUI의 StopTime이 팀장점수 정지를 그대로 이어받아
+        // 시간이 잠깐 흘렀다 다시 멈추는 깜빡임이 없다.
+        if (!_testMode)
+            DevelopmentManager.Instance?.CheckPartTotalChallenge();
+
         GameTimeManager.Instance?.StartTime();
         ModalGate.I.Unregister(this);
         _onComplete?.Invoke();

@@ -18,6 +18,9 @@ public class GameTimeManager : MonoBehaviour
     private int _stopCount = 0;
     private bool _isRunning = false;
     private bool _isLoaded = false;
+    // 첫 Insert 응답(=_rowInDate 확보) 전에 SaveGameTime 이 또 불리면 두 번째도 Insert 를 쳐서
+    // UserGameTime 에 중복 row 가 생긴다. 진행 중이면 두 번째 Insert 를 건너뛴다.
+    private bool _insertInFlight = false;
 
     // 연간 결제 진행 단계 (영속): 0=없음 / 1=임금 알림 대기(새해, 1월 1주차) / 2=연세 알림 대기(7월 1주차).
     // 임금과 연세는 더 이상 연쇄(같은 시점)가 아니라 서로 다른 시점에 독립적으로 트리거된다.
@@ -116,7 +119,29 @@ public class GameTimeManager : MonoBehaviour
 
                 if (rows.Count > 0)
                 {
-                    JsonData row = rows[rows.Count - 1];
+                    // 중복 row 가 있어도 항상 inDate 최신 row 를 채택 (정렬 없는 "마지막 row" 가정 제거).
+                    int latestIdx = 0;
+                    for (int i = 1; i < rows.Count; i++)
+                        if (string.CompareOrdinal(SafeString(rows[i], "inDate", ""),
+                                                  SafeString(rows[latestIdx], "inDate", "")) > 0)
+                            latestIdx = i;
+                    JsonData row = rows[latestIdx];
+
+                    // 중복 row 자가 정리 — 최신만 남기고 나머지 삭제 (best-effort).
+                    if (rows.Count > 1)
+                    {
+                        for (int i = 0; i < rows.Count; i++)
+                        {
+                            if (i == latestIdx) continue;
+                            string dupInDate = SafeString(rows[i], "inDate", "");
+                            if (string.IsNullOrEmpty(dupInDate)) continue;
+                            Backend.GameData.DeleteV2("UserGameTime", dupInDate, Backend.UserInDate, delBro =>
+                            {
+                                if (!delBro.IsSuccess()) Debug.LogWarning($"[UserGameTime] 중복 row 삭제 실패: {delBro}");
+                                else                     Debug.Log($"[UserGameTime] 중복 row 삭제: {dupInDate}");
+                            });
+                        }
+                    }
 
                     foreach (var key in row.Keys)
                         Debug.Log($"key: {key} / value: {row[key]}");
@@ -230,7 +255,6 @@ public class GameTimeManager : MonoBehaviour
 
         OnTimeChanged?.Invoke();
         HUDUI.Instance?.RefreshTime();
-        LoanManager.Instance.CheckDueLoans();
 
         // 11~12월 연봉협상 트리거 체크 (롤오버 후 새 주차 기준 — HUD 표시와 일치)
         if (Month == 11 || Month == 12)
@@ -364,8 +388,18 @@ public class GameTimeManager : MonoBehaviour
         }
         else
         {
+            // 첫 Insert 응답 전에 또 불리면 두 번째 Insert 를 건너뛴다(중복 row 방지) — _rowInDate 확보
+            // 후 UPDATE 경로로 최신 상태가 반영되므로 이 저장 1회 스킵은 무해.
+            if (_insertInFlight)
+            {
+                Debug.LogWarning("[UserGameTime] Insert 진행 중 — 중복 Insert 스킵");
+                onComplete?.Invoke();
+                return;
+            }
+            _insertInFlight = true;
             Backend.GameData.Insert("UserGameTime", param, bro =>
             {
+                _insertInFlight = false;
                 if (bro.IsSuccess())
                 {
                     _rowInDate = bro.GetInDate();
@@ -445,21 +479,8 @@ public class GameTimeManager : MonoBehaviour
             return;
         }
 
-        // [대출 시스템 비활성화] 잔액 부족 → 바로 파산.
-        // 대출 복구 시 아래 블록 주석 해제.
+        // 잔액 부족 → 바로 파산.
         TriggerBankruptcy();
-        /*
-        // 대출 활성으로 prompt 불가 / 사용자 prompt 거절 → 임금 못 받음 → 파산
-        // 대출 받고 닫으면 → 다시 임금 차감 시도. 대출 안 받고 그냥 닫으면 → 파산.
-        GameUIHelper.ShowLoanPrompt(
-            onDecline: TriggerBankruptcy,
-            onClose: didTakeLoan =>
-            {
-                if (didTakeLoan) TryPaySalary(totalSalary);
-                else             TriggerBankruptcy();
-            }
-        );
-        */
     }
 
     // 다른 파산 소스(랜덤이벤트 선택지 등)도 재사용 — 잔액이 마이너스가 되면 이 메서드로 통일해서 호출한다.

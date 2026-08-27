@@ -153,7 +153,7 @@ public class MarketingUI : MonoBehaviour
         {
             // MarketingUI 자신이 Show()에서 ModalGate.Register(this)로 게이트를 쥔 채 열려있는 상태라
             // bypassGate 없이 부르면 패널이 열려있는 동안 안 뜨고 대기만 함(ProjectSetupUI와 동일 버그). 즉시 표시.
-            GameUIHelper.ShowLoanPrompt(bypassGate: true);
+            GameUIHelper.ShowInsufficientFunds(bypassGate: true);
             return;
         }
 
