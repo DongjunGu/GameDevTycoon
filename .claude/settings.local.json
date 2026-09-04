@@ -24,7 +24,8 @@
       "WebFetch(domain:developer.thebackend.io)",
       "Artifact",
       "Bash(claude mcp *)",
-      "Bash(python3 -c ' *)"
+      "Bash(python3 -c ' *)",
+      "mcp__UnityMCP__find_gameobjects"
     ],
     "ask": [
       "Bash(rm:*)",
