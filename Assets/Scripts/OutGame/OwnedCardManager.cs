@@ -8,7 +8,7 @@ using UnityEngine;
 // 유저별 보유 직원 카드 (중복 포함)
 // 뒤끝 테이블: OwnedCard { cardsJson:string } — 한 줄 압축
 // JSON 포맷: [{"e":"emp_gold","g":0,"s":0,"n":2}, ...]  (e=empId, g=(int)grade, s=stage, n=장수)
-//   stage: 같은 grade 안의 강화 단계. Epic/Unique 1단계 합성으로 +1 됨. 기본 0.
+//   stage: 같은 grade 안의 강화 단계. Epic/Unique만 1~2단계까지 올라감(합성으로 +1). 기본 0.
 //
 // 메모리: Dictionary<string, int> 키=$"{empId}|{(int)grade}|{stage}"
 // 갱신 시 OutGameEmployeeManager.TryUpgradeMaxGrade + EmployeeManager.AcquireEmployee 자동 연동

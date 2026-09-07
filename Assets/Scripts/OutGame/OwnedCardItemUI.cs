@@ -6,7 +6,7 @@ using UnityEngine.UI;
 
 // 보유 카드 1장 (employeeId + grade + stage)을 표시하는 카드 UI
 // 중복은 카드 GameObject를 N개 생성해서 표현 (count 표시 없음)
-// stage>0이면 우상단에 "+stage" 표시 (Epic 1단계, Unique 1단계)
+// stage>0이면 우상단에 "+stage" 표시 (Epic/Unique 1~2단계)
 // 색상 팔레트는 EmployeePanelItemUI와 동일 + Unique/Legendary shimmer
 public class OwnedCardItemUI : MonoBehaviour
 {

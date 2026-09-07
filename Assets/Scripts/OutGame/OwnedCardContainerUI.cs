@@ -155,7 +155,7 @@ public class OwnedCardContainerUI : MonoBehaviour
     }
 
     // 합성 매칭 카드를 앞으로 sibling 재정렬 + 비매칭은 dim
-    // sameEmpId가 비어있으면 grade/stage만 일치 (Epic+1/Unique+1 합성)
+    // sameEmpId가 비어있으면 grade/stage만 일치 (Epic/Unique 단계 승급 합성)
     public void ApplyMergeHighlight(EmployeeGrade matGrade, int matStage, string sameEmpId)
     {
         if (container == null) return;

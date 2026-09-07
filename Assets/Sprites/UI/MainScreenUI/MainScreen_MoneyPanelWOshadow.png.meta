@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: 8553991597b50b449989d308be9b2f9d
+guid: b217398600b503846921af36c00d38ab
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: -2896038602210117596
-    second: MainScreen_Profile_0
+      213: 1921056132469164637
+    second: MainScreen_MoneyPanelWOshadow_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -46,7 +46,7 @@ TextureImporter:
   nPOTScale: 0
   lightmap: 0
   compressionQuality: 50
-  spriteMode: 1
+  spriteMode: 2
   spriteExtrude: 1
   spriteMeshType: 1
   alignment: 0
@@ -139,13 +139,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: MainScreen_Profile_0
+      name: MainScreen_MoneyPanelWOshadow_0
       rect:
         serializedVersion: 2
-        x: 6
-        y: 7
-        width: 2038
-        height: 614
+        x: 0
+        y: 0
+        width: 1109
+        height: 270
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -154,8 +154,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 42872733c343fc7d0800000000000000
-      internalID: -2896038602210117596
+      spriteID: d5a0961df56f8aa10800000000000000
+      internalID: 1921056132469164637
       vertices: []
       indices: 
       edges: []
@@ -164,7 +164,7 @@ TextureImporter:
     customData: 
     physicsShape: []
     bones: []
-    spriteID: 5e97eb03825dee720800000000000000
+    spriteID: 
     internalID: 0
     vertices: []
     indices: 
@@ -174,7 +174,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      MainScreen_Profile_0: -2896038602210117596
+      MainScreen_MoneyPanelWOshadow_0: 1921056132469164637
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

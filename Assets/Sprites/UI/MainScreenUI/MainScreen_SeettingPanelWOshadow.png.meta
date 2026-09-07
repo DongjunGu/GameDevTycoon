@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: 8553991597b50b449989d308be9b2f9d
+guid: d984cd6f0a1fcda43a54e159d83a337a
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: -2896038602210117596
-    second: MainScreen_Profile_0
+      213: -7801982420416284390
+    second: MainScreen_SeettingPanelWOshadow_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -139,13 +139,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: MainScreen_Profile_0
+      name: MainScreen_SeettingPanelWOshadow_0
       rect:
         serializedVersion: 2
-        x: 6
-        y: 7
-        width: 2038
-        height: 614
+        x: 0
+        y: 0
+        width: 303
+        height: 270
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -154,8 +154,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 42872733c343fc7d0800000000000000
-      internalID: -2896038602210117596
+      spriteID: a19be37435ac9b390800000000000000
+      internalID: -7801982420416284390
       vertices: []
       indices: 
       edges: []
@@ -174,7 +174,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      MainScreen_Profile_0: -2896038602210117596
+      MainScreen_SeettingPanelWOshadow_0: -7801982420416284390
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

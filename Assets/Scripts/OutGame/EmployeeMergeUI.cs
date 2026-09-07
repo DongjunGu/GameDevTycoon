@@ -6,12 +6,17 @@ using UnityEngine.UI;
 // 슬롯: 메인 1 + 재료 2 (재료 슬롯 사용 개수는 메인 카드 grade/stage에 따라 자동 결정)
 //
 // 합성 규칙 (메인 → 결과):
-//   Normal s0  → Rare s0          | 같은 직원 Normal s0 × 1
-//   Rare s0    → Epic s0           | 같은 직원 Rare s0 × 1
-//   Epic s0    → Epic s1 (1단계)    | 아무 Epic s0 × 2
-//   Epic s1    → Unique s0          | 같은 직원 Epic s1 × 1
-//   Unique s0  → Unique s1 (1단계)  | 아무 Unique s0 × 2
-//   Unique s1  → Legendary s0       | 같은 직원 Unique s1 × 1
+//   Normal s0  → Rare s0            | 같은 직원 Normal s0 × 2  (메인 포함 총 3장)
+//   Rare s0    → Epic s0            | 같은 직원 Rare s0 × 2    (메인 포함 총 3장)
+//   Epic s0    → Epic s1 (1단계)     | 아무 직원 Epic s0 × 1
+//   Epic s1    → Epic s2 (2단계)     | 아무 직원 Epic s1 × 1
+//   Epic s2    → Unique s0          | 같은 직원 Epic s2 × 1    (메인 포함 총 2장)
+//   Unique s0  → Unique s1 (1단계)   | 아무 직원 Unique s0 × 1
+//   Unique s1  → Unique s2 (2단계)   | 아무 직원 Unique s1 × 1
+//   Unique s2  → Legendary s0       | 같은 직원 Unique s2 × 1  (메인 포함 총 2장)
+//
+// 등급 승급(Rare/Epic/Unique/Legendary)은 같은 직원 카드만 재료로 쓸 수 있고,
+// 단계 승급(s0→s1→s2)은 같은 등급/단계면 아무 직원 카드나 재료로 쓸 수 있다.
 public class EmployeeMergeUI : MonoBehaviour
 {
     [Header("References")]
@@ -158,12 +163,15 @@ public class EmployeeMergeUI : MonoBehaviour
         if (mainSlot == null || mainSlot.IsEmpty) return false;
         var g = mainSlot.Grade; var s = mainSlot.Stage;
 
-        if (g == EmployeeGrade.Normal && s == 0) { r = new Recipe(EmployeeGrade.Rare, 0,      1, true,  EmployeeGrade.Normal, 0); return true; }
-        if (g == EmployeeGrade.Rare   && s == 0) { r = new Recipe(EmployeeGrade.Epic, 0,      1, true,  EmployeeGrade.Rare,   0); return true; }
-        if (g == EmployeeGrade.Epic   && s == 0) { r = new Recipe(EmployeeGrade.Epic, 1,      2, false, EmployeeGrade.Epic,   0); return true; }
-        if (g == EmployeeGrade.Epic   && s == 1) { r = new Recipe(EmployeeGrade.Unique, 0,    1, true,  EmployeeGrade.Epic,   1); return true; }
-        if (g == EmployeeGrade.Unique && s == 0) { r = new Recipe(EmployeeGrade.Unique, 1,    2, false, EmployeeGrade.Unique, 0); return true; }
-        if (g == EmployeeGrade.Unique && s == 1) { r = new Recipe(EmployeeGrade.Legendary, 0, 1, true,  EmployeeGrade.Unique, 1); return true; }
+        //                                                     결과등급              결과s  재료수  같은직원  재료등급              재료s
+        if (g == EmployeeGrade.Normal && s == 0) { r = new Recipe(EmployeeGrade.Rare,      0,     2,   true,  EmployeeGrade.Normal, 0); return true; }
+        if (g == EmployeeGrade.Rare   && s == 0) { r = new Recipe(EmployeeGrade.Epic,      0,     2,   true,  EmployeeGrade.Rare,   0); return true; }
+        if (g == EmployeeGrade.Epic   && s == 0) { r = new Recipe(EmployeeGrade.Epic,      1,     1,   false, EmployeeGrade.Epic,   0); return true; }
+        if (g == EmployeeGrade.Epic   && s == 1) { r = new Recipe(EmployeeGrade.Epic,      2,     1,   false, EmployeeGrade.Epic,   1); return true; }
+        if (g == EmployeeGrade.Epic   && s == 2) { r = new Recipe(EmployeeGrade.Unique,    0,     1,   true,  EmployeeGrade.Epic,   2); return true; }
+        if (g == EmployeeGrade.Unique && s == 0) { r = new Recipe(EmployeeGrade.Unique,    1,     1,   false, EmployeeGrade.Unique, 0); return true; }
+        if (g == EmployeeGrade.Unique && s == 1) { r = new Recipe(EmployeeGrade.Unique,    2,     1,   false, EmployeeGrade.Unique, 1); return true; }
+        if (g == EmployeeGrade.Unique && s == 2) { r = new Recipe(EmployeeGrade.Legendary, 0,     1,   true,  EmployeeGrade.Unique, 2); return true; }
         return false;
     }
 
