@@ -1,17 +1,17 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 
 // TraitPanel 루트 컨트롤러
-// - 좌측 장착 슬롯 3개 갱신
+// - 좌측 장착 슬롯 갱신 (기본 2개 해금, 3~5번째는 다이아 해금)
 // - 우측 보유 특성을 등급별(S/A/B/C) 섹션 그리드에 빌드
 //   - 모든 특성 표시 (미보유는 TraitItemUI.lockedVeil 활성화)
-// - "선택된 특성 (n/3)" 카운트 텍스트 갱신
+// - "선택된 특성 (n/해금슬롯수)" 카운트 텍스트 갱신
 // - OwnedTraitManager.OnChanged 구독해서 자동 갱신
 public class TraitPanelUI : MonoBehaviour
 {
     [Header("Equipped Slots (좌측)")]
-    [Tooltip("길이는 OwnedTraitManager.EquipSlotCount (3) 와 동일해야 함")]
+    [Tooltip("길이는 OwnedTraitManager.EquipSlotCount (5) 와 동일해야 함. 앞에서부터 해금 순서")]
     public TraitSlotUI[] slots;
     public TMP_Text equippedCountText; // 예: "선택된 특성 (2/3)"
 
@@ -89,7 +89,19 @@ public class TraitPanelUI : MonoBehaviour
 
     void OnSlotClicked(int slotIndex)
     {
-        OwnedTraitManager.Instance?.UnequipSlot(slotIndex);
+        var mgr = OwnedTraitManager.Instance;
+        if (mgr == null) return;
+
+        // 잠긴 슬롯 클릭 = 해금 시도 (다이아 즉시 차감)
+        // ponytail: 아웃게임 확인/알림 팝업이 없어 바로 차감한다. 팝업 생기면 확인 단계 추가
+        if (!mgr.IsSlotUnlocked(slotIndex))
+        {
+            if (!mgr.TryUnlockSlot(slotIndex, out string reason))
+                Debug.LogWarning($"[TraitPanel] 슬롯 {slotIndex + 1} 해금 실패 — {reason}");
+            return;
+        }
+
+        mgr.UnequipSlot(slotIndex);
     }
 
     void BuildSections()
@@ -169,9 +181,10 @@ public class TraitPanelUI : MonoBehaviour
     void UpdateCountText()
     {
         if (equippedCountText == null || OwnedTraitManager.Instance == null) return;
+        int unlocked = OwnedTraitManager.Instance.UnlockedSlotCount;
         int n = 0;
-        for (int i = 0; i < OwnedTraitManager.EquipSlotCount; i++)
+        for (int i = 0; i < unlocked; i++)
             if (!string.IsNullOrEmpty(OwnedTraitManager.Instance.GetEquipped(i))) n++;
-        equippedCountText.text = $"선택된 특성 ({n}/{OwnedTraitManager.EquipSlotCount})";
+        equippedCountText.text = $"선택된 특성 ({n}/{unlocked})";
     }
 }

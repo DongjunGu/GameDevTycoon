@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Text;
@@ -10,12 +10,19 @@ using UnityEngine;
 // 뒤끝 테이블: OwnedTrait
 //   - ownedJson : "[{\"t\":\"trait_xxx\",\"n\":2}, ...]"  (t=traitId, n=장수)
 //   - equippedJson : "[\"trait_a\",\"\",\"trait_b\"]"     (길이 EquipSlotCount, 빈 슬롯은 빈 문자열)
+//   - unlockedSlots : INT (해금된 슬롯 수. 없으면 DefaultUnlockedSlots)
 //
-// 기본: default 장착 0개 (3슬롯 모두 비어있음)
-// 메모리: 보유 dict + 장착 string[3]
+// 기본: default 장착 0개 / 슬롯은 2개만 해금
+// 3~5번째 슬롯은 다이아로 순서대로 해금 (SlotUnlockCosts: 500 / 1000 / 2000)
+// 메모리: 보유 dict + 장착 string[EquipSlotCount]
 public class OwnedTraitManager : MonoBehaviour
 {
-    public const int EquipSlotCount = 3;
+    // 슬롯 배열 길이(최대치). 실제 사용 가능한 개수는 UnlockedSlotCount
+    public const int EquipSlotCount = 5;
+    public const int DefaultUnlockedSlots = 2;
+
+    // 인덱스 = 슬롯 인덱스. 해금 비용(다이아). 기본 해금 슬롯은 0
+    public static readonly int[] SlotUnlockCosts = { 0, 0, 500, 1000, 2000 };
 
     public static OwnedTraitManager Instance { get; private set; }
 
@@ -26,6 +33,7 @@ public class OwnedTraitManager : MonoBehaviour
     private readonly Dictionary<string, int> _owned = new();
     private readonly string[] _equipped = new string[EquipSlotCount];
     private string _rowInDate = null;
+    private int _unlockedSlots = DefaultUnlockedSlots;
 
     private bool _dirty;
     private Coroutine _saveCo;
@@ -34,6 +42,7 @@ public class OwnedTraitManager : MonoBehaviour
 
     public IReadOnlyDictionary<string, int> AllOwned => _owned;
     public IReadOnlyList<string> Equipped => _equipped;
+    public int UnlockedSlotCount => _unlockedSlots;
 
     void Awake()
     {
@@ -76,6 +85,7 @@ public class OwnedTraitManager : MonoBehaviour
         {
             _owned.Clear();
             ClearEquipped();
+            _unlockedSlots = DefaultUnlockedSlots;
 
             if (bro.IsSuccess())
             {
@@ -86,7 +96,9 @@ public class OwnedTraitManager : MonoBehaviour
                     _rowInDate = row["inDate"]?.ToString();
                     ParseOwned(row.ContainsKey("ownedJson") ? row["ownedJson"]?.ToString() : null);
                     ParseEquipped(row.ContainsKey("equippedJson") ? row["equippedJson"]?.ToString() : null);
-                    Debug.Log($"[OwnedTrait] 로드: 보유 {_owned.Count}종 / 장착 {CountEquipped()}개");
+                    _unlockedSlots = ParseUnlockedSlots(row);
+                    ClampEquippedToUnlocked();
+                    Debug.Log($"[OwnedTrait] 로드: 보유 {_owned.Count}종 / 장착 {CountEquipped()}개 / 해금 슬롯 {_unlockedSlots}개");
                 }
                 else
                 {
@@ -102,6 +114,19 @@ public class OwnedTraitManager : MonoBehaviour
             OnChanged?.Invoke();
             onComplete?.Invoke();
         });
+    }
+
+    int ParseUnlockedSlots(JsonData row)
+    {
+        if (row == null || !row.ContainsKey("unlockedSlots")) return DefaultUnlockedSlots;
+        if (!int.TryParse(row["unlockedSlots"]?.ToString(), out int v)) return DefaultUnlockedSlots;
+        return Mathf.Clamp(v, DefaultUnlockedSlots, EquipSlotCount);
+    }
+
+    // 잠긴 슬롯에 남아있는 장착 정보 제거 (구버전 데이터 방어)
+    void ClampEquippedToUnlocked()
+    {
+        for (int i = _unlockedSlots; i < _equipped.Length; i++) _equipped[i] = null;
     }
 
     void ClearEquipped()
@@ -199,6 +224,19 @@ public class OwnedTraitManager : MonoBehaviour
 
     public bool IsEquipped(string traitId) => IndexOfEquipped(traitId) >= 0;
 
+    public bool IsSlotUnlocked(int slotIndex) => slotIndex >= 0 && slotIndex < _unlockedSlots;
+
+    // 해금 비용(다이아). 이미 해금됐거나 범위 밖이면 0
+    public int GetSlotUnlockCost(int slotIndex)
+    {
+        if (slotIndex < 0 || slotIndex >= EquipSlotCount) return 0;
+        if (IsSlotUnlocked(slotIndex)) return 0;
+        return SlotUnlockCosts[slotIndex];
+    }
+
+    // 다음에 해금 가능한 슬롯만 열 수 있다 (순서대로)
+    public bool CanUnlockSlot(int slotIndex) => slotIndex == _unlockedSlots && slotIndex < EquipSlotCount;
+
     public string GetEquipped(int slotIndex)
     {
         if (slotIndex < 0 || slotIndex >= _equipped.Length) return null;
@@ -222,7 +260,7 @@ public class OwnedTraitManager : MonoBehaviour
         if (string.IsNullOrEmpty(traitId)) return false;
         if (!IsOwned(traitId)) return false;
         if (IsEquipped(traitId)) return false;
-        for (int i = 0; i < _equipped.Length; i++)
+        for (int i = 0; i < _unlockedSlots; i++)
         {
             if (string.IsNullOrEmpty(_equipped[i]))
             {
@@ -253,11 +291,44 @@ public class OwnedTraitManager : MonoBehaviour
         OnChanged?.Invoke();
     }
 
+    // 다이아 차감 후 슬롯 1칸 해금. 실패 사유는 reason 으로 반환
+    public bool TryUnlockSlot(int slotIndex, out string reason)
+    {
+        reason = null;
+        if (!CanUnlockSlot(slotIndex))
+        {
+            reason = "이전 슬롯부터 순서대로 해금해야 합니다.";
+            return false;
+        }
+
+        int cost = SlotUnlockCosts[slotIndex];
+        var wallet = OutGameCurrencyManager.Instance;
+        if (wallet == null)
+        {
+            reason = "재화 정보를 불러오지 못했습니다.";
+            return false;
+        }
+        if (!wallet.SpendDiamond(cost))
+        {
+            reason = $"다이아가 부족합니다. (필요 {cost:N0}D / 보유 {wallet.Diamond:N0}D)";
+            return false;
+        }
+
+        _unlockedSlots = slotIndex + 1;
+        // 재화 차감은 이미 서버 저장됨 — 슬롯 해금도 디바운스 없이 즉시 저장 (유실 시 다이아만 사라짐)
+        _dirty = true;
+        FlushPendingSave();
+        OnChanged?.Invoke();
+        Debug.Log($"[OwnedTrait] 슬롯 {slotIndex + 1} 해금 (-{cost}D) / 해금 슬롯 {_unlockedSlots}개");
+        return true;
+    }
+
     public void Save()
     {
         var param = new Param();
         param.Add("ownedJson", SerializeOwned());
         param.Add("equippedJson", SerializeEquipped());
+        param.Add("unlockedSlots", _unlockedSlots);
 
         if (!string.IsNullOrEmpty(_rowInDate))
         {

@@ -1,10 +1,10 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
 // 상점 패널 — 5 카테고리 (기간한정/뽑기/다이아/골드/패키지). 좌측 카테고리 바, 우측 카테고리별 컨텐츠.
 // 현재는 뽑기 카테고리만 구현 (직원 일반/스페셜, 특성 일반/스페셜/프리미엄 = 5 버튼).
-// 5 버튼 모두 임시로 동일 기능 — GachaTestUI / TraitGachaTestUI 와 같은 1회 무료 가챠.
+// 직원 일반/스페셜은 등급 가중치만 다름. 특성 3버튼은 아직 동일 기능. 전부 무료 1회 뽑기.
 public class ShopPanelUI : MonoBehaviour
 {
     public enum Category { LimitedTime = 0, Gacha = 1, Diamond = 2, Gold = 3, Package = 4 }
@@ -22,6 +22,9 @@ public class ShopPanelUI : MonoBehaviour
     [Header("Gacha Buttons (뽑기 카테고리)")]
     public Button employeeNormalBtn;
     public Button employeeSpecialBtn;
+    [Tooltip("10연차 버튼 — 비워두면 해당 10연차 없음.")]
+    public Button employeeNormal10Btn;
+    public Button employeeSpecial10Btn;
     public Button traitNormalBtn;
     public Button traitSpecialBtn;
     public Button traitPremiumBtn;
@@ -29,10 +32,21 @@ public class ShopPanelUI : MonoBehaviour
     [Header("Result")]
     public ShopGachaResultPanelUI resultPanel;
 
-    [Header("Employee Gacha Weights (임시 — 모든 직원 가챠 공통)")]
-    [Range(0, 100)] public int weightNormal = 60;
-    [Range(0, 100)] public int weightRare   = 30;
-    [Range(0, 100)] public int weightEpic   = 10;
+    [Header("Employee Gacha Cost (다이아)")]
+    public int normalGachaCost    = 60;
+    public int normalGacha10Cost  = 600;
+    public int specialGachaCost   = 250;
+    public int specialGacha10Cost = 2500;
+
+    [Header("Employee Gacha Weights — 일반 (합산 후 비례 추첨)")]
+    [Range(0, 100)] public int normalWeightNormal = 70;
+    [Range(0, 100)] public int normalWeightRare   = 30;
+    [Range(0, 100)] public int normalWeightEpic   = 0;
+
+    [Header("Employee Gacha Weights — 스페셜")]
+    [Range(0, 100)] public int specialWeightNormal = 65;
+    [Range(0, 100)] public int specialWeightRare   = 30;
+    [Range(0, 100)] public int specialWeightEpic   = 5;
 
     Category _selected;
 
@@ -57,8 +71,10 @@ public class ShopPanelUI : MonoBehaviour
 
     void WireGachaButtons()
     {
-        WireBtn(employeeNormalBtn,  OnEmployeeGacha);
-        WireBtn(employeeSpecialBtn, OnEmployeeGacha);
+        WireBtn(employeeNormalBtn,   () => OnEmployeeGacha(false, 1));
+        WireBtn(employeeSpecialBtn,  () => OnEmployeeGacha(true,  1));
+        WireBtn(employeeNormal10Btn, () => OnEmployeeGacha(false, 10));
+        WireBtn(employeeSpecial10Btn,() => OnEmployeeGacha(true,  10));
         WireBtn(traitNormalBtn,     OnTraitGacha);
         WireBtn(traitSpecialBtn,    OnTraitGacha);
         WireBtn(traitPremiumBtn,    OnTraitGacha);
@@ -85,7 +101,7 @@ public class ShopPanelUI : MonoBehaviour
     }
 
     // ──────────── 직원 가챠 ────────────
-    void OnEmployeeGacha()
+    void OnEmployeeGacha(bool special, int count)
     {
         var pool = EmployeeManager.Instance?.poolEmployees;
         if (pool == null || pool.Count == 0)
@@ -95,20 +111,50 @@ public class ShopPanelUI : MonoBehaviour
         }
         if (OwnedCardManager.Instance == null) return;
 
-        var emp   = pool[Random.Range(0, pool.Count)];
-        var grade = RollEmployeeGrade();
-        OwnedCardManager.Instance.AddCard(emp.id, grade, stage: 0, save: true);
-        Debug.Log($"[Shop] 직원 가챠 → {emp.employeeName} ({grade})");
+        int cost = special
+            ? (count > 1 ? specialGacha10Cost : specialGachaCost)
+            : (count > 1 ? normalGacha10Cost  : normalGachaCost);
+        var wallet = OutGameCurrencyManager.Instance;
+        if (wallet == null) return;
+        if (!wallet.SpendDiamond(cost))
+        {
+            // ponytail: 아웃게임 알림 UI 없음. 다이아 부족 팝업 생기면 교체.
+            Debug.LogWarning($"[Shop] 다이아 부족 — 필요 {cost}D / 보유 {wallet.Diamond}D");
+            return;
+        }
 
-        if (resultPanel != null) resultPanel.ShowEmployee(emp, grade);
+        string label = special ? "스페셜" : "일반";
+        var draws = new List<(EmployeeData emp, EmployeeGrade grade)>(count);
+        for (int i = 0; i < count; i++)
+        {
+            var emp   = pool[Random.Range(0, pool.Count)];
+            var grade = RollEmployeeGrade(special);
+            OwnedCardManager.Instance.AddCard(emp.id, grade, stage: 0, save: i == count - 1);
+            Debug.Log($"[Shop] 직원 가챠({label}) → {emp.employeeName} ({grade})");
+            draws.Add((emp, grade));
+        }
+        Debug.Log($"[Shop] 직원 가챠({label}) x{count} -{cost}D");
+
+        ShowDrawsSequential(draws, 0);
     }
 
-    EmployeeGrade RollEmployeeGrade()
+    // 닫기 버튼을 누를 때마다 다음 장. 1회 뽑기도 같은 경로.
+    void ShowDrawsSequential(List<(EmployeeData emp, EmployeeGrade grade)> draws, int index)
     {
-        int total = Mathf.Max(1, weightNormal + weightRare + weightEpic);
+        if (resultPanel == null || index >= draws.Count) return;
+        resultPanel.onClosed = () => ShowDrawsSequential(draws, index + 1);
+        resultPanel.ShowEmployee(draws[index].emp, draws[index].grade);
+    }
+
+    EmployeeGrade RollEmployeeGrade(bool special)
+    {
+        int wn = special ? specialWeightNormal : normalWeightNormal;
+        int wr = special ? specialWeightRare   : normalWeightRare;
+        int we = special ? specialWeightEpic   : normalWeightEpic;
+        int total = Mathf.Max(1, wn + wr + we);
         int r = Random.Range(0, total);
-        if (r < weightNormal) return EmployeeGrade.Normal;
-        if (r < weightNormal + weightRare) return EmployeeGrade.Rare;
+        if (r < wn) return EmployeeGrade.Normal;
+        if (r < wn + wr) return EmployeeGrade.Rare;
         return EmployeeGrade.Epic;
     }
 

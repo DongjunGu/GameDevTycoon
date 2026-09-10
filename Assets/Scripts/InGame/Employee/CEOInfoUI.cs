@@ -1,4 +1,4 @@
-using TMPro;
+﻿using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -22,7 +22,7 @@ public class CEOInfoUI : MonoBehaviour
     public bool stopTimeWhileOpen = true;
 
     [Header("Trait — LeftPanel (장착 특성, 읽기 전용)")]
-    [Tooltip("아웃게임 TraitPanel.LeftPanel 의 장착 슬롯들 그대로. 보통 길이 3 (OwnedTraitManager.EquipSlotCount).")]
+    [Tooltip("아웃게임 TraitPanel.LeftPanel 의 장착 슬롯들 그대로. 최대 길이 OwnedTraitManager.EquipSlotCount (5). 잠긴 슬롯은 해금 비용 표시(인게임에선 해금 불가).")]
     public TraitSlotUI[] traitSlots;
     [Tooltip("\"선택된 특성 (n/3)\" 텍스트 (선택)")]
     public TMP_Text equippedCountText;
@@ -143,10 +143,11 @@ public class CEOInfoUI : MonoBehaviour
 
         if (equippedCountText != null && OwnedTraitManager.Instance != null)
         {
+            int unlocked = OwnedTraitManager.Instance.UnlockedSlotCount;
             int n = 0;
-            for (int i = 0; i < OwnedTraitManager.EquipSlotCount; i++)
+            for (int i = 0; i < unlocked; i++)
                 if (!string.IsNullOrEmpty(OwnedTraitManager.Instance.GetEquipped(i))) n++;
-            equippedCountText.text = $"선택된 특성 ({n}/{OwnedTraitManager.EquipSlotCount})";
+            equippedCountText.text = $"선택된 특성 ({n}/{unlocked})";
         }
     }
 

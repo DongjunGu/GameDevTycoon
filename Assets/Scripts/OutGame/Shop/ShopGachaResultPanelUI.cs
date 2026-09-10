@@ -1,4 +1,4 @@
-using TMPro;
+﻿using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -28,7 +28,16 @@ public class ShopGachaResultPanelUI : MonoBehaviour
         }
     }
 
-    public void Close() => gameObject.SetActive(false);
+    // 10연차 순차 표시용 — 닫힌 직후 1회만 불리고 자동 해제.
+    public System.Action onClosed;
+
+    public void Close()
+    {
+        gameObject.SetActive(false);
+        var cb = onClosed;
+        onClosed = null;
+        cb?.Invoke();
+    }
 
     public void ShowEmployee(EmployeeData emp, EmployeeGrade grade)
     {

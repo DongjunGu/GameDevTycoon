@@ -1,12 +1,11 @@
-using System;
-using System.Collections;
+﻿using System;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
 // 아웃게임 EmployeePanel 카드 UI — ItemPrefab에 부착
-// SetData()로 직군 아이콘/이름/등급 배경/초상화 세팅
-// 등급 색상은 OwnedEmployeeSlotUI와 동일 팔레트 (Unique는 황금 shimmer)
+// SetData()로 직군 아이콘/이름/등급 프레임/초상화 세팅
+// 등급 구분은 색 틴트가 아니라 GradeSpriteSet(SO)의 프레임 스프라이트 교체로 한다
 public class EmployeePanelItemUI : MonoBehaviour
 {
     [Header("References")]
@@ -21,13 +20,12 @@ public class EmployeePanelItemUI : MonoBehaviour
     [Tooltip("인덱스 = (int)EmployeeRole — Planner(0)/Programmer(1)/Artist(2)")]
     public Sprite[] roleIcons;
 
+    [Header("Grade Frame (SO)")]
+    [Tooltip("등급별 프레임 스프라이트 SO. 기본 에셋: Assets/ScriptableObject/OutGameEmployeeFrameSet.asset (Employee_Frame_*)")]
+    public GradeSpriteSet gradeFrameSet;
+
     [Header("Locked Visual")]
     public Color lockedTint = new Color(0f, 0f, 0f, 0.6f);
-
-    // OwnedEmployeeSlotUI와 동일 팔레트
-    private static readonly Color ColorNormal = new Color(0.92f, 0.92f, 0.92f);
-    private static readonly Color ColorRare   = new Color(0.75f, 0.88f, 0.95f);
-    private static readonly Color ColorEpic   = new Color(0.55f, 0.30f, 0.85f);
 
     public EmployeeData Data { get; private set; }
     public bool IsUnlocked { get; private set; }
@@ -35,7 +33,6 @@ public class EmployeePanelItemUI : MonoBehaviour
     public event Action<EmployeePanelItemUI> OnClicked;
 
     private EmployeeGrade _pendingGrade;
-    private Coroutine _shimmerCo;
 
     public void SetData(EmployeeData emp, bool unlocked)
     {
@@ -46,7 +43,7 @@ public class EmployeePanelItemUI : MonoBehaviour
         _pendingGrade = OutGameEmployeeManager.Instance != null
             ? OutGameEmployeeManager.Instance.GetMaxGrade(emp.id)
             : EmployeeGrade.Normal;
-        ApplyGradeColor(_pendingGrade);
+        ApplyGradeFrame(_pendingGrade);
 
         if (portrait != null)
         {
@@ -76,50 +73,17 @@ public class EmployeePanelItemUI : MonoBehaviour
         }
     }
 
+    // 비활성 상태에서 SetData 를 받았을 수 있어 켜질 때 다시 적용
     void OnEnable()
     {
-        if (Data != null) ApplyGradeColor(_pendingGrade);
+        if (Data != null) ApplyGradeFrame(_pendingGrade);
     }
 
-    void OnDisable()
-    {
-        if (_shimmerCo != null) { StopCoroutine(_shimmerCo); _shimmerCo = null; }
-    }
-
-    void ApplyGradeColor(EmployeeGrade grade)
+    // 등급 = 프레임 스프라이트 교체. 색 틴트는 쓰지 않는다(항상 흰색)
+    void ApplyGradeFrame(EmployeeGrade grade)
     {
         if (gradeBackground == null) return;
-        if (_shimmerCo != null) { StopCoroutine(_shimmerCo); _shimmerCo = null; }
-
-        if (grade == EmployeeGrade.Legendary)
-        {
-            if (isActiveAndEnabled) _shimmerCo = StartCoroutine(LegendaryShimmer());
-            else gradeBackground.color = Color.HSVToRGB(0f, 0.55f, 1f);
-            return;
-        }
-
-        if (grade == EmployeeGrade.Unique)
-        {
-            gradeBackground.color = new Color(1.0f, 0.85f, 0.30f); // 금색 단색 (반짝임 제거)
-            return;
-        }
-
-        gradeBackground.color = grade switch
-        {
-            EmployeeGrade.Normal => ColorNormal,
-            EmployeeGrade.Rare   => ColorRare,
-            EmployeeGrade.Epic   => ColorEpic,
-            _                    => ColorNormal
-        };
-    }
-
-    IEnumerator LegendaryShimmer()
-    {
-        while (true)
-        {
-            float h = Mathf.Repeat(Time.time * 0.25f, 1f);
-            gradeBackground.color = Color.HSVToRGB(h, 0.55f, 1f);
-            yield return null;
-        }
+        gradeBackground.color = Color.white;
+        GradeSpriteSet.Apply(gradeBackground, gradeFrameSet, grade);
     }
 }
