@@ -267,6 +267,18 @@ public static class GameAnalytics
 
             if (!_depsOk || IsReady) return;
 
+            // Play 출시 전 보고서의 Test Lab 봇 기기가 가짜 유저(first_open 등)로 집계되는 걸 막는다.
+            // AndroidManifest 에서 수집을 꺼둔 채 시작하므로, 여기서 켜지 않으면 자동 이벤트도 안 나간다.
+            // IsReady 를 세우지 않으므로 이후 LogEvent 는 큐(최대 64)에만 쌓이고 전송되지 않는다.
+            if (IsTestLab())
+            {
+                FirebaseAnalytics.SetAnalyticsCollectionEnabled(false);
+                Debug.Log("[Analytics] Firebase Test Lab 기기 — 분석 수집 비활성");
+                _queue.Clear();
+                enabled = false;
+                return;
+            }
+
             FirebaseAnalytics.SetAnalyticsCollectionEnabled(true);
             IsReady = true;
             Debug.Log("[Analytics] Firebase Analytics 준비 완료");
@@ -282,6 +294,24 @@ public static class GameAnalytics
 
             enabled = false;
         }
+    }
+
+    // Google 공식 안내: Test Lab 기기는 Settings.System "firebase.test.lab" 값이 "true".
+    static bool IsTestLab()
+    {
+#if UNITY_ANDROID && !UNITY_EDITOR
+        try
+        {
+            using var player = new AndroidJavaClass("com.unity3d.player.UnityPlayer");
+            using var activity = player.GetStatic<AndroidJavaObject>("currentActivity");
+            using var resolver = activity.Call<AndroidJavaObject>("getContentResolver");
+            using var settings = new AndroidJavaClass("android.provider.Settings$System");
+            return settings.CallStatic<string>("getString", resolver, "firebase.test.lab") == "true";
+        }
+        catch { return false; }
+#else
+        return false;
+#endif
     }
 #else
     // SDK 미도입 상태 — 전송 없이 콘솔로만 확인한다. 배선/이벤트 설계를 먼저 검증하는 용도.

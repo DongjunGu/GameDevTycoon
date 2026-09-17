@@ -3,6 +3,9 @@
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
     <application>
+        <!--Firebase Analytics 자동수집(first_open/session_start 등)을 시작 시 꺼둔다.
+            GameAnalytics.cs 가 Test Lab 기기(Play 출시 전 보고서)가 아닐 때만 켠다.-->
+        <meta-data android:name="firebase_analytics_collection_enabled" android:value="false" />
         <!--Used when Application Entry is set to Activity, otherwise remove this activity block-->
         <activity android:name="com.unity3d.player.UnityPlayerActivity"
                   android:theme="@style/UnityThemeSelector">

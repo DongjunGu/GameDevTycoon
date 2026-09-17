@@ -293,20 +293,9 @@ public class AdsManager : MonoBehaviour
 
     void HookEvents(Slot slot, RewardedAd ad)
     {
-        // ILRD(Impression-Level Revenue Data) — 노출 1건이 실제로 확정된 시점에만 온다.
-        // AdMob-Firebase 콘솔 연동은 네트워크 집계치라 하루 지연되므로, ARPDAU를 정밀 계산하려면
-        // 이 콜백으로 노출 단위 값을 직접 GA4에 심어야 한다.
-        ad.OnAdPaid += adValue =>
-        {
-            double revenue = adValue.Value / 1_000_000.0; // micros → 통화 단위
-            GameAnalytics.LogEvent("ad_impression",
-                "ad_platform", "AdMob",
-                "ad_source", ad.GetResponseInfo()?.GetMediationAdapterClassName() ?? "unknown",
-                "ad_format", "Rewarded",
-                "ad_unit_name", slot.placement.ToString(),
-                "value", revenue,
-                "currency", adValue.CurrencyCode);
-        };
+        // 광고 매출(ad_impression)은 수동으로 로깅하지 않는다.
+        // AdMob-Firebase 연동 상태라 SDK가 노출마다 value/currency 포함 ad_impression(origin=am)을
+        // 자동 전송한다. 여기서 또 보내면 매출·ARPDAU가 2배로 집계된다(2026-09-17 실기기 logcat 확인).
 
         ad.OnAdFullScreenContentClosed += () =>
         {
