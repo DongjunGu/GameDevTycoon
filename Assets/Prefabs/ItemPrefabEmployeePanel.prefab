@@ -34,7 +34,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 10, y: -79}
+  m_AnchoredPosition: {x: 18, y: -85}
   m_SizeDelta: {x: 200, y: 50}
   m_Pivot: {x: 0, y: 1}
 --- !u!222 &455646593431793850
@@ -283,9 +283,9 @@ MonoBehaviour:
   traitContainer: {fileID: 1809509610708083950}
   button: {fileID: 2051704881762808695}
   roleIcons:
-  - {fileID: 557219105, guid: b35b93d3d97396945a9a3a8d376c3c92, type: 3}
-  - {fileID: 962383066, guid: b35b93d3d97396945a9a3a8d376c3c92, type: 3}
-  - {fileID: 1888231692, guid: b35b93d3d97396945a9a3a8d376c3c92, type: 3}
+  - {fileID: 21300000, guid: abbb632aabeaddf4baf85d382d1ad8be, type: 3}
+  - {fileID: 21300000, guid: 62fb1b4c615c6304c936c36f5aa29afd, type: 3}
+  - {fileID: 21300000, guid: a92671868929c984d81320b3e16e68a8, type: 3}
   gradeFrameSet: {fileID: 11400000, guid: 097fc4e3444f91a4b873c4c4e0b8b5f0, type: 2}
   lockedTint: {r: 0, g: 0, b: 0, a: 0.6}
 --- !u!114 &8454403632817560171
@@ -412,7 +412,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 8, y: -37}
+  m_AnchoredPosition: {x: 15, y: -45}
   m_SizeDelta: {x: 34, y: 34}
   m_Pivot: {x: 0, y: 1}
 --- !u!222 &2060361134082555372

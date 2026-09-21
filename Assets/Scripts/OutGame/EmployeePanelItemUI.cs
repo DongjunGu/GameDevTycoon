@@ -13,6 +13,8 @@ public class EmployeePanelItemUI : MonoBehaviour
     public Image portrait;
     public Image jobIcon;
     public TMP_Text nameText;
+    [Tooltip("GradeExtraNum — Epic/Unique 합성 단계(1·2). 비우면 이름으로 자동 탐색")]
+    public TMP_Text gradeExtraNum;
     public Transform traitContainer; // 추후 특성 슬롯 영역
     public Button button;
 
@@ -66,6 +68,8 @@ public class EmployeePanelItemUI : MonoBehaviour
 
         if (nameText != null) nameText.text = emp.employeeName;
 
+        ApplyStage(emp, unlocked, _pendingGrade);
+
         if (button != null)
         {
             button.onClick.RemoveAllListeners();
@@ -77,6 +81,24 @@ public class EmployeePanelItemUI : MonoBehaviour
     void OnEnable()
     {
         if (Data != null) ApplyGradeFrame(_pendingGrade);
+    }
+
+    // 합성 단계 표시 — Epic/Unique 에서만 s1/s2 가 존재한다. s0·다른 등급·미해금은 숨김.
+    void ApplyStage(EmployeeData emp, bool unlocked, EmployeeGrade grade)
+    {
+        if (gradeExtraNum == null)
+        {
+            var t = transform.Find("GradeExtraNum");
+            if (t != null) gradeExtraNum = t.GetComponent<TMP_Text>();
+            if (gradeExtraNum == null) return;
+        }
+
+        bool stageGrade = grade == EmployeeGrade.Epic || grade == EmployeeGrade.Unique;
+        int stage = (unlocked && stageGrade && OwnedCardManager.Instance != null)
+            ? OwnedCardManager.Instance.GetHighestStage(emp.id, grade) : 0;
+
+        gradeExtraNum.text = stage.ToString();
+        gradeExtraNum.gameObject.SetActive(stage > 0);
     }
 
     // 등급 = 프레임 스프라이트 교체. 색 틴트는 쓰지 않는다(항상 흰색)

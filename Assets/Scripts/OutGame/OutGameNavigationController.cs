@@ -14,6 +14,8 @@ public class OutGameNavigationController : MonoBehaviour
     public GameObject mainPanel;
     [Tooltip("하단 네비게이션 바 (탭 들어가면 숨김)")]
     public GameObject bottomNavBar;
+    [Tooltip("메일 패널 (TopRightPanel/MainMailPanel) — TopRightPanel 은 항상 최상단이지만 메일은 메인에서만 노출")]
+    public GameObject mailPanel;
 
     [Header("Tabs")]
     [Tooltip("탭 controller들 (직원/특성/조각/상점/랭킹/업적 ...)")]
@@ -70,6 +72,7 @@ public class OutGameNavigationController : MonoBehaviour
     {
         if (mainPanel != null)    mainPanel.SetActive(show);
         if (bottomNavBar != null) bottomNavBar.SetActive(show);
+        if (mailPanel != null)    mailPanel.SetActive(show);
     }
 
     public void SwitchTo(int index)

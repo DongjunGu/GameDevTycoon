@@ -152,6 +152,22 @@ public class OwnedCardManager : MonoBehaviour
         return highest;
     }
 
+    // 해당 직원이 그 grade 에서 보유한 카드 중 최고 stage. 카드 없으면 0.
+    // stage 는 Epic/Unique 에서만 1~2 까지 올라감 (합성 규칙 — EmployeeMergeUI.TryGetRecipe).
+    public int GetHighestStage(string empId, EmployeeGrade grade)
+    {
+        int highest = 0;
+        if (string.IsNullOrEmpty(empId)) return highest;
+        foreach (var kv in _cards)
+        {
+            if (kv.Value <= 0) continue;
+            ParseKey(kv.Key, out var e, out var g, out var stage);
+            if (e != empId || g != grade) continue;
+            if (stage > highest) highest = stage;
+        }
+        return highest;
+    }
+
     // 보유 카드 전체 (UI 빌드용) — key 형식 "empId|grade|stage"
     public IReadOnlyDictionary<string, int> AllCards => _cards;
 

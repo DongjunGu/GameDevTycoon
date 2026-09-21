@@ -48,6 +48,9 @@ public class OutGameEmployeePanelGallery : MonoBehaviour
     [Tooltip("등급 표시 패널 (DescriptionPanel) — 클릭한 직원의 maxGrade 위 슬롯을 잠금 처리")]
     public EmployeePanelDescriptionUI descriptionUI;
 
+    [Tooltip("PreviewContainer2 — 선택한 직원의 일러스트/도트/등급/직군/이름 교체. 비우면 자식에서 자동 탐색")]
+    public EmployeePanelPreviewUI previewUI;
+
     [Header("Sort / Filter")]
     [Tooltip("정렬·필터 모드 (UI에서 SetMode로 변경)")]
     public EmployeeGalleryMode mode = EmployeeGalleryMode.All;
@@ -63,8 +66,13 @@ public class OutGameEmployeePanelGallery : MonoBehaviour
     private readonly List<EmployeePanelItemUI> _spawned = new();
     private string _selectedEmpId;
 
+    // 현재 선택된 직원 — 상세 패널(EmployeeDetailPanelUI) 처럼 "지금 보고 있는 직원"이 필요한 곳에서 조회
+    public EmployeeData Selected { get; private set; }
+    public bool SelectedUnlocked { get; private set; }
+
     void OnEnable()
     {
+        if (previewUI == null) previewUI = GetComponentInChildren<EmployeePanelPreviewUI>(true);
         SetPreviewVisible(false);
         _selectedEmpId = null; // 패널 진입 시 첫 직원 자동 선택
         if (buildOnEnable) Rebuild();
@@ -220,8 +228,11 @@ public class OutGameEmployeePanelGallery : MonoBehaviour
         if (item == null || item.Data == null) return;
         if (!item.IsUnlocked && !lockedClickable) return;
         _selectedEmpId = item.Data.id;
+        Selected = item.Data;
+        SelectedUnlocked = item.IsUnlocked;
         ShowPreview(item.Data.portraitId, item.IsUnlocked);
         if (descriptionUI != null) descriptionUI.ApplyEmployee(item.Data, item.IsUnlocked);
+        if (previewUI != null) previewUI.ApplyEmployee(item.Data, item.IsUnlocked);
     }
 
     public void ShowPreview(string portraitId, bool unlocked = true)

@@ -163,6 +163,30 @@ public class RoleIconSpriteAssetCreator : EditorWindow
         }
     }
 
+    // EmployeePanel FilterBar 라벨 앞에 붙는 인라인 화살표 — ArrowImage(FilterToggleBtn)와 같은 원본.
+    // 텍스트에서는 <sprite="ArrowIconSpriteAsset" name="arrow"> 로 사용. 라벨 fontSize 22 에 맞춘 크기.
+    const float ArrowIconSize = 22f;
+
+    [InitializeOnLoadMethod]
+    static void AutoCreateArrowIconIfMissing()
+    {
+        var arrow = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Sprites/UI/Outgame/OutgameEmployee/ArrowUp.png");
+        if (arrow == null) return;
+
+        var outputPath = $"{OutputDir}/ArrowIconSpriteAsset.asset";
+        var existing = AssetDatabase.LoadAssetAtPath<TMP_SpriteAsset>(outputPath);
+        if (existing != null && existing.spriteGlyphTable.Count > 0)
+        {
+            var m = existing.spriteGlyphTable[0].metrics;
+            if (Mathf.Approximately(Mathf.Max(m.width, m.height), ArrowIconSize)) return;
+        }
+
+        CreateOne(arrow, "ArrowIconSpriteAsset", "arrow", ArrowIconSize);
+        AssetDatabase.SaveAssets();
+        AssetDatabase.Refresh();
+        Debug.Log("[RoleIconSpriteAssetCreator] ArrowIconSpriteAsset 생성됨");
+    }
+
     static bool RegenIfSizeMismatch(Sprite sprite, string assetName, string spriteName)
     {
         var outputPath = $"{OutputDir}/{assetName}.asset";
