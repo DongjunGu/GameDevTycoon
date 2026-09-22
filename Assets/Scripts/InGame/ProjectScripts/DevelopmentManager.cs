@@ -286,6 +286,7 @@ public class DevelopmentManager : MonoBehaviour
     private float _elapsed;
     private bool _isRunning;
     private bool _triggered25;
+    private bool _triggered60; // 잠 깨우기(천재 Unique) 진행도 60% 1회 hook
     private bool _triggered75;
     private bool _pendingLeaderScore25;
     private bool _pendingLeaderScore75;
@@ -383,6 +384,7 @@ public class DevelopmentManager : MonoBehaviour
         _elapsed = 0f;
         _isRunning = false;
         _triggered25 = false;
+        _triggered60 = false;
         _triggered75 = false;
         _usedGameUpgrades.Clear();
 
@@ -395,6 +397,9 @@ public class DevelopmentManager : MonoBehaviour
         // 여기서 명시적으로 비워야 이전 프로젝트 기여자(퇴사자 포함)가 새 프로젝트로 새는 것을 막는다.
         _employeeContribution.Clear();
         _contributionInfo.Clear();
+
+        // 신의 축복(우기 Unique) — 개발 시작 시 1회 주사위. InfoFeedUI 토스트만 뜨고 모달은 없음.
+        CharacterUniqueEvents.CheckGodBlessingOnDevStart();
 
         DevelopmentPanelUI.Instance.ResetValues();
         // 이전 프로젝트에서 남은 개발틱 팝업 잔재 정리 — LeaderSelectUI 가 stale ActiveCount 를 기다리며
@@ -711,6 +716,14 @@ public class DevelopmentManager : MonoBehaviour
                 GameTimeManager.Instance.StopTime();
                 DispatchPanelUI.Instance.OpenForLeaderSelect(LeaderType.Programmer, null);
                 yield break;
+            }
+
+            // 잠 깨우기(천재 Unique) — 진행도 60% 1회. 선택지 패널이 뜨는 동안 StopTime 이라
+            // 이 코루틴은 위의 IsRunning 체크에서 자동으로 _elapsed 누적을 멈춘다(yield break 불필요).
+            if (!_triggered60 && progress >= 0.60f)
+            {
+                _triggered60 = true;
+                CharacterUniqueEvents.CheckGeniusWakeUp();
             }
 
             if (!_triggered75 && progress >= 0.75f)
@@ -1398,7 +1411,7 @@ public class DevelopmentManager : MonoBehaviour
         float M = tutorialFixedRollsDev ? 1.35f : tutorialFixedRollsCycle2 ? 1.5f : LeaderStageM[stage - 1];
         float K = 0.8738f + 0.026409f * Mathf.Pow(skill, 0.9081f);
         bool lazyGenius = type == LeaderType.Programmer && CharacterTraitApplier.HasLazyGeniusOwned();
-        if (lazyGenius) K *= CharacterTraitApplier.LAZY_GENIUS_LEADER_BONUS;
+        if (lazyGenius) K *= CharacterTraitApplier.GetLazyGeniusLeaderBonus();
         float P = GetLeaderPotentialP(employee.potential);
 
         _leaderBonusGranted  = new bool[3];
@@ -1513,7 +1526,7 @@ public class DevelopmentManager : MonoBehaviour
         float M = LeaderStageM[stage - 1];
         float K = 0.8738f + 0.026409f * Mathf.Pow(skill, 0.9081f);
         bool lazyGenius = type == LeaderType.Programmer && CharacterTraitApplier.HasLazyGeniusOwned();
-        if (lazyGenius) K *= CharacterTraitApplier.LAZY_GENIUS_LEADER_BONUS;
+        if (lazyGenius) K *= CharacterTraitApplier.GetLazyGeniusLeaderBonus();
         float P = GetLeaderPotentialP(employee.potential);
 
         _leaderBonusGranted  = new bool[3];
@@ -1635,7 +1648,7 @@ public class DevelopmentManager : MonoBehaviour
             float K = 0.8738f + 0.026409f * Mathf.Pow(skill, 0.9081f);
             bool lazyGenius = type == LeaderType.Programmer && CharacterTraitApplier.HasLazyGeniusOwned();
             if (lazyGenius)
-                K *= CharacterTraitApplier.LAZY_GENIUS_LEADER_BONUS;
+                K *= CharacterTraitApplier.GetLazyGeniusLeaderBonus();
 
             float P = GetLeaderPotentialP(employee.potential);
 
@@ -1754,9 +1767,8 @@ public class DevelopmentManager : MonoBehaviour
             hunsuBonusTarget = LeaderType.Planner;
             if (type == LeaderType.Programmer && CharacterTraitApplier.IsHunsu(employee))
             {
-                float baseTotal = lazyGenius ? total / CharacterTraitApplier.LAZY_GENIUS_LEADER_BONUS : total;
-                hunsuBonus = Mathf.RoundToInt(baseTotal * CharacterTraitApplier.HUNSU_BONUS_RATIO);
-                hunsuBonusTarget = UnityEngine.Random.value < 0.5f ? LeaderType.Planner : LeaderType.Artist;
+                float baseTotal = lazyGenius ? total / CharacterTraitApplier.GetLazyGeniusLeaderBonus() : total;
+                hunsuBonus = Mathf.RoundToInt(baseTotal * CharacterTraitApplier.GetHunsuBonusRatio(employee));
             }
         }
 
@@ -1887,9 +1899,8 @@ public class DevelopmentManager : MonoBehaviour
         LeaderType hunsuBonusTarget = LeaderType.Planner;
         if (ctx.type == LeaderType.Programmer && CharacterTraitApplier.IsHunsu(ctx.employee))
         {
-            float baseTotal = ctx.lazyGenius ? total / CharacterTraitApplier.LAZY_GENIUS_LEADER_BONUS : total;
-            hunsuBonus = Mathf.RoundToInt(baseTotal * CharacterTraitApplier.HUNSU_BONUS_RATIO);
-            hunsuBonusTarget = UnityEngine.Random.value < 0.5f ? LeaderType.Planner : LeaderType.Artist;
+            float baseTotal = ctx.lazyGenius ? total / CharacterTraitApplier.GetLazyGeniusLeaderBonus() : total;
+            hunsuBonus = Mathf.RoundToInt(baseTotal * CharacterTraitApplier.GetHunsuBonusRatio(ctx.employee));
         }
 
         // 오버플로 확정 시에만 값 잠금 저장 (기존 설계와 동일 — non-overflow 는 재접속 시 재추첨 허용)
@@ -2014,13 +2025,11 @@ public class DevelopmentManager : MonoBehaviour
         // StartDeveloping 의 ForceStartTime 이 곧바로 다시 겹쳐 걸려, 팝업이 떠있는 동안에도 시간이 흐름.
         if (hunsuBonus > 0)
         {
-            float pl = hunsuBonusTarget == LeaderType.Planner ? hunsuBonus : 0f;
-            float ar = hunsuBonusTarget == LeaderType.Artist  ? hunsuBonus : 0f;
-            DevelopmentPanelUI.Instance?.AddValuesInstant(pl, 0f, ar, 0f, 0f);
+            // 기획·아트 양쪽에 같은 값 반영 (hunsuBonusTarget 은 구 저장분 파싱 호환용으로만 남김 — 미사용)
+            DevelopmentPanelUI.Instance?.AddValuesInstant(hunsuBonus, 0f, hunsuBonus, 0f, 0f);
 
-            string targetName = hunsuBonusTarget == LeaderType.Planner ? "기획" : "아트";
             AlertUI.Instance?.ShowPortrait(
-                $"훈수쟁이 특성 발동!\n{targetName} 점수 +{hunsuBonus}",
+                $"훈수쟁이 특성 발동!\n기획, 아트 점수 +{hunsuBonus}",
                 employee.portraitId, "훈수쟁이", ProceedAfterHunsu);
         }
         else

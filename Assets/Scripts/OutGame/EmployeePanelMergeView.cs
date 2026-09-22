@@ -2,8 +2,8 @@ using UnityEngine;
 using UnityEngine.UI;
 
 // EmployeePanel의 합성 뷰 토글
-// - Start: ContainerPanel 비활성, MiddlePanel 활성
-// - MergeBtn 클릭: ContainerPanel 활성, MiddlePanel 비활성
+// - Start: EmployeeMergePanel 비활성, MiddlePanel 활성
+// - EmployeeMergeBtn 클릭: EmployeeMergePanel 활성, MiddlePanel 비활성
 // - BackBtn 클릭: 반대로
 public class EmployeePanelMergeView : MonoBehaviour
 {

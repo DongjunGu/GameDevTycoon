@@ -73,12 +73,29 @@ public static class CharacterTraitApplier
     public static bool IsGlassMental(EmployeeData emp)
         => GetActiveTrait(emp) != null && ResolveTraitId(emp) == "ctrait_kim";
 
+    // 특성 강화 단계(0~2) — 아웃게임 보유 카드의 Epic+N / Unique+N 합성 단계.
+    // 저장하지 않고 OwnedCardManager 에서 실시간 조회 (진실 source 는 cardsJson 한 곳).
+    // 채용 후보는 masterEmployeeId 가 비어 있어 id 로 fallback (채용 시 id 가 GUID 로 바뀜).
+    public static int GetTraitStage(EmployeeData emp)
+    {
+        if (emp == null || OwnedCardManager.Instance == null) return 0;
+        string masterId = !string.IsNullOrEmpty(emp.masterEmployeeId) ? emp.masterEmployeeId : emp.id;
+        if (string.IsNullOrEmpty(masterId)) return 0;
+        return OwnedCardManager.Instance.GetHighestStage(masterId, emp.grade);
+    }
+
     // ──────────── 오타쿠(otaku_01) ────────────
     // 채용 시마다 랜덤 장르 1개를 emp.otakuFixedGenre 에 고정(재추첨). 그 장르 개발 시:
-    //   - 오타쿠 본인 능력치 +20% 버프 (EmployeeData.GetOtakuBuffPercent 가 Effective*Skill 합연산 % 에 포함해서 계산 — 다른 버프와 동일 취급).
-    //   - 프로젝트 매출 +20% (보유 오타쿠의 고정장르가 프로젝트 장르와 일치 시). SalesUI 가 GetOtakuSalesBonus 호출.
-    public const float OTAKU_STAT_MULT  = 1.2f;  // 능력치 +20% (EmployeeData.GetOtakuBuffPercent 가 (OTAKU_STAT_MULT-1)*100 으로 환산)
-    public const float OTAKU_SALES_BONUS = 0.2f; // 매출 bonusSum 합연산 +0.20
+    //   - 오타쿠 본인 능력치 버프 (EmployeeData.GetOtakuBuffPercent 가 Effective*Skill 합연산 % 에 포함해서 계산 — 다른 버프와 동일 취급).
+    //   - 그 장르의 숙련도 승급 확률 배수 (MasteryManager.TryPromote 의 확률 구간 / 거장 3% 양쪽에 곱).
+    // 수치는 특성 강화 단계(GetTraitStage)별: 0단계 +10%/×1.5, 1단계 +15%/×2.0, 2단계 +20%/×2.5.
+
+    // 능력치 버프 % — 비오타쿠/장르 불일치면 0.
+    public static float GetOtakuStatPercent(EmployeeData emp, ProjectGenre genre)
+    {
+        if (!IsOtakuGenreMatch(emp, genre)) return 0f;
+        return GetTraitStage(emp) switch { >= 2 => 20f, 1 => 15f, _ => 10f };
+    }
 
     public static bool IsOtaku(EmployeeData emp)
         => GetActiveTrait(emp) != null && ResolveTraitId(emp) == "ctrait_otaku";
@@ -89,40 +106,49 @@ public static class CharacterTraitApplier
            && !string.IsNullOrEmpty(emp.otakuFixedGenre)
            && emp.otakuFixedGenre == genre.ToString();
 
-    // 매출 보너스 — 보유 직원 중 고정장르가 프로젝트 장르와 일치하는 오타쿠가 한 명이라도 있으면 +0.20.
-    public static float GetOtakuSalesBonus(ProjectGenre genre)
+    // 숙련도 승급 확률 배수 — 보유 오타쿠 중 고정장르가 일치하는 최고 단계 기준. 없으면 1.0(영향 없음).
+    public static float GetOtakuMasteryChanceMult(ProjectGenre genre)
     {
         var em = EmployeeManager.Instance;
-        if (em == null || em.ownedEmployees == null) return 0f;
+        if (em == null || em.ownedEmployees == null) return 1f;
+        float best = 1f;
         foreach (var emp in em.ownedEmployees)
-            if (IsOtakuGenreMatch(emp, genre)) return OTAKU_SALES_BONUS;
-        return 0f;
+        {
+            if (!IsOtakuGenreMatch(emp, genre)) continue;
+            float m = GetTraitStage(emp) switch { >= 2 => 2.5f, 1 => 2.0f, _ => 1.5f };
+            if (m > best) best = m;
+        }
+        return best;
     }
 
     // ──────────── 금수저(goldspoon_01) ────────────
-    // 기본 연봉·강화 연봉 상승량 50% 감소(채용/강화 시점에 salary 값 자체를 절반으로 확정 저장) + 연봉 협상 대상 제외.
-    //   - 연봉 감소: EmployeeManager 의 후보 연봉 roll / 강화 연봉 가감 시 ApplyGoldspoonSalary 로 절반 처리.
+    // 기본 연봉·강화 연봉 상승량 감소(채용/강화 시점에 salary 값 자체를 감산해 확정 저장) + 연봉 협상 대상 제외.
+    //   - 연봉 감소: EmployeeManager 의 후보 연봉 roll / 강화 연봉 가감 시 ApplyGoldspoonSalary 로 처리.
+    //     감소율은 특성 강화 단계(GetTraitStage)별 — 0단계 50% / 1단계 65% / 2단계 80%.
     //   - 협상 제외: SalaryNegotiationManager.SelectNegotiationTarget 의 eligible 필터에서 IsGoldspoon 제외.
-    public const float GOLDSPOON_SALARY_FACTOR = 0.5f;
 
     public static bool IsGoldspoon(EmployeeData emp)
         => GetActiveTrait(emp) != null && ResolveTraitId(emp) == "ctrait_goldspoon";
 
-    // 금수저면 amount 의 절반(반올림), 아니면 amount 그대로. 기본 연봉·강화 상승량 양쪽에 공통 사용.
+    // 금수저 연봉 배율 — 0단계 ×0.50 / 1단계 ×0.35 / 2단계 ×0.20. 비금수저는 ×1.
+    public static float GetGoldspoonSalaryFactor(EmployeeData emp)
+        => !IsGoldspoon(emp) ? 1f
+           : GetTraitStage(emp) switch { >= 2 => 0.2f, 1 => 0.35f, _ => 0.5f };
+
+    // 금수저면 amount 에 감소 배율 적용(반올림), 아니면 amount 그대로. 기본 연봉·강화 상승량 양쪽에 공통 사용.
     public static int ApplyGoldspoonSalary(EmployeeData emp, int amount)
-        => IsGoldspoon(emp) ? Mathf.RoundToInt(amount * GOLDSPOON_SALARY_FACTOR) : amount;
+        => IsGoldspoon(emp) ? Mathf.RoundToInt(amount * GetGoldspoonSalaryFactor(emp)) : amount;
 
     // ──────────── 게으른 천재(genius_01) ────────────
     // 게으른 천재를 보유(Epic+)하면: 프로젝트 기간 +2주(고정, 다수여도 누적 X) + 개발(프로그래머) 팀장 최종 점수 ×1.3.
     //   - 기간: DevelopmentManager.StartDevelopment 의 developmentDuration 산정에 HasLazyGeniusOwned 시 +2주.
     //   - 팀장: DevelopmentManager.SetLeader 에서 type==Programmer 이고 보유 중이면 total ×1.3 (팀장 본인 여부 무관).
-    public const int   LAZY_GENIUS_EXTRA_WEEKS = 2;
-    public const float LAZY_GENIUS_LEADER_BONUS = 1.3f;
+    public const int LAZY_GENIUS_EXTRA_WEEKS = 2;
 
     public static bool IsLazyGenius(EmployeeData emp)
         => GetActiveTrait(emp) != null && ResolveTraitId(emp) == "ctrait_genius";
 
-    // 게으른 천재를 한 명이라도 보유 중인가 (기간 +2주 / 개발 팀장 점수 +30% 발동 조건)
+    // 게으른 천재를 한 명이라도 보유 중인가 (기간 +2주 / 개발 팀장 점수 증가 발동 조건)
     public static bool HasLazyGeniusOwned()
     {
         var em = EmployeeManager.Instance;
@@ -132,14 +158,33 @@ public static class CharacterTraitApplier
         return false;
     }
 
-    // ──────────── 훈수쟁이(hunsu_01) ────────────
-    // 개발(프로그래머) 팀장일 때, 그 개발 팀장 점수의 10% 를 기획/아트 중 랜덤 1곳에 추가.
-    // (훈수쟁이는 프로그래머라 LeaderSelect 역할 필터상 개발 팀장으로만 선정됨.)
-    // 추가분은 LeaderScoreUI 마지막 tick 에 함께 카운트업 — DevelopmentManager.SetLeader 가 보너스/대상을 계산해 Show 에 전달.
-    public const float HUNSU_BONUS_RATIO = 0.1f; // 개발 점수의 10%
+    // 개발 팀장 최종 점수 배율 — 보유 게으른 천재 중 최고 단계 기준(0단계 ×1.3 / 1단계 ×1.4 / 2단계 ×1.5).
+    // 미보유면 1.0. 훈수쟁이 base 역산도 같은 값을 쓰므로 반드시 이 함수 하나만 참조할 것.
+    public static float GetLazyGeniusLeaderBonus()
+    {
+        var em = EmployeeManager.Instance;
+        if (em == null || em.ownedEmployees == null) return 1f;
+        float best = 1f;
+        foreach (var emp in em.ownedEmployees)
+        {
+            if (!IsLazyGenius(emp)) continue;
+            float m = GetTraitStage(emp) switch { >= 2 => 1.5f, 1 => 1.4f, _ => 1.3f };
+            if (m > best) best = m;
+        }
+        return best;
+    }
 
+    // ──────────── 훈수쟁이(hunsu_01) ────────────
+    // 개발(프로그래머) 팀장일 때, 그 개발 팀장 점수의 일정 비율을 기획·아트 양쪽에 추가.
+    // (훈수쟁이는 프로그래머라 LeaderSelect 역할 필터상 개발 팀장으로만 선정됨.)
+    // 추가분은 DevelopmentManager.ContinueAfterLeaderScore 가 AlertUI 안내 후 양쪽에 반영.
     public static bool IsHunsu(EmployeeData emp)
         => GetActiveTrait(emp) != null && ResolveTraitId(emp) == "ctrait_hunsu";
+
+    // 개발 점수 대비 기획·아트 반영 비율 — 0단계 10% / 1단계 15% / 2단계 20%. 비훈수쟁이는 0.
+    public static float GetHunsuBonusRatio(EmployeeData emp)
+        => !IsHunsu(emp) ? 0f
+           : GetTraitStage(emp) switch { >= 2 => 0.20f, 1 => 0.15f, _ => 0.10f };
 
     // 슬롯/카드 UI 표시용 — 활성 특성명 반환, 없으면 "" (grade < Epic 또는 미보유). UI 는 빈 문자열이면 숨김.
     public static string GetTraitName(EmployeeData emp)
@@ -187,27 +232,83 @@ public static class CharacterTraitApplier
         traitText.raycastTarget = true; // 특성 있으면 클릭 받아 설명 표시
     }
 
-    // 특성명 텍스트 클릭 시 — 특성명 + 설명을 AlertUI 로 표시. 오타쿠는 고정 장르를 덧붙임.
+    // 특성명 텍스트 클릭 시 — 특성명(+단계) + 설명을 AlertUI 로 표시.
     public static void ShowTraitDescription(EmployeeData emp)
     {
         var row = GetActiveTrait(emp);
         if (row == null || AlertUI.Instance == null) return;
-
-        string desc = row.description ?? "";
-        if (ResolveTraitId(emp) == "ctrait_otaku" && !string.IsNullOrEmpty(emp.otakuFixedGenre))
-            desc += $"\n\n고정 장르: {GenreKorName(emp.otakuFixedGenre)}";
-        AlertUI.Instance.ShowPortrait(desc, emp.portraitId, row.name);
+        int stage = GetTraitStage(emp);
+        string label = stage > 0 ? $"{row.name} +{stage}" : row.name;
+        AlertUI.Instance.ShowPortrait(GetTraitDescription(emp), emp.portraitId, label);
     }
 
     // 특성 설명 문자열만 반환(이름 없이) — 이력서 패널 등 자체 표시용. 특성 없으면 빈 문자열.
+    // 차트 설명(정성 문구) + 현재 강화 단계의 실제 수치 + (오타쿠) 고정 장르.
     public static string GetTraitDescription(EmployeeData emp)
     {
         var row = GetActiveTrait(emp);
         if (row == null) return "";
         string desc = row.description;
+
+        string effect = GetTraitEffectText(emp);
+        if (!string.IsNullOrEmpty(effect)) desc += $"\n\n{effect}";
+
         if (ResolveTraitId(emp) == "ctrait_otaku" && !string.IsNullOrEmpty(emp.otakuFixedGenre))
             desc += $"\n\n고정 장르: {GenreKorName(emp.otakuFixedGenre)}";
         return desc;
+    }
+
+    // 현재 강화 단계(0~2)에 해당하는 실제 수치 문구. 수치 변경 시 각 효과 로직과 함께 여기도 갱신할 것.
+    //   유리멘탈 EmployeeData.GetSatisfactionMultiplier / 오타쿠 GetOtakuStatPercent·GetOtakuMasteryChanceMult /
+    //   금수저 GetGoldspoonSalaryFactor / 우기 RerollCosmicEnergy / 천재 GetLazyGeniusLeaderBonus / 훈수 GetHunsuBonusRatio
+    public static string GetTraitEffectText(EmployeeData emp)
+        => GetTraitEffectText(ResolveTraitId(emp), GetTraitStage(emp));
+
+    // traitId + 단계 직접 지정 — 아웃게임 상세 패널처럼 emp.grade 가 Normal(마스터 데이터)인 경우용.
+    public static string GetTraitEffectText(string traitId, int stage)
+    {
+        int i = Mathf.Clamp(stage, 0, 2);
+        switch (traitId)
+        {
+            case "ctrait_kim":
+                return $"만족도 81~100일 때 능력치 +{new[] { 20, 25, 30 }[i]}%, 41~60일 때 능력치 -15%";
+            case "ctrait_otaku":
+                return $"해당 장르를 개발 시 능력치 +{new[] { 10, 15, 20 }[i]}% 상승, 숙련도 승급 확률 {new[] { "1.5", "2", "2.5" }[i]}배 증가";
+            case "ctrait_goldspoon":
+                return $"연봉 {new[] { 50, 65, 80 }[i]}% 감소, 연봉 협상 이벤트 대상에서 제외";
+            case "ctrait_ugi":
+                return $"게임 제작 시 능력치 {new[] { "70~150", "75~155", "80~160" }[i]}% 사이 랜덤 변동";
+            case "ctrait_genius":
+                return $"개발 기간 {LAZY_GENIUS_EXTRA_WEEKS}주 지연, 개발 팀장 최종 점수 {new[] { 30, 40, 50 }[i]}% 증가 적용";
+            case "ctrait_hunsu":
+                return $"개발 점수 상승량의 {new[] { 10, 15, 20 }[i]}%가 기획, 아트 점수에도 반영";
+            default:
+                return "";
+        }
+    }
+
+    // 등급 게이팅을 무시한 차트 설명 원문만 반환(수치 문구 미포함) — 문장형/숫자형을 따로 표시하는 패널용.
+    public static string GetTraitDescriptionRawAnyGrade(EmployeeData emp)
+    {
+        if (emp == null || emp.isCEO) return "";
+        string traitId = ResolveTraitId(emp);
+        if (string.IsNullOrEmpty(traitId)) return "";
+        var cache = CharacterTraitChartLoader.Cache;
+        return (cache != null && cache.TryGetValue(traitId, out var row)) ? row.description : "";
+    }
+
+    // 등급 게이팅을 무시한 특성 설명 — 아웃게임 상세 패널용(갤러리 직원은 grade 가 Normal 이라 GetTraitDescription 이 빈 문자열).
+    // 차트 설명 + 지정 단계의 실제 수치. 특성 없으면 빈 문자열.
+    public static string GetTraitDescriptionAnyGrade(EmployeeData emp, int stage)
+    {
+        if (emp == null || emp.isCEO) return "";
+        string traitId = ResolveTraitId(emp);
+        if (string.IsNullOrEmpty(traitId)) return "";
+        var cache = CharacterTraitChartLoader.Cache;
+        if (cache == null || !cache.TryGetValue(traitId, out var row)) return "";
+
+        string effect = GetTraitEffectText(traitId, stage);
+        return string.IsNullOrEmpty(effect) ? row.description : $"{row.description}\n\n{effect}";
     }
 
     // 저장된 enum 이름(RPG, VisualNovel 등)을 한글 표시명으로 변환 (ProjectData 의 canonical 매핑 재사용)
@@ -237,11 +338,13 @@ public static class CharacterTraitApplier
         }
     }
 
-    // 우주의 기운 — 능력치 배율 70~150% 재추첨 (영속 필드 cosmicEnergyPercent, Effective*Skill 외곽 곱으로 소비)
+    // 우주의 기운 — 능력치 배율 재추첨 (영속 필드 cosmicEnergyPercent, Effective*Skill 외곽 곱으로 소비)
+    // 범위는 특성 강화 단계별 — 0단계 70~150% / 1단계 75~155% / 2단계 80~160%.
     static void RerollCosmicEnergy(EmployeeData emp)
     {
-        emp.cosmicEnergyPercent = UnityEngine.Random.Range(70, 151); // 70~150
-        Debug.Log($"[우주의 기운] {emp.employeeName} 이번 배율 = {emp.cosmicEnergyPercent}%");
+        int min = GetTraitStage(emp) switch { >= 2 => 80, 1 => 75, _ => 70 };
+        emp.cosmicEnergyPercent = UnityEngine.Random.Range(min, min + 81); // min ~ min+80
+        Debug.Log($"[우주의 기운] {emp.employeeName} 이번 배율 = {emp.cosmicEnergyPercent}% (범위 {min}~{min + 80})");
     }
 
     // 매주 1회. 유리멘탈(만족도 구간 배율) / 우주의 기운(주간 능력치 변동) 등.

@@ -37,17 +37,17 @@ public static class CharacterTraitChartLoader
     static Dictionary<string, CharacterTraitRow> GetFallback() => new()
     {
         ["ctrait_kim"]       = new CharacterTraitRow { traitId = "ctrait_kim",       name = "유리멘탈",
-            description = "만족도가 높을 때 스탯이 크게 상승하고 낮을 때 크게 하락합니다", effectType = "", effectValue = 0 },
+            description = "만족도가 높을 때 능력치가 크게 상승하고 낮을 때 크게 하락합니다", effectType = "", effectValue = 0 },
         ["ctrait_otaku"]     = new CharacterTraitRow { traitId = "ctrait_otaku",     name = "오타쿠",
-            description = "특정 장르를 만들 때 능력치가 20% 상승하고 해당 게임 매출이 20% 증가합니다", effectType = "", effectValue = 0 },
+            description = "특정 장르를 만들 때 능력치가 올라가고 해당 장르 숙련도 상승률이 증가합니다", effectType = "", effectValue = 0 },
         ["ctrait_goldspoon"] = new CharacterTraitRow { traitId = "ctrait_goldspoon", name = "금수저",
-            description = "연봉을 다른 직원의 50%만 받고 연봉 협상을 요구하지 않습니다", effectType = "", effectValue = 0 },
+            description = "연봉을 다른 직원보다 적게 받고 연봉 협상을 요구하지 않습니다", effectType = "", effectValue = 0 },
         ["ctrait_ugi"]       = new CharacterTraitRow { traitId = "ctrait_ugi",       name = "우주의 기운",
-            description = "능력치가 매주 변동합니다", effectType = "", effectValue = 0 },
+            description = "능력치가 우주의 기운에 따라 랜덤하게 변동합니다", effectType = "", effectValue = 0 },
         ["ctrait_genius"]    = new CharacterTraitRow { traitId = "ctrait_genius",    name = "게으른 천재",
-            description = "프로젝트가 2주 지연되는 대신 개발 팀장 점수가 30% 증가합니다", effectType = "", effectValue = 0 },
+            description = "잠을 자느라 프로젝트가 지연되는 대신 개발 팀장 점수가 크게 증가합니다", effectType = "", effectValue = 0 },
         ["ctrait_hunsu"]     = new CharacterTraitRow { traitId = "ctrait_hunsu",     name = "훈수쟁이",
-            description = "개발 도중 다른 파트의 수치가 일부 증가합니다", effectType = "", effectValue = 0 },
+            description = "다른 파트에 훈수를 두어 기획, 아트 파트의 점수가 상승합니다", effectType = "", effectValue = 0 },
     };
 
     static Dictionary<string, CharacterTraitRow> LoadFromServer()

@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-// ContainerPanel 안에 보유 카드 GridLayout 빌드
+// EmployeeMergePanel 안에 보유 카드 GridLayout 빌드
 // OwnedCardManager.OnChanged 구독 → 자동 재빌드
 // 정렬·필터 모드는 EmployeeGalleryMode 재사용 (EmployeePanel 갤러리와 동일 UX)
 // 카드 클릭 → OnCardClicked 이벤트 (MergeUI 등 외부 리스너에 전달)

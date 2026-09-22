@@ -540,7 +540,8 @@ public class DevelopmentResultUI : MonoBehaviour
         {
             1 => 0.95f,
             2 => 1.0f,
-            3 => 1.05f,
+            // 4·5 단계(버튜버 데뷔)는 품질 배율은 3단계와 같고, 추가 이득은 매출 보너스로만 준다(SalesUI).
+            3 or 4 or 5 => 1.05f,
             _ => 1.0f
         };
     }

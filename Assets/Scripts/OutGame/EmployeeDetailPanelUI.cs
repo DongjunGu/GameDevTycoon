@@ -31,6 +31,22 @@ public class EmployeeDetailPanelUI : MonoBehaviour
     [Tooltip("DetailPanelLegend/DetailGradeDesText")]
     public TMP_Text legendDescText;
 
+    [Header("Description 전환 (DetailTopPanel ↔ DetailDescriptionPanel)")]
+    [Tooltip("EmployeeDetailPanel/DetailTopPanel — 설명 화면에서 숨김")]
+    public GameObject detailTopPanel;
+    [Tooltip("EmployeeDetailPanel/DetailDescriptionPanel — 설명 화면 루트")]
+    public GameObject detailDescriptionPanel;
+    [Tooltip("DetailPanelEpic/DetailInfoImage — 눌러서 특성 설명 보기")]
+    public Button epicInfoButton;
+    [Tooltip("DetailPanelUnique/DetailInfoImage — 눌러서 전용 이벤트 설명 보기")]
+    public Button uniqueInfoButton;
+    [Tooltip("DetaiDescFrame/TraitName — 특성명 / 이벤트명")]
+    public TMP_Text descNameText;
+    [Tooltip("DetaiDescFrame/TraitDesc — 문장형 설명 (차트 description)")]
+    public TMP_Text descBodyText;
+    [Tooltip("DetaiDescFrame/TraitDescDetail — 숫자형 설명 (현재 강화 단계의 실제 수치)")]
+    public TMP_Text descDetailText;
+
     // EmployeeData.GradeIntervalBonus 와 같은 값 — Rare 이상이면 주스탯 +50.
     const int GradeStatBonus = 50;
 
@@ -51,6 +67,16 @@ public class EmployeeDetailPanelUI : MonoBehaviour
             closeButton.onClick.RemoveAllListeners();
             closeButton.onClick.AddListener(Close);
         }
+        if (epicInfoButton != null)
+        {
+            epicInfoButton.onClick.RemoveAllListeners();
+            epicInfoButton.onClick.AddListener(() => ShowDescription(false));
+        }
+        if (uniqueInfoButton != null)
+        {
+            uniqueInfoButton.onClick.RemoveAllListeners();
+            uniqueInfoButton.onClick.AddListener(() => ShowDescription(true));
+        }
         if (panelRoot != null) panelRoot.SetActive(false);
     }
 
@@ -66,12 +92,62 @@ public class EmployeeDetailPanelUI : MonoBehaviour
         if (emp == null) return;
 
         Apply(emp, gallery.SelectedUnlocked);
+        ShowTop();
         if (panelRoot != null) panelRoot.SetActive(true);
     }
 
+    // 확인 버튼 — 설명 화면이면 상단 화면으로 되돌리고, 아니면 패널 자체를 닫는다.
     public void Close()
     {
+        if (detailDescriptionPanel != null && detailDescriptionPanel.activeSelf) { ShowTop(); return; }
         if (panelRoot != null) panelRoot.SetActive(false);
+    }
+
+    void ShowTop()
+    {
+        if (detailTopPanel         != null) detailTopPanel.SetActive(true);
+        if (detailDescriptionPanel != null) detailDescriptionPanel.SetActive(false);
+    }
+
+    // DetailInfoImage 클릭 — 상단 패널을 숨기고 설명 패널에 이름/설명을 채워 표시.
+    // isUnique=false → 캐릭터 특성(Epic), true → 전용 이벤트(Unique).
+    // 갤러리 직원은 마스터 데이터라 grade 가 Normal → 등급 게이팅 없는 AnyGrade 계열 + 보유 카드 기준 단계를 쓴다.
+    void ShowDescription(bool isUnique)
+    {
+        var emp = gallery != null ? gallery.Selected : null;
+        if (emp == null) return;
+
+        int stage = OwnedStageOf(emp);
+        string name, body, detail;
+        if (isUnique)
+        {
+            string eventType = CharacterTraitApplier.ResolveEventType(emp);
+            name   = CharacterUniqueEvents.GetEventNameAnyGrade(emp);
+            body   = CharacterUniqueEvents.GetEventDescriptionRawAnyGrade(emp);
+            detail = CharacterUniqueEvents.GetEventEffectText(eventType, stage, emp);
+        }
+        else
+        {
+            string traitId = CharacterTraitApplier.ResolveTraitId(emp);
+            name   = CharacterTraitApplier.GetTraitNameAnyGrade(emp);
+            body   = CharacterTraitApplier.GetTraitDescriptionRawAnyGrade(emp);
+            detail = CharacterTraitApplier.GetTraitEffectText(traitId, stage);
+        }
+
+        if (descNameText   != null) descNameText.text   = stage > 0 ? $"{name} +{stage}" : name;
+        if (descBodyText   != null) descBodyText.text   = body;
+        if (descDetailText != null) descDetailText.text = detail;
+
+        if (detailTopPanel         != null) detailTopPanel.SetActive(false);
+        if (detailDescriptionPanel != null) detailDescriptionPanel.SetActive(true);
+    }
+
+    // 보유 카드 기준 강화 단계 — 도달 최고 등급에서의 최고 stage(Epic+N / Unique+N). 미보유는 0.
+    static int OwnedStageOf(EmployeeData emp)
+    {
+        if (OwnedCardManager.Instance == null || OutGameEmployeeManager.Instance == null) return 0;
+        var grade = OutGameEmployeeManager.Instance.GetMaxGrade(emp.id);
+        return OwnedCardManager.Instance.GetHighestStage(emp.id, grade);
     }
 
     void Apply(EmployeeData emp, bool unlocked)

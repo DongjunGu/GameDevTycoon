@@ -64,11 +64,15 @@ public class MasteryManager : MonoBehaviour
     {
         var current = GetTier(genre);
 
+        // 오타쿠 특성 — 고정장르가 이 장르면 승급 확률에 배수(단계별 1.5/2.0/2.5). 미보유/불일치면 1.0.
+        // 확정선 이상(100% 승급)에는 영향 없음.
+        float chanceMult = CharacterTraitApplier.GetOtakuMasteryChanceMult(genre);
+
         if (current == MasteryTier.Veteran)
         {
             // 거장 승급 — 이전 승급조건과 다름: 판정점수 100 이상일 때만 3% 확률.
             if (judgmentScore < 100f) return false;
-            if (Random.value < 0.03f)
+            if (Random.value < Mathf.Min(1f, 0.03f * chanceMult))
             {
                 _tiers[genre] = MasteryTier.Master;
                 _pendingPromo = new PendingPromo { genre = genre, from = MasteryTier.Veteran, to = MasteryTier.Master };
@@ -90,7 +94,7 @@ public class MasteryManager : MonoBehaviour
         else if (judgmentScore >= floor)
         {
             float chance = 0.10f + 0.50f * (judgmentScore - floor) / (confirm - floor);
-            promote = Random.value < chance;
+            promote = Random.value < Mathf.Min(1f, chance * chanceMult);
         }
         else
         {

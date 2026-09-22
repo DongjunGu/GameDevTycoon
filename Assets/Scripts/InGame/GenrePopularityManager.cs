@@ -59,10 +59,11 @@ public class GenrePopularityManager : MonoBehaviour
         return _popularity.TryGetValue(genre, out int v) ? v : 1;
     }
 
-    // 특정 장르 인기도 강제 설정 (버튜버 데뷔 이벤트 등). 1~3 클램프.
+    // 특정 장르 인기도 강제 설정 (버튜버 데뷔 이벤트 등). 1~5 클램프.
+    // 평소 랜덤 범위는 1~3 이고, 4·5 단계는 버튜버 데뷔(Unique 1·2단계)로만 도달한다.
     public void SetPopularity(ProjectGenre genre, int value)
     {
-        _popularity[genre] = Mathf.Clamp(value, 1, 3);
+        _popularity[genre] = Mathf.Clamp(value, 1, 5);
         OnPopularityChanged?.Invoke();
     }
 }

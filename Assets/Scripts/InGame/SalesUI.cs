@@ -267,8 +267,6 @@ public class SalesUI : MonoBehaviour
             {
                 float youtuberBonus = RandomEventManager.Instance != null
                     ? RandomEventManager.Instance.YoutuberSalesBonus : 1.0f;
-                // 오타쿠 특성: 보유 오타쿠의 고정 장르가 이 프로젝트 장르와 일치하면 매출 +20%.
-                float otakuSalesBonus  = CharacterTraitApplier.GetOtakuSalesBonus(_cachedGenre);
                 // 신의 축복(우기 전용 이벤트) 주사위 6: 다음 축복까지 매출 +10%.
                 float godBlessingBonus = CharacterUniqueEvents.GetGodBlessingSalesBonus();
                 // 장착 특성 'b6'(소형) / 'a5'(중형) / 's7'(대작) — 규모별 매출 보너스.
@@ -280,6 +278,13 @@ public class SalesUI : MonoBehaviour
                     _                   => 0f
                 };
                 // 장착 특성 's8'(perfectScoreSaleBonus) — 평론가 100점 시 매출 보너스 (테크트리 만점신화와 합산).
+                // 버튜버 데뷔(오타쿠 Unique 1·2단계)로만 도달하는 인기도 4·5 단계 — 매출 +7.5% / +10%.
+                float highPopBonus = ProjectSetupUI.SelectedGenrePopularity switch
+                {
+                    4 => 0.075f,
+                    5 => 0.10f,
+                    _ => 0f
+                };
                 float perfectTraitBonus = (CriticReviewUI.Instance != null && CriticReviewUI.Instance.LastCriticTotal == 100)
                     ? TraitEffectApplier.GetPerfectScoreSaleBonus() : 0f;
                 // 차기작(CompletedProjectsUI.NextProjectButton) — 원작 대비 기획/개발/아트/창의성 중 이번 작이 더
@@ -305,7 +310,7 @@ public class SalesUI : MonoBehaviour
                     Debug.Log($"[차기작] 원작 대비 상회 항목 {higherCount}/4 → 매출 보정 {sequelBonus * 100f:F0}%");
                 }
                 // 매출 보너스는 합연산 — 유튜버 +5% + 장인정신 +10% + 만점 +15% + 오타쿠 +20% + 신의축복 +10% + 규모 +5% + 평론가만점 +5% + 차기작 -25~+25% (곱셈 아님).
-                float bonusSum         = (youtuberBonus - 1f) + (craftsmanBonus - 1f) + perfectBonus + otakuSalesBonus + godBlessingBonus + scaleSaleBonus + perfectTraitBonus + sequelBonus;
+                float bonusSum         = (youtuberBonus - 1f) + (craftsmanBonus - 1f) + perfectBonus + godBlessingBonus + scaleSaleBonus + perfectTraitBonus + highPopBonus + sequelBonus;
                 float totalMultiplier  = Mathf.Max(0f, 1f + bonusSum);
                 // 매출 = 규모배율 × 248 × (원천/100)^2  (원천 = 최종 변환 점수 qualityScore)
                 // 2026-08-14 — 공식에서 Random(0.9~1.1) 삭제. 변동성은 이제 주차별 분배 지터(아래

@@ -12,9 +12,13 @@ using TMPro;
 // 효과 명세는 [[project_character_trait_event_spec]] 참조.
 public static class CharacterUniqueEvents
 {
-    const float GLASS_MENTAL_RECOVERY_CHANCE = 0.03f; // 매주 3%
-    const int   GOD_BLESSING_STAT_PERCENT       = 10;    // 신의 축복 주사위 3: 랜덤 직원 능력치 +10%
-    public const float GOD_BLESSING_SALES_BONUS = 0.10f; // 신의 축복 주사위 6: 매출 +10% (SalesUI bonusSum 합연산)
+    const int   GLASS_MENTAL_COOLDOWN_WEEKS     = 24;    // 유리 멘탈 회복 재발동 금지 6개월(=24주)
+    const int   GOD_BLESSING_STAT_PERCENT       = 20;    // 신의 축복 주사위 3: 랜덤 직원 능력치 +20%
+    const int   GOD_BLESSING_ALL_STAT_PERCENT   = 8;     // 신의 축복 주사위 5: 모든 직원 능력치 +8%
+    public const float GOD_BLESSING_SALES_BONUS = 0.12f; // 신의 축복 주사위 6: 매출 +12% (SalesUI bonusSum 합연산)
+
+    // 전용 이벤트 강화 단계(0~2) — 특성과 같은 보유 카드 stage(Unique+N)를 공유.
+    static int StageOf(EmployeeData emp) => Mathf.Clamp(CharacterTraitApplier.GetTraitStage(emp), 0, 2);
     public static int DebugForcedDice = 0; // 테스트용 — 1~6 지정 시 다음 신의 축복이 그 눈으로 발동(소비 후 0 리셋). 0=정상 랜덤.
 
     // 매주 1회 (RandomEventManager.CheckCharacterUniqueEvents → 유니크 직원별 호출).
@@ -27,39 +31,135 @@ public static class CharacterUniqueEvents
         {
             case "KimUnique":       CheckGlassMentalRecovery(emp); break;
             case "GoldspoonUnique": CheckGoldspoonGift(emp);       break;
-            case "UgiUnique":       CheckGodBlessing(emp);         break;
-            // 그 외(Genius/Hunsu)는 각자 시점(아이템/99% hook)에서 처리
+            // 그 외(Ugi/Genius/Hunsu)는 각자 시점(개발 시작 / 진행도 60% / 창의성 게임 후)에서 처리
         }
     }
 
-    // 연중 정확히 한 주에 1회 발동 — 아직 올해 발동 안 했으면 남은 주차 기준 1/weeksLeft 확률(연말 주 확정).
-    // 1년 = 12개월 × 4주 = 48주. 오다 주웠다·신의 축복 공통(월 한정 없이 1년 중 아무 주에 1회).
-    static bool ShouldFireAnnualRandom(EmployeeData emp)
-    {
-        var gt = GameTimeManager.Instance;
-        if (gt == null) return false;
-        if (emp.lastUniqueEventYear == gt.Year) return false; // 올해 이미 발동
-        int weekOfYear = (gt.Month - 1) * 4 + gt.Week;        // 1..48
-        int weeksLeft  = Mathf.Max(1, 49 - weekOfYear);
-        return Random.value < 1f / weeksLeft;
-    }
-
-    // 오다 주웠다 — 1년 중 랜덤한 한 주에 1회, 상점 등장 아이템 중 랜덤 1개 지급.
+    // 오다 주웠다 — 매년 1월 1주에 1회, 상점 등장 아이템 중 랜덤 (단계+1)개 지급.
     static void CheckGoldspoonGift(EmployeeData emp)
     {
-        if (!ShouldFireAnnualRandom(emp)) return;
+        var gt = GameTimeManager.Instance;
+        if (gt == null) return;
+        if (emp.lastUniqueEventYear == gt.Year) return; // 올해 이미 발동
+        if (gt.Month != 1 || gt.Week != 1) return;      // 1월 1주 고정
         Trigger(emp); // 패널 + ApplyEffect(아이템 지급 + lastUniqueEventYear) + 4-set 저장
     }
 
-    // 신의 축복 — 1년 중 랜덤한 한 주에 1회 주사위(d6) 발동.
-    static void CheckGodBlessing(EmployeeData emp)
+    // 신의 축복 — 프로젝트 개발 시작 시 1회 주사위(d6) 발동 (DevelopmentManager.StartDevelopment 에서 호출).
+    // 프로젝트당 1회는 _usedGameUpgrades("godBlessing") 마킹으로 보장(재접속 복원에도 유지).
+    public static void CheckGodBlessingOnDevStart()
     {
-        if (!ShouldFireAnnualRandom(emp)) return;
-        Trigger(emp); // 패널(주사위 결과 문구) + ApplyEffect(d6 효과 + lastUniqueEventYear) + 4-set 저장
+        var dm = DevelopmentManager.Instance;
+        if (dm == null || dm.IsGameUpgradeUsed("godBlessing")) return;
+        var em = EmployeeManager.Instance;
+        if (em?.ownedEmployees == null) return;
+
+        foreach (var emp in em.ownedEmployees)
+        {
+            if (emp.grade < EmployeeGrade.Unique) continue;
+            if (CharacterTraitApplier.IsOnDispatch(emp)) continue;
+            if (CharacterTraitApplier.ResolveEventType(emp) != "UgiUnique") continue;
+            dm.MarkGameUpgradeUsed("godBlessing");
+            Trigger(emp); // InfoFeedUI 토스트 + ApplyEffect(d6 효과) + 4-set 저장 (모달 패널 없음)
+            return;
+        }
+    }
+
+    // ──────────── 잠 깨우기 (GeniusUnique) — 진행도 60% 도달 시 1회 선택지 이벤트 ────────────
+    // "....Zzzz" 대사 + 선택지 2개: 커피를 사준다(자금 -500G, 최종 개발 점수 +6/8/10%) / 그냥 자게 둔다(만족도 +10/15/20).
+    // 자금 부족이면 커피 선택지는 비활성(회색). 프로젝트당 1회 — _usedGameUpgrades("geniusWakeup") 마킹.
+    // 호출: DevelopmentManager.DevelopmentCoroutine 의 progress >= 0.60 분기. 시간 정지/재개는 이 함수가 처리.
+    public const int GENIUS_COFFEE_COST = 500;
+
+    public static void CheckGeniusWakeUp()
+    {
+        var dm = DevelopmentManager.Instance;
+        if (dm == null || dm.IsGameUpgradeUsed("geniusWakeup")) return;
+        var em = EmployeeManager.Instance;
+        if (em?.ownedEmployees == null) return;
+
+        EmployeeData genius = null;
+        foreach (var emp in em.ownedEmployees)
+        {
+            if (emp.grade < EmployeeGrade.Unique) continue;
+            if (CharacterTraitApplier.IsOnDispatch(emp)) continue;
+            if (CharacterTraitApplier.ResolveEventType(emp) != "GeniusUnique") continue;
+            genius = emp; break;
+        }
+        if (genius == null || RandomEventChoiceUI.Instance == null) return;
+
+        dm.MarkGameUpgradeUsed("geniusWakeup"); // 패널 표시 전 마킹 — 중도 종료해도 중복 발동 방지
+
+        int stage      = StageOf(genius);
+        float devPct   = new[] { 0.06f, 0.08f, 0.10f }[stage];
+        int   satUp    = new[] { 10, 15, 20 }[stage];
+        bool  canAfford = MoneyManager.Instance != null && MoneyManager.Instance.CanAfford(GENIUS_COFFEE_COST);
+
+        CharacterUniqueEventRow row = null;
+        CharacterUniqueEventChartLoader.Cache?.TryGetValue("GeniusUnique", out row);
+        string title = row != null ? $"{row.title} 발동" : "잠 깨우기 발동";
+
+        var data = new RandomEventChoiceData
+        {
+            title       = title,
+            description = "....Zzzz",
+            portraitId  = genius.portraitId,
+            choices     = new List<RandomEventChoiceOption>
+            {
+                new RandomEventChoiceOption
+                {
+                    buttonLabel   = "커피를 사준다",
+                    conditionText = $"자금 -{GENIUS_COFFEE_COST:N0} G",
+                    disabled      = !canAfford,
+                    onChoose      = () => ApplyGeniusCoffee(genius, devPct),
+                },
+                new RandomEventChoiceOption
+                {
+                    buttonLabel = "그냥 자게 둔다",
+                    onChoose    = () =>
+                    {
+                        genius.ChangeSatisfaction(satUp);
+                        InfoFeedUI.Instance?.ShowSatisfaction(genius, satUp);
+                        SaveAfterChoice();
+                    },
+                },
+            },
+            onConfirm = () => GameTimeManager.Instance?.StartTime(),
+        };
+
+        ModalGate.I.WhenFree(() =>
+        {
+            GameTimeManager.Instance?.StopTime();
+            RandomEventChoiceUI.Instance.Show(data);
+        });
+    }
+
+    // 커피 구매 — 자금 차감 후 현재 개발 점수의 devPct 만큼 개발 파트에 가산.
+    static void ApplyGeniusCoffee(EmployeeData genius, float devPct)
+    {
+        if (MoneyManager.Instance == null || !MoneyManager.Instance.SpendGold(GENIUS_COFFEE_COST, false)) return;
+
+        var ui = DevelopmentPanelUI.Instance;
+        if (ui != null)
+        {
+            int add = Mathf.Max(1, Mathf.RoundToInt(ui.GetDevelop() * devPct));
+            ui.AddValuesInstant(0f, add, 0f, 0f, 0f); // 개발 파트에만 가산
+            InfoFeedUI.Instance?.ShowCustom(genius,
+                $"{InfoFeedUI.Colorize(genius.employeeName, true)}이(가) 잠에서 깨어 개발 점수가 {InfoFeedUI.Colorize($"+{add}", true)} 올랐다.");
+        }
+        SaveAfterChoice();
+    }
+
+    // 선택 결과 즉시 영속화 — 전용 이벤트 Trigger 와 동일한 4-set.
+    static void SaveAfterChoice()
+    {
+        MoneyManager.Instance?.SaveMoney();
+        ProjectSaveManager.Instance?.SaveProject();
+        GameTimeManager.Instance?.SaveGameTime();
     }
 
     // 약점 극복(HunsuUnique) — 창의성 미니게임 후·디버깅 전 1회(DevelopmentManager.ShowCreativityGame 콜백에서 호출).
-    // Unique+ 훈수쟁이 보유 시 기획/개발/아트/창의성 중 최저 파트에 개발 팀장점수의 20% 추가(상한=두 번째로 낮은 값).
+    // Unique+ 훈수쟁이 보유 시 기획/개발/아트 중 최저 파트에 개발 팀장점수의 25/35/45%(단계별) 추가.
     public static void CheckWeaknessOvercome()
     {
         var dm = DevelopmentManager.Instance;
@@ -104,15 +204,19 @@ public static class CharacterUniqueEvents
         return ids.Count > 0 ? ids[Random.Range(0, ids.Count)] : null;
     }
 
-    // 유리 멘탈 회복 — 만족도 80 이하일 때 매주 3% 확률로 만족도 100 회복. 달력 연도당 1회(매년 1월 리셋).
+    // 유리 멘탈 회복 — 만족도 80 이하일 때 매주 단계별 확률(2/3/4%)로 만족도 100 회복.
+    // 재발동은 최소 6개월(24주) 간격 — glassMentalCooldownWeeks 가 매주 1씩 감소.
     static void CheckGlassMentalRecovery(EmployeeData emp)
     {
-        int year = GameTimeManager.Instance != null ? GameTimeManager.Instance.Year : 0;
-        if (emp.lastUniqueEventYear == year) return;              // 올해 이미 발동 (연 1회, 연도 바뀌면 리셋)
-        if (emp.satisfaction > 80) return;                        // 만족도 80 이하에서만
-        if (Random.value >= GLASS_MENTAL_RECOVERY_CHANCE) return; // 매주 3%
-        Trigger(emp); // 차트 문구 모달 + ApplyEffect(만족도 100 + lastUniqueEventYear=올해)
+        if (emp.glassMentalCooldownWeeks > 0) { emp.glassMentalCooldownWeeks--; return; } // 쿨다운 소진 중
+        if (emp.satisfaction > 80) return;                             // 만족도 80 이하에서만
+        if (Random.value >= GetGlassMentalChance(emp)) return;         // 단계별 매주 확률
+        Trigger(emp); // 차트 문구 모달 + ApplyEffect(만족도 100 + 쿨다운 세팅)
     }
+
+    // 유리 멘탈 회복 주간 확률 — 0단계 2% / 1단계 3% / 2단계 4%.
+    static float GetGlassMentalChance(EmployeeData emp)
+        => new[] { 0.02f, 0.03f, 0.04f }[StageOf(emp)];
 
     // ──────────── UI 표시 (eventText — traitText 와 동일 패턴) ────────────
 
@@ -144,7 +248,10 @@ public static class CharacterUniqueEvents
     public static bool IsEventUnlocked(EmployeeData emp)
         => emp != null && !emp.isCEO && emp.grade >= EmployeeGrade.Unique;
 
-    // eventText 클릭 시 — 전용 이벤트명 + 설명을 AlertUI 로 표시.
+    // 약점 극복 — 개발 팀장 점수 대비 최저 파트 가산 비율. 0단계 25% / 1단계 35% / 2단계 45%.
+    static float GetWeaknessRatio(EmployeeData emp) => new[] { 0.25f, 0.35f, 0.45f }[StageOf(emp)];
+
+    // eventText 클릭 시 — 전용 이벤트명(+단계) + 설명을 AlertUI 로 표시.
     public static void ShowEventDescription(EmployeeData emp)
     {
         if (emp == null || AlertUI.Instance == null || emp.grade < EmployeeGrade.Unique) return;
@@ -152,11 +259,13 @@ public static class CharacterUniqueEvents
         CharacterUniqueEventRow row = null;
         CharacterUniqueEventChartLoader.Cache?.TryGetValue(eventType, out row);
         if (row == null) return;
-        string desc = (row.descriptions != null && row.descriptions.Length > 0) ? row.descriptions[0] : "";
-        AlertUI.Instance.ShowPortrait(desc, emp.portraitId, row.title);
+        int stage = StageOf(emp);
+        string label = stage > 0 ? $"{row.title} +{stage}" : row.title;
+        AlertUI.Instance.ShowPortrait(GetEventDescription(emp), emp.portraitId, label);
     }
 
     // 전용 이벤트 설명 문자열만 반환(제목 없이) — 이력서 패널 등 자체 표시용. 없으면 빈 문자열.
+    // 차트 설명(정성 문구) + 현재 강화 단계의 실제 수치.
     public static string GetEventDescription(EmployeeData emp)
     {
         if (emp == null || emp.grade < EmployeeGrade.Unique) return "";
@@ -164,7 +273,42 @@ public static class CharacterUniqueEvents
         CharacterUniqueEventRow row = null;
         CharacterUniqueEventChartLoader.Cache?.TryGetValue(eventType, out row);
         if (row == null) return "";
-        return (row.descriptions != null && row.descriptions.Length > 0) ? row.descriptions[0] : "";
+        string desc = (row.descriptions != null && row.descriptions.Length > 0) ? row.descriptions[0] : "";
+        string effect = GetEventEffectText(emp);
+        return string.IsNullOrEmpty(effect) ? desc : $"{desc}\n\n{effect}";
+    }
+
+    // 현재 강화 단계(0~2)의 실제 수치 문구. 수치 변경 시 각 효과 로직과 함께 여기도 갱신할 것.
+    public static string GetEventEffectText(EmployeeData emp)
+        => emp == null ? "" : GetEventEffectText(CharacterTraitApplier.ResolveEventType(emp), StageOf(emp), emp);
+
+    // eventType + 단계 직접 지정 — 아웃게임 상세 패널처럼 emp.grade 가 Normal(마스터 데이터)인 경우용.
+    public static string GetEventEffectText(string eventType, int stage, EmployeeData emp = null)
+    {
+        int i = Mathf.Clamp(stage, 0, 2);
+        switch (eventType)
+        {
+            case "KimUnique":
+                return $"만족도가 80 이하일 때 매주 {new[] { 2, 3, 4 }[i]}%의 확률로 100까지 회복 (최소 6개월 간격 발동)";
+            case "OtakuUnique":
+                return $"해당 장르의 인기도를 {3 + i}단계로 올려주는 이벤트 발생";
+            case "GoldspoonUnique":
+                return $"매년 1월에 아이템을 랜덤하게 {i + 1}개 제공";
+            case "UgiUnique":
+                return "게임 개발 중 주사위를 던져 랜덤한 버프 제공"
+                     + $"\n1: {new[] { "꽝", "모든 직원 만족도 +5", "모든 직원 만족도 +15" }[i]}"
+                     + $"\n2: 우기 능력치 {(i >= 1 ? "130~160" : "120~150")}% 사이 적용"
+                     + $"\n3: 랜덤 직원 능력치 +{GOD_BLESSING_STAT_PERCENT}%"
+                     + "\n4: 우기 만족도 100 고정"
+                     + $"\n5: 모든 직원 능력치 +{GOD_BLESSING_ALL_STAT_PERCENT}%"
+                     + $"\n6: 매출 +{Mathf.RoundToInt(GOD_BLESSING_SALES_BONUS * 100f)}%";
+            case "GeniusUnique":
+                return $"커피를 사주면 최종 개발 점수 +{new[] { 6, 8, 10 }[i]}% / 그냥 두면 만족도 +{new[] { 10, 15, 20 }[i]}";
+            case "HunsuUnique":
+                return $"기획·개발·아트 중 가장 점수가 낮은 파트에 개발 팀장 점수의 {new[] { 25, 35, 45 }[i]}% 추가";
+            default:
+                return "";
+        }
     }
 
     // 슬롯 프리팹용 — traitText 의 형제 "eventText"(TMP)를 찾아 세팅 (직렬화 필드 없이 형제 탐색).
@@ -195,6 +339,32 @@ public static class CharacterUniqueEvents
         if (btn == null) btn = eventText.gameObject.AddComponent<EventDescriptionButton>();
         btn.Bind(emp);
         eventText.raycastTarget = true;
+    }
+
+    // 등급 게이팅을 무시한 차트 설명 원문만 반환(수치 문구 미포함) — 문장형/숫자형을 따로 표시하는 패널용.
+    public static string GetEventDescriptionRawAnyGrade(EmployeeData emp)
+    {
+        if (emp == null || emp.isCEO) return "";
+        string eventType = CharacterTraitApplier.ResolveEventType(emp);
+        if (string.IsNullOrEmpty(eventType)) return "";
+        CharacterUniqueEventRow row = null;
+        CharacterUniqueEventChartLoader.Cache?.TryGetValue(eventType, out row);
+        return (row != null && row.descriptions != null && row.descriptions.Length > 0) ? row.descriptions[0] : "";
+    }
+
+    // 등급 게이팅을 무시한 전용 이벤트 설명 — 아웃게임 상세 패널용. 차트 설명 + 지정 단계의 실제 수치.
+    public static string GetEventDescriptionAnyGrade(EmployeeData emp, int stage)
+    {
+        if (emp == null || emp.isCEO) return "";
+        string eventType = CharacterTraitApplier.ResolveEventType(emp);
+        if (string.IsNullOrEmpty(eventType)) return "";
+        CharacterUniqueEventRow row = null;
+        CharacterUniqueEventChartLoader.Cache?.TryGetValue(eventType, out row);
+        if (row == null) return "";
+
+        string desc   = (row.descriptions != null && row.descriptions.Length > 0) ? row.descriptions[0] : "";
+        string effect = GetEventEffectText(eventType, stage, emp);
+        return string.IsNullOrEmpty(effect) ? desc : $"{desc}\n\n{effect}";
     }
 
     // 전용 이벤트 1건 발동 — 차트 문구 표시 후 케이스별 효과 적용.
@@ -272,11 +442,12 @@ public static class CharacterUniqueEvents
             if (!string.IsNullOrEmpty(emp.otakuFixedGenre) && emp.otakuFixedGenre == genreName) { otaku = emp; break; }
         }
         if (otaku == null) { onDone?.Invoke(); return; }
-        if (ProjectSetupUI.SelectedGenrePopularity >= 3) { onDone?.Invoke(); return; } // 이미 3단계면 발동 안 함
+        int targetPop = 3 + StageOf(otaku); // 0단계 3 / 1단계 4 / 2단계 5
+        if (ProjectSetupUI.SelectedGenrePopularity >= targetPop) { onDone?.Invoke(); return; } // 이미 목표 이상이면 발동 안 함
 
-        // 효과: 이번 프로젝트 인기도(스냅샷) + 표시 인기도를 3단계로
-        ProjectSetupUI.SelectedGenrePopularity = 3;
-        GenrePopularityManager.Instance?.SetPopularity(ProjectSetupUI.SelectedGenre, 3);
+        // 효과: 이번 프로젝트 인기도(스냅샷) + 표시 인기도를 목표 단계로
+        ProjectSetupUI.SelectedGenrePopularity = targetPop;
+        GenrePopularityManager.Instance?.SetPopularity(ProjectSetupUI.SelectedGenre, targetPop);
 
         CharacterUniqueEventRow row = null;
         CharacterUniqueEventChartLoader.Cache?.TryGetValue("OtakuUnique", out row);
@@ -289,63 +460,45 @@ public static class CharacterUniqueEvents
     {
         switch (eventType)
         {
-            case "KimUnique":       // 유리 멘탈 회복 — 만족도 100 회복 + 올해 발동 기록 (연 1회, 발동 조건/확률은 WeeklyCheck 에서)
+            case "KimUnique":       // 유리 멘탈 회복 — 만족도 100 회복 + 6개월 쿨다운 세팅 (조건/확률은 WeeklyCheck 에서)
                 emp.satisfaction = 100;
-                emp.lastUniqueEventYear = GameTimeManager.Instance != null ? GameTimeManager.Instance.Year : emp.lastUniqueEventYear;
+                emp.glassMentalCooldownWeeks = GLASS_MENTAL_COOLDOWN_WEEKS;
                 // 저장은 Trigger 의 4-set(SaveAllEmployees 포함)에서 일괄 처리 — 여기서 별도 UpdateEmployee 안 함(중복/동시 쓰기 방지)
                 break;
             case "OtakuUnique":     // 버튜버 데뷔 — 개발 시작 hook(CheckVtuberDebut)에서 처리. 이 경로(Trigger/ApplyEffect)로는 안 옴.
                 break;
-            case "GoldspoonUnique": // 오다 주웠다 — 상점 등장 아이템 중 랜덤 1개 지급 + 올해 발동 기록
-                string giftId = PickRandomShopItem();
-                if (!string.IsNullOrEmpty(giftId))
+            case "GoldspoonUnique": // 오다 주웠다 — 상점 등장 아이템 중 랜덤 (단계+1)개 지급 + 올해 발동 기록
+                int giftCount = StageOf(emp) + 1; // 0단계 1개 / 1단계 2개 / 2단계 3개
+                for (int g = 0; g < giftCount; g++)
                 {
+                    string giftId = PickRandomShopItem(); // 중복 허용 — 매번 독립 추첨
+                    if (string.IsNullOrEmpty(giftId)) continue;
                     ItemManager.Instance?.AddItem(giftId); // 인벤토리 추가 + UserItems 저장
-                    Debug.Log($"[오다 주웠다] {emp.employeeName} → 아이템 '{giftId}' 지급");
+                    Debug.Log($"[오다 주웠다] {emp.employeeName} → 아이템 '{giftId}' 지급 ({g + 1}/{giftCount})");
                 }
                 emp.lastUniqueEventYear = GameTimeManager.Instance != null ? GameTimeManager.Instance.Year : emp.lastUniqueEventYear;
                 break;
             case "UgiUnique":       // 신의 축복 — d6 주사위. 결과 문구를 반환해 패널에 표시.
                 return ApplyGodBlessing(emp);
-            case "GeniusUnique":    // 잠 깨우기 — 커피 사용 hook(ItemManager.TryGeniusWakeUp)이 조건 확인 후 Trigger 호출.
-                // 효과: 개발 업그레이드권과 동일하게 팀장 점수의 1/4 를 개발 점수로 추가 + 프로젝트당 1회 마킹.
-                {
-                    var dm = DevelopmentManager.Instance;
-                    if (dm != null)
-                    {
-                        int rounded = Mathf.Max(1, Mathf.RoundToInt(dm.CalcGameUpgradeScore(emp, emp.role)));
-                        DevelopmentPanelUI.Instance?.AddValuesInstant(
-                            emp.role == EmployeeRole.Planner    ? rounded : 0f,
-                            emp.role == EmployeeRole.Programmer ? rounded : 0f,
-                            emp.role == EmployeeRole.Artist     ? rounded : 0f,
-                            0f, 0f);
-                        dm.MarkGameUpgradeUsed("geniusWakeup");
-                    }
-                }
+            case "GeniusUnique":    // 잠 깨우기 — CheckGeniusWakeUp(진행도 60% 선택지 이벤트)에서 직접 처리. 이 경로로는 안 옴.
                 break;
-            case "HunsuUnique":     // 약점 극복 — 기획/개발/아트/창의성 중 최저 파트에 개발 팀장점수의 20% 추가.
-                                    // 단 두 번째로 낮은 값을 상한으로(최저를 그 값까지만). 프로젝트당 1회.
+            case "HunsuUnique":     // 약점 극복 — 기획/개발/아트 중 최저 파트에 개발 팀장점수의 25/35/45% 추가. 프로젝트당 1회.
                 {
                     var dm = DevelopmentManager.Instance;
                     var ui = DevelopmentPanelUI.Instance;
                     if (dm == null || ui == null) break;
-                    int raise = Mathf.Max(1, Mathf.RoundToInt(dm.LeaderDevelopBonusTotal * 0.2f));
+                    int raise = Mathf.Max(1, Mathf.RoundToInt(dm.LeaderDevelopBonusTotal * GetWeaknessRatio(emp)));
 
-                    // 4개 파트 [기획, 개발, 아트, 창의성] 현재값
-                    float[] vals = { ui.GetPlanning(), ui.GetDevelop(), ui.GetArt(), ui.GetCreativity() };
+                    // 3개 파트 [기획, 개발, 아트] 현재값 — 창의성은 대상 아님
+                    float[] vals = { ui.GetPlanning(), ui.GetDevelop(), ui.GetArt() };
                     int minIdx = 0;
-                    for (int i = 1; i < 4; i++) if (vals[i] < vals[minIdx]) minIdx = i;
-                    // 두 번째로 낮은 값(= 최저 제외 나머지 중 최소) 을 상한으로
-                    float secondLowest = float.MaxValue;
-                    for (int i = 0; i < 4; i++) if (i != minIdx && vals[i] < secondLowest) secondLowest = vals[i];
-                    int actual = Mathf.Max(0, Mathf.Min(raise, Mathf.RoundToInt(secondLowest - vals[minIdx])));
+                    for (int i = 1; i < 3; i++) if (vals[i] < vals[minIdx]) minIdx = i;
 
                     ui.AddValuesInstant(
-                        minIdx == 0 ? actual : 0f,  // 기획
-                        minIdx == 1 ? actual : 0f,  // 개발
-                        minIdx == 2 ? actual : 0f,  // 아트
-                        0f,                         // 버그
-                        minIdx == 3 ? actual : 0f); // 창의성
+                        minIdx == 0 ? raise : 0f,  // 기획
+                        minIdx == 1 ? raise : 0f,  // 개발
+                        minIdx == 2 ? raise : 0f,  // 아트
+                        0f, 0f);                   // 버그 / 창의성
                     dm.MarkGameUpgradeUsed("hunsuWeakness");
                 }
                 break;
@@ -362,28 +515,38 @@ public static class CharacterUniqueEvents
     // 발동 시 작년 축복의 지속효과는 ClearGodBlessing 으로 먼저 해제(한 번에 하나만 활성).
     static string ApplyGodBlessing(EmployeeData ugi)
     {
-        ClearGodBlessing(); // 작년 축복(지속형 2/3/6) 해제 후 새 축복 적용
-        ugi.lastUniqueEventYear = GameTimeManager.Instance != null ? GameTimeManager.Instance.Year : ugi.lastUniqueEventYear;
+        ClearGodBlessing(); // 이전 축복(지속형 2/3/5/6) 해제 후 새 축복 적용
 
         // 테스트용 강제 주사위(1~6) 가 지정돼 있으면 그 값 사용 후 리셋, 아니면 정상 랜덤.
         int dice = (DebugForcedDice >= 1 && DebugForcedDice <= 6) ? DebugForcedDice : Random.Range(1, 7); // 1~6
         DebugForcedDice = 0;
         Debug.Log($"[신의 축복] {ugi.employeeName} 주사위 = {dice}");
+        int stage = StageOf(ugi);
         switch (dice)
         {
-            case 1: // 꽝
-                InfoFeedUI.Instance?.ShowCustom(ugi, $"{ugi.employeeName}에게 아무 일도 일어나지 않았다. (꽝)");
-                return "주사위 결과: 1\n\n...이번 해에는 아무 일도 일어나지 않았습니다. (꽝)";
-            case 2: // 우기 능력치 100~130% 중 특정값 고정 (다음 축복까지, 우주의 기운 매주 재추첨 정지)
+            case 1: // 0단계 꽝 / 1단계 모든 직원 만족도 +5 / 2단계 +15
             {
-                int pct = Random.Range(100, 131); // 100~130
+                int satUp = new[] { 0, 5, 15 }[stage];
+                if (satUp <= 0)
+                {
+                    InfoFeedUI.Instance?.ShowCustom(ugi, $"{ugi.employeeName}에게 아무 일도 일어나지 않았다. (꽝)");
+                    return "주사위 결과: 1\n\n...이번 해에는 아무 일도 일어나지 않았습니다. (꽝)";
+                }
+                ApplyAllSatisfaction(satUp);
+                InfoFeedUI.Instance?.ShowGlobalSatisfaction(satUp);
+                return $"주사위 결과: 1\n\n모든 직원의 만족도가 +{satUp} 상승했습니다!";
+            }
+            case 2: // 우기 능력치 배율 고정 (다음 축복까지, 우주의 기운 매주 재추첨 정지). 0단계 120~150% / 1·2단계 130~160%
+            {
+                int lo  = stage >= 1 ? 130 : 120;
+                int pct = Random.Range(lo, lo + 31); // lo ~ lo+30
                 ugi.cosmicEnergyPercent = pct;
                 ugi.cosmicFrozen        = true;
                 InfoFeedUI.Instance?.ShowCustom(ugi,
                     $"{InfoFeedUI.Colorize(ugi.employeeName, true)}의 능력치 배율이 {InfoFeedUI.Colorize($"{pct}%", true)}로 고정됐다.");
                 return $"주사위 결과: 2\n\n{ugi.employeeName}의 능력치 배율이 <b>{pct}%</b>로 고정됩니다!\n(다음 축복 때까지 매주 변동 정지)";
             }
-            case 3: // 랜덤 직원 능력치 +10% (다음 축복까지)
+            case 3: // 랜덤 직원 능력치 +20% (다음 축복까지)
             {
                 var target = PickRandomOwnedEmployee();
                 if (target == null)
@@ -393,24 +556,29 @@ public static class CharacterUniqueEvents
                 }
                 target.godBlessingStatPercent = GOD_BLESSING_STAT_PERCENT;
                 InfoFeedUI.Instance?.ShowCustom(target,
-                    $"{InfoFeedUI.Colorize(target.employeeName, true)}의 능력치가 {InfoFeedUI.Colorize("10%", true)} 상승했다.");
-                return $"주사위 결과: 3\n\n<b>{target.employeeName}</b>의 능력치가 +10% 상승합니다!\n(다음 축복 때까지 유지)";
+                    $"{InfoFeedUI.Colorize(target.employeeName, true)}의 능력치가 {InfoFeedUI.Colorize($"{GOD_BLESSING_STAT_PERCENT}%", true)} 상승했다.");
+                return $"주사위 결과: 3\n\n<b>{target.employeeName}</b>의 능력치가 +{GOD_BLESSING_STAT_PERCENT}% 상승합니다!\n(다음 축복 때까지 유지)";
             }
-            case 4: // 우기 만족도 +20 (즉시)
+            case 4: // 우기 만족도 100 고정(즉시 최대치)
             {
                 int before = ugi.satisfaction;
-                ugi.ChangeSatisfaction(20);
+                ugi.satisfaction = 100;
                 InfoFeedUI.Instance?.ShowSatisfaction(ugi, ugi.satisfaction - before);
-                return $"주사위 결과: 4\n\n{ugi.employeeName}의 만족도가 +20 상승했습니다!";
+                return $"주사위 결과: 4\n\n{ugi.employeeName}의 만족도가 100으로 고정됐습니다!";
             }
-            case 5: // 모든 직원 만족도 +10 (즉시)
-                ApplyAllSatisfaction(10);
-                InfoFeedUI.Instance?.ShowGlobalSatisfaction(10);
-                return "주사위 결과: 5\n\n모든 직원의 만족도가 +10 상승했습니다!";
-            case 6: // 매출 +10% (다음 축복까지)
+            case 5: // 모든 직원 능력치 +8% (다음 축복까지)
+            {
+                var em = EmployeeManager.Instance;
+                if (em?.ownedEmployees != null)
+                    foreach (var e in em.ownedEmployees) e.godBlessingStatPercent = GOD_BLESSING_ALL_STAT_PERCENT;
+                InfoFeedUI.Instance?.ShowCustom(ugi,
+                    $"모든 직원의 능력치가 {InfoFeedUI.Colorize($"{GOD_BLESSING_ALL_STAT_PERCENT}%", true)} 상승했다.");
+                return $"주사위 결과: 5\n\n모든 직원의 능력치가 +{GOD_BLESSING_ALL_STAT_PERCENT}% 상승합니다!\n(다음 축복 때까지 유지)";
+            }
+            case 6: // 매출 +12% (다음 축복까지)
                 ugi.godBlessingSalesActive = true;
-                InfoFeedUI.Instance?.ShowCustom(ugi, $"{InfoFeedUI.Colorize(ugi.employeeName, true)} 덕분에 매출이 {InfoFeedUI.Colorize("10%", true)} 상승했다.");
-                return "주사위 결과: 6\n\n다음 축복 때까지 게임 매출이 +10% 상승합니다!";
+                InfoFeedUI.Instance?.ShowCustom(ugi, $"{InfoFeedUI.Colorize(ugi.employeeName, true)} 덕분에 매출이 {InfoFeedUI.Colorize("12%", true)} 상승했다.");
+                return "주사위 결과: 6\n\n다음 축복 때까지 게임 매출이 +12% 상승합니다!";
         }
         return null;
     }

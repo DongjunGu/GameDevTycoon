@@ -263,13 +263,22 @@ public class EmployeeData
 
         float mult;
         // 유리멘탈(김아무개) 특성: 만족도 구간 배율이 일반 직원보다 극단적.
-        // 91~100 +30% / 81~90 +15% / 61~80 중립 / 60 이하 -20%.
+        // 81~100 은 강화 단계별 +20/25/30% (합연산 아님 — 일반 배율을 통째로 대체).
+        // 41~60 -15% / 0~40 -20% 는 단계 무관 고정.
         if (CharacterTraitApplier.IsGlassMental(this))
         {
-            if      (satisfaction >= 91) mult = 1.3f;
-            else if (satisfaction >= 81) mult = 1.15f;
+            if (satisfaction >= 81)
+            {
+                mult = CharacterTraitApplier.GetTraitStage(this) switch
+                {
+                    >= 2 => 1.3f,
+                    1    => 1.25f,
+                    _    => 1.2f,
+                };
+            }
             else if (satisfaction >= 61) mult = 1.0f;
-            else                         mult = 0.8f; // 60 이하 (41~60 및 40 이하 모두)
+            else if (satisfaction >= 41) mult = 0.85f;
+            else                         mult = 0.8f;
         }
         else
         {
@@ -324,8 +333,7 @@ public class EmployeeData
     // 예전엔 DevelopmentManager 가 Effective 값 바깥에서 별도로 ×1.2 곱해서 카드/슬롯 표시엔 안 보였는데,
     // 이제 다른 버프들과 동일하게 여기 포함시켜서 실제 산출값과 표시값이 항상 일치하게 한다.
     public float GetOtakuBuffPercent()
-        => CharacterTraitApplier.IsOtakuGenreMatch(this, ProjectSetupUI.SelectedGenre)
-           ? (CharacterTraitApplier.OTAKU_STAT_MULT - 1f) * 100f : 0f;
+        => CharacterTraitApplier.GetOtakuStatPercent(this, ProjectSetupUI.SelectedGenre);
 
     // 위 다섯 항목의 합연산 총 %.
     public float GetTotalStatBuffDebuffPercent()

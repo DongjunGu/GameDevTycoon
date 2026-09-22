@@ -25,7 +25,8 @@
       "Artifact",
       "Bash(claude mcp *)",
       "Bash(python3 -c ' *)",
-      "mcp__UnityMCP__find_gameobjects"
+      "mcp__UnityMCP__find_gameobjects",
+      "Bash(python -)"
     ],
     "ask": [
       "Bash(rm:*)",
