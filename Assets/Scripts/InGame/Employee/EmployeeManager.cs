@@ -766,7 +766,6 @@ public class EmployeeManager : MonoBehaviour
             CharacterTraitApplier.WeeklyTick(emp);
         }
 
-        CheckLowSatisfaction();
         RandomEventManager.Instance?.CheckConditionEvents();
 
         // 채용 면접 대기 카운트다운 — 0 되면 후보 리스트 공개 (HiringUI 가 비활성이어도 동작)
@@ -781,33 +780,10 @@ public class EmployeeManager : MonoBehaviour
                 GameTimeManager.Instance?.SaveGameTime(); // weeks=0 영속(tier 유지)
                 int tier = HiringPendingTier;
                 var hiring = FindObjectOfType<HiringUI>(true); // 비활성 포함
-                // 같은 주 퇴사/조건 이벤트(위 CheckLowSatisfaction/CheckConditionEvents 가 먼저 실행)가 모달로 떠 있으면
+                // 같은 주 퇴사/조건 이벤트(위 CheckConditionEvents 가 먼저 실행)가 모달로 떠 있으면
                 // 그 모달이 모두 닫힌 뒤 후보 리스트 공개 — 패널 겹침 + 시간 강제재개 충돌 방지.
                 if (hiring != null) ModalGate.I.WhenFree(() => hiring.RevealHiring(tier));
             }
-        }
-    }
-
-    void CheckLowSatisfaction()
-    {
-        foreach (var emp in ownedEmployees)
-        {
-            if (DispatchManager.Instance != null && DispatchManager.Instance.IsDispatched(emp.id)) continue; // 파견중 제외
-            // 만족도 40 이상 회복 시 플래그 리셋 — 다음 진입 때 재적용 가능
-            if (emp.satisfaction >= 40)
-            {
-                emp.lowSatisfactionPenaltyApplied = false;
-                continue;
-            }
-            // 이번 진입 사이클에서 이미 페널티 적용됨 — 매주 누적 방지
-            if (emp.lowSatisfactionPenaltyApplied) continue;
-
-            // 스탯 ×0.8 (데이터 패널티만 처리, 이벤트 트리거는 RandomEventManager 담당)
-            emp.developSkill    = Mathf.Max(1, Mathf.RoundToInt(emp.developSkill    * 0.8f));
-            emp.planningSkill   = Mathf.Max(1, Mathf.RoundToInt(emp.planningSkill   * 0.8f));
-            emp.artSkill        = Mathf.Max(1, Mathf.RoundToInt(emp.artSkill        * 0.8f));
-            emp.creativitySkill = Mathf.Max(1, Mathf.RoundToInt(emp.creativitySkill * 0.8f));
-            emp.lowSatisfactionPenaltyApplied = true;
         }
     }
 
@@ -941,34 +917,34 @@ public class EmployeeManager : MonoBehaviour
         });
     }
     // ── 강화 적용 ─────────────────────────────
-    // 강화 단계별 연봉 증가량 [강화 단계(0→1 ~ 24→25)] — 2026-08-13 재조정(1강부터 소액 상승 시작)
+    // 강화 단계별 연봉 증가량 [강화 단계(0→1 ~ 24→25)] — 2026-09-23 재조정(1성 도달 시 +100부터, 25성 도달 +300,000)
     private static readonly int[] EnhanceSalaryTable =
     {
-              0,  // 0→1
-            100,  // 1→2
-            200,  // 2→3
-            300,  // 3→4
-            400,  // 4→5
-            500,  // 5→6
-            600,  // 6→7
-            700,  // 7→8
-            800,  // 8→9
-            900,  // 9→10
-          1_000,  // 10→11
-          1_500,  // 11→12
-          3_000,  // 12→13
-          4_500,  // 13→14
-          6_300,  // 14→15
-         10_000,  // 15→16
-         13_000,  // 16→17
-         25_000,  // 17→18
-         30_000,  // 18→19
-         35_000,  // 19→20
-        100_000,  // 20→21
-        130_000,  // 21→22
-        160_000,  // 22→23
-        200_000,  // 23→24
-        250_000,  // 24→25
+            100,  // 0→1
+            200,  // 1→2
+            300,  // 2→3
+            400,  // 3→4
+            500,  // 4→5
+            600,  // 5→6
+            700,  // 6→7
+            800,  // 7→8
+            900,  // 8→9
+          1_000,  // 9→10
+          1_500,  // 10→11
+          3_000,  // 11→12
+          4_500,  // 12→13
+          6_300,  // 13→14
+         10_000,  // 14→15
+         13_000,  // 15→16
+         25_000,  // 16→17
+         30_000,  // 17→18
+         35_000,  // 18→19
+        100_000,  // 19→20
+        130_000,  // 20→21
+        160_000,  // 21→22
+        200_000,  // 22→23
+        250_000,  // 23→24
+        300_000,  // 24→25
     };
 
     // 주스탯 증가량 테이블 [강화 단계(0→1 ~ 24→25)] = (min, max) — 2026-08-13 재조정
@@ -1188,11 +1164,10 @@ public class EmployeeManager : MonoBehaviour
         }
     }
 
-    // 만족도를 특정 값으로 회복 (파견 복귀 등). 40 이상이면 저만족 페널티 플래그도 리셋.
+    // 만족도를 특정 값으로 회복 (파견 복귀 등).
     public void RecoverSatisfaction(EmployeeData emp, int value)
     {
         if (emp == null) return;
         emp.satisfaction = Mathf.Clamp(value, 0, 100);
-        if (emp.satisfaction >= 40) emp.lowSatisfactionPenaltyApplied = false;
     }
 }

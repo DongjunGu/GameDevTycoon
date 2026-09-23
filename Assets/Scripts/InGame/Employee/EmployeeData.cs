@@ -56,9 +56,6 @@ public class EmployeeData
     public int consecutiveLeaderCount    = 0; // 연속 팀장 선정 횟수
     public int consecutiveNonLeaderCount = 0; // 연속 팀장 미선정 횟수
     public bool isOvertimeWorker = false;     // 이번 프로젝트 야근 여부 (프로젝트 단위 리셋)
-    // 만족도 < 40 진입 시 base skill ×0.8 영구 감산을 1회만 적용하기 위한 플래그.
-    // 만족도가 40 이상으로 회복되면 false 로 리셋되어 다음 진입 때 재적용 가능.
-    public bool lowSatisfactionPenaltyApplied = false;
 
     // ── 범위 수치 ─────────────────────────────
     public int developMin, developMax;
@@ -193,7 +190,6 @@ public class EmployeeData
         data.consecutiveLeaderCount    = SafeInt(row, "consecutiveLeaderCount",    0);
         data.consecutiveNonLeaderCount = SafeInt(row, "consecutiveNonLeaderCount", 0);
         data.isOvertimeWorker          = SafeBool(row, "isOvertimeWorker",          false);
-        data.lowSatisfactionPenaltyApplied = SafeBool(row, "lowSatisfactionPenaltyApplied", false);
         return data;
     }
 
@@ -246,7 +242,6 @@ public class EmployeeData
         param.Add("consecutiveLeaderCount",    consecutiveLeaderCount);
         param.Add("consecutiveNonLeaderCount", consecutiveNonLeaderCount);
         param.Add("isOvertimeWorker",          isOvertimeWorker);
-        param.Add("lowSatisfactionPenaltyApplied", lowSatisfactionPenaltyApplied);
         return param;
     }
 
