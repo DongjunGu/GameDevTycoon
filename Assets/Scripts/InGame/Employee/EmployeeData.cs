@@ -259,7 +259,7 @@ public class EmployeeData
         float mult;
         // 유리멘탈(김아무개) 특성: 만족도 구간 배율이 일반 직원보다 극단적.
         // 81~100 은 강화 단계별 +20/25/30% (합연산 아님 — 일반 배율을 통째로 대체).
-        // 41~60 -15% / 0~40 -20% 는 단계 무관 고정.
+        // 41~60 -15% / 0~40 -10% 는 단계 무관 고정.
         if (CharacterTraitApplier.IsGlassMental(this))
         {
             if (satisfaction >= 81)
@@ -273,14 +273,14 @@ public class EmployeeData
             }
             else if (satisfaction >= 61) mult = 1.0f;
             else if (satisfaction >= 41) mult = 0.85f;
-            else                         mult = 0.8f;
+            else                         mult = 0.9f;
         }
         else
         {
             if      (satisfaction >= 81) mult = 1.1f;
             else if (satisfaction >= 61) mult = 1.0f;
             else if (satisfaction >= 41) mult = 0.9f;
-            else                         mult = 0.8f;
+            else                         mult = 0.9f;
         }
 
         // 장착 특성 'b3'(81+, +5%) / 'a4'(80+, +10%) — 고만족 시 스탯 배율 추가 가산 (임계값별 합산).
