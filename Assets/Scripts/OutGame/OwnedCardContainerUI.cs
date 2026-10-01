@@ -174,6 +174,15 @@ public class OwnedCardContainerUI : MonoBehaviour
         foreach (var it in unmatched) { it.transform.SetSiblingIndex(idx++); it.SetDimmed(true);  }
     }
 
+    // 카드 목록 스크롤을 맨 위로 (합성 매칭 카드가 앞으로 정렬되므로)
+    public void ScrollToTop()
+    {
+        var sr = container != null ? container.GetComponentInParent<UnityEngine.UI.ScrollRect>() : null;
+        if (sr == null) return;
+        sr.StopMovement();
+        sr.verticalNormalizedPosition = 1f;
+    }
+
     // dim 해제 + 원래 모드 정렬로 복원
     public void ClearMergeHighlight()
     {

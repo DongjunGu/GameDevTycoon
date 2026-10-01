@@ -12,17 +12,18 @@ using UnityEngine;
 //   - equippedJson : "[\"trait_a\",\"\",\"trait_b\"]"     (길이 EquipSlotCount, 빈 슬롯은 빈 문자열)
 //   - unlockedSlots : INT (해금된 슬롯 수. 없으면 DefaultUnlockedSlots)
 //
-// 기본: default 장착 0개 / 슬롯은 2개만 해금
-// 3~5번째 슬롯은 다이아로 순서대로 해금 (SlotUnlockCosts: 500 / 1000 / 2000)
+// 기본: default 장착 0개 / 슬롯은 3개 해금
+// 4~5번째 슬롯은 다이아로 순서대로 해금 (SlotUnlockCosts: 1000 / 2000)
 // 메모리: 보유 dict + 장착 string[EquipSlotCount]
 public class OwnedTraitManager : MonoBehaviour
 {
     // 슬롯 배열 길이(최대치). 실제 사용 가능한 개수는 UnlockedSlotCount
     public const int EquipSlotCount = 5;
-    public const int DefaultUnlockedSlots = 2;
+    // 저장값이 이보다 작으면(구버전 2) 로드 시 이 값으로 올라감 — ParseUnlockedSlots 의 Clamp
+    public const int DefaultUnlockedSlots = 3;
 
     // 인덱스 = 슬롯 인덱스. 해금 비용(다이아). 기본 해금 슬롯은 0
-    public static readonly int[] SlotUnlockCosts = { 0, 0, 500, 1000, 2000 };
+    public static readonly int[] SlotUnlockCosts = { 0, 0, 0, 1000, 2000 };
 
     public static OwnedTraitManager Instance { get; private set; }
 

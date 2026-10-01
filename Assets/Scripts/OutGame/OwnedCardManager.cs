@@ -207,6 +207,78 @@ public class OwnedCardManager : MonoBehaviour
         return true;
     }
 
+    // 일괄 합성 — 합성 가능한 카드를 전부 합성하고 1회 저장. 반환: 새로 생긴 카드 (key → 순증가 장수)
+    public Dictionary<string, int> MergeAll()
+    {
+        var before = new Dictionary<string, int>(_cards);
+        var touched = MergeAllInto(_cards);
+
+        var gained = new Dictionary<string, int>();
+        foreach (var kv in _cards)
+        {
+            int diff = kv.Value - (before.TryGetValue(kv.Key, out var b) ? b : 0);
+            if (diff > 0) gained[kv.Key] = diff;
+        }
+        if (touched.Count == 0) return gained;
+
+        if (OutGameEmployeeManager.Instance != null)
+            foreach (var e in touched) OutGameEmployeeManager.Instance.RecalcMaxGrade(e);
+        Save();
+        OnChanged?.Invoke();
+        return gained;
+    }
+
+    // 합성 단계 순서 — 각 단계 결과는 항상 뒤쪽 단계라 앞에서부터 한 번만 훑으면 연쇄 합성까지 끝난다
+    static readonly (EmployeeGrade g, int s)[] MergeTiers =
+    {
+        (EmployeeGrade.Normal, 0), (EmployeeGrade.Rare, 0),
+        (EmployeeGrade.Epic, 0), (EmployeeGrade.Epic, 1), (EmployeeGrade.Epic, 2),
+        (EmployeeGrade.Unique, 0), (EmployeeGrade.Unique, 1), (EmployeeGrade.Unique, 2),
+    };
+
+    // 순수 로직 (저장/이벤트 없음). cards 를 직접 수정하고 변경된 직원 id 를 반환.
+    // 같은 직원끼리 먼저 묶고, 아무 직원 허용 단계(단계 승급)는 남은 낱장끼리 empId 순으로 묶는다(앞 카드가 메인).
+    // ponytail: 낱장 묶음의 메인 선택은 empId 순 고정 — 직원 우선순위가 필요해지면 여기서 정렬 기준만 교체
+    public static HashSet<string> MergeAllInto(Dictionary<string, int> cards)
+    {
+        var touched = new HashSet<string>();
+        void Change(string e, EmployeeGrade g, int s, int delta)
+        {
+            var k = Key(e, g, s);
+            int n = (cards.TryGetValue(k, out var c) ? c : 0) + delta;
+            if (n <= 0) cards.Remove(k); else cards[k] = n;
+            touched.Add(e);
+        }
+
+        foreach (var (g, s) in MergeTiers)
+        {
+            if (!EmployeeMergeUI.TryGetRecipe(g, s, out var r)) continue;
+            int size = r.MatCount + 1;
+            var singles = new List<string>();
+
+            foreach (var kv in new List<KeyValuePair<string, int>>(cards))
+            {
+                ParseKey(kv.Key, out var e, out var kg, out var ks);
+                if (kg != g || ks != s) continue;
+                int sets = kv.Value / size;
+                if (sets > 0)
+                {
+                    Change(e, g, s, -sets * size);
+                    Change(e, r.OutGrade, r.OutStage, sets);
+                }
+                if (!r.SameEmp) for (int i = 0; i < kv.Value % size; i++) singles.Add(e);
+            }
+
+            singles.Sort(StringComparer.Ordinal);
+            for (int i = 0; i + size <= singles.Count; i += size)
+            {
+                for (int j = 0; j < size; j++) Change(singles[i + j], g, s, -1);
+                Change(singles[i], r.OutGrade, r.OutStage, 1);
+            }
+        }
+        return touched;
+    }
+
     public void Save()
     {
         var param = new Param();

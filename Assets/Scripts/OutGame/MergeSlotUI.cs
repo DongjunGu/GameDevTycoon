@@ -4,16 +4,18 @@ using UnityEngine;
 using UnityEngine.UI;
 
 // 합성 슬롯 1개 (메인 또는 재료) — 카드 정보 + 시각화 + 클릭으로 비우기
+// 슬롯 배경 Image 의 색/알파는 건드리지 않는다 (인스펙터 값 그대로). 등급은 카드 프레임 스프라이트로 표시.
 public class MergeSlotUI : MonoBehaviour
 {
     [Header("References")]
     public Image portrait;
-    public Image gradeBackground;
     public TMP_Text stageLabel;
     [Tooltip("슬롯 클릭 시 카드를 다시 풀로 되돌리는 버튼")]
     public Button button;
     [Tooltip("빈 슬롯 placeholder (가운데 + 마크 등) — 카드 채워지면 비활성")]
     public GameObject placeholder;
+    [Tooltip("카드형 표시 (자식 NewPortrait) — 있으면 카드 채울 때 켜고 SetPreview, 비우면 끔")]
+    public EmployeePanelItemUI card;
 
     public string EmployeeId { get; private set; }
     public EmployeeGrade Grade { get; private set; }
@@ -23,27 +25,26 @@ public class MergeSlotUI : MonoBehaviour
 
     public event Action<MergeSlotUI> OnClicked;
 
-    private static readonly Color ColorNormal    = new Color(0.92f, 0.92f, 0.92f);
-    private static readonly Color ColorRare      = new Color(0.75f, 0.88f, 0.95f);
-    private static readonly Color ColorEpic      = new Color(0.55f, 0.30f, 0.85f);
-    private static readonly Color ColorUnique    = new Color(1.0f, 0.85f, 0.30f);
-    private static readonly Color ColorLegendary = new Color(0.95f, 0.55f, 0.85f);
-    private static readonly Color ColorEmpty     = new Color(0.25f, 0.25f, 0.25f, 0.6f);
-
     void Awake()
     {
         // 자동 매핑 (인스펙터 비어있어도 자식 이름으로 찾음)
-        if (gradeBackground == null) gradeBackground = GetComponent<Image>();
         if (button == null) button = GetComponent<Button>();
-        if (portrait == null) { var t = transform.Find("Portrait"); if (t != null) portrait = t.GetComponent<Image>(); }
-        if (stageLabel == null) { var t = transform.Find("StageLabel"); if (t != null) stageLabel = t.GetComponent<TMP_Text>(); }
         if (placeholder == null) { var t = transform.Find("Placeholder"); if (t != null) placeholder = t.gameObject; }
+        if (card == null) { var t = transform.Find("NewPortrait"); if (t != null) card = t.GetComponent<EmployeePanelItemUI>(); }
+        // 카드형 슬롯은 초상화/단계를 카드가 표시 — 옛 자식(Portrait/StageLabel)은 자동 매핑 안 함
+        if (card == null)
+        {
+            if (portrait == null) { var t = transform.Find("Portrait"); if (t != null) portrait = t.GetComponent<Image>(); }
+            if (stageLabel == null) { var t = transform.Find("StageLabel"); if (t != null) stageLabel = t.GetComponent<TMP_Text>(); }
+        }
 
         if (button != null)
         {
             button.onClick.RemoveAllListeners();
             button.onClick.AddListener(() => OnClicked?.Invoke(this));
         }
+        // 카드가 슬롯 위를 덮어 클릭을 먼저 받으므로 슬롯 클릭으로 전달
+        if (card != null) card.OnClicked += _ => OnClicked?.Invoke(this);
         Clear();
     }
 
@@ -54,7 +55,7 @@ public class MergeSlotUI : MonoBehaviour
         Grade      = source.Grade;
         Stage      = source.Stage;
         ApplyVisual(masterEmp);
-        if (source != null) source.gameObject.SetActive(false);
+        if (source != null) source.SetSelected(true);
     }
 
     // 결과 미리보기 등 풀 카드 source 없이 슬롯 채울 때
@@ -79,7 +80,11 @@ public class MergeSlotUI : MonoBehaviour
                 if (sp != null) portrait.sprite = sp;
             }
         }
-        if (gradeBackground != null) gradeBackground.color = GradeColor(Grade);
+        if (card != null)
+        {
+            card.gameObject.SetActive(true);
+            card.SetPreview(masterEmp, Grade, Stage);
+        }
         if (stageLabel != null)
         {
             bool show = Stage > 0;
@@ -91,25 +96,15 @@ public class MergeSlotUI : MonoBehaviour
 
     public void Clear()
     {
-        if (Source != null) Source.gameObject.SetActive(true);
+        if (Source != null) Source.SetSelected(false);
         Source     = null;
         EmployeeId = null;
         Grade      = EmployeeGrade.Normal;
         Stage      = 0;
 
         if (portrait != null) { portrait.sprite = null; portrait.enabled = false; }
-        if (gradeBackground != null) gradeBackground.color = ColorEmpty;
+        if (card != null) card.gameObject.SetActive(false);
         if (stageLabel != null) stageLabel.gameObject.SetActive(false);
         if (placeholder != null) placeholder.SetActive(true);
     }
-
-    static Color GradeColor(EmployeeGrade g) => g switch
-    {
-        EmployeeGrade.Normal    => ColorNormal,
-        EmployeeGrade.Rare      => ColorRare,
-        EmployeeGrade.Epic      => ColorEpic,
-        EmployeeGrade.Unique    => ColorUnique,
-        EmployeeGrade.Legendary => ColorLegendary,
-        _                       => ColorNormal
-    };
 }

@@ -42,10 +42,29 @@ public class EmployeePanelItemUI : MonoBehaviour
         IsUnlocked = unlocked;
         if (emp == null) return;
 
-        _pendingGrade = OutGameEmployeeManager.Instance != null
+        var grade = OutGameEmployeeManager.Instance != null
             ? OutGameEmployeeManager.Instance.GetMaxGrade(emp.id)
             : EmployeeGrade.Normal;
-        ApplyGradeFrame(_pendingGrade);
+        // 합성 단계 — Epic/Unique 에서만 s1/s2 가 존재한다
+        bool stageGrade = grade == EmployeeGrade.Epic || grade == EmployeeGrade.Unique;
+        int stage = (unlocked && stageGrade && OwnedCardManager.Instance != null)
+            ? OwnedCardManager.Instance.GetHighestStage(emp.id, grade) : 0;
+        Apply(emp, unlocked, grade, stage);
+    }
+
+    // 합성 결과 미리보기 — 보유 최고 등급 대신 지정한 등급/단계로 표시
+    public void SetPreview(EmployeeData emp, EmployeeGrade grade, int stage)
+    {
+        Data = emp;
+        IsUnlocked = true;
+        if (emp == null) return;
+        Apply(emp, true, grade, stage);
+    }
+
+    void Apply(EmployeeData emp, bool unlocked, EmployeeGrade grade, int stage)
+    {
+        _pendingGrade = grade;
+        ApplyGradeFrame(grade);
 
         if (portrait != null)
         {
@@ -68,7 +87,7 @@ public class EmployeePanelItemUI : MonoBehaviour
 
         if (nameText != null) nameText.text = emp.employeeName;
 
-        ApplyStage(emp, unlocked, _pendingGrade);
+        ApplyStage(stage);
 
         if (button != null)
         {
@@ -83,8 +102,8 @@ public class EmployeePanelItemUI : MonoBehaviour
         if (Data != null) ApplyGradeFrame(_pendingGrade);
     }
 
-    // 합성 단계 표시 — Epic/Unique 에서만 s1/s2 가 존재한다. s0·다른 등급·미해금은 숨김.
-    void ApplyStage(EmployeeData emp, bool unlocked, EmployeeGrade grade)
+    // 합성 단계 표시 — s0 은 숨김
+    void ApplyStage(int stage)
     {
         if (gradeExtraNum == null)
         {
@@ -92,10 +111,6 @@ public class EmployeePanelItemUI : MonoBehaviour
             if (t != null) gradeExtraNum = t.GetComponent<TMP_Text>();
             if (gradeExtraNum == null) return;
         }
-
-        bool stageGrade = grade == EmployeeGrade.Epic || grade == EmployeeGrade.Unique;
-        int stage = (unlocked && stageGrade && OwnedCardManager.Instance != null)
-            ? OwnedCardManager.Instance.GetHighestStage(emp.id, grade) : 0;
 
         gradeExtraNum.text = stage.ToString();
         gradeExtraNum.gameObject.SetActive(stage > 0);

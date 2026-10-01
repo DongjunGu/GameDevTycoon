@@ -35,6 +35,24 @@ public class EmployeeMergeUI : MonoBehaviour
 
     [Header("Result Preview (선택)")]
     public TMP_Text resultLabel;
+    [Tooltip("ResultSlot/PortraitDescription/PortraitName — 결과 직원 이름")]
+    public TMP_Text resultNameText;
+    [Tooltip("ResultSlot/PortraitDescription/PortraitDescText — 합성 후 얻는 능력")]
+    public TMP_Text resultDescText;
+
+    [Header("일괄 합성")]
+    public Button mergeOnceButton;
+    [Tooltip("일괄 합성 결과 팝업 루트 (기본 비활성)")]
+    public GameObject mergeOncePanel;
+    [Tooltip("결과 카드가 배치될 부모 (GridLayoutGroup)")]
+    public Transform mergeOnceContent;
+    [Tooltip("결과 카드 프리팹 — ItemPrefabOwnedCard")]
+    public GameObject mergeOnceItemPrefab;
+    [Tooltip("합성할 카드가 없을 때 표시")]
+    public GameObject mergeOnceEmptyText;
+    public Button mergeOnceConfirmButton;
+
+    const string Red = "<color=red>";
 
     void Awake()
     {
@@ -46,6 +64,64 @@ public class EmployeeMergeUI : MonoBehaviour
             mergeButton.onClick.RemoveAllListeners();
             mergeButton.onClick.AddListener(TryMerge);
         }
+        if (mergeOnceButton != null)
+        {
+            mergeOnceButton.onClick.RemoveAllListeners();
+            mergeOnceButton.onClick.AddListener(MergeOnce);
+        }
+        if (mergeOnceConfirmButton != null)
+        {
+            mergeOnceConfirmButton.onClick.RemoveAllListeners();
+            mergeOnceConfirmButton.onClick.AddListener(CloseMergeOncePanel);
+        }
+        CloseMergeOncePanel();
+    }
+
+    // 일괄 합성 — 슬롯 예약 해제 후 보유 카드 전체를 합성하고 새로 생긴 카드를 팝업에 표시
+    void MergeOnce()
+    {
+        var mgr = OwnedCardManager.Instance;
+        if (mgr == null) return;
+
+        ResetSlots();
+        var gained = mgr.MergeAll();
+        UpdateButton();
+
+        if (mergeOnceContent != null)
+        {
+            for (int i = mergeOnceContent.childCount - 1; i >= 0; i--)
+                Destroy(mergeOnceContent.GetChild(i).gameObject);
+
+            var keys = new System.Collections.Generic.List<string>(gained.Keys);
+            keys.Sort((a, b) =>
+            {
+                OwnedCardManager.ParseKey(a, out var ea, out var ga, out var sa);
+                OwnedCardManager.ParseKey(b, out var eb, out var gb, out var sb);
+                int c = ((int)gb).CompareTo((int)ga);
+                if (c != 0) return c;
+                c = sb.CompareTo(sa);
+                return c != 0 ? c : string.CompareOrdinal(ea, eb);
+            });
+
+            if (mergeOnceItemPrefab != null)
+                foreach (var key in keys)
+                {
+                    OwnedCardManager.ParseKey(key, out var e, out var g, out var s);
+                    var master = FindMaster(e);
+                    for (int i = 0; i < gained[key]; i++)
+                    {
+                        var item = Instantiate(mergeOnceItemPrefab, mergeOnceContent).GetComponent<OwnedCardItemUI>();
+                        if (item != null) item.SetData(e, g, s, master);
+                    }
+                }
+        }
+        if (mergeOnceEmptyText != null) mergeOnceEmptyText.SetActive(gained.Count == 0);
+        if (mergeOncePanel != null) mergeOncePanel.SetActive(true);
+    }
+
+    void CloseMergeOncePanel()
+    {
+        if (mergeOncePanel != null) mergeOncePanel.SetActive(false);
     }
 
     void OnEnable()
@@ -59,6 +135,7 @@ public class EmployeeMergeUI : MonoBehaviour
     {
         if (containerUI != null) containerUI.OnCardClicked -= HandleCardClicked;
         ResetSlots();
+        CloseMergeOncePanel();
     }
 
     void ResetSlots()
@@ -67,6 +144,7 @@ public class EmployeeMergeUI : MonoBehaviour
         mat1Slot?.Clear();
         mat2Slot?.Clear();
         resultSlot?.Clear();
+        SetResultDescription(null, default);
         // 기본: main + result만 활성, mat1/mat2 비활성. 메인 채워지면 OnMainChanged에서 활성화.
         SetSlotActive(mat1Slot, false);
         SetSlotActive(mat2Slot, false);
@@ -84,7 +162,7 @@ public class EmployeeMergeUI : MonoBehaviour
 
     void HandleCardClicked(OwnedCardItemUI item)
     {
-        if (item == null) return;
+        if (item == null || item.IsSelected) return;
         // 빈 슬롯 우선순위: main → mat1(active) → mat2(active)
         MergeSlotUI target = null;
         if (mainSlot != null && mainSlot.IsEmpty) target = mainSlot;
@@ -97,6 +175,7 @@ public class EmployeeMergeUI : MonoBehaviour
 
         if (target == mainSlot) OnMainChanged();
         UpdateButton();
+        if (containerUI != null) containerUI.ScrollToTop();
     }
 
     void HandleSlotClicked(MergeSlotUI slot)
@@ -122,6 +201,7 @@ public class EmployeeMergeUI : MonoBehaviour
             SetSlotActive(mat1Slot, false);
             SetSlotActive(mat2Slot, false);
             resultSlot?.Clear();
+            SetResultDescription(null, default);
             return;
         }
 
@@ -132,6 +212,7 @@ public class EmployeeMergeUI : MonoBehaviour
             // 결과 미리보기는 메인 직원 기준
             var master = FindMaster(mainSlot.EmployeeId);
             resultSlot?.SetPreviewCard(mainSlot.EmployeeId, r.OutGrade, r.OutStage, master);
+            SetResultDescription(master, r);
             // 풀에서 매칭 카드 sorting + 비매칭 dim
             if (containerUI != null)
                 containerUI.ApplyMergeHighlight(r.MatGrade, r.MatStage, r.SameEmp ? mainSlot.EmployeeId : null);
@@ -144,9 +225,28 @@ public class EmployeeMergeUI : MonoBehaviour
             SetSlotActive(mat1Slot, false);
             SetSlotActive(mat2Slot, false);
             resultSlot?.Clear();
+            SetResultDescription(null, default);
             if (containerUI != null) containerUI.ClearMergeHighlight();
             if (filterUI != null) filterUI.SetInteractable(true);
         }
+    }
+
+    // 결과 미리보기 — 직원 이름 + 합성 후 얻는 능력. emp==null 이면 비움.
+    // 마스터 데이터라 grade 가 Normal → 등급 게이팅 없는 AnyGrade 이름 조회 사용
+    void SetResultDescription(EmployeeData emp, Recipe r)
+    {
+        if (resultNameText != null) resultNameText.text = emp != null ? emp.employeeName : "";
+        if (resultDescText == null) return;
+        if (emp == null) { resultDescText.text = ""; return; }
+
+        resultDescText.text = r.OutGrade switch
+        {
+            EmployeeGrade.Rare      => $"모든 능력치 {Red}+50</color>",
+            EmployeeGrade.Epic      => $"{Red}{CharacterTraitApplier.GetTraitNameAnyGrade(emp)}</color> " + (r.OutStage > 0 ? "강화" : "특성 획득"),
+            EmployeeGrade.Unique    => $"{Red}{CharacterUniqueEvents.GetEventNameAnyGrade(emp)}</color> " + (r.OutStage > 0 ? "강화" : "획득"),
+            EmployeeGrade.Legendary => $"20성 달성 시 추가 능력치 {Red}+10%</color>",
+            _                       => "",
+        };
     }
 
     EmployeeData FindMaster(string empId)
@@ -161,7 +261,13 @@ public class EmployeeMergeUI : MonoBehaviour
     {
         r = default;
         if (mainSlot == null || mainSlot.IsEmpty) return false;
-        var g = mainSlot.Grade; var s = mainSlot.Stage;
+        return TryGetRecipe(mainSlot.Grade, mainSlot.Stage, out r);
+    }
+
+    // 합성표 단일 소스 — 메인 grade/stage 기준. 재료 grade/stage 는 항상 메인과 같다. (OwnedCardManager.MergeAll 도 사용)
+    public static bool TryGetRecipe(EmployeeGrade g, int s, out Recipe r)
+    {
+        r = default;
 
         //                                                     결과등급              결과s  재료수  같은직원  재료등급              재료s
         if (g == EmployeeGrade.Normal && s == 0) { r = new Recipe(EmployeeGrade.Rare,      0,     2,   true,  EmployeeGrade.Normal, 0); return true; }
@@ -201,12 +307,11 @@ public class EmployeeMergeUI : MonoBehaviour
 
         if (resultLabel != null)
         {
-            if (hasRecipe)
-            {
-                string name = GradeName(r.OutGrade) + (r.OutStage > 0 ? $" +{r.OutStage}" : "");
-                resultLabel.text = ok ? $"결과: {name}" : $"필요: {GradeName(r.MatGrade)}{(r.MatStage > 0 ? $" +{r.MatStage}" : "")} {r.MatCount}장{(r.SameEmp ? " (같은 직원)" : "")}";
-            }
-            else resultLabel.text = "";
+            // 합성표 표기: 같은 직원 = 메인 포함 총 장수, 아무 직원 = 재료 장수
+            if (!hasRecipe) resultLabel.text = "";
+            else if (ok) resultLabel.text = $"결과: {CardName(r.OutGrade, r.OutStage)}";
+            else if (r.SameEmp) resultLabel.text = $"필요: 같은 직원 {CardName(r.MatGrade, r.MatStage)} 총 {r.MatCount + 1}장";
+            else resultLabel.text = $"필요: 아무 직원 {CardName(r.MatGrade, r.MatStage)} {r.MatCount}장";
         }
     }
 
@@ -231,6 +336,8 @@ public class EmployeeMergeUI : MonoBehaviour
         UpdateButton();
     }
 
+    static string CardName(EmployeeGrade g, int stage) => stage > 0 ? $"{GradeName(g)} {stage}단계" : GradeName(g);
+
     static string GradeName(EmployeeGrade g) => g switch
     {
         EmployeeGrade.Normal    => "노말",
@@ -241,7 +348,7 @@ public class EmployeeMergeUI : MonoBehaviour
         _                       => g.ToString()
     };
 
-    readonly struct Recipe
+    public readonly struct Recipe
     {
         public readonly EmployeeGrade OutGrade;
         public readonly int OutStage;

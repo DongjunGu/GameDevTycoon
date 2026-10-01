@@ -1,0 +1,20 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: af162aa09994f7647af78317b5a04a8c, type: 3}
+  m_Name: MergeFrameSet
+  m_EditorClassIdentifier: Assembly-CSharp::GradeSpriteSet
+  normal: {fileID: 21300000, guid: 90cea5615b7c8d94090f91e4d856a6e5, type: 3}
+  rare: {fileID: 21300000, guid: e552794211c8df2418af70967090358c, type: 3}
+  epic: {fileID: 21300000, guid: d7201a2e6dc10a0498552080e7a5c95b, type: 3}
+  unique: {fileID: 21300000, guid: 9ccc72acba4501e4bb0123bea5a64b3a, type: 3}
+  legendary: {fileID: 21300000, guid: ea5fd81a8381c0541ad43809fd2e88cc, type: 3}
+  ceo: {fileID: 0}

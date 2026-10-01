@@ -31,6 +31,11 @@ public class EmployeeDetailPanelUI : MonoBehaviour
     [Tooltip("DetailPanelLegend/DetailGradeDesText")]
     public TMP_Text legendDescText;
 
+    [Header("등급 잠금 (보유 최고 등급 미만이면 활성) — 비우면 각 DetailPanel*/LockImage 자동 탐색")]
+    public GameObject epicLock;
+    public GameObject uniqueLock;
+    public GameObject legendLock;
+
     [Header("Description 전환 (DetailTopPanel ↔ DetailDescriptionPanel)")]
     [Tooltip("EmployeeDetailPanel/DetailTopPanel — 설명 화면에서 숨김")]
     public GameObject detailTopPanel;
@@ -164,6 +169,25 @@ public class EmployeeDetailPanelUI : MonoBehaviour
         // ponytail: Legend 전용 효과 명세가 아직 없어 Rare 와 같은 주스탯 보너스를 표시한다.
         // 별도 효과가 정해지면 여기만 교체.
         if (legendDescText != null) legendDescText.text = statText;
+
+        // 미해금 직원은 전부 잠금
+        var maxGrade = unlocked && OutGameEmployeeManager.Instance != null
+            ? OutGameEmployeeManager.Instance.GetMaxGrade(emp.id)
+            : EmployeeGrade.Normal;
+        SetLock(ref epicLock,   epicDescText,   maxGrade < EmployeeGrade.Epic);
+        SetLock(ref uniqueLock, uniqueDescText, maxGrade < EmployeeGrade.Unique);
+        SetLock(ref legendLock, legendDescText, maxGrade < EmployeeGrade.Legendary);
+    }
+
+    // lockObj 가 비어 있으면 같은 DetailPanel* 아래의 LockImage 를 찾는다
+    static void SetLock(ref GameObject lockObj, TMP_Text siblingText, bool locked)
+    {
+        if (lockObj == null && siblingText != null)
+        {
+            var t = siblingText.transform.parent.Find("LockImage");
+            if (t != null) lockObj = t.gameObject;
+        }
+        if (lockObj != null) lockObj.SetActive(locked);
     }
 
     static string MainStatName(EmployeeRole role) => role switch

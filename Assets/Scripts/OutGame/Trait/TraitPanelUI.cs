@@ -1,19 +1,16 @@
 ﻿using System.Collections.Generic;
-using TMPro;
 using UnityEngine;
 
 // TraitPanel 루트 컨트롤러
-// - 좌측 장착 슬롯 갱신 (기본 2개 해금, 3~5번째는 다이아 해금)
+// - 좌측 장착 슬롯 갱신 (기본 3개 해금, 4~5번째는 확인 팝업 후 다이아 해금)
 // - 우측 보유 특성을 등급별(S/A/B/C) 섹션 그리드에 빌드
 //   - 모든 특성 표시 (미보유는 TraitItemUI.lockedVeil 활성화)
-// - "선택된 특성 (n/해금슬롯수)" 카운트 텍스트 갱신
 // - OwnedTraitManager.OnChanged 구독해서 자동 갱신
 public class TraitPanelUI : MonoBehaviour
 {
     [Header("Equipped Slots (좌측)")]
     [Tooltip("길이는 OwnedTraitManager.EquipSlotCount (5) 와 동일해야 함. 앞에서부터 해금 순서")]
     public TraitSlotUI[] slots;
-    public TMP_Text equippedCountText; // 예: "선택된 특성 (2/3)"
 
     [Header("Grade Sections (S/A/B/C — 우측)")]
     [Tooltip("등급별 섹션 루트 (헤더+그리드 묶음). 해당 등급에 특성이 없으면 비활성화")]
@@ -71,7 +68,6 @@ public class TraitPanelUI : MonoBehaviour
     {
         BindSlots();
         BuildSections();
-        UpdateCountText();
     }
 
     void BindSlots()
@@ -92,16 +88,35 @@ public class TraitPanelUI : MonoBehaviour
         var mgr = OwnedTraitManager.Instance;
         if (mgr == null) return;
 
-        // 잠긴 슬롯 클릭 = 해금 시도 (다이아 즉시 차감)
-        // ponytail: 아웃게임 확인/알림 팝업이 없어 바로 차감한다. 팝업 생기면 확인 단계 추가
+        // 잠긴 슬롯 클릭 = 확인 팝업 후 해금 (다이아 차감)
         if (!mgr.IsSlotUnlocked(slotIndex))
         {
-            if (!mgr.TryUnlockSlot(slotIndex, out string reason))
-                Debug.LogWarning($"[TraitPanel] 슬롯 {slotIndex + 1} 해금 실패 — {reason}");
+            if (!mgr.CanUnlockSlot(slotIndex))
+            {
+                ShowNotice($"{mgr.UnlockedSlotCount + 1}번째 슬롯을 먼저 해금해야 합니다.");
+                return;
+            }
+            int cost = mgr.GetSlotUnlockCost(slotIndex);
+            string msg = $"다이아 {cost:N0}개로 {slotIndex + 1}번째 슬롯을 해금할까요?";
+            if (ConfirmUI.Instance == null) { TryUnlock(slotIndex); return; }
+            ConfirmUI.Instance.Show(msg, onConfirm: () => TryUnlock(slotIndex), confirmText: "해금", cancelText: "취소");
             return;
         }
 
         mgr.UnequipSlot(slotIndex);
+    }
+
+    void TryUnlock(int slotIndex)
+    {
+        var mgr = OwnedTraitManager.Instance;
+        if (mgr != null && !mgr.TryUnlockSlot(slotIndex, out string reason)) ShowNotice(reason);
+    }
+
+    // 안내 문구 (ConfirmUI 를 확인 버튼만 쓰는 용도로 재사용 — 취소도 같은 동작)
+    static void ShowNotice(string message)
+    {
+        if (ConfirmUI.Instance == null) { Debug.LogWarning($"[TraitPanel] {message}"); return; }
+        ConfirmUI.Instance.Show(message, onConfirm: null, confirmText: "확인", cancelText: "닫기");
     }
 
     void BuildSections()
@@ -178,13 +193,4 @@ public class TraitPanelUI : MonoBehaviour
             Debug.Log("[TraitPanel] 빈 슬롯 없음 — 기존 특성 해제 후 다시 시도");
     }
 
-    void UpdateCountText()
-    {
-        if (equippedCountText == null || OwnedTraitManager.Instance == null) return;
-        int unlocked = OwnedTraitManager.Instance.UnlockedSlotCount;
-        int n = 0;
-        for (int i = 0; i < unlocked; i++)
-            if (!string.IsNullOrEmpty(OwnedTraitManager.Instance.GetEquipped(i))) n++;
-        equippedCountText.text = $"선택된 특성 ({n}/{unlocked})";
-    }
 }

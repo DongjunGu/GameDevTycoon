@@ -1,42 +1,44 @@
 using System;
-using System.Collections;
-using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
 // 보유 카드 1장 (employeeId + grade + stage)을 표시하는 카드 UI
 // 중복은 카드 GameObject를 N개 생성해서 표현 (count 표시 없음)
-// stage>0이면 우상단에 "+stage" 표시 (Epic/Unique 1~2단계)
-// 색상 팔레트는 EmployeePanelItemUI와 동일 + Unique/Legendary shimmer
+// 표시(이름/초상화/직군/등급 프레임/합성 단계)는 같은 오브젝트의 EmployeePanelItemUI.SetPreview 에 위임
+// → ItemPrefabOwnedCard 는 ItemPrefabEmployeePanel 의 Prefab Variant (+ 이 컴포넌트 + DimOverlay)
 public class OwnedCardItemUI : MonoBehaviour
 {
     [Header("References")]
-    public Image gradeBackground;
-    public Image portrait;
-    [Tooltip("우상단 stage 라벨 (TMP). stage>0일 때만 표시")]
-    public TMP_Text stageLabel;
+    [Tooltip("카드 표시 담당. 비우면 같은 오브젝트에서 자동 탐색")]
+    public EmployeePanelItemUI card;
     public Button button;
     [Tooltip("합성 매칭 안 되는 카드 dim 오버레이 (검정 알파 50%)")]
     public GameObject dimOverlay;
-
-    private static readonly Color ColorNormal = new Color(0.92f, 0.92f, 0.92f);
-    private static readonly Color ColorRare   = new Color(0.75f, 0.88f, 0.95f);
-    private static readonly Color ColorEpic   = new Color(0.55f, 0.30f, 0.85f);
+    [Tooltip("합성 슬롯에 올라간 카드 표시 (DimOverlayCheck). 비우면 이름으로 자동 탐색")]
+    public GameObject checkOverlay;
 
     public string EmployeeId { get; private set; }
+    // 합성 슬롯에 올라가 있는지 — 선택된 카드는 다시 클릭해도 슬롯에 안 들어간다
+    public bool IsSelected { get; private set; }
     public EmployeeGrade Grade { get; private set; }
     public int Stage { get; private set; }
 
     public event Action<OwnedCardItemUI> OnClicked;
 
-    private Coroutine _shimmerCo;
-
     void Awake()
     {
+        if (card == null) card = GetComponent<EmployeePanelItemUI>();
         if (button == null) button = GetComponent<Button>();
-        if (stageLabel == null) stageLabel = GetComponentInChildren<TMP_Text>(true);
         if (dimOverlay == null) { var t = transform.Find("DimOverlay"); if (t != null) dimOverlay = t.gameObject; }
         if (dimOverlay != null) dimOverlay.SetActive(false);
+        if (checkOverlay == null) { var t = transform.Find("DimOverlayCheck"); if (t != null) checkOverlay = t.gameObject; }
+        SetSelected(false);
+    }
+
+    public void SetSelected(bool selected)
+    {
+        IsSelected = selected;
+        if (checkOverlay != null) checkOverlay.SetActive(selected);
     }
 
     public void SetDimmed(bool dim)
@@ -51,71 +53,13 @@ public class OwnedCardItemUI : MonoBehaviour
         Grade      = grade;
         Stage      = stage;
 
-        ApplyGradeColor(grade);
+        if (card != null) card.SetPreview(masterEmp, grade, stage);
 
-        if (portrait != null && masterEmp != null && !string.IsNullOrEmpty(masterEmp.portraitId))
-        {
-            var sp = Resources.Load<Sprite>($"Portraits/{masterEmp.portraitId}");
-            if (sp != null) portrait.sprite = sp;
-            portrait.preserveAspect = true;
-        }
-
-        if (stageLabel != null)
-        {
-            if (stage > 0) { stageLabel.text = $"+{stage}"; stageLabel.gameObject.SetActive(true); }
-            else stageLabel.gameObject.SetActive(false);
-        }
-
+        // card.SetPreview 가 같은 Button 에 리스너를 다시 거므로 그 뒤에 덮어쓴다
         if (button != null)
         {
             button.onClick.RemoveAllListeners();
             button.onClick.AddListener(() => OnClicked?.Invoke(this));
-        }
-    }
-
-    void OnEnable()
-    {
-        if (!string.IsNullOrEmpty(EmployeeId)) ApplyGradeColor(Grade);
-    }
-
-    void OnDisable()
-    {
-        if (_shimmerCo != null) { StopCoroutine(_shimmerCo); _shimmerCo = null; }
-    }
-
-    void ApplyGradeColor(EmployeeGrade grade)
-    {
-        if (gradeBackground == null) return;
-        if (_shimmerCo != null) { StopCoroutine(_shimmerCo); _shimmerCo = null; }
-
-        if (grade == EmployeeGrade.Legendary)
-        {
-            if (isActiveAndEnabled) _shimmerCo = StartCoroutine(LegendaryShimmer());
-            else gradeBackground.color = Color.HSVToRGB(0f, 0.55f, 1f);
-            return;
-        }
-        if (grade == EmployeeGrade.Unique)
-        {
-            gradeBackground.color = new Color(1.0f, 0.85f, 0.30f); // 금색 단색 (반짝임 제거)
-            return;
-        }
-
-        gradeBackground.color = grade switch
-        {
-            EmployeeGrade.Normal => ColorNormal,
-            EmployeeGrade.Rare   => ColorRare,
-            EmployeeGrade.Epic   => ColorEpic,
-            _                    => ColorNormal
-        };
-    }
-
-    IEnumerator LegendaryShimmer()
-    {
-        while (true)
-        {
-            float h = Mathf.Repeat(Time.time * 0.25f, 1f);
-            gradeBackground.color = Color.HSVToRGB(h, 0.55f, 1f);
-            yield return null;
         }
     }
 }
