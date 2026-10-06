@@ -26,6 +26,10 @@ public class TraitOwnedListUI : MonoBehaviour
     private readonly List<TraitItemUI> _pool = new();
     private bool _subscribed;
 
+    // AlwaysOnTopUI(TopRightPanel, 100) 보다 위, ConfirmUI dim(120) 보다 아래
+    const int DimSortingOrder = 110;
+    private GameObject _dim;
+
     void Awake()
     {
         if (listPanel != null) listPanel.SetActive(false);
@@ -50,11 +54,13 @@ public class TraitOwnedListUI : MonoBehaviour
         Subscribe();
         Refresh();
         listPanel.SetActive(true);
+        ScreenDim.Show(ref _dim, listPanel, DimSortingOrder); // 뒤 dim + 클릭 차단
     }
 
     public void Close()
     {
         if (listPanel != null) listPanel.SetActive(false);
+        ScreenDim.Hide(_dim);
         Unsubscribe();
     }
 
@@ -72,12 +78,13 @@ public class TraitOwnedListUI : MonoBehaviour
         _subscribed = false;
     }
 
-    void Refresh()
+    // 보유 특성을 장수만큼 펼친 목록 (등급 내림차순 → 이름 오름차순). 조합 화면(TraitMergePanelUI)도 같은 목록을 쓴다.
+    public static List<TraitChartRow> BuildOwnedRows()
     {
-        if (itemPrefab == null || gridContainer == null) return;
+        var flat = new List<TraitChartRow>();
         var owned = OwnedTraitManager.Instance?.AllOwned;
         var cache = TraitChartLoader.Cache;
-        if (owned == null || cache == null) return;
+        if (owned == null || cache == null) return flat;
 
         // 보유 (count > 0) 만 모아서 정렬
         var entries = new List<(TraitChartRow row, int count)>();
@@ -95,10 +102,17 @@ public class TraitOwnedListUI : MonoBehaviour
         });
 
         // 중복 카운트 만큼 펼친 row 리스트
-        var flat = new List<TraitChartRow>();
         foreach (var e in entries)
             for (int i = 0; i < e.count; i++)
                 flat.Add(e.row);
+        return flat;
+    }
+
+    void Refresh()
+    {
+        if (itemPrefab == null || gridContainer == null) return;
+        if (OwnedTraitManager.Instance == null || TraitChartLoader.Cache == null) return;
+        var flat = BuildOwnedRows();
 
         // 풀 부족분 Instantiate
         for (int i = _pool.Count; i < flat.Count; i++)

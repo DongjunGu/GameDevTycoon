@@ -55,6 +55,11 @@ public class EmployeeDetailPanelUI : MonoBehaviour
     // EmployeeData.GradeIntervalBonus 와 같은 값 — Rare 이상이면 주스탯 +50.
     const int GradeStatBonus = 50;
 
+    // AlwaysOnTopUI(TopRightPanel, 100) 보다 위 — dim 이 상단 UI 까지 덮고 패널은 그 위(+1)
+    const int DimSortingOrder = 110;
+
+    private GameObject _dim;
+
     void Awake()
     {
         if (gallery == null) gallery = GetComponent<OutGameEmployeePanelGallery>();
@@ -82,13 +87,13 @@ public class EmployeeDetailPanelUI : MonoBehaviour
             uniqueInfoButton.onClick.RemoveAllListeners();
             uniqueInfoButton.onClick.AddListener(() => ShowDescription(true));
         }
-        if (panelRoot != null) panelRoot.SetActive(false);
+        SetOpen(false);
     }
 
     // 탭을 다시 열었을 때 상세 패널이 남아있지 않도록
     void OnEnable()
     {
-        if (panelRoot != null) panelRoot.SetActive(false);
+        SetOpen(false);
     }
 
     public void Open()
@@ -98,14 +103,26 @@ public class EmployeeDetailPanelUI : MonoBehaviour
 
         Apply(emp, gallery.SelectedUnlocked);
         ShowTop();
-        if (panelRoot != null) panelRoot.SetActive(true);
+        SetOpen(true);
     }
 
     // 확인 버튼 — 설명 화면이면 상단 화면으로 되돌리고, 아니면 패널 자체를 닫는다.
     public void Close()
     {
         if (detailDescriptionPanel != null && detailDescriptionPanel.activeSelf) { ShowTop(); return; }
-        if (panelRoot != null) panelRoot.SetActive(false);
+        SetOpen(false);
+    }
+
+    // 탭 전환 등으로 루트가 꺼질 때 — dim 은 루트 캔버스 직속이라 같이 안 꺼지므로 직접 내린다
+    void OnDisable() => SetOpen(false);
+
+    // 패널 + 뒤 dim 을 함께 토글. dim 은 화면 전체를 덮어 뒤쪽 UI(상단 TopRightPanel·하단 네비 포함) 클릭을 막는다.
+    void SetOpen(bool open)
+    {
+        if (panelRoot == null) return;
+        panelRoot.SetActive(open);
+        if (open) ScreenDim.Show(ref _dim, panelRoot, DimSortingOrder);
+        else ScreenDim.Hide(_dim);
     }
 
     void ShowTop()

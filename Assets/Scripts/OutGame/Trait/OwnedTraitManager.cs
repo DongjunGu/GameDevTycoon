@@ -255,6 +255,38 @@ public class OwnedTraitManager : MonoBehaviour
         OnChanged?.Invoke();
     }
 
+    // 조합용 교환 — consumeIds 를 1장씩 차감하고 addId 1장 지급 (같은 id 가 여러 번 있으면 그만큼 차감).
+    // 보유 장수가 모자라면 아무것도 바꾸지 않고 false. 0장이 된 특성은 장착 해제.
+    // 재료가 사라지는 되돌릴 수 없는 변경이라 디바운스 없이 즉시 저장한다.
+    public bool TryExchange(IReadOnlyList<string> consumeIds, string addId)
+    {
+        if (consumeIds == null || string.IsNullOrEmpty(addId)) return false;
+
+        var need = new Dictionary<string, int>();
+        foreach (var id in consumeIds)
+        {
+            if (string.IsNullOrEmpty(id)) return false;
+            need[id] = (need.TryGetValue(id, out var n) ? n : 0) + 1;
+        }
+        foreach (var kv in need)
+            if (GetCount(kv.Key) < kv.Value) return false;
+
+        foreach (var kv in need)
+        {
+            int left = _owned[kv.Key] - kv.Value;
+            if (left > 0) { _owned[kv.Key] = left; continue; }
+            _owned.Remove(kv.Key);
+            int slot = IndexOfEquipped(kv.Key);
+            if (slot >= 0) _equipped[slot] = null;
+        }
+        _owned[addId] = GetCount(addId) + 1;
+
+        _dirty = true;
+        FlushPendingSave();
+        OnChanged?.Invoke();
+        return true;
+    }
+
     // 빈 슬롯에 자동 장착. 이미 장착돼있거나 빈 슬롯 없으면 false
     public bool TryEquip(string traitId)
     {

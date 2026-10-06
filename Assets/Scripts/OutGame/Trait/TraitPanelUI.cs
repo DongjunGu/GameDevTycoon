@@ -97,9 +97,9 @@ public class TraitPanelUI : MonoBehaviour
                 return;
             }
             int cost = mgr.GetSlotUnlockCost(slotIndex);
-            string msg = $"다이아 {cost:N0}개로 {slotIndex + 1}번째 슬롯을 해금할까요?";
+            string msg = "특성칸 오픈";
             if (ConfirmUI.Instance == null) { TryUnlock(slotIndex); return; }
-            ConfirmUI.Instance.Show(msg, onConfirm: () => TryUnlock(slotIndex), confirmText: "해금", cancelText: "취소");
+            ConfirmUI.Instance.Show(msg, onConfirm: () => TryUnlock(slotIndex), confirmText: "해금", cancelText: "취소", diamondCost: cost);
             return;
         }
 

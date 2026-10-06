@@ -59,22 +59,21 @@ public class GlobalButtonClickBounce : MonoBehaviour
             results.Clear();
             es.RaycastAll(data, results);
 
-            for (int i = 0; i < results.Count; i++)
-            {
-                // 맨 위(가장 먼저 맞은) 결과가 팝업(PopupClickAway) 안이면 뒤로 더 넘어가지 않고 즉시 중단.
-                // 안 그러면 팝업 자신은 Button 조상이 없어 이 루프가 팝업 뒤에 가려진 버튼까지 뚫고
-                // 들어가 그 버튼이 눌린 것처럼 튕겨버린다 — 팝업을 눌렀는데 뒤의 버튼이 반응하는 버그.
-                if (results[i].gameObject.GetComponentInParent<PopupClickAway>() != null) return;
+            // 맨 위(실제로 클릭을 받는) 결과만 본다. 뒤 결과까지 훑으면 dim/팝업처럼 Button 조상이 없는
+            // 차단용 UI 를 뚫고 들어가, 가려져서 클릭도 안 되는 뒤쪽 버튼이 눌린 것처럼 튕긴다.
+            if (results.Count == 0) return;
+            var top = results[0].gameObject;
 
-                var btn = results[i].gameObject.GetComponentInParent<Button>();
-                if (btn != null && btn.interactable)
-                {
-                    var wrapper = GetOrCreateWrapper(btn);
-                    if (wrapper == null) return;
-                    _pressedWrapper = wrapper;
-                    Animate(wrapper, shrinkScale, shrinkDuration, Ease.OutQuad);
-                    return; // 가장 위 버튼 1개만
-                }
+            // 팝업(PopupClickAway)이 Button 의 자식으로 놓인 경우 조상 버튼이 같이 튕기지 않게 한다.
+            if (top.GetComponentInParent<PopupClickAway>() != null) return;
+
+            var btn = top.GetComponentInParent<Button>();
+            if (btn != null && btn.interactable)
+            {
+                var wrapper = GetOrCreateWrapper(btn);
+                if (wrapper == null) return;
+                _pressedWrapper = wrapper;
+                Animate(wrapper, shrinkScale, shrinkDuration, Ease.OutQuad);
             }
         }
         else if (pointer.press.wasReleasedThisFrame && _pressedWrapper != null)

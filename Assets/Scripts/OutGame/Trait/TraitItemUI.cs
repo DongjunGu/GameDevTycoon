@@ -10,6 +10,7 @@ public class TraitItemUI : MonoBehaviour
 {
     [Header("References")]
     public Image gradeBackground;
+    public TraitGradeSet gradeSet;     // 등급별 배경 스프라이트 (미지정 시 색상 틴트)
     public TMP_Text nameText;
     public TMP_Text descriptionText;
     public GameObject equippedBadge;   // 장착 중 표시(선택)
@@ -27,7 +28,9 @@ public class TraitItemUI : MonoBehaviour
         IsOwned = owned;
         if (row == null) return;
 
-        if (gradeBackground != null) gradeBackground.color = TraitGradeColors.Get(row.grade);
+        // 등급 스프라이트 우선, SO/스프라이트 미지정이면 기존 색상 틴트로 폴백
+        if (gradeBackground != null && !TraitGradeSet.Apply(gradeBackground, gradeSet, row.grade))
+            gradeBackground.color = TraitGradeColors.Get(row.grade);
         if (nameText != null) nameText.text = row.name;
         if (descriptionText != null) descriptionText.text = row.description;
 

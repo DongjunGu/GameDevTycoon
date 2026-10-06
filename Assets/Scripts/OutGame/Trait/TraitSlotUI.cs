@@ -64,6 +64,22 @@ public class TraitSlotUI : MonoBehaviour
         Refresh();
     }
 
+    // 장착 슬롯이 아닌 "표시 전용" 용도 (조합 재료 슬롯 등) — row 가 null 이면 빈 칸(+)
+    public void SetPreview(TraitChartRow row)
+    {
+        if (emptyPlaceholder == null) { var t = transform.Find("PlusText"); if (t != null) emptyPlaceholder = t.gameObject; }
+        bool filled = row != null;
+        if (lockedVeil != null)       lockedVeil.SetActive(false);
+        if (emptyPlaceholder != null) emptyPlaceholder.SetActive(!filled);
+        if (filledContent != null)    filledContent.SetActive(filled);
+        if (gradeBackground != null)
+        {
+            if (defaultSprite != null) gradeBackground.sprite = defaultSprite;
+            gradeBackground.color = filled ? TraitGradeColors.Get(row.grade) : emptyColor;
+        }
+        if (nameText != null) nameText.text = filled ? row.name : string.Empty;
+    }
+
     public void Refresh()
     {
         // veil 은 비용 텍스트를 덮으므로 사용하지 않는다 (씬에 남아있어도 강제 비활성)
@@ -86,8 +102,8 @@ public class TraitSlotUI : MonoBehaviour
         {
             int cost = OwnedTraitManager.Instance.GetSlotUnlockCost(SlotIndex);
             if (valueText != null) valueText.text = cost.ToString("N0");
-            // 잠긴 슬롯도 장착된 특성이 없으므로 "+" 표시
-            if (emptyPlaceholder != null) emptyPlaceholder.SetActive(true);
+            // 잠긴 슬롯은 장착할 수 없으므로 "+" 숨김
+            if (emptyPlaceholder != null) emptyPlaceholder.SetActive(false);
             // 비용 패널이 있는 슬롯은 이름 텍스트로 비용을 중복 표시하지 않는다
             if (filledContent != null)    filledContent.SetActive(valuePanel == null);
             if (gradeBackground != null)

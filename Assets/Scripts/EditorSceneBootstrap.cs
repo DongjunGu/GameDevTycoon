@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 
 // ⚠ 에디터에서 GameScene 을 LoadingScene 없이 직접 실행할 때만 쓰는 임시 부트스트랩.
@@ -33,6 +34,12 @@ using UnityEngine;
 //         끄면 이들도 같이 죽어 뒤끝 로드 도중(예: CEO/비서 스폰) OfficeManager.Instance 를 참조하는
 //         코드가 NRE 를 낸다. 정상 플로우에서도 안전(그 시점엔 이미 HasInitializedThisSession=true 라
 //         한 프레임도 안 밀리고 바로 통과).
+//
+// 문제 4: OutGameScene 처럼 GameSceneInitializer 가 없는 씬은 보류시킬 단일 진입점이 없다. 씬 UI 들이 각자
+//         Awake/Start/OnEnable 에서 매니저 데이터를 읽어 화면을 채우는데, 직접 실행하면 그 시점엔 데이터가 비어 있다.
+// 해결 4: 이 스크립트(-10000)가 Awake 에서 나머지 활성 루트 오브젝트(MainCanvas 등)를 먼저 꺼서 그 Awake 자체를
+//         미루고, 뒤끝 로드가 끝나면 다시 켠다 → 정상 플로우(로드 완료 후 씬 진입)와 같은 순서가 된다.
+//         대기하는 몇 프레임 동안은 카메라도 꺼져 있어 Game 뷰가 비어 보인다.
 [DefaultExecutionOrder(-10000)]
 public class EditorSceneBootstrap : MonoBehaviour
 {
@@ -48,12 +55,35 @@ public class EditorSceneBootstrap : MonoBehaviour
         }
 
         var scene = gameObject.scene;
-        foreach (var root in scene.GetRootGameObjects())
+        var roots = scene.GetRootGameObjects();
+
+        // GameSceneInitializer 가 없는 씬(OutGameScene): 데이터 로드 전이면 씬 루트를 통째로 보류
+        if (gsi == null && !BackendManager.HasInitializedThisSession)
+        {
+            var held = new List<GameObject>();
+            foreach (var root in roots)
+            {
+                if (root == gameObject || root.name.StartsWith(Prefix) || !root.activeSelf) continue;
+                root.SetActive(false);
+                held.Add(root);
+            }
+            StartCoroutine(ReactivateWhenDataLoaded(held));
+        }
+
+        foreach (var root in roots)
         {
             if (root == gameObject) continue;
             if (!root.name.StartsWith(Prefix)) continue;
             root.SetActive(true);
         }
+    }
+
+    IEnumerator ReactivateWhenDataLoaded(List<GameObject> held)
+    {
+        while (!BackendManager.HasInitializedThisSession)
+            yield return null;
+        foreach (var root in held)
+            if (root != null) root.SetActive(true);
     }
 
     IEnumerator ReactivateWhenDataLoaded(GameSceneInitializer gsi)

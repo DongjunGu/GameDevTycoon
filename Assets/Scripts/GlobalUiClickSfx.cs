@@ -28,14 +28,10 @@ public class GlobalUiClickSfx : MonoBehaviour
         results.Clear();
         es.RaycastAll(data, results);
 
-        for (int i = 0; i < results.Count; i++)
-        {
-            var btn = results[i].gameObject.GetComponentInParent<Button>();
-            if (btn != null && btn.interactable)
-            {
-                SoundManager.Instance?.PlaySFX(clickSound);
-                return; // 가장 위 버튼 1개만
-            }
-        }
+        // 맨 위(실제로 클릭을 받는) 결과만 본다 — 뒤 결과까지 훑으면 dim 에 가려진 버튼에서도 소리가 난다
+        if (results.Count == 0) return;
+        var btn = results[0].gameObject.GetComponentInParent<Button>();
+        if (btn != null && btn.interactable)
+            SoundManager.Instance?.PlaySFX(clickSound);
     }
 }
