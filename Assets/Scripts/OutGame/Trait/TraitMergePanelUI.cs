@@ -1,25 +1,24 @@
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
-using DG.Tweening;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-// TraitPanel 의 "특성 조합" 모드 전환 (TraitPanel 루트에 부착 — 패널들이 꺼졌다 켜지므로 항상 켜진 루트에 둔다)
-// - MergeTraitBtn: LeftPanel 이 왼쪽으로 빠지고 TraitMergePanel 이 왼쪽에서 들어온다. 다시 누르면 반대로 복귀
-// - 조합 모드 동안 RightPanel/Content 의 등급 섹션을 숨기고, 보유 특성(중복 포함)을 그리드로 표시
-// - 카드 클릭 → 조합 슬롯(Top1Panel → Bottom2Panel 순)에 채움 / 채워진 슬롯 클릭 → 되돌림
-// - 3칸이 다 차면 MergeRatePanel 에 해당 조합의 결과 등급 확률 표시
+// TraitPanel 의 "특성 조합" 화면 (TraitPanel 루트에 부착 — 조합 패널이 꺼졌다 켜지므로 항상 켜진 루트에 둔다)
+// - MergeTraitBtn: 전체 화면 TraitMergePanel 을 켠다 / TraitMergePanel/TopPanel/BackBtn: 끈다
+// - TraitMergePanel 자체 RightPanel/Content/MergeGridContainer 에 보유 특성(중복 포함) 카드를 표시
+// - 카드 클릭 → 조합 슬롯(Top1Panel → Bottom2Panel 순)에 채움 + 카드에 veil/체크 표시 / 체크된 카드나 채워진 슬롯 클릭 → 되돌림
+// - 3칸이 다 차면 MergeRatePanel 에 해당 조합의 결과 등급 확률 표시 + 조합하기 버튼 활성
+// - 조합하기 버튼 → MergeConfirmPanel2 확인창 → 확인 시 TraitMerge.TryMerge → 결과 카드를 MergeConfirmPanel 에 표시 (실패 사유는 ConfirmUI)
 //
 // 참조는 비워두면 하이어라키 이름으로 자동 탐색한다. 이름을 바꿨다면 인스펙터에 직접 연결할 것.
 public class TraitMergePanelUI : MonoBehaviour
 {
     [Header("Panels (비우면 이름으로 탐색)")]
-    public GameObject leftPanel;        // LeftPanel
-    public GameObject mergePanel;       // TraitMergePanel
-    public RectTransform rightPanel;    // RightPanel — 좌측 폭이 바뀔 때 같이 밀려 이동
-    public Button toggleButton;         // MergeTraitBtn
-    public Transform rightContent;      // RightPanel/ScrollView/Viewport/Content
+    public GameObject mergePanel;       // TraitPanel/TraitMergePanel (전체 화면)
+    public Button toggleButton;         // MergeTraitBtn — 조합 화면 열기
+    public Button backButton;           // TraitMergePanel/TopPanel/BackBtn — 조합 화면 닫기
+    public Transform mergeGrid;         // TraitMergePanel/RightPanel/ScrollView/Viewport/Content/MergeGridContainer — 카드가 들어갈 그리드
 
     [Header("Merge Slots — Top1Panel 1칸, Bottom2Panel 2칸 순 (비우면 TraitMergePanel 아래 TraitSlotUI 탐색)")]
     public TraitSlotUI[] mergeSlots;
@@ -28,53 +27,60 @@ public class TraitMergePanelUI : MonoBehaviour
     public GameObject ratePanel;
     public TMP_Text rateS, rateA, rateB, rateC;
 
-    [Header("Slide")]
-    public float slideDuration = 0.25f;
-    [Tooltip("화면 밖으로 빼는 여유 거리 (패널 폭에 더함)")]
-    public float slideMargin = 400f;
+    [Header("Merge (비우면 MergeExecuteBtn 탐색)")]
+    public Button mergeButton;          // 조합하기 — 조합 화면에서만 보이고 3칸이 차야 눌린다
 
-    private HorizontalLayoutGroup _layout;
+    [Header("Ask (비우면 ConfirmUI 아래 MergeConfirmPanel2 / 그 안의 ConfirmButton·CancelButton 탐색)")]
+    public GameObject mergeAskPanel;       // 조합 실행 전 확인창
+    public Button mergeAskConfirmButton;   // 확인 — 여기서 실제 조합
+    public Button mergeAskCancelButton;    // 취소 — 창만 닫음
+
+    [Header("Result (비우면 ConfirmUI 아래 MergeConfirmPanel / 그 안의 TraitItemUI 탐색)")]
+    public GameObject mergeConfirmPanel;   // 조합 결과 창 — 안의 버튼은 전부 닫기
+    public TraitItemUI mergeConfirmItem;   // 결과 특성 카드
+
+    // ConfirmUI dim 과 같은 층 (다른 아웃게임 dim 110 보다 위)
+    const int ResultDimSortingOrder = 120;
+    private GameObject _resultDim;
+    private bool _resultHooked;
+    private GameObject _askDim;
+    private bool _askHooked;
+
     private TraitOwnedListUI _ownedList;
-    private TraitPanelUI _traitPanel;
     private CanvasGroup _rateGroup;
-    private Transform _grid;                                   // 조합 모드용 카드 그리드 (Content 아래 런타임 생성)
     private readonly List<TraitItemUI> _pool = new();
-    private readonly List<GameObject> _hiddenSections = new();
     private readonly TraitItemUI[] _picked = new TraitItemUI[TraitMerge.MaterialCount];
     private readonly Dictionary<TMP_Text, string> _rateTemplates = new();
     private bool _mergeMode;
-    private bool _sliding;
     private bool _subscribed;
 
     public bool IsMergeMode => _mergeMode;
 
     void Awake()
     {
-        _layout = GetComponent<HorizontalLayoutGroup>();
         _ownedList = GetComponent<TraitOwnedListUI>();
-        _traitPanel = GetComponent<TraitPanelUI>();
 
-        if (leftPanel == null)    leftPanel = FindChild("LeftPanel");
-        if (mergePanel == null)   mergePanel = FindChild("TraitMergePanel");
-        if (rightPanel == null)   { var rp = FindChild("RightPanel"); if (rp != null) rightPanel = rp.transform as RectTransform; }
-        if (rightContent == null) rightContent = transform.Find("RightPanel/ScrollView/Viewport/Content");
-        if (toggleButton == null) { var tb = FindChild("MergeTraitBtn"); if (tb != null) toggleButton = tb.GetComponent<Button>(); }
+        if (mergePanel == null)   { var mp = transform.Find("TraitMergePanel"); if (mp != null) mergePanel = mp.gameObject; }
+        if (toggleButton == null) { var tb = transform.Find("MergeTraitBtn"); if (tb != null) toggleButton = tb.GetComponent<Button>(); }
 
-        if (mergePanel != null)
+        // 이름 끝에 공백이 붙은 오브젝트("RightPanel ")가 있어 Trim 해서 비교한다
+        foreach (var t in GetComponentsInChildren<Transform>(true))
         {
-            if (mergeSlots == null || mergeSlots.Length == 0) mergeSlots = mergePanel.GetComponentsInChildren<TraitSlotUI>(true);
-            foreach (var t in mergePanel.GetComponentsInChildren<Transform>(true))
+            bool inMerge = mergePanel != null && t.IsChildOf(mergePanel.transform);
+            switch (t.name.Trim())
             {
-                switch (t.name)
-                {
-                    case "MergeRatePanel": if (ratePanel == null) ratePanel = t.gameObject; break;
-                    case "RankSRate": if (rateS == null) rateS = t.GetComponent<TMP_Text>(); break;
-                    case "RankARate": if (rateA == null) rateA = t.GetComponent<TMP_Text>(); break;
-                    case "RankBRate": if (rateB == null) rateB = t.GetComponent<TMP_Text>(); break;
-                    case "RankCRate": if (rateC == null) rateC = t.GetComponent<TMP_Text>(); break;
-                }
+                case "MergeExecuteBtn": if (mergeButton == null) mergeButton = t.GetComponent<Button>(); break;
+                case "BackBtn":        if (inMerge && backButton == null) backButton = t.GetComponent<Button>(); break;
+                case "MergeGridContainer": if (inMerge && mergeGrid == null) mergeGrid = t; break;
+                case "MergeRatePanel": if (inMerge && ratePanel == null) ratePanel = t.gameObject; break;
+                case "RankSRate": if (inMerge && rateS == null) rateS = t.GetComponent<TMP_Text>(); break;
+                case "RankARate": if (inMerge && rateA == null) rateA = t.GetComponent<TMP_Text>(); break;
+                case "RankBRate": if (inMerge && rateB == null) rateB = t.GetComponent<TMP_Text>(); break;
+                case "RankCRate": if (inMerge && rateC == null) rateC = t.GetComponent<TMP_Text>(); break;
             }
         }
+        if (mergePanel != null && (mergeSlots == null || mergeSlots.Length == 0))
+            mergeSlots = mergePanel.GetComponentsInChildren<TraitSlotUI>(true);
 
         // 씬에 써둔 문구("S  100% " 등)의 숫자만 갈아끼우도록 원문을 보관
         foreach (var t in new[] { rateS, rateA, rateB, rateC })
@@ -82,7 +88,15 @@ public class TraitMergePanelUI : MonoBehaviour
 
         if (ratePanel != null && !ratePanel.TryGetComponent(out _rateGroup)) _rateGroup = ratePanel.AddComponent<CanvasGroup>();
 
-        if (toggleButton != null) toggleButton.onClick.AddListener(Toggle);
+        if (toggleButton != null) toggleButton.onClick.AddListener(Open);
+        if (backButton != null)
+        {
+            // 탭용 BackBtn 을 복제해 만든 버튼이라 인스펙터 OnClick(GoToMain)이 남아 있으면 메인까지 나가버린다 — 조합 화면만 닫도록 끈다
+            for (int i = 0; i < backButton.onClick.GetPersistentEventCount(); i++)
+                backButton.onClick.SetPersistentListenerState(i, UnityEngine.Events.UnityEventCallState.Off);
+            backButton.onClick.AddListener(Close);
+        }
+        if (mergeButton != null) mergeButton.onClick.AddListener(DoMerge);
         if (mergeSlots != null)
             for (int i = 0; i < mergeSlots.Length && i < _picked.Length; i++)
             {
@@ -91,144 +105,45 @@ public class TraitMergePanelUI : MonoBehaviour
                     mergeSlots[i].button.onClick.AddListener(() => Unpick(index));
             }
 
-        if (leftPanel == null || mergePanel == null || rightContent == null)
-            Debug.LogWarning("[TraitMerge] LeftPanel / TraitMergePanel / RightPanel Content 를 찾지 못함 — 인스펙터에 직접 연결 필요");
+        if (mergePanel == null || mergeGrid == null || backButton == null)
+            Debug.LogWarning("[TraitMerge] TraitMergePanel / 그 안의 MergeGridContainer / BackBtn 을 찾지 못함 — 인스펙터에 직접 연결 필요");
     }
 
-    GameObject FindChild(string childName)
+    // 탭에 들어오거나 떠날 때 항상 기본(장착) 화면으로
+    void OnEnable() => Close();
+    void OnDisable() => Close();
+
+    public void Open()
     {
-        var t = transform.Find(childName);
-        return t != null ? t.gameObject : null;
-    }
-
-    // 탭에 들어올 때마다 기본(장착) 화면으로 시작
-    void OnEnable() => ResetToNormal();
-
-    void OnDisable()
-    {
-        Unsubscribe();
-        ResetToNormal();
-    }
-
-    void ResetToNormal()
-    {
-        KillTweens();
-        _sliding = false;
-        if (_layout != null) _layout.enabled = true;
-        if (mergePanel != null) mergePanel.SetActive(false);
-        if (leftPanel != null) leftPanel.SetActive(true);
-        if (_mergeMode) ShowMergeContent(false);
-        _mergeMode = false;
-    }
-
-    void KillTweens()
-    {
-        if (leftPanel != null) leftPanel.transform.DOKill();
-        if (mergePanel != null) mergePanel.transform.DOKill();
-        if (rightPanel != null) rightPanel.DOKill();
-    }
-
-    public void Toggle()
-    {
-        if (_sliding || leftPanel == null || mergePanel == null) return;
-        _mergeMode = !_mergeMode;
-        ShowMergeContent(_mergeMode);
-        if (_mergeMode) Slide(leftPanel, mergePanel);
-        else Slide(mergePanel, leftPanel);
-    }
-
-    // from 을 왼쪽 화면 밖으로 밀어내고 끈 뒤, to 를 켜서 왼쪽 밖에서 제자리로 들인다.
-    // 부모 HorizontalLayoutGroup 이 살아 있으면 자식 anchoredPosition 을 매 리빌드마다 덮어쓰므로 연출 동안만 꺼둔다.
-    void Slide(GameObject from, GameObject to)
-    {
-        _sliding = true;
-        var fromRt = (RectTransform)from.transform;
-        var toRt = (RectTransform)to.transform;
-        if (_layout != null) _layout.enabled = false;
-
-        fromRt.DOAnchorPosX(fromRt.anchoredPosition.x - (fromRt.rect.width + slideMargin), slideDuration)
-            .SetEase(Ease.InQuad).SetUpdate(true)
-            .OnComplete(() =>
-            {
-                from.SetActive(false);
-                to.SetActive(true);
-
-                // 레이아웃을 잠깐 켜서 to / RightPanel 의 최종 위치를 받아온 뒤 다시 끄고 그 위치로 트윈
-                Vector2 rightFrom = rightPanel != null ? rightPanel.anchoredPosition : Vector2.zero;
-                if (_layout != null)
-                {
-                    _layout.enabled = true;
-                    LayoutRebuilder.ForceRebuildLayoutImmediate((RectTransform)transform);
-                    _layout.enabled = false;
-                }
-                Vector2 target = toRt.anchoredPosition;
-                toRt.anchoredPosition = new Vector2(target.x - (toRt.rect.width + slideMargin), target.y);
-                if (rightPanel != null)
-                {
-                    float rightTo = rightPanel.anchoredPosition.x;
-                    rightPanel.anchoredPosition = rightFrom;
-                    rightPanel.DOAnchorPosX(rightTo, slideDuration).SetEase(Ease.OutQuad).SetUpdate(true);
-                }
-                toRt.DOAnchorPosX(target.x, slideDuration).SetEase(Ease.OutQuad).SetUpdate(true)
-                    .OnComplete(() =>
-                    {
-                        if (_layout != null) _layout.enabled = true;
-                        _sliding = false;
-                    });
-            });
-    }
-
-    // ----- RightPanel 내용 전환 -----
-    void ShowMergeContent(bool merge)
-    {
-        if (rightContent == null) return;
+        if (mergePanel == null) return;
+        _mergeMode = true;
+        mergePanel.SetActive(true);
+        if (mergeButton != null) mergeButton.gameObject.SetActive(true);
+        Subscribe();
         ClearPicked();
-
-        if (merge)
-        {
-            Subscribe();
-            HideSections();
-            BuildGrid();
-        }
-        else
-        {
-            Unsubscribe();
-            if (_grid != null) _grid.gameObject.SetActive(false);
-            foreach (var go in _hiddenSections)
-                if (go != null) go.SetActive(true);
-            _hiddenSections.Clear();
-            if (_traitPanel != null && _traitPanel.isActiveAndEnabled) _traitPanel.Refresh(); // 빈 등급 섹션은 다시 꺼짐
-        }
+        BuildGrid();
         RefreshSlots();
     }
 
-    void HideSections()
+    public void Close()
     {
-        foreach (Transform child in rightContent)
-        {
-            if (child == _grid || !child.gameObject.activeSelf) continue;
-            child.gameObject.SetActive(false);
-            _hiddenSections.Add(child.gameObject);
-        }
+        _mergeMode = false;
+        Unsubscribe();
+        ClearPicked();
+        HideAsk();
+        HideResult();
+        if (mergePanel != null) mergePanel.SetActive(false);
+        if (mergeButton != null) mergeButton.gameObject.SetActive(false);
     }
 
     void BuildGrid()
     {
-        if (_ownedList == null || _ownedList.itemPrefab == null || _ownedList.gridContainer == null) return;
-
-        if (_grid == null)
-        {
-            // OwnedTraitListPanel 의 GridContainer 를 그대로 복제 (GridLayoutGroup 설정 유지) 후 내용만 비운다
-            _grid = Instantiate(_ownedList.gridContainer, rightContent);
-            _grid.name = "MergeGridContainer";
-            for (int i = _grid.childCount - 1; i >= 0; i--) Destroy(_grid.GetChild(i).gameObject);
-        }
-        _grid.gameObject.SetActive(true);
+        if (mergeGrid == null || _ownedList == null || _ownedList.itemPrefab == null) return;
 
         var rows = TraitOwnedListUI.BuildOwnedRows();
         for (int i = _pool.Count; i < rows.Count; i++)
         {
-            var item = Instantiate(_ownedList.itemPrefab, _grid);
+            var item = Instantiate(_ownedList.itemPrefab, mergeGrid);
             item.OnClicked += Pick;
             _pool.Add(item);
         }
@@ -242,13 +157,11 @@ public class TraitMergePanelUI : MonoBehaviour
         }
     }
 
-    // 조합 모드 중 보유 특성이 바뀌면(뽑기 등) 목록을 다시 만들고 선택은 비운다.
-    // TraitPanelUI 가 같은 이벤트에서 등급 섹션을 다시 켜므로 여기서 도로 숨긴다.
+    // 조합 화면 중 보유 특성이 바뀌면(조합 등) 목록을 다시 만들고 선택은 비운다.
     void OnOwnedChanged()
     {
         if (!_mergeMode) return;
         ClearPicked();
-        HideSections();
         BuildGrid();
         RefreshSlots();
     }
@@ -278,24 +191,123 @@ public class TraitMergePanelUI : MonoBehaviour
             return;
         }
 
+        // 이미 체크된 카드를 다시 누르면 선택 해제
+        int already = System.Array.IndexOf(_picked, item);
+        if (already >= 0) { Unpick(already); return; }
+
         int slot = System.Array.IndexOf(_picked, null);
         if (slot < 0) return; // 3칸 다 참
         _picked[slot] = item;
-        item.gameObject.SetActive(false); // 슬롯으로 옮겨간 카드는 목록에서 뺀다 (카드 1장 = 보유 1장)
+        item.SetSelected(true); // 카드는 목록에 그대로 두고 veil + 체크로 선택됨을 표시 (카드 1장 = 보유 1장)
         RefreshSlots();
     }
 
     void Unpick(int slot)
     {
         if (!_mergeMode || slot < 0 || slot >= _picked.Length || _picked[slot] == null) return;
-        _picked[slot].gameObject.SetActive(true);
+        _picked[slot].SetSelected(false);
         _picked[slot] = null;
         RefreshSlots();
     }
 
     void ClearPicked()
     {
-        for (int i = 0; i < _picked.Length; i++) _picked[i] = null;
+        for (int i = 0; i < _picked.Length; i++)
+        {
+            if (_picked[i] != null) _picked[i].SetSelected(false);
+            _picked[i] = null;
+        }
+    }
+
+    // ----- 조합 실행 -----
+    bool AllPicked()
+    {
+        foreach (var p in _picked)
+            if (p == null || p.Data == null) return false;
+        return true;
+    }
+
+    // 조합하기 버튼 — 바로 조합하지 않고 확인창(MergeConfirmPanel2)을 띄운다. 창을 못 찾으면 ConfirmUI 로 대신 묻는다
+    void DoMerge()
+    {
+        if (!_mergeMode || !AllPicked()) return;
+
+        if (mergeAskPanel == null && ConfirmUI.Instance != null)
+        {
+            var t = ConfirmUI.Instance.transform.Find("MergeConfirmPanel2");
+            if (t != null) mergeAskPanel = t.gameObject;
+        }
+        if (mergeAskPanel == null)
+        {
+            if (ConfirmUI.Instance != null) ConfirmUI.Instance.Show("선택한 특성 3개를 조합할까요?", onConfirm: ExecuteMerge);
+            return;
+        }
+
+        if (!_askHooked)
+        {
+            _askHooked = true;
+            foreach (var b in mergeAskPanel.GetComponentsInChildren<Button>(true))
+            {
+                if (mergeAskConfirmButton == null && b.name.Trim() == "ConfirmButton") mergeAskConfirmButton = b;
+                if (mergeAskCancelButton == null && b.name.Trim() == "CancelButton")   mergeAskCancelButton = b;
+            }
+            if (mergeAskConfirmButton != null) mergeAskConfirmButton.onClick.AddListener(() => { HideAsk(); ExecuteMerge(); });
+            if (mergeAskCancelButton != null)  mergeAskCancelButton.onClick.AddListener(HideAsk);
+        }
+        mergeAskPanel.SetActive(true);
+        ScreenDim.Show(ref _askDim, mergeAskPanel, ResultDimSortingOrder); // 뒤 dim + 클릭 차단
+    }
+
+    void HideAsk()
+    {
+        if (mergeAskPanel != null) mergeAskPanel.SetActive(false);
+        ScreenDim.Hide(_askDim);
+    }
+
+    void ExecuteMerge()
+    {
+        if (!_mergeMode || !AllPicked()) return;
+
+        // TryMerge 성공 시 OnChanged → OnOwnedChanged 가 선택을 비우고 목록을 다시 만든다
+        bool ok = TraitMerge.TryMerge(_picked[0].Data.traitId, _picked[1].Data.traitId, _picked[2].Data.traitId, out var result, out var reason);
+        if (ok && ShowResult(result)) return;
+        if (ConfirmUI.Instance == null) return;
+        ConfirmUI.Instance.Show(ok ? $"조합 결과\n\n[{result.grade}] {result.name}\n{result.description}" : reason,
+                                onConfirm: null, confirmText: "확인", cancelText: "닫기");
+    }
+
+    // 결과 창(MergeConfirmPanel)에 얻은 특성 카드를 띄운다. 창을 못 찾으면 false (호출부가 ConfirmUI 텍스트로 대체)
+    bool ShowResult(TraitChartRow row)
+    {
+        if (mergeConfirmPanel == null && ConfirmUI.Instance != null)
+        {
+            var t = ConfirmUI.Instance.transform.Find("MergeConfirmPanel");
+            if (t != null) mergeConfirmPanel = t.gameObject;
+        }
+        if (mergeConfirmPanel == null) return false;
+        if (mergeConfirmItem == null) mergeConfirmItem = mergeConfirmPanel.GetComponentInChildren<TraitItemUI>(true);
+
+        if (!_resultHooked)
+        {
+            _resultHooked = true;
+            foreach (var b in mergeConfirmPanel.GetComponentsInChildren<Button>(true))
+                if (mergeConfirmItem == null || b != mergeConfirmItem.button) b.onClick.AddListener(HideResult);
+        }
+
+        if (mergeConfirmItem != null)
+        {
+            mergeConfirmItem.SetData(row, true);
+            if (mergeConfirmItem.equippedBadge != null) mergeConfirmItem.equippedBadge.SetActive(false);
+        }
+        mergeConfirmPanel.SetActive(true);
+        ScreenDim.Show(ref _resultDim, mergeConfirmPanel, ResultDimSortingOrder); // 뒤 dim + 클릭 차단
+        return true;
+    }
+
+    void HideResult()
+    {
+        if (mergeConfirmPanel != null) mergeConfirmPanel.SetActive(false);
+        ScreenDim.Hide(_resultDim);
     }
 
     void RefreshSlots()
@@ -312,6 +324,7 @@ public class TraitMergePanelUI : MonoBehaviour
         int[] rates = null;
         bool show = full && TraitMerge.TryGetRates(_picked[0].Data.grade, _picked[1].Data.grade, _picked[2].Data.grade, out rates);
         if (_rateGroup != null) _rateGroup.alpha = show ? 1f : 0f;
+        if (mergeButton != null) mergeButton.interactable = show;
         if (!show) return;
         SetRate(rateS, rates[0]);
         SetRate(rateA, rates[1]);

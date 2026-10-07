@@ -15,6 +15,7 @@ public class TraitItemUI : MonoBehaviour
     public TMP_Text descriptionText;
     public GameObject equippedBadge;   // 장착 중 표시(선택)
     public GameObject lockedVeil;      // 미보유 오버레이(검정 알파)
+    public GameObject selectedVeil;    // 조합 재료로 선택됨 표시(검정 veil + 중앙 체크). 비우면 자식 SelectedVeil 탐색
     public Button button;
 
     public TraitChartRow Data { get; private set; }
@@ -42,6 +43,12 @@ public class TraitItemUI : MonoBehaviour
             button.onClick.RemoveAllListeners();
             button.onClick.AddListener(() => OnClicked?.Invoke(this));
         }
+    }
+
+    public void SetSelected(bool on)
+    {
+        if (selectedVeil == null) { var t = transform.Find("SelectedVeil"); if (t != null) selectedVeil = t.gameObject; }
+        if (selectedVeil != null) selectedVeil.SetActive(on);
     }
 
     public void RefreshEquippedState()

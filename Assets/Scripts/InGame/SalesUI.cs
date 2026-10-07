@@ -479,7 +479,8 @@ public class SalesUI : MonoBehaviour
 
             int startRevenue = cumulativeRevenue;
 
-            float weekDuration = 4f; // 규모 무관 4초/주 통일
+            // 규모 무관 총 13초(끝 대기 0.5초 포함) — bar 개수로 균등 분배 (소형 3개 / 중형 6개 / 대형 8개)
+            float weekDuration = (13f - 0.5f) / barCount;
             float barAnimDuration = weekDuration * 0.7f;
             float elapsed = 0f;
             while (elapsed < barAnimDuration)

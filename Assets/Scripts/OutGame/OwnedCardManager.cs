@@ -229,11 +229,10 @@ public class OwnedCardManager : MonoBehaviour
     }
 
     // 합성 단계 순서 — 각 단계 결과는 항상 뒤쪽 단계라 앞에서부터 한 번만 훑으면 연쇄 합성까지 끝난다
+    // 일괄 합성은 에픽(0단계)을 만드는 데까지만 — 에픽 1단계부터는 슬롯 합성으로 직접 해야 한다
     static readonly (EmployeeGrade g, int s)[] MergeTiers =
     {
         (EmployeeGrade.Normal, 0), (EmployeeGrade.Rare, 0),
-        (EmployeeGrade.Epic, 0), (EmployeeGrade.Epic, 1), (EmployeeGrade.Epic, 2),
-        (EmployeeGrade.Unique, 0), (EmployeeGrade.Unique, 1), (EmployeeGrade.Unique, 2),
     };
 
     // 순수 로직 (저장/이벤트 없음). cards 를 직접 수정하고 변경된 직원 id 를 반환.
