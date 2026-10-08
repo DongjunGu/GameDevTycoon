@@ -547,12 +547,20 @@ public class CreativityGameUI : MonoBehaviour
     bool IsGridFullyFilled => _gridUI != null
                               && _gridUI.ValidCellCount > 0
                               && _gridUI.CountFilledCells() >= _gridUI.ValidCellCount;
-    int GetBonusScore() => IsGridFullyFilled ? _score / 10 : 0;
+    // 퍼펙트 보너스 = 점수의 10%. 책 아트 Lv20 이면 20%.
+    int GetBonusScore() => IsGridFullyFilled ? _score * (CEOManager.HasMilestone(CEOManager.Part.Art, 20) ? 2 : 1) / 10 : 0;
+
+    // 채운 칸 × 칸당 점수. 책 아트 Lv30 이면 +5% (반올림).
+    int CalcScore()
+    {
+        int score = _gridUI.CountFilledCells() * BaseScorePerCell;
+        return CEOManager.HasMilestone(CEOManager.Part.Art, 30) ? Mathf.RoundToInt(score * 1.05f) : score;
+    }
 
     // CreativityGameBlockUI.OnEndDrag 에서 호출
     public void OnBlockPlaced(CreativityGameBlockUI block)
     {
-        _score = _gridUI.CountFilledCells() * BaseScorePerCell;
+        _score = CalcScore();
         UpdateScore();
         OnAnyBlockPlaced?.Invoke(block);
     }
@@ -560,7 +568,7 @@ public class CreativityGameUI : MonoBehaviour
     // CreativityGameBlockUI.LiftFromGrid 에서 호출
     public void OnBlockLifted(CreativityGameBlockUI block)
     {
-        _score = _gridUI.CountFilledCells() * BaseScorePerCell;
+        _score = CalcScore();
         UpdateScore();
     }
 
@@ -643,7 +651,7 @@ public class CreativityGameUI : MonoBehaviour
     {
         if (_gridUI == null) return;
         _gridUI.DebugFillAllCells(new Color(0.7f, 0.7f, 0.7f));
-        _score = _gridUI.CountFilledCells() * BaseScorePerCell;
+        _score = CalcScore();
         UpdateScore();
     }
 

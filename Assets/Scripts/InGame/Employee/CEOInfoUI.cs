@@ -1,11 +1,12 @@
 ﻿using TMPro;
 using UnityEngine;
+using UnityEngine.Serialization;
 using UnityEngine.UI;
 
 // 인게임 CEO 정보 패널 컨트롤러 — 아웃게임에서 적용된 메타 상태를 읽기 전용으로 보여준다.
 //  • LeftPanel  : 장착 특성 슬롯 (OwnedTraitManager)         — 아웃게임 TraitPanel.LeftPanel 미러
-//  • PieceRight : CEO 능력치 + 강화 단계 (CEOManager→ActiveStone) — 아웃게임 PiecePanel.PieceRight 미러
-//                 (8~10단계 카테고리 보너스 리스트는 PieceRight 에 붙은 StoneBonusListUI 가 자체 갱신)
+//  • PieceRight : CEO 능력치 + 책 강화 레벨 (CEOManager) — 아웃게임 PiecePanel.PieceRight 미러
+//                 (레벨 마일스톤 리스트는 PieceRight 에 붙은 BookBonusListUI 가 자체 갱신)
 //
 // 구조: 이 스크립트가 붙은 CEOInfoUI 는 '항상 활성', 실제로 열고 닫는 건 자식 panelRoot(CEOInfoPanel) 토글.
 //   - Open()        : panelRoot 활성 + (옵션)시간 정지 + Refresh
@@ -35,15 +36,15 @@ public class CEOInfoUI : MonoBehaviour
     [Tooltip("팝업을 누르면 닫히게 하는 버튼. 비우면 traitPopUp 의 Button 자동 사용.")]
     public Button traitPopUpButton;
 
-    [Header("Piece — PieceRight: 현재 능력치 (base + 단계 보너스)")]
+    [Header("Piece — PieceRight: 현재 능력치 (base + 레벨 보너스)")]
     public TMP_Text planningStatText;
     public TMP_Text developStatText;
     public TMP_Text artStatText;
 
-    [Header("Piece — PieceRight: 강화 단계 (PieceLeft 에서 가져온 단계 숫자)")]
-    public TMP_Text planningStageText;
-    public TMP_Text developStageText;
-    public TMP_Text artStageText;
+    [Header("Piece — PieceRight: 강화 레벨")]
+    [FormerlySerializedAs("planningStageText")] public TMP_Text planningLevelText;
+    [FormerlySerializedAs("developStageText")]  public TMP_Text developLevelText;
+    [FormerlySerializedAs("artStageText")]      public TMP_Text artLevelText;
 
     private bool _subscribed;
 
@@ -177,7 +178,7 @@ public class CEOInfoUI : MonoBehaviour
         if (traitPopUp != null) traitPopUp.SetActive(false);
     }
 
-    // CEO 능력치/단계 — CEOManager (활성 돌 위임). 아웃게임 PiecePanel.PieceRight 와 동일 표시.
+    // CEO 능력치/레벨 — CEOManager. 아웃게임 PiecePanel.PieceRight 와 동일 표시.
     void RefreshPiece()
     {
         var mgr = CEOManager.Instance;
@@ -187,8 +188,8 @@ public class CEOInfoUI : MonoBehaviour
         if (developStatText  != null) developStatText.text  = mgr.GetDevelop().ToString();
         if (artStatText      != null) artStatText.text      = mgr.GetArt().ToString();
 
-        if (planningStageText != null) planningStageText.text = $"{mgr.PlanningStage}단계";
-        if (developStageText  != null) developStageText.text  = $"{mgr.DevelopStage}단계";
-        if (artStageText      != null) artStageText.text      = $"{mgr.ArtStage}단계";
+        if (planningLevelText != null) planningLevelText.text = $"Lv.{mgr.GetLevel(CEOManager.Part.Planning)}";
+        if (developLevelText  != null) developLevelText.text  = $"Lv.{mgr.GetLevel(CEOManager.Part.Develop)}";
+        if (artLevelText      != null) artLevelText.text      = $"Lv.{mgr.GetLevel(CEOManager.Part.Art)}";
     }
 }

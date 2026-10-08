@@ -1,119 +1,131 @@
+using System;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-// 아웃게임 "조각(Piece)" 패널 — CEO 능력치 강화 UI
+// 아웃게임 "능력치" 패널 — CEO 책(Book) 강화 UI (구 조각 패널)
 //
-// 좌측: 기획/개발/아트 3 row
-//   - 강화 확률 % 라벨
-//   - 10칸 슬라이더 (현재 단계 / 10)
-//   - 단계 숫자 (사각형 안)
-// 우측: 현재 스탯 박스 (기획/개발/아트 = base + stage*per)
-// 하단: 강화하기 버튼 (TotalStage >= maxTotalStage 시 비활성)
+// 메인: 내 능력치 카드(초상화 + 기획/개발/아트 스탯) + 트랙 카드 3장
+//   - 트랙 카드: 레벨, 책 바(보유 / 다음 레벨 필요량), 강화 가능 시 화살표
+//   - 카드 클릭 → 상세 팝업
+// 팝업: 레벨, 책 바, 특수효과(마일스톤 10/20/30/40), 레벨업 버튼(책 + 골드 소모량)
 //
-// 인스펙터 연결: CEOManager(OnChanged 구독) 메타라 별도 인자 없음.
+// 배열 인덱스 = CEOManager.Part (0 기획 / 1 개발 / 2 아트)
 public class PiecePanelUI : MonoBehaviour
 {
-    [Header("Sliders (단계/10)")]
-    public Slider planningSlider;
-    public Slider developSlider;
-    public Slider artSlider;
+    [Serializable]
+    public class TrackView
+    {
+        public Button cardButton;
+        public TMP_Text levelText;
+        [Tooltip("책 바 fill (Image Type = Filled). 보유 책 / 필요 책")]
+        public Image bookFill;
+        public TMP_Text bookText;
+        [Tooltip("강화 가능할 때만 켜지는 화살표")]
+        public GameObject upgradeArrow;
+        [Tooltip("내 능력치 카드의 스탯 값")]
+        public TMP_Text statText;
+    }
 
-    [Header("Stage Texts (사각형 안 — 현재 단계)")]
-    public TMP_Text planningStageText;
-    public TMP_Text developStageText;
-    public TMP_Text artStageText;
+    [Header("Tracks (0 기획 / 1 개발 / 2 아트)")]
+    public TrackView[] tracks = new TrackView[3];
+    public Sprite[] trackIcons = new Sprite[3];
+    public Color[] trackColors = { Color.white, Color.white, Color.white };
 
-    [Header("Probability Texts (강화 확률 % )")]
-    public TMP_Text planningProbText;
-    public TMP_Text developProbText;
-    public TMP_Text artProbText;
+    [Header("Currency")]
+    [Tooltip("보유 책 수량")]
+    public TMP_Text ownedBookText;
+    [Tooltip("테스트용 — 누르면 책 +20 (뒤끝 저장)")]
+    public Button addBookButton;
 
-    [Header("Current Stats (우측 패널)")]
-    public TMP_Text planningStatText;
-    public TMP_Text developStatText;
-    public TMP_Text artStatText;
+    [Header("Popup")]
+    public GameObject popupRoot;
+    [Tooltip("선택한 트랙 색으로 칠할 그래픽 (타이틀 탭, 좌측 카드 등)")]
+    public Graphic[] popupTinted;
+    public TMP_Text popupTitleText;
+    public Image popupTitleIcon;
+    public Image popupIcon;
+    public TMP_Text popupLevelText;
+    public Image popupBookFill;
+    public TMP_Text popupBookText;
+    [Tooltip("마일스톤 효과 텍스트 4개 (Lv10/20/30/40 순)")]
+    public TMP_Text[] milestoneTexts = new TMP_Text[4];
+    [Tooltip("미달성 마일스톤 텍스트 알파")]
+    public float lockedAlpha = 0.4f;
+    public Button closeButton;
+    public Button levelUpButton;
+    [Tooltip("레벨업 버튼 안 — 책 소모량")]
+    public TMP_Text costBookText;
+    [Tooltip("레벨업 버튼 안 — 골드 소모량")]
+    public TMP_Text costGoldText;
 
-    [Header("Buttons")]
-    public Button upgradeButton;
-    public Button resetButton;
-    public Button listButton;
+    const int TestBookAmount = 20;
+    const int DimOrder = 110; // ScreenDim: dim 110 / 팝업 111 (상단 재화 UI 100 위)
 
-    [Header("Stone List Panel (보관함)")]
-    [Tooltip("listButton 클릭 시 토글되는 패널 GameObject. 인스펙터에 StoneListPanelUI 가 붙어있어야 함.")]
-    public GameObject listPanel;
+    static readonly string[] TrackNames = { "기획", "개발", "아트" };
 
+    private CEOManager.Part _selected;
+    private GameObject _dim;
     private bool _subscribed;
 
     void OnEnable()
     {
-        if (upgradeButton != null)
+        for (int i = 0; i < tracks.Length; i++)
         {
-            upgradeButton.onClick.RemoveAllListeners();
-            upgradeButton.onClick.AddListener(OnClickUpgrade);
+            var part = (CEOManager.Part)i;
+            Bind(tracks[i]?.cardButton, () => OpenPopup(part));
         }
-        if (resetButton != null)
-        {
-            resetButton.onClick.RemoveAllListeners();
-            resetButton.onClick.AddListener(OnClickReset);
-        }
-        if (listButton != null)
-        {
-            listButton.onClick.RemoveAllListeners();
-            listButton.onClick.AddListener(OnClickList);
-        }
-        if (listPanel != null) listPanel.SetActive(false);
+        Bind(closeButton, ClosePopup);
+        Bind(addBookButton, () => OutGameCurrencyManager.Instance?.AddBook(TestBookAmount)); // AddBook 이 즉시 저장
+        Bind(levelUpButton, () => CEOManager.Instance?.TryUpgrade(_selected)); // OnChanged → Refresh 자동 호출
+
+        if (popupRoot != null) popupRoot.SetActive(false);
         Subscribe();
         Refresh();
-    }
-
-    void OnClickList()
-    {
-        if (listPanel == null) return;
-        listPanel.SetActive(!listPanel.activeSelf);
     }
 
     void OnDisable()
     {
         Unsubscribe();
+        ScreenDim.Hide(_dim); // dim 은 패널 자식이 아니라 직접 꺼야 함
+    }
+
+    static void Bind(Button button, UnityEngine.Events.UnityAction action)
+    {
+        if (button == null) return;
+        button.onClick.RemoveAllListeners();
+        button.onClick.AddListener(action);
     }
 
     void Subscribe()
     {
         if (_subscribed || CEOManager.Instance == null) return;
         CEOManager.Instance.OnChanged += Refresh;
+        if (OutGameCurrencyManager.Instance != null) OutGameCurrencyManager.Instance.OnChanged += Refresh;
         _subscribed = true;
     }
 
     void Unsubscribe()
     {
-        if (!_subscribed || CEOManager.Instance == null) return;
-        CEOManager.Instance.OnChanged -= Refresh;
+        if (!_subscribed) return;
+        if (CEOManager.Instance != null) CEOManager.Instance.OnChanged -= Refresh;
+        if (OutGameCurrencyManager.Instance != null) OutGameCurrencyManager.Instance.OnChanged -= Refresh;
         _subscribed = false;
     }
 
-    void OnClickUpgrade()
+    void OpenPopup(CEOManager.Part part)
     {
-        if (CEOManager.Instance == null) return;
-        if (!CEOManager.Instance.TryUpgrade(out _)) return;
-        // OnChanged → Refresh 자동 호출
+        if (popupRoot == null) return;
+        _selected = part;
+        popupRoot.SetActive(true);
+        ScreenDim.Show(ref _dim, popupRoot, DimOrder); // 반드시 패널을 켠 뒤 호출
+        Refresh();
     }
 
-    void OnClickReset()
+    void ClosePopup()
     {
-        if (CEOManager.Instance == null) return;
-        if (ConfirmUI.Instance == null)
-        {
-            CEOManager.Instance.ResetAll();
-            return;
-        }
-        ConfirmUI.Instance.Show(
-            "현재 이 조각을 리셋하시겠습니까?",
-            onConfirm: () => CEOManager.Instance.ResetAll(),
-            onCancel:  () => { },
-            confirmText: "예",
-            cancelText:  "아니오"
-        );
+        if (popupRoot != null) popupRoot.SetActive(false);
+        ScreenDim.Hide(_dim);
     }
 
     public void Refresh()
@@ -121,28 +133,60 @@ public class PiecePanelUI : MonoBehaviour
         var mgr = CEOManager.Instance;
         if (mgr == null) return;
 
-        // 단계 숫자
-        if (planningStageText != null) planningStageText.text = mgr.PlanningStage.ToString();
-        if (developStageText  != null) developStageText.text  = mgr.DevelopStage.ToString();
-        if (artStageText      != null) artStageText.text      = mgr.ArtStage.ToString();
+        int owned = OutGameCurrencyManager.Instance != null ? OutGameCurrencyManager.Instance.Book : 0;
+        if (ownedBookText != null) ownedBookText.text = owned.ToString("N0");
 
-        // 슬라이더 (단계 / 10 — Slider value 는 0~1)
-        if (planningSlider != null) planningSlider.value = mgr.PlanningStage / 10f;
-        if (developSlider  != null) developSlider.value  = mgr.DevelopStage  / 10f;
-        if (artSlider      != null) artSlider.value      = mgr.ArtStage      / 10f;
+        for (int i = 0; i < tracks.Length; i++)
+        {
+            var view = tracks[i];
+            if (view == null) continue;
+            var part = (CEOManager.Part)i;
 
-        // 강화 확률 (소수점 반올림)
-        var probs = mgr.GetProbabilities();
-        if (planningProbText != null) planningProbText.text = $"강화 확률 {Mathf.RoundToInt(probs[0] * 100f)}%";
-        if (developProbText  != null) developProbText.text  = $"강화 확률 {Mathf.RoundToInt(probs[1] * 100f)}%";
-        if (artProbText      != null) artProbText.text      = $"강화 확률 {Mathf.RoundToInt(probs[2] * 100f)}%";
+            if (view.levelText != null) view.levelText.text = $"Lv {mgr.GetLevel(part)}";
+            if (view.statText != null)  view.statText.text  = mgr.GetStat(part).ToString();
+            if (view.upgradeArrow != null) view.upgradeArrow.SetActive(mgr.CanUpgrade(part));
+            SetBookBar(view.bookFill, view.bookText, mgr.GetLevel(part), owned);
+        }
 
-        // 현재 스탯 (우측 패널)
-        if (planningStatText != null) planningStatText.text = mgr.GetPlanning().ToString();
-        if (developStatText  != null) developStatText.text  = mgr.GetDevelop().ToString();
-        if (artStatText      != null) artStatText.text      = mgr.GetArt().ToString();
+        if (popupRoot != null && popupRoot.activeSelf) RefreshPopup(mgr, owned);
+    }
 
-        // 강화 버튼 활성/비활성
-        if (upgradeButton != null) upgradeButton.interactable = mgr.CanUpgrade();
+    void RefreshPopup(CEOManager mgr, int owned)
+    {
+        int idx = (int)_selected;
+        int level = mgr.GetLevel(_selected);
+
+        if (popupTinted != null && idx < trackColors.Length)
+            foreach (var g in popupTinted) if (g != null) g.color = trackColors[idx];
+
+        if (popupTitleText != null) popupTitleText.text = TrackNames[idx];
+        if (popupLevelText != null) popupLevelText.text = $"Lv {level}";
+        if (idx < trackIcons.Length)
+        {
+            if (popupTitleIcon != null) popupTitleIcon.sprite = trackIcons[idx];
+            if (popupIcon != null)      popupIcon.sprite      = trackIcons[idx];
+        }
+        SetBookBar(popupBookFill, popupBookText, level, owned);
+
+        for (int i = 0; i < milestoneTexts.Length; i++)
+        {
+            var text = milestoneTexts[i];
+            if (text == null) continue;
+            text.text  = BookBonusListUI.BonusTexts[idx][i];
+            text.alpha = CEOManager.HasMilestone(_selected, BookBonusListUI.Milestones[i]) ? 1f : lockedAlpha;
+        }
+
+        bool hasNext = BookChartLoader.TryGetCost(level, out int book, out int gold);
+        if (costBookText != null) costBookText.text = hasNext ? $"책 {book:N0}" : "MAX";
+        if (costGoldText != null) costGoldText.text = hasNext ? $"골드 {gold:N0}" : "";
+        if (levelUpButton != null) levelUpButton.interactable = mgr.CanUpgrade(_selected);
+    }
+
+    // 책 바: 보유 책 / 다음 레벨 필요 책. MAX 레벨이면 가득 채우고 "MAX".
+    static void SetBookBar(Image fill, TMP_Text text, int level, int owned)
+    {
+        bool hasNext = BookChartLoader.TryGetCost(level, out int need, out _);
+        if (fill != null) fill.fillAmount = hasNext ? Mathf.Clamp01((float)owned / need) : 1f;
+        if (text != null) text.text = hasNext ? $"{owned:N0}/{need:N0}" : "MAX";
     }
 }

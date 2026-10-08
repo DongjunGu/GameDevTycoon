@@ -2,31 +2,33 @@ using System;
 using BackEnd;
 using LitJson;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 // CEO 시스템 매니저 (메타, 영구 보존 — 런 무관)
 //
-// 상태 single source: StoneManager.ActiveStone (Stones 리스트의 한 항목).
-// CEOManager 는 stage/progress 를 ActiveStone 에서 위임 조회. 자체 저장 없음.
-// LoadAsync 는 구 UserCEO row 가 있으면 마이그레이션 시드용으로만 읽어 둠 → StoneManager.LoadAsync 가 활용.
+// 책(Book) 강화: 기획/개발/아트 3트랙이 각각 Lv1~MaxLevel 독립. 책 + 아웃게임 골드를 소모하는 확정 강화.
+//   - 비용: BookChartLoader (level → level+1)
+//   - 재화: OutGameCurrencyManager (book / gold)
+//   - 특수효과: 10/20/30/40 레벨 마일스톤 — HasMilestone(part, level) 로 조회
 //
-// 강화/리셋은 ActiveStone 을 직접 mutate 하고 StoneManager.MarkDirty 로 저장 트리거.
+// 뒤끝 테이블: UserCEO (단일 row) — planningLevel / developLevel / artLevel (int)
 public class CEOManager : MonoBehaviour
 {
     public static CEOManager Instance { get; private set; }
 
-    [Header("Defaults")]
-    [Tooltip("강화 단계 0 일 때 기본 능력치 (기획/개발/아트 동일)")]
-    public int baseStat = 50;
-    [Tooltip("1~6 단계 도달 시 단계당 누적되는 능력치 보너스. 6단계면 +60.")]
-    public int statPerStage = 10;
-    [Tooltip("7단계 도달 시 추가되는 1회성 보너스 (1~6 누적 위에 한 번 더 가산). 기본 +100.")]
-    public int stage7Bonus = 100;
+    public enum Part { Planning, Develop, Art }
 
-    [Header("Upgrade")]
-    [Tooltip("강화 가중치. 인덱스 = 현재 단계. Lv.0~Lv.10 (11개). 합이 maxTotalStage 도달 시 강화 불가.")]
-    public float[] upgradeWeights = new float[] { 100f, 73f, 53.3f, 38.9f, 28.4f, 20.7f, 15.1f, 11f, 8.1f, 5.9f, 0f };
-    [Tooltip("강화 합계 최대치 (planning+develop+art). 이 합 도달 시 강화 버튼 비활성.")]
-    public int maxTotalStage = 20;
+    public const int MaxLevel = 40;
+
+    [Header("Defaults")]
+    [Tooltip("Lv1 기본 능력치 (기획/개발/아트 동일)")]
+    public int baseStat = 50;
+    [Tooltip("레벨당 능력치 증가량. Lv N = baseStat + (N-1) * statPerLevel.")]
+    [FormerlySerializedAs("statPerStage")]
+    public int statPerLevel = 10;
+    [Tooltip("Lv10 마일스톤 도달 시 1회 가산되는 능력치 보너스. 기본 +100.")]
+    [FormerlySerializedAs("stage7Bonus")]
+    public int level10Bonus = 100;
 
     [Header("CEO Identity")]
     public string ceoEmployeeId = "ceo_001";
@@ -36,28 +38,12 @@ public class CEOManager : MonoBehaviour
     [Tooltip("CEO 가 항상 앉을 데스크 ID. 인게임 진입 시 자동 점유되어 일반 직원이 못 앉음.")]
     public string ceoDeskId = "desk_04";
 
-    // ── 활성 돌 위임 조회 ─────────────────────
-    public int PlanningStage    => StoneManager.Instance?.ActiveStone?.planningStage    ?? 0;
-    public int DevelopStage     => StoneManager.Instance?.ActiveStone?.developStage     ?? 0;
-    public int ArtStage         => StoneManager.Instance?.ActiveStone?.artStage         ?? 0;
-    public int PlanningProgress => StoneManager.Instance?.ActiveStone?.planningProgress ?? 0;
-    public int DevelopProgress  => StoneManager.Instance?.ActiveStone?.developProgress  ?? 0;
-    public int ArtProgress      => StoneManager.Instance?.ActiveStone?.artProgress      ?? 0;
-    public bool HasActive       => StoneManager.Instance?.ActiveStone != null;
+    static readonly string[] LevelColumns = { "planningLevel", "developLevel", "artLevel" };
 
-    // ── 마이그레이션 시드 (구 UserCEO row → StoneManager.LoadAsync 가 첫 active 돌 생성용으로 사용) ──
-    public bool HasMigrationSeed { get; private set; }
-    public int MigPlanningStage { get; private set; }
-    public int MigDevelopStage { get; private set; }
-    public int MigArtStage { get; private set; }
-    public int MigPlanningProgress { get; private set; }
-    public int MigDevelopProgress { get; private set; }
-    public int MigArtProgress { get; private set; }
+    private readonly int[] _levels = { 1, 1, 1 };
+    private string _rowInDate;
 
     public event Action OnChanged;
-
-    // StoneManager 가 ActiveStone 갱신 시 호출 → PiecePanelUI 등 구독자 갱신.
-    public void RaiseChanged() => OnChanged?.Invoke();
 
     void Awake()
     {
@@ -66,16 +52,28 @@ public class CEOManager : MonoBehaviour
         DontDestroyOnLoad(gameObject);
     }
 
-    // 더 이상 자체 저장 없음. StoneManager.FlushPendingSave 가 모든 상태 저장.
-    public void FlushPendingSave() { }
+    public int GetLevel(Part part) => _levels[(int)part];
+
+    // 마일스톤 특수효과 조회 (10/20/30/40). 인스턴스 없으면 false.
+    public static bool HasMilestone(Part part, int level) => Instance != null && Instance.GetLevel(part) >= level;
+
+    // 능력치 공식: base + (Lv-1) * statPerLevel + Lv10 도달 시 level10Bonus 1회 가산.
+    public int GetStat(Part part)
+    {
+        int lv = GetLevel(part);
+        return baseStat + (lv - 1) * statPerLevel + (lv >= 10 ? level10Bonus : 0);
+    }
+
+    public int GetPlanning() => GetStat(Part.Planning);
+    public int GetDevelop()  => GetStat(Part.Develop);
+    public int GetArt()      => GetStat(Part.Art);
 
     public void LoadAsync(Action onComplete = null)
     {
         BackendRetry.Instance.GetMyData("UserCEO", bro =>
         {
-            HasMigrationSeed = false;
-            MigPlanningStage = MigDevelopStage = MigArtStage = 0;
-            MigPlanningProgress = MigDevelopProgress = MigArtProgress = 0;
+            for (int i = 0; i < _levels.Length; i++) _levels[i] = 1;
+            _rowInDate = null;
 
             if (bro.IsSuccess())
             {
@@ -83,115 +81,68 @@ public class CEOManager : MonoBehaviour
                 if (rows.Count > 0)
                 {
                     JsonData row = rows[0];
-                    MigPlanningStage    = SafeInt(row, "planningStage",    0);
-                    MigDevelopStage     = SafeInt(row, "developStage",     0);
-                    MigArtStage         = SafeInt(row, "artStage",         0);
-                    MigPlanningProgress = SafeInt(row, "planningProgress", 0);
-                    MigDevelopProgress  = SafeInt(row, "developProgress",  0);
-                    MigArtProgress      = SafeInt(row, "artProgress",      0);
-                    bool hadActive = SafeInt(row, "hasActive", 1) != 0;
-                    // 마이그레이션 트리거: 구 UserCEO 가 hasActive=true 였고 어떤 stage 든 진행이 있었을 때만.
-                    HasMigrationSeed = hadActive && (MigPlanningStage > 0 || MigDevelopStage > 0 || MigArtStage > 0);
-                    Debug.Log($"[CEO] UserCEO 읽음 (마이그레이션용): seed={HasMigrationSeed} P{MigPlanningStage}/D{MigDevelopStage}/A{MigArtStage}");
+                    _rowInDate = row["inDate"]?.ToString();
+                    for (int i = 0; i < _levels.Length; i++)
+                        _levels[i] = Mathf.Clamp(SafeInt(row, LevelColumns[i], 1), 1, MaxLevel);
                 }
+                Debug.Log($"[CEO] 로드: 기획 Lv{_levels[0]} / 개발 Lv{_levels[1]} / 아트 Lv{_levels[2]}");
             }
+            else
+            {
+                Debug.LogError($"[CEO] 로드 실패: {bro}");
+            }
+
+            OnChanged?.Invoke();
             onComplete?.Invoke();
         });
     }
 
-    // 능력치 공식: base + 1~6단계 누적(statPerStage 씩) + 7단계 도달 시 stage7Bonus 1회 가산.
-    // 8/9/10 단계는 카테고리 보너스라 능력치에 가산 안 함 (StoneBonusListUI 가 row 로 표시).
-    public int GetPlanning() => baseStat + Mathf.Min(PlanningStage, 6) * statPerStage + (PlanningStage >= 7 ? stage7Bonus : 0);
-    public int GetDevelop()  => baseStat + Mathf.Min(DevelopStage,  6) * statPerStage + (DevelopStage  >= 7 ? stage7Bonus : 0);
-    public int GetArt()      => baseStat + Mathf.Min(ArtStage,      6) * statPerStage + (ArtStage      >= 7 ? stage7Bonus : 0);
-
-    public void ResetAll()
-    {
-        var s = StoneManager.Instance?.ActiveStone;
-        if (s == null) return;
-        s.planningStage    = 0;
-        s.developStage     = 0;
-        s.artStage         = 0;
-        s.planningProgress = 0;
-        s.developProgress  = 0;
-        s.artProgress      = 0;
-        StoneManager.Instance.MarkDirty();
-        OnChanged?.Invoke();
-        Debug.Log("[CEO] 리셋 완료");
-    }
-
     // ──────── 강화 ────────
-    public enum UpgradePart { Planning, Develop, Art }
 
-    public struct UpgradeResult
+    public bool CanUpgrade(Part part)
     {
-        public UpgradePart part;
-        public int newStage;
+        var currency = OutGameCurrencyManager.Instance;
+        if (currency == null) return false;
+        if (!BookChartLoader.TryGetCost(GetLevel(part), out int book, out int gold)) return false; // MAX
+        return currency.Book >= book && currency.Gold >= gold;
     }
 
-    float GetWeight(int level)
+    public bool TryUpgrade(Part part)
     {
-        if (upgradeWeights == null || upgradeWeights.Length == 0) return 0f;
-        int idx = Mathf.Clamp(level, 0, upgradeWeights.Length - 1);
-        return upgradeWeights[idx];
+        if (!CanUpgrade(part)) return false;
+        BookChartLoader.TryGetCost(GetLevel(part), out int book, out int gold);
+
+        var currency = OutGameCurrencyManager.Instance;
+        currency.SpendGold(gold, saveImmediately: false);
+        currency.SpendBook(book); // 골드+책 한 번에 저장
+
+        _levels[(int)part]++;
+        Save();
+        OnChanged?.Invoke();
+        Debug.Log($"[CEO] 강화 → {part} Lv.{GetLevel(part)} (책 -{book} / 골드 -{gold})");
+        return true;
     }
 
-    public int TotalStage => PlanningStage + DevelopStage + ArtStage;
-
-    public bool CanUpgrade()
+    void Save()
     {
-        if (!HasActive) return false;
-        if (TotalStage >= maxTotalStage) return false;
-        float sum = GetWeight(PlanningStage) + GetWeight(DevelopStage) + GetWeight(ArtStage);
-        return sum > 0f;
-    }
+        var param = new Param();
+        for (int i = 0; i < _levels.Length; i++) param.Add(LevelColumns[i], _levels[i]);
 
-    public float[] GetProbabilities()
-    {
-        float wP = GetWeight(PlanningStage);
-        float wD = GetWeight(DevelopStage);
-        float wA = GetWeight(ArtStage);
-        float sum = wP + wD + wA;
-        if (sum <= 0f) return new[] { 0f, 0f, 0f };
-        return new[] { wP / sum, wD / sum, wA / sum };
-    }
-
-    public bool TryUpgrade(out UpgradeResult result)
-    {
-        result = default;
-        if (!CanUpgrade()) return false;
-        var s = StoneManager.Instance?.ActiveStone;
-        if (s == null) return false;
-
-        float wP = GetWeight(s.planningStage);
-        float wD = GetWeight(s.developStage);
-        float wA = GetWeight(s.artStage);
-        float sum  = wP + wD + wA;
-        float roll = UnityEngine.Random.Range(0f, sum);
-
-        if (roll < wP)
+        if (!string.IsNullOrEmpty(_rowInDate))
         {
-            s.planningStage++;
-            result.part = UpgradePart.Planning;
-            result.newStage = s.planningStage;
-        }
-        else if (roll < wP + wD)
-        {
-            s.developStage++;
-            result.part = UpgradePart.Develop;
-            result.newStage = s.developStage;
+            Backend.GameData.UpdateV2("UserCEO", _rowInDate, Backend.UserInDate, param, bro =>
+            {
+                if (!bro.IsSuccess()) Debug.LogError($"[CEO] 저장 실패: {bro}");
+            });
         }
         else
         {
-            s.artStage++;
-            result.part = UpgradePart.Art;
-            result.newStage = s.artStage;
+            Backend.GameData.Insert("UserCEO", param, bro =>
+            {
+                if (bro.IsSuccess()) _rowInDate = bro.GetInDate();
+                else Debug.LogError($"[CEO] Insert 실패: {bro}");
+            });
         }
-
-        StoneManager.Instance.MarkDirty();
-        OnChanged?.Invoke();
-        Debug.Log($"[CEO] 강화 → {result.part} Lv.{result.newStage} (Total {TotalStage}/{maxTotalStage})");
-        return true;
     }
 
     public EmployeeData CreateCEOEmployee()

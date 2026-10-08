@@ -100,6 +100,7 @@ public class BackendManager : MonoBehaviour
         CharacterUniqueEventChartLoader.Load();
         TutorialDialogChartLoader.Load();
         MailRewardChartLoader.Load();
+        BookChartLoader.Load();
         RandomEventManager.Instance.InitConditionEvents();
 
         Step("EmployeeManager");
@@ -119,9 +120,6 @@ public class BackendManager : MonoBehaviour
             {
             Step("CEOManager");
             CEOManager.Instance?.LoadAsync(() =>
-            {
-            Step("StoneManager");
-            StoneManager.Instance?.LoadAsync(() =>
             {
             Step("RunStateManager");
             RunStateManager.Instance?.LoadAsync(() =>
@@ -161,7 +159,6 @@ public class BackendManager : MonoBehaviour
                         });
                     });
                 });
-            });
             });
             });
             });

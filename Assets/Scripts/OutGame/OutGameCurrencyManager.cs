@@ -4,17 +4,19 @@ using BackEnd;
 using LitJson;
 
 // 아웃게임 메타 재화 (인게임 G와 별개)
-// Backend 테이블: OutGameCurrency { gold:int, diamond:int }
+// Backend 테이블: OutGameCurrency { gold:int, diamond:int, book:int }
 public class OutGameCurrencyManager : MonoBehaviour
 {
     public static OutGameCurrencyManager Instance { get; private set; }
 
     private int _gold = 0;
     private int _diamond = 0;
+    private int _book = 0;
     private string _rowInDate = null;
 
     public int Gold    => _gold;
     public int Diamond => _diamond;
+    public int Book    => _book;
 
     public event Action OnChanged;
 
@@ -38,6 +40,7 @@ public class OutGameCurrencyManager : MonoBehaviour
                     JsonData row = rows[0];
                     _gold      = SafeInt(row, "gold", 0);
                     _diamond   = SafeInt(row, "diamond", 0);
+                    _book      = SafeInt(row, "book", 0);
                     _rowInDate = row["inDate"]?.ToString();
                     Debug.Log($"[OutGameCurrency] 로드: {_gold}G / {_diamond}D");
                 }
@@ -45,6 +48,7 @@ public class OutGameCurrencyManager : MonoBehaviour
                 {
                     _gold    = 0;
                     _diamond = 0;
+                    _book    = 0;
                     SaveCurrency();
                     Debug.Log("[OutGameCurrency] 신규 유저 초기화 (0/0)");
                 }
@@ -103,11 +107,33 @@ public class OutGameCurrencyManager : MonoBehaviour
 
     public bool CanAffordDiamond(int amount) => _diamond >= amount;
 
+    // 책 — CEO 강화 재화 (CEOManager.TryUpgrade)
+    public void AddBook(int amount)
+    {
+        if (amount <= 0) return;
+        _book += amount;
+        SaveCurrency();
+        OnChanged?.Invoke();
+        Debug.Log($"[OutGameCurrency] +{amount}책 / 잔액 {_book}책");
+    }
+
+    public bool SpendBook(int amount, bool saveImmediately = true)
+    {
+        if (amount <= 0) return false;
+        if (_book < amount) return false;
+        _book -= amount;
+        if (saveImmediately) SaveCurrency();
+        OnChanged?.Invoke();
+        Debug.Log($"[OutGameCurrency] -{amount}책 / 잔액 {_book}책");
+        return true;
+    }
+
     public void SaveCurrency()
     {
         var param = new Param();
         param.Add("gold",    _gold);
         param.Add("diamond", _diamond);
+        param.Add("book",    _book);
 
         if (!string.IsNullOrEmpty(_rowInDate))
         {

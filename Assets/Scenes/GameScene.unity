@@ -6361,6 +6361,8 @@ MonoBehaviour:
   cancelButton: {fileID: 517906115}
   confirmButtonText: {fileID: 1046390367}
   cancelButtonText: {fileID: 1382999424}
+  diaConfirmButton: {fileID: 0}
+  diaConfirmLabel: {fileID: 0}
 --- !u!114 &40709305
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -19535,7 +19537,7 @@ SpriteRenderer:
   m_GlobalIlluminationMeshLod: 0
   m_SortingLayerID: 502371653
   m_SortingLayer: -4
-  m_SortingOrder: 1600
+  m_SortingOrder: 2100
   m_MaskInteraction: 0
   m_Sprite: {fileID: -8077778254341843930, guid: 6c9da61b0a85b044fbf2f0572a0d56ca, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -66903,8 +66905,14 @@ MonoBehaviour:
   emptyPlaceholder: {fileID: 1675316158}
   filledContent: {fileID: 1159653580}
   button: {fileID: 485662138}
-  isLocked: 0
   lockedVeil: {fileID: 0}
+  lockedColor: {r: 0, g: 0, b: 0, a: 0.961}
+  lockedSprite: {fileID: 0}
+  defaultSprite: {fileID: 0}
+  lockedFormat: "\uC7A0\uAE40\n\uB2E4\uC774\uC544 {0:N0}"
+  valuePanel: {fileID: 0}
+  valueText: {fileID: 0}
+  lockImage: {fileID: 0}
   emptyColor: {r: 1, g: 1, b: 1, a: 0.15}
 --- !u!114 &485662138
 MonoBehaviour:
@@ -70482,8 +70490,14 @@ MonoBehaviour:
   emptyPlaceholder: {fileID: 1766715743}
   filledContent: {fileID: 2054130755}
   button: {fileID: 505071748}
-  isLocked: 0
   lockedVeil: {fileID: 0}
+  lockedColor: {r: 0, g: 0, b: 0, a: 0.961}
+  lockedSprite: {fileID: 0}
+  defaultSprite: {fileID: 0}
+  lockedFormat: "\uC7A0\uAE40\n\uB2E4\uC774\uC544 {0:N0}"
+  valuePanel: {fileID: 0}
+  valueText: {fileID: 0}
+  lockImage: {fileID: 0}
   emptyColor: {r: 1, g: 1, b: 1, a: 0.15}
 --- !u!114 &505071748
 MonoBehaviour:
@@ -130757,6 +130771,7 @@ MonoBehaviour:
   headerPrefab: {fileID: 5071228358872426821, guid: 1e25f1e56c85e264ab76c586f0f0ee00, type: 3}
   rowPrefab: {fileID: 5690976000070938873, guid: a351b3ff37f063540b65cc2ea13d6916, type: 3}
   contentParent: {fileID: 1386874864}
+  lockedAlpha: 0.4
 --- !u!114 &912654765
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -135760,7 +135775,6 @@ MonoBehaviour:
     consecutiveLeaderCount: 0
     consecutiveNonLeaderCount: 0
     isOvertimeWorker: 0
-    lowSatisfactionPenaltyApplied: 0
     developMin: 0
     developMax: 0
     planningMin: 0
@@ -135814,7 +135828,6 @@ MonoBehaviour:
     consecutiveLeaderCount: 0
     consecutiveNonLeaderCount: 0
     isOvertimeWorker: 0
-    lowSatisfactionPenaltyApplied: 0
     developMin: 0
     developMax: 0
     planningMin: 0
@@ -135868,7 +135881,6 @@ MonoBehaviour:
     consecutiveLeaderCount: 0
     consecutiveNonLeaderCount: 0
     isOvertimeWorker: 0
-    lowSatisfactionPenaltyApplied: 0
     developMin: 0
     developMax: 0
     planningMin: 0
@@ -147765,9 +147777,9 @@ MonoBehaviour:
   planningStatText: {fileID: 945018618}
   developStatText: {fileID: 1107759335}
   artStatText: {fileID: 2001491594}
-  planningStageText: {fileID: 1237840468}
-  developStageText: {fileID: 66358426}
-  artStageText: {fileID: 27414784}
+  planningLevelText: {fileID: 1237840468}
+  developLevelText: {fileID: 66358426}
+  artLevelText: {fileID: 27414784}
 --- !u!1 &1007088333
 GameObject:
   m_ObjectHideFlags: 0
@@ -165987,7 +165999,7 @@ SpriteRenderer:
   m_GlobalIlluminationMeshLod: 0
   m_SortingLayerID: 502371653
   m_SortingLayer: -4
-  m_SortingOrder: 881
+  m_SortingOrder: 1381
   m_MaskInteraction: 0
   m_Sprite: {fileID: -8077778254341843930, guid: 6c9da61b0a85b044fbf2f0572a0d56ca, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -194774,8 +194786,14 @@ MonoBehaviour:
   emptyPlaceholder: {fileID: 1938007932}
   filledContent: {fileID: 1013269554}
   button: {fileID: 1324055032}
-  isLocked: 1
   lockedVeil: {fileID: 1324457404}
+  lockedColor: {r: 0, g: 0, b: 0, a: 0.961}
+  lockedSprite: {fileID: 0}
+  defaultSprite: {fileID: 0}
+  lockedFormat: "\uC7A0\uAE40\n\uB2E4\uC774\uC544 {0:N0}"
+  valuePanel: {fileID: 0}
+  valueText: {fileID: 0}
+  lockImage: {fileID: 0}
   emptyColor: {r: 1, g: 1, b: 1, a: 0.15}
 --- !u!114 &1324055032
 MonoBehaviour:
@@ -201917,7 +201935,7 @@ SpriteRenderer:
   m_GlobalIlluminationMeshLod: 0
   m_SortingLayerID: 502371653
   m_SortingLayer: -4
-  m_SortingOrder: 1549
+  m_SortingOrder: 2049
   m_MaskInteraction: 0
   m_Sprite: {fileID: -8077778254341843930, guid: 6c9da61b0a85b044fbf2f0572a0d56ca, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -218877,7 +218895,6 @@ GameObject:
   - component: {fileID: 1492493247}
   - component: {fileID: 1492493246}
   - component: {fileID: 1492493245}
-  - component: {fileID: 1492493244}
   - component: {fileID: 1492493243}
   - component: {fileID: 1492493242}
   - component: {fileID: 1492493266}
@@ -218921,20 +218938,6 @@ MonoBehaviour:
   visitEndMonth: 7
   promptMessage: "\uC544\uC774\uD15C \uC0AC\uC138\uC694!"
   itemsPerVisit: 3
---- !u!114 &1492493244
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1492493241}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 3f65e425a381e524b84fd0320baf3f07, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::StoneManager
-  saveDebounceSeconds: 0.7
-  maxStones: 0
 --- !u!114 &1492493245
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -218948,21 +218951,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CEOManager
   baseStat: 50
-  statPerStage: 10
-  stage7Bonus: 100
-  upgradeWeights:
-  - 100
-  - 73
-  - 53.3
-  - 38.9
-  - 28.4
-  - 20.7
-  - 15.1
-  - 11
-  - 8.1
-  - 5.9
-  - 0
-  maxTotalStage: 20
+  statPerLevel: 10
+  level10Bonus: 100
   ceoEmployeeId: ceo_001
   ceoName: CEO
   ceoPrefab: {fileID: 2828724654860466180, guid: b8736b9fb841bc444beae8a760fe2acb, type: 3}
@@ -242018,8 +242008,14 @@ MonoBehaviour:
   emptyPlaceholder: {fileID: 1957788926}
   filledContent: {fileID: 451379353}
   button: {fileID: 1635817295}
-  isLocked: 1
   lockedVeil: {fileID: 213193193}
+  lockedColor: {r: 0, g: 0, b: 0, a: 0.961}
+  lockedSprite: {fileID: 0}
+  defaultSprite: {fileID: 0}
+  lockedFormat: "\uC7A0\uAE40\n\uB2E4\uC774\uC544 {0:N0}"
+  valuePanel: {fileID: 0}
+  valueText: {fileID: 0}
+  lockImage: {fileID: 0}
   emptyColor: {r: 1, g: 1, b: 1, a: 0.15}
 --- !u!114 &1635817295
 MonoBehaviour:
@@ -262590,7 +262586,7 @@ SpriteRenderer:
   m_GlobalIlluminationMeshLod: 0
   m_SortingLayerID: 502371653
   m_SortingLayer: -4
-  m_SortingOrder: 2347
+  m_SortingOrder: 2847
   m_MaskInteraction: 0
   m_Sprite: {fileID: -8077778254341843930, guid: 6c9da61b0a85b044fbf2f0572a0d56ca, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -281907,8 +281903,14 @@ MonoBehaviour:
   emptyPlaceholder: {fileID: 1271373043}
   filledContent: {fileID: 2033013650}
   button: {fileID: 1928898705}
-  isLocked: 0
   lockedVeil: {fileID: 0}
+  lockedColor: {r: 0, g: 0, b: 0, a: 0.961}
+  lockedSprite: {fileID: 0}
+  defaultSprite: {fileID: 0}
+  lockedFormat: "\uC7A0\uAE40\n\uB2E4\uC774\uC544 {0:N0}"
+  valuePanel: {fileID: 0}
+  valueText: {fileID: 0}
+  lockImage: {fileID: 0}
   emptyColor: {r: 1, g: 1, b: 1, a: 0.15}
 --- !u!114 &1928898705
 MonoBehaviour:
@@ -290925,7 +290927,6 @@ MonoBehaviour:
     consecutiveLeaderCount: 0
     consecutiveNonLeaderCount: 0
     isOvertimeWorker: 0
-    lowSatisfactionPenaltyApplied: 0
     developMin: 0
     developMax: 0
     planningMin: 0
@@ -290979,7 +290980,6 @@ MonoBehaviour:
     consecutiveLeaderCount: 0
     consecutiveNonLeaderCount: 0
     isOvertimeWorker: 0
-    lowSatisfactionPenaltyApplied: 0
     developMin: 0
     developMax: 0
     planningMin: 0
@@ -291033,7 +291033,6 @@ MonoBehaviour:
     consecutiveLeaderCount: 0
     consecutiveNonLeaderCount: 0
     isOvertimeWorker: 0
-    lowSatisfactionPenaltyApplied: 0
     developMin: 0
     developMax: 0
     planningMin: 0

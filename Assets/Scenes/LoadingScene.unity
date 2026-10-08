@@ -4265,7 +4265,6 @@ GameObject:
   - component: {fileID: 2062941543}
   - component: {fileID: 2062941544}
   - component: {fileID: 2062941545}
-  - component: {fileID: 2062941546}
   - component: {fileID: 2062941547}
   - component: {fileID: 2062941548}
   - component: {fileID: 2062941549}
@@ -4320,7 +4319,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SalaryNegotiationManager
   employeeSlotAreaName: EmployeeSlotArea
-  ownedEmployeeSlotPrefab: {fileID: 1983924396680351385, guid: 23524c125c52de440a5a21ca65b5e7b9, type: 3}
 --- !u!114 &2062941528
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4535,39 +4533,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CEOManager
   baseStat: 50
-  statPerStage: 10
-  stage7Bonus: 100
-  upgradeWeights:
-  - 100
-  - 73
-  - 53.3
-  - 38.9
-  - 28.4
-  - 20.7
-  - 15.1
-  - 11
-  - 8.1
-  - 5.9
-  - 0
-  maxTotalStage: 20
+  statPerLevel: 10
+  level10Bonus: 100
   ceoEmployeeId: ceo_001
   ceoName: CEO
   ceoPrefab: {fileID: 2828724654860466180, guid: b8736b9fb841bc444beae8a760fe2acb, type: 3}
   ceoDeskId: desk_04
---- !u!114 &2062941546
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2062941524}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 3f65e425a381e524b84fd0320baf3f07, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::StoneManager
-  saveDebounceSeconds: 0.7
-  maxStones: 0
 --- !u!114 &2062941547
 MonoBehaviour:
   m_ObjectHideFlags: 0

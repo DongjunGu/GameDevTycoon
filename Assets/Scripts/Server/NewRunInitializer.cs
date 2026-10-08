@@ -37,8 +37,6 @@ public static class NewRunInitializer
     {
         // 아웃게임에서 만진 장착 슬롯 변경 등 pending 저장 즉시 flush
         OwnedTraitManager.Instance?.FlushPendingSave();
-        CEOManager.Instance?.FlushPendingSave();
-        StoneManager.Instance?.FlushPendingSave();
         ResetMemoryOnly();
 
         int pending = 0;

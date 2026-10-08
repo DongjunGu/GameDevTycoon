@@ -600,6 +600,13 @@ public class DevelopmentManager : MonoBehaviour
         int blank      = total - jackpot - success - creativity - bug;
         if (blank < 0) { creativity = Mathf.Max(0, creativity + blank); blank = 0; }
 
+        // 책 개발 Lv30 — 잭팟 확률 +1%p (11% → 12%). 늘어난 만큼 꽝에서 차감하고, 꽝이 0이 될 때까지만 적용.
+        if (jackpotP > 0f && CEOManager.HasMilestone(CEOManager.Part.Develop, 30))
+        {
+            int extra = Mathf.Min(blank, Mathf.RoundToInt(total * (jackpotP + 0.01f)) - jackpot);
+            if (extra > 0) { jackpot += extra; blank -= extra; }
+        }
+
         var list = new List<int>();
         for (int i = 0; i < jackpot;    i++) list.Add(0);
         for (int i = 0; i < success;    i++) list.Add(1);
@@ -1292,7 +1299,8 @@ public class DevelopmentManager : MonoBehaviour
         int bucket = LeaderBonusGrowthBucket(enhanceLevel);
         var (fMin, fMax) = LeaderBonusF[bucket, i];
         float f = Mathf.Round(UnityEngine.Random.Range(fMin, fMax) * 100f) / 100f;
-        _leaderBonusAmounts[i] = K * f;
+        // 책 개발 Lv20 — 90/95/99 존 보너스 1.5배
+        _leaderBonusAmounts[i] = K * f * (CEOManager.HasMilestone(CEOManager.Part.Develop, 20) ? 1.5f : 1f);
     }
 
     // 1회차 시작 시점(90/95/99BG가 처음 활성화되는 그 순간)부터 보여줄 "이 임계선까지 도달하면 받을 수
@@ -1412,6 +1420,7 @@ public class DevelopmentManager : MonoBehaviour
         float K = 0.8738f + 0.026409f * Mathf.Pow(skill, 0.9081f);
         bool lazyGenius = type == LeaderType.Programmer && CharacterTraitApplier.HasLazyGeniusOwned();
         if (lazyGenius) K *= CharacterTraitApplier.GetLazyGeniusLeaderBonus();
+        K *= BookScoreMult(type); // 책 Lv40 — 해당 파트 모든 점수 +10%
         float P = GetLeaderPotentialP(employee.potential);
 
         _leaderBonusGranted  = new bool[3];
@@ -1527,6 +1536,7 @@ public class DevelopmentManager : MonoBehaviour
         float K = 0.8738f + 0.026409f * Mathf.Pow(skill, 0.9081f);
         bool lazyGenius = type == LeaderType.Programmer && CharacterTraitApplier.HasLazyGeniusOwned();
         if (lazyGenius) K *= CharacterTraitApplier.GetLazyGeniusLeaderBonus();
+        K *= BookScoreMult(type); // 책 Lv40 — 해당 파트 모든 점수 +10%
         float P = GetLeaderPotentialP(employee.potential);
 
         _leaderBonusGranted  = new bool[3];
@@ -1650,6 +1660,7 @@ public class DevelopmentManager : MonoBehaviour
             if (lazyGenius)
                 K *= CharacterTraitApplier.GetLazyGeniusLeaderBonus();
 
+            K *= BookScoreMult(type); // 책 Lv40 — 해당 파트 모든 점수 +10%
             float P = GetLeaderPotentialP(employee.potential);
 
             // 보너스 임계선(90/95/99) 지급 상태 리셋 — 새 팀장점수 세션 시작
@@ -2524,6 +2535,23 @@ public class DevelopmentManager : MonoBehaviour
         return Mathf.Min(ratio * 10f, 10f);
     }
 
+    // 책 Lv40 마일스톤 — 해당 파트 "모든 점수 +10%" (틱 + 팀장 공용). 미달성이면 1.
+    static float BookScoreMult(CEOManager.Part part) => CEOManager.HasMilestone(part, 40) ? 1.1f : 1f;
+
+    static float BookScoreMult(LeaderType type) => BookScoreMult(type switch
+    {
+        LeaderType.Planner    => CEOManager.Part.Planning,
+        LeaderType.Programmer => CEOManager.Part.Develop,
+        _                     => CEOManager.Part.Art
+    });
+
+    static float BookScoreMult(EmployeeRole role) => BookScoreMult(role switch
+    {
+        EmployeeRole.Planner    => CEOManager.Part.Planning,
+        EmployeeRole.Programmer => CEOManager.Part.Develop,
+        _                       => CEOManager.Part.Art
+    });
+
     void AccumulateByType(EmployeeData employee, int tickType)
     {
         // 개발 틱 산출 = Effective 주스탯(만족도 배율 + 버프/디버프 스택 + 사내연애 + 오타쿠 포함)
@@ -2538,7 +2566,7 @@ public class DevelopmentManager : MonoBehaviour
         switch (tickType)
         {
             case 0: // 잭팟 — 1.8 × S × Random(0.8~1.2)
-                float jackpot = Mathf.Max(1, Mathf.RoundToInt(1.8f * S * UnityEngine.Random.Range(0.8f, 1.2f)));
+                float jackpot = Mathf.Max(1, Mathf.RoundToInt(1.8f * S * UnityEngine.Random.Range(0.8f, 1.2f) * BookScoreMult(employee.role)));
                 {
                     Color jackpotColor = new Color(1f, 0.85f, 0f);
                     InfoFeedUI.Instance?.ShowJackpot(employee);
@@ -2561,7 +2589,7 @@ public class DevelopmentManager : MonoBehaviour
                 break;
 
             case 1: // 성공 — S × Random(0.8~1.2)
-                float success = Mathf.Max(0, Mathf.RoundToInt(S * UnityEngine.Random.Range(0.8f, 1.2f)));
+                float success = Mathf.Max(0, Mathf.RoundToInt(S * UnityEngine.Random.Range(0.8f, 1.2f) * BookScoreMult(employee.role)));
                 switch (employee.role)
                 {
                     case EmployeeRole.Planner:

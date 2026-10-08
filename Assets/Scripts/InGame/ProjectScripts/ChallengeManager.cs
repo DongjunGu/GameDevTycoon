@@ -146,7 +146,8 @@ public class ChallengeManager
             : CalcLeaderZoneTarget(_challengePart, _kind);
         _targetComputed = true;
 
-        _rewardScore = CalcRewardScore();
+        // 책 기획 Lv30 — 도전과제 달성 점수 2배
+        _rewardScore = CalcRewardScore() * (CEOManager.HasMilestone(CEOManager.Part.Planning, 30) ? 2f : 1f);
         _rewardComputed = true;
 
         _resolved = false; _succeeded = false; _rewardApplied = false;
