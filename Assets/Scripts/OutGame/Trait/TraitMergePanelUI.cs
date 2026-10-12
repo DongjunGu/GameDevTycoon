@@ -50,6 +50,7 @@ public class TraitMergePanelUI : MonoBehaviour
     private CanvasGroup _rateGroup;
     private readonly List<TraitItemUI> _pool = new();
     private readonly TraitItemUI[] _picked = new TraitItemUI[TraitMerge.MaterialCount];
+    private readonly HashSet<TraitItemUI> _equippedLocked = new();
     private readonly Dictionary<TMP_Text, string> _rateTemplates = new();
     private bool _mergeMode;
     private bool _subscribed;
@@ -147,6 +148,9 @@ public class TraitMergePanelUI : MonoBehaviour
             item.OnClicked += Pick;
             _pool.Add(item);
         }
+        // 장착 중인 특성은 1장이 슬롯에 묶여 있으므로, 종류당 카드 1장만 veil 로 잠가 재료로 못 쓰게 한다 (나머지 중복분은 사용 가능)
+        _equippedLocked.Clear();
+        var lockedIds = new HashSet<string>();
         for (int i = 0; i < _pool.Count; i++)
         {
             bool used = i < rows.Count;
@@ -154,6 +158,10 @@ public class TraitMergePanelUI : MonoBehaviour
             if (!used) continue;
             _pool[i].SetData(rows[i], true);
             if (_pool[i].equippedBadge != null) _pool[i].equippedBadge.SetActive(false);
+
+            bool locked = OwnedTraitManager.Instance.IsEquipped(rows[i].traitId) && lockedIds.Add(rows[i].traitId);
+            if (locked) _equippedLocked.Add(_pool[i]);
+            _pool[i].SetSelected(locked); // veil + 체크 (재료 선택 표시와 같은 모양, 클릭은 Pick 에서 막음)
         }
     }
 
@@ -184,6 +192,7 @@ public class TraitMergePanelUI : MonoBehaviour
     void Pick(TraitItemUI item)
     {
         if (!_mergeMode || item == null || item.Data == null) return;
+        if (_equippedLocked.Contains(item)) return; // 장착 중인 카드
         if (item.Data.grade == TraitGrade.S)
         {
             if (ConfirmUI.Instance != null)

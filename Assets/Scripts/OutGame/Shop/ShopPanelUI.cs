@@ -16,8 +16,15 @@ public class ShopPanelUI : MonoBehaviour
     [Tooltip("선택 시 활성화될 우측 컨텐츠 — 각 카테고리별.")]
     public GameObject[] categoryContents = new GameObject[5];
 
+    [Tooltip("선택된 카테고리 버튼 프레임 (Shop_Frame_Selected). 선택 시 버튼 자식 아이콘·텍스트는 흰색.")]
+    public Sprite categorySelectedSprite;
+
     [Header("Default")]
     public Category defaultCategory = Category.Gacha;
+
+    // 선택 해제 시 되돌릴 원래 프레임/색 (최초 1회 캐시)
+    readonly Dictionary<Image, Sprite> _defaultFrames = new();
+    readonly Dictionary<Graphic, Color> _defaultColors = new();
 
     [Header("Gacha Buttons (뽑기 카테고리)")]
     public Button employeeNormalBtn;
@@ -97,6 +104,24 @@ public class ShopPanelUI : MonoBehaviour
                 categoryHighlights[i].SetActive(on);
             if (categoryContents != null && i < categoryContents.Length && categoryContents[i] != null)
                 categoryContents[i].SetActive(on);
+            if (categoryButtons != null && i < categoryButtons.Length && categoryButtons[i] != null)
+                SetCategoryVisual(categoryButtons[i], on);
+        }
+    }
+
+    // 선택: 프레임 교체 + 자식 아이콘·텍스트 흰색 / 해제: 원래 프레임·색 복원
+    void SetCategoryVisual(Button button, bool on)
+    {
+        if (button.TryGetComponent(out Image frame))
+        {
+            if (!_defaultFrames.ContainsKey(frame)) _defaultFrames[frame] = frame.sprite;
+            frame.sprite = on && categorySelectedSprite != null ? categorySelectedSprite : _defaultFrames[frame];
+        }
+        foreach (var g in button.GetComponentsInChildren<Graphic>(true))
+        {
+            if (g.gameObject == button.gameObject) continue; // 프레임 자신은 제외
+            if (!_defaultColors.ContainsKey(g)) _defaultColors[g] = g.color;
+            g.color = on ? Color.white : _defaultColors[g];
         }
     }
 

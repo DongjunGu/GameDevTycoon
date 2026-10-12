@@ -17,10 +17,9 @@ public class OutGameTopNavBarUI : MonoBehaviour
     public GameObject mailboxPanel;
     public GameObject settingsPanel;
 
-    [Header("Format")]
-    [Tooltip("재화 표시 포맷 (string.Format용 {0})")]
-    private string goldFormat    = "골드: {0:N0}";
-    private string diamondFormat = "다이아: {0:N0}";
+    // 아이콘이 옆에 있으므로 숫자만 표시
+    private string goldFormat    = "{0:N0}";
+    private string diamondFormat = "{0:N0}";
 
     void OnEnable()
     {

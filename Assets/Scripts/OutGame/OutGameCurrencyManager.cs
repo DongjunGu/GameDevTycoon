@@ -4,19 +4,22 @@ using BackEnd;
 using LitJson;
 
 // 아웃게임 메타 재화 (인게임 G와 별개)
-// Backend 테이블: OutGameCurrency { gold:int, diamond:int, book:int }
+// Backend 테이블: OutGameCurrency { gold:int, diamond:int, bookPlanning:int, bookDevelop:int, bookArt:int }
 public class OutGameCurrencyManager : MonoBehaviour
 {
     public static OutGameCurrencyManager Instance { get; private set; }
 
+    // 인덱스 = CEOManager.Part (0 기획 / 1 개발 / 2 아트)
+    static readonly string[] BookColumns = { "bookPlanning", "bookDevelop", "bookArt" };
+
     private int _gold = 0;
     private int _diamond = 0;
-    private int _book = 0;
+    private readonly int[] _books = new int[3];
     private string _rowInDate = null;
 
     public int Gold    => _gold;
     public int Diamond => _diamond;
-    public int Book    => _book;
+    public int GetBook(CEOManager.Part part) => _books[(int)part];
 
     public event Action OnChanged;
 
@@ -40,7 +43,7 @@ public class OutGameCurrencyManager : MonoBehaviour
                     JsonData row = rows[0];
                     _gold      = SafeInt(row, "gold", 0);
                     _diamond   = SafeInt(row, "diamond", 0);
-                    _book      = SafeInt(row, "book", 0);
+                    for (int i = 0; i < _books.Length; i++) _books[i] = SafeInt(row, BookColumns[i], 0);
                     _rowInDate = row["inDate"]?.ToString();
                     Debug.Log($"[OutGameCurrency] 로드: {_gold}G / {_diamond}D");
                 }
@@ -48,7 +51,7 @@ public class OutGameCurrencyManager : MonoBehaviour
                 {
                     _gold    = 0;
                     _diamond = 0;
-                    _book    = 0;
+                    Array.Clear(_books, 0, _books.Length);
                     SaveCurrency();
                     Debug.Log("[OutGameCurrency] 신규 유저 초기화 (0/0)");
                 }
@@ -107,24 +110,24 @@ public class OutGameCurrencyManager : MonoBehaviour
 
     public bool CanAffordDiamond(int amount) => _diamond >= amount;
 
-    // 책 — CEO 강화 재화 (CEOManager.TryUpgrade)
-    public void AddBook(int amount)
+    // 책 — CEO 강화 재화, 트랙(기획/개발/아트)별로 따로 보유 (CEOManager.TryUpgrade)
+    public void AddBook(CEOManager.Part part, int amount)
     {
         if (amount <= 0) return;
-        _book += amount;
+        _books[(int)part] += amount;
         SaveCurrency();
         OnChanged?.Invoke();
-        Debug.Log($"[OutGameCurrency] +{amount}책 / 잔액 {_book}책");
+        Debug.Log($"[OutGameCurrency] +{amount} {part}책 / 잔액 {_books[(int)part]}");
     }
 
-    public bool SpendBook(int amount, bool saveImmediately = true)
+    public bool SpendBook(CEOManager.Part part, int amount, bool saveImmediately = true)
     {
         if (amount <= 0) return false;
-        if (_book < amount) return false;
-        _book -= amount;
+        if (_books[(int)part] < amount) return false;
+        _books[(int)part] -= amount;
         if (saveImmediately) SaveCurrency();
         OnChanged?.Invoke();
-        Debug.Log($"[OutGameCurrency] -{amount}책 / 잔액 {_book}책");
+        Debug.Log($"[OutGameCurrency] -{amount} {part}책 / 잔액 {_books[(int)part]}");
         return true;
     }
 
@@ -133,7 +136,7 @@ public class OutGameCurrencyManager : MonoBehaviour
         var param = new Param();
         param.Add("gold",    _gold);
         param.Add("diamond", _diamond);
-        param.Add("book",    _book);
+        for (int i = 0; i < _books.Length; i++) param.Add(BookColumns[i], _books[i]);
 
         if (!string.IsNullOrEmpty(_rowInDate))
         {

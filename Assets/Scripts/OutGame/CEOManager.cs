@@ -8,7 +8,7 @@ using UnityEngine.Serialization;
 //
 // 책(Book) 강화: 기획/개발/아트 3트랙이 각각 Lv1~MaxLevel 독립. 책 + 아웃게임 골드를 소모하는 확정 강화.
 //   - 비용: BookChartLoader (level → level+1)
-//   - 재화: OutGameCurrencyManager (book / gold)
+//   - 재화: OutGameCurrencyManager (트랙별 book / gold)
 //   - 특수효과: 10/20/30/40 레벨 마일스톤 — HasMilestone(part, level) 로 조회
 //
 // 뒤끝 테이블: UserCEO (단일 row) — planningLevel / developLevel / artLevel (int)
@@ -104,7 +104,7 @@ public class CEOManager : MonoBehaviour
         var currency = OutGameCurrencyManager.Instance;
         if (currency == null) return false;
         if (!BookChartLoader.TryGetCost(GetLevel(part), out int book, out int gold)) return false; // MAX
-        return currency.Book >= book && currency.Gold >= gold;
+        return currency.GetBook(part) >= book && currency.Gold >= gold;
     }
 
     public bool TryUpgrade(Part part)
@@ -114,7 +114,7 @@ public class CEOManager : MonoBehaviour
 
         var currency = OutGameCurrencyManager.Instance;
         currency.SpendGold(gold, saveImmediately: false);
-        currency.SpendBook(book); // 골드+책 한 번에 저장
+        currency.SpendBook(part, book); // 골드+책 한 번에 저장
 
         _levels[(int)part]++;
         Save();

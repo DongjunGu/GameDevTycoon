@@ -172,6 +172,7 @@ public class TraitPanelUI : MonoBehaviour
                 var row = rows[i];
                 pool[i].gameObject.SetActive(true);
                 pool[i].SetData(row, OwnedTraitManager.Instance.IsOwned(row.traitId));
+                pool[i].SetSelected(OwnedTraitManager.Instance.IsEquipped(row.traitId)); // 장착 중 = veil + 체크
             }
             else
             {

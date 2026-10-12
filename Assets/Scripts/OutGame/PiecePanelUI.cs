@@ -33,10 +33,12 @@ public class PiecePanelUI : MonoBehaviour
     public Color[] trackColors = { Color.white, Color.white, Color.white };
 
     [Header("Currency")]
-    [Tooltip("보유 책 수량")]
-    public TMP_Text ownedBookText;
-    [Tooltip("테스트용 — 누르면 책 +20 (뒤끝 저장)")]
+    [Tooltip("트랙별 보유 책 수량 (0 기획 / 1 개발 / 2 아트)")]
+    public TMP_Text[] ownedBookTexts = new TMP_Text[3];
+    [Tooltip("테스트용 — 누르면 트랙별 책 +20씩 (뒤끝 저장). 상점 추가되면 제거")]
     public Button addBookButton;
+    [Tooltip("테스트용 — 누르면 골드 +50,000 (뒤끝 저장)")]
+    public Button addGoldButton;
 
     [Header("Popup")]
     public GameObject popupRoot;
@@ -60,6 +62,7 @@ public class PiecePanelUI : MonoBehaviour
     public TMP_Text costGoldText;
 
     const int TestBookAmount = 20;
+    const int TestGoldAmount = 50000;
     const int DimOrder = 110; // ScreenDim: dim 110 / 팝업 111 (상단 재화 UI 100 위)
 
     static readonly string[] TrackNames = { "기획", "개발", "아트" };
@@ -76,7 +79,12 @@ public class PiecePanelUI : MonoBehaviour
             Bind(tracks[i]?.cardButton, () => OpenPopup(part));
         }
         Bind(closeButton, ClosePopup);
-        Bind(addBookButton, () => OutGameCurrencyManager.Instance?.AddBook(TestBookAmount)); // AddBook 이 즉시 저장
+        Bind(addBookButton, () =>
+        {
+            for (int i = 0; i < tracks.Length; i++)
+                OutGameCurrencyManager.Instance?.AddBook((CEOManager.Part)i, TestBookAmount); // AddBook 이 즉시 저장
+        });
+        Bind(addGoldButton, () => OutGameCurrencyManager.Instance?.AddGold(TestGoldAmount));
         Bind(levelUpButton, () => CEOManager.Instance?.TryUpgrade(_selected)); // OnChanged → Refresh 자동 호출
 
         if (popupRoot != null) popupRoot.SetActive(false);
@@ -133,14 +141,13 @@ public class PiecePanelUI : MonoBehaviour
         var mgr = CEOManager.Instance;
         if (mgr == null) return;
 
-        int owned = OutGameCurrencyManager.Instance != null ? OutGameCurrencyManager.Instance.Book : 0;
-        if (ownedBookText != null) ownedBookText.text = owned.ToString("N0");
-
         for (int i = 0; i < tracks.Length; i++)
         {
             var view = tracks[i];
             if (view == null) continue;
             var part = (CEOManager.Part)i;
+            int owned = OwnedBook(part);
+            if (i < ownedBookTexts.Length && ownedBookTexts[i] != null) ownedBookTexts[i].text = owned.ToString("N0");
 
             if (view.levelText != null) view.levelText.text = $"Lv {mgr.GetLevel(part)}";
             if (view.statText != null)  view.statText.text  = mgr.GetStat(part).ToString();
@@ -148,8 +155,11 @@ public class PiecePanelUI : MonoBehaviour
             SetBookBar(view.bookFill, view.bookText, mgr.GetLevel(part), owned);
         }
 
-        if (popupRoot != null && popupRoot.activeSelf) RefreshPopup(mgr, owned);
+        if (popupRoot != null && popupRoot.activeSelf) RefreshPopup(mgr, OwnedBook(_selected));
     }
+
+    static int OwnedBook(CEOManager.Part part) =>
+        OutGameCurrencyManager.Instance != null ? OutGameCurrencyManager.Instance.GetBook(part) : 0;
 
     void RefreshPopup(CEOManager mgr, int owned)
     {

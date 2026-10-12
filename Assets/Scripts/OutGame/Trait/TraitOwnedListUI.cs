@@ -2,9 +2,10 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
-// TraitPanel 내 "전체 특성" 버튼으로 열리는 보유 갤러리 패널.
-// _owned dict(traitId→count) 의 count 만큼 카드를 펼쳐서 그리드 표시. (중복 포함)
+// TraitPanel 내 "전체 특성" 버튼으로 열리는 특성 도감 패널.
+// 차트의 모든 특성을 종류당 1장씩 그리드 표시 (보유 여부·장수 무관).
 // 정렬: 등급 내림차순(S→A→B→C), 같은 등급 내 이름 오름차순.
+// 보유 장수만큼 펼친 목록(BuildOwnedRows)은 조합 화면(TraitMergePanelUI) 전용.
 //
 // 인스펙터 연결:
 //   - openButton : TraitPanel 의 "전체 특성" 버튼
@@ -112,7 +113,16 @@ public class TraitOwnedListUI : MonoBehaviour
     {
         if (itemPrefab == null || gridContainer == null) return;
         if (OwnedTraitManager.Instance == null || TraitChartLoader.Cache == null) return;
-        var flat = BuildOwnedRows();
+
+        // 도감: 보유 여부·장수와 무관하게 차트의 모든 특성을 종류당 1장씩 (등급 내림차순 → 이름 오름차순)
+        var flat = new List<TraitChartRow>();
+        foreach (var row in TraitChartLoader.Cache.Values)
+            if (row != null) flat.Add(row);
+        flat.Sort((a, b) =>
+        {
+            int c = b.grade.CompareTo(a.grade);
+            return c != 0 ? c : string.Compare(a.name, b.name, System.StringComparison.Ordinal);
+        });
 
         // 풀 부족분 Instantiate
         for (int i = _pool.Count; i < flat.Count; i++)
@@ -127,8 +137,8 @@ public class TraitOwnedListUI : MonoBehaviour
             if (i < flat.Count)
             {
                 _pool[i].gameObject.SetActive(true);
-                _pool[i].SetData(flat[i], true);
-                // 갤러리에서는 "장착중" 뱃지 표시 안 함 — 단순 보유 카드 표시 용도
+                _pool[i].SetData(flat[i], true); // 미보유도 내용이 보이도록 lockedVeil 은 켜지 않음
+                // 도감에서는 "장착중" 뱃지 표시 안 함
                 if (_pool[i].equippedBadge != null)
                     _pool[i].equippedBadge.SetActive(false);
             }
