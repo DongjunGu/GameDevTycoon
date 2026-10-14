@@ -3,8 +3,8 @@ using UnityEngine;
 using UnityEngine.UI;
 
 // 상점 패널 — 5 카테고리 (기간한정/뽑기/다이아/골드/패키지). 좌측 카테고리 바, 우측 카테고리별 컨텐츠.
-// 현재는 뽑기 카테고리만 구현 (직원 일반/스페셜, 특성 일반/스페셜/프리미엄 = 5 버튼).
-// 직원 일반/스페셜은 등급 가중치만 다름. 특성 3버튼은 아직 동일 기능. 전부 무료 1회 뽑기.
+// 현재는 뽑기 카테고리만 구현 — 직원 일반/스페셜, 특성 일반/스페셜 각각 1회/10회 (다이아).
+// 등급을 가중치로 먼저 뽑고, 같은 등급 안에서는 균등. 스페셜은 천장(직원 10회=에픽, 특성 30회=S), 당첨 시 카운트 초기화.
 public class ShopPanelUI : MonoBehaviour
 {
     public enum Category { LimitedTime = 0, Gacha = 1, Diamond = 2, Gold = 3, Package = 4 }
@@ -34,7 +34,8 @@ public class ShopPanelUI : MonoBehaviour
     public Button employeeSpecial10Btn;
     public Button traitNormalBtn;
     public Button traitSpecialBtn;
-    public Button traitPremiumBtn;
+    public Button traitNormal10Btn;
+    public Button traitSpecial10Btn;
 
     [Header("Result")]
     public ShopGachaResultPanelUI resultPanel;
@@ -54,6 +55,30 @@ public class ShopPanelUI : MonoBehaviour
     [Range(0, 100)] public int specialWeightNormal = 65;
     [Range(0, 100)] public int specialWeightRare   = 30;
     [Range(0, 100)] public int specialWeightEpic   = 5;
+
+    [Header("Employee Gacha Pity — 스페셜 (N회째 에픽 확정, 에픽 당첨 시 초기화)")]
+    public int employeeSpecialPity = 10;
+
+    [Header("Trait Gacha Cost (다이아)")]
+    public int traitNormalCost    = 100;
+    public int traitNormal10Cost  = 1000;
+    public int traitSpecialCost   = 400;
+    public int traitSpecial10Cost = 4000;
+
+    [Header("Trait Gacha Weights — 일반 (S/A/B/C)")]
+    public int traitNormalWeightS = 0;
+    public int traitNormalWeightA = 5;
+    public int traitNormalWeightB = 30;
+    public int traitNormalWeightC = 65;
+
+    [Header("Trait Gacha Weights — 스페셜 (S/A/B/C)")]
+    public int traitSpecialWeightS = 3;
+    public int traitSpecialWeightA = 25;
+    public int traitSpecialWeightB = 45;
+    public int traitSpecialWeightC = 27;
+
+    [Header("Trait Gacha Pity — 스페셜 (N회째 S 확정, S 당첨 시 초기화)")]
+    public int traitSpecialPity = 30;
 
     Category _selected;
 
@@ -82,9 +107,10 @@ public class ShopPanelUI : MonoBehaviour
         WireBtn(employeeSpecialBtn,  () => OnEmployeeGacha(true,  1));
         WireBtn(employeeNormal10Btn, () => OnEmployeeGacha(false, 10));
         WireBtn(employeeSpecial10Btn,() => OnEmployeeGacha(true,  10));
-        WireBtn(traitNormalBtn,     OnTraitGacha);
-        WireBtn(traitSpecialBtn,    OnTraitGacha);
-        WireBtn(traitPremiumBtn,    OnTraitGacha);
+        WireBtn(traitNormalBtn,      () => OnTraitGacha(false, 1));
+        WireBtn(traitSpecialBtn,     () => OnTraitGacha(true,  1));
+        WireBtn(traitNormal10Btn,    () => OnTraitGacha(false, 10));
+        WireBtn(traitSpecial10Btn,   () => OnTraitGacha(true,  10));
     }
 
     void WireBtn(Button b, UnityEngine.Events.UnityAction handler)
@@ -141,12 +167,7 @@ public class ShopPanelUI : MonoBehaviour
             : (count > 1 ? normalGacha10Cost  : normalGachaCost);
         var wallet = OutGameCurrencyManager.Instance;
         if (wallet == null) return;
-        if (!wallet.SpendDiamond(cost))
-        {
-            // ponytail: 아웃게임 알림 UI 없음. 다이아 부족 팝업 생기면 교체.
-            Debug.LogWarning($"[Shop] 다이아 부족 — 필요 {cost}D / 보유 {wallet.Diamond}D");
-            return;
-        }
+        if (!CheckDiamond(wallet, cost)) return;
 
         string label = special ? "스페셜" : "일반";
         var draws = new List<(EmployeeData emp, EmployeeGrade grade)>(count);
@@ -154,13 +175,29 @@ public class ShopPanelUI : MonoBehaviour
         {
             var emp   = pool[Random.Range(0, pool.Count)];
             var grade = RollEmployeeGrade(special);
+            if (special)
+            {
+                // 천장: 에픽 없이 (pity-1)회 연속이면 이번 회차는 에픽 확정
+                if (grade != EmployeeGrade.Epic && wallet.pityEmployeeSpecial + 1 >= employeeSpecialPity)
+                    grade = EmployeeGrade.Epic;
+                wallet.pityEmployeeSpecial = grade == EmployeeGrade.Epic ? 0 : wallet.pityEmployeeSpecial + 1;
+            }
             OwnedCardManager.Instance.AddCard(emp.id, grade, stage: 0, save: i == count - 1);
             Debug.Log($"[Shop] 직원 가챠({label}) → {emp.employeeName} ({grade})");
             draws.Add((emp, grade));
         }
-        Debug.Log($"[Shop] 직원 가챠({label}) x{count} -{cost}D");
+        wallet.SpendDiamond(cost); // 천장 카운트도 같이 저장
+        Debug.Log($"[Shop] 직원 가챠({label}) x{count} -{cost}D (천장 {wallet.pityEmployeeSpecial}/{employeeSpecialPity})");
 
         ShowDrawsSequential(draws, 0);
+    }
+
+    bool CheckDiamond(OutGameCurrencyManager wallet, int cost)
+    {
+        if (wallet.CanAffordDiamond(cost)) return true;
+        // ponytail: 아웃게임 알림 UI 없음. 다이아 부족 팝업 생기면 교체.
+        Debug.LogWarning($"[Shop] 다이아 부족 — 필요 {cost}D / 보유 {wallet.Diamond}D");
+        return false;
     }
 
     // 닫기 버튼을 누를 때마다 다음 장. 1회 뽑기도 같은 경로.
@@ -169,6 +206,13 @@ public class ShopPanelUI : MonoBehaviour
         if (resultPanel == null || index >= draws.Count) return;
         resultPanel.onClosed = () => ShowDrawsSequential(draws, index + 1);
         resultPanel.ShowEmployee(draws[index].emp, draws[index].grade);
+    }
+
+    void ShowTraitsSequential(List<TraitChartRow> draws, int index)
+    {
+        if (resultPanel == null || index >= draws.Count) return;
+        resultPanel.onClosed = () => ShowTraitsSequential(draws, index + 1);
+        resultPanel.ShowTrait(draws[index]);
     }
 
     EmployeeGrade RollEmployeeGrade(bool special)
@@ -184,7 +228,7 @@ public class ShopPanelUI : MonoBehaviour
     }
 
     // ──────────── 특성 가챠 ────────────
-    void OnTraitGacha()
+    void OnTraitGacha(bool special, int count)
     {
         if (OwnedTraitManager.Instance == null) return;
         var cache = TraitChartLoader.Cache;
@@ -193,13 +237,63 @@ public class ShopPanelUI : MonoBehaviour
             Debug.LogWarning("[Shop] 특성 차트 비어있음");
             return;
         }
+        var wallet = OutGameCurrencyManager.Instance;
+        if (wallet == null) return;
 
-        var ids = new List<string>(cache.Keys);
-        string id = ids[Random.Range(0, ids.Count)];
-        OwnedTraitManager.Instance.AddTrait(id, save: true);
-        cache.TryGetValue(id, out var row);
-        Debug.Log($"[Shop] 특성 가챠 → {row?.name ?? id} ({row?.grade})");
+        int cost = special
+            ? (count > 1 ? traitSpecial10Cost : traitSpecialCost)
+            : (count > 1 ? traitNormal10Cost  : traitNormalCost);
+        if (!CheckDiamond(wallet, cost)) return;
 
-        if (resultPanel != null) resultPanel.ShowTrait(row);
+        // 등급별 버킷 (TraitGrade C=0 ~ S=3)
+        var byGrade = new List<TraitChartRow>[4];
+        for (int g = 0; g < 4; g++) byGrade[g] = new List<TraitChartRow>();
+        foreach (var row in cache.Values) byGrade[(int)row.grade].Add(row);
+
+        int[] w = special
+            ? new[] { traitSpecialWeightC, traitSpecialWeightB, traitSpecialWeightA, traitSpecialWeightS }
+            : new[] { traitNormalWeightC,  traitNormalWeightB,  traitNormalWeightA,  traitNormalWeightS };
+        // 차트에 없는 등급은 가중치 0 — 빈 버킷 당첨 방지
+        for (int g = 0; g < 4; g++) if (byGrade[g].Count == 0) w[g] = 0;
+
+        int sIdx = (int)TraitGrade.S;
+        string label = special ? "스페셜" : "일반";
+        var draws = new List<TraitChartRow>(count);
+        for (int i = 0; i < count; i++)
+        {
+            int grade = RollIndex(w);
+            if (special)
+            {
+                // 천장: S 없이 (pity-1)회 연속이면 이번 회차는 S 확정
+                if (grade != sIdx && byGrade[sIdx].Count > 0 && wallet.pityTraitSpecial + 1 >= traitSpecialPity)
+                    grade = sIdx;
+                wallet.pityTraitSpecial = grade == sIdx ? 0 : wallet.pityTraitSpecial + 1;
+            }
+            var bucket = byGrade[grade];
+            if (bucket.Count == 0) continue; // 가중치 전부 0인 차트 — 방어
+            var pick = bucket[Random.Range(0, bucket.Count)];
+            OwnedTraitManager.Instance.AddTrait(pick.traitId);
+            Debug.Log($"[Shop] 특성 가챠({label}) → {pick.name} ({pick.grade})");
+            draws.Add(pick);
+        }
+        wallet.SpendDiamond(cost); // 천장 카운트도 같이 저장
+        Debug.Log($"[Shop] 특성 가챠({label}) x{count} -{cost}D (천장 {wallet.pityTraitSpecial}/{traitSpecialPity})");
+
+        ShowTraitsSequential(draws, 0);
+    }
+
+    // 가중치 비례 추첨 → 인덱스
+    static int RollIndex(int[] weights)
+    {
+        int total = 0;
+        foreach (var x in weights) total += Mathf.Max(0, x);
+        if (total <= 0) return 0;
+        int r = Random.Range(0, total);
+        for (int i = 0; i < weights.Length; i++)
+        {
+            r -= Mathf.Max(0, weights[i]);
+            if (r < 0) return i;
+        }
+        return weights.Length - 1;
     }
 }
