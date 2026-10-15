@@ -188,6 +188,21 @@ public class OwnedCardManager : MonoBehaviour
         OnChanged?.Invoke();
     }
 
+    // 서버(뒤끝 펑션)가 이미 저장한 cardsJson 으로 메모리 교체 + 새로 받은 카드의 해금/등급 연동. 저장하지 않음
+    public void ApplyServerCards(string cardsJson, IEnumerable<(string empId, EmployeeGrade grade)> gained)
+    {
+        _cards.Clear();
+        Parse(cardsJson);
+        foreach (var (empId, grade) in gained)
+        {
+            if (OutGameEmployeeManager.Instance != null)
+                OutGameEmployeeManager.Instance.TryUpgradeMaxGrade(empId, grade);
+            if (EmployeeManager.Instance != null && !EmployeeManager.Instance.IsAcquired(empId))
+                EmployeeManager.Instance.AcquireEmployee(empId);
+        }
+        OnChanged?.Invoke();
+    }
+
     // 카드 차감 (합성 재료 소모용). 부족하면 false 반환하고 변경 없음
     // 차감 후 그 직원의 maxGrade를 보유 카드 기준으로 재계산 (다운그레이드 가능)
     public bool RemoveCard(string empId, EmployeeGrade grade, int stage = 0, int count = 1, bool save = true)

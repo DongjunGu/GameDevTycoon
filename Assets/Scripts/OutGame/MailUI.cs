@@ -9,7 +9,7 @@ using UnityEngine.UI;
 // OutGameScene MailPanel — 뒤끝 관리자 우편(PostType.Admin) 목록 조회 + 일괄 수령.
 //
 // [뒤끝 콘솔 설정]
-//  1) CDN 차트 "MailReward" 업로드 (컬럼: mailRewardId, type, amount, description) — MailReward_Chart.csv 참고.
+//  1) CDN 차트 "RewardChart" 업로드 (컬럼: mailRewardId, type, amount, description) — MailReward_Chart.csv 참고.
 //  2) 우편 발송 시 아이템 "이름"에 mailRewardId(예: "gold_5000") 입력. 커스텀 JSON 불필요.
 //     실제 지급 내용은 전부 MailRewardChartLoader.Cache 가 정의한다.
 //     우편 chargeAmount 가 2 이상이면 amount × chargeAmount 로 배수 지급.
@@ -94,7 +94,7 @@ public class MailUI : MonoBehaviour
         }
     }
 
-    // 우편 아이템의 "이름"(mailRewardId) 을 MailReward 차트에서 조회해 실제 보상으로 변환.
+    // 우편 아이템의 "이름"(mailRewardId) 을 RewardChart 차트에서 조회해 실제 보상으로 변환.
     List<Reward> ParseRewards(JsonData post)
     {
         var result = new List<Reward>();

@@ -22,7 +22,7 @@ public class OutGameCurrencyManager : MonoBehaviour
     public int Diamond => _diamond;
     public int GetBook(CEOManager.Part part) => _books[(int)part];
 
-    // 상점 스페셜 뽑기 천장 카운트 (최고 등급 미당첨 연속 횟수). ShopPanelUI 가 갱신, 다음 SaveCurrency 때 같이 저장.
+    // 상점 스페셜 뽑기 천장 카운트 (최고 등급 미당첨 연속 횟수). 뒤끝 펑션 gacha 가 서버에서 갱신 → ApplyServerState.
     public int pityEmployeeSpecial;
     public int pityTraitSpecial;
 
@@ -117,6 +117,15 @@ public class OutGameCurrencyManager : MonoBehaviour
     }
 
     public bool CanAffordDiamond(int amount) => _diamond >= amount;
+
+    // 서버(뒤끝 펑션)가 이미 저장한 값을 메모리에만 반영 — 저장하지 않음
+    public void ApplyServerState(int diamond, int pityEmployee, int pityTrait)
+    {
+        _diamond = diamond;
+        pityEmployeeSpecial = pityEmployee;
+        pityTraitSpecial = pityTrait;
+        OnChanged?.Invoke();
+    }
 
     // 책 — CEO 강화 재화, 트랙(기획/개발/아트)별로 따로 보유 (CEOManager.TryUpgrade)
     public void AddBook(CEOManager.Part part, int amount)

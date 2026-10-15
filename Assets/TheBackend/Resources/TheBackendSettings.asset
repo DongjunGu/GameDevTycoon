@@ -14,11 +14,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: TheBackendSettings.dll::TheBackendSettings
   clientAppID: 7fde73e0-1888-11f1-b746-d12312fda90d11058
   signatureKey: 7fde73e1-1888-11f1-b746-d12312fda90d11058
-  functionAuthKey: 
+  functionAuthKey: AQICAHiT9pph8qngOxVNCJXRC0BZjtURNwhhts4F69FL8VO4dgGYCFYmqHEfc+gff9lKL4qjAAAAYzBhBgkqhkiG9w0BBwagVDBSAgEAME0GCSqGSIb3DQEHATAeBglghkgBZQMEAS4wEQQMtuh6B3Wk5y1/fssxAgEQgCA31ieXfx9BEqrawOKLwXTfwHXrijvegmi9xfFtDh5KnQ==
   packageName: com.es.get
   sendLogReport: 1
   timeOutSec: 100
-  Version: 5.18.3
+  Version: 5.18.7
   autoRefreshToken: 1
   retryWhenClientRequestFailError: 1
   retryWhenServerError: 1

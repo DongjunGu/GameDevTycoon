@@ -43,6 +43,7 @@ public class OutGameNavigationController : MonoBehaviour
         ModalGate.I.ClearAll();                     // 인게임 패널이 Unregister 없이 넘어왔을 잔여 등록 정리
 
         WireTabButtons();
+        WireStartButton();
         HideAllTabs();
 
         if (startInMain) GoToMain();
@@ -59,6 +60,20 @@ public class OutGameNavigationController : MonoBehaviour
             if (tab != null && tab.TabButton != null)
                 tab.TabButton.onClick.AddListener(() => SwitchTo(captured));
         }
+    }
+
+    // 09-07 메인패널 개편 때 Inspector OnClick 연결이 유실됨 → 코드로 연결 (씬 OnClick 이 비어 있어도 동작)
+    void WireStartButton()
+    {
+        if (mainPanel == null) return;
+        foreach (var b in mainPanel.GetComponentsInChildren<UnityEngine.UI.Button>(true))
+        {
+            if (b.name != "MainStartBtn") continue;
+            b.onClick.RemoveListener(StartGame);
+            b.onClick.AddListener(StartGame);
+            return;
+        }
+        Debug.LogError("[OutGameNav] mainPanel 아래 MainStartBtn 없음 — 게임시작 버튼 미연결 (이름 변경 확인)");
     }
 
     void HideAllTabs()

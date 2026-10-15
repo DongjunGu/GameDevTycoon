@@ -1,10 +1,13 @@
 ﻿using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using BackEnd;
+using LitJson;
 
 // 상점 패널 — 5 카테고리 (기간한정/뽑기/다이아/골드/패키지). 좌측 카테고리 바, 우측 카테고리별 컨텐츠.
 // 현재는 뽑기 카테고리만 구현 — 직원 일반/스페셜, 특성 일반/스페셜 각각 1회/10회 (다이아).
-// 등급을 가중치로 먼저 뽑고, 같은 등급 안에서는 균등. 스페셜은 천장(직원 10회=에픽, 특성 30회=S), 당첨 시 카운트 초기화.
+// 뽑기는 뒤끝 펑션 "gacha"(BackendFunction/Gacha/Function.cs)가 서버에서 처리 — 등급 확률은 뒤끝 콘솔 확률 테이블,
+// 같은 등급 안에서는 균등, 스페셜 천장(직원 10회=에픽, 특성 30회=S)도 서버. 아래 가격은 표시/사전체크용(서버 상수와 맞출 것).
 public class ShopPanelUI : MonoBehaviour
 {
     public enum Category { LimitedTime = 0, Gacha = 1, Diamond = 2, Gold = 3, Package = 4 }
@@ -46,39 +49,11 @@ public class ShopPanelUI : MonoBehaviour
     public int specialGachaCost   = 250;
     public int specialGacha10Cost = 2500;
 
-    [Header("Employee Gacha Weights — 일반 (합산 후 비례 추첨)")]
-    [Range(0, 100)] public int normalWeightNormal = 70;
-    [Range(0, 100)] public int normalWeightRare   = 30;
-    [Range(0, 100)] public int normalWeightEpic   = 0;
-
-    [Header("Employee Gacha Weights — 스페셜")]
-    [Range(0, 100)] public int specialWeightNormal = 65;
-    [Range(0, 100)] public int specialWeightRare   = 30;
-    [Range(0, 100)] public int specialWeightEpic   = 5;
-
-    [Header("Employee Gacha Pity — 스페셜 (N회째 에픽 확정, 에픽 당첨 시 초기화)")]
-    public int employeeSpecialPity = 10;
-
     [Header("Trait Gacha Cost (다이아)")]
     public int traitNormalCost    = 100;
     public int traitNormal10Cost  = 1000;
     public int traitSpecialCost   = 400;
     public int traitSpecial10Cost = 4000;
-
-    [Header("Trait Gacha Weights — 일반 (S/A/B/C)")]
-    public int traitNormalWeightS = 0;
-    public int traitNormalWeightA = 5;
-    public int traitNormalWeightB = 30;
-    public int traitNormalWeightC = 65;
-
-    [Header("Trait Gacha Weights — 스페셜 (S/A/B/C)")]
-    public int traitSpecialWeightS = 3;
-    public int traitSpecialWeightA = 25;
-    public int traitSpecialWeightB = 45;
-    public int traitSpecialWeightC = 27;
-
-    [Header("Trait Gacha Pity — 스페셜 (N회째 S 확정, S 당첨 시 초기화)")]
-    public int traitSpecialPity = 30;
 
     Category _selected;
 
@@ -87,6 +62,16 @@ public class ShopPanelUI : MonoBehaviour
         WireCategories();
         WireGachaButtons();
         ApplyCategory(defaultCategory);
+        WarmUpGacha();
+    }
+
+    // 펑션 콜드 스타트(첫 호출 ~6초)를 상점 여는 순간 미리 소모 — 결과는 무시
+    static void WarmUpGacha()
+    {
+        if (!Backend.IsLogin) return;
+        var param = new Param();
+        param.Add("kind", "ping");
+        Backend.BFunc.InvokeFunction("gacha", param, _ => { });
     }
 
     void WireCategories()
@@ -151,46 +136,121 @@ public class ShopPanelUI : MonoBehaviour
         }
     }
 
-    // ──────────── 직원 가챠 ────────────
+
+    // ──────────── 가챠 (뒤끝 펑션 "gacha") ────────────
+    // 다이아 차감·추첨(뒤끝 확률)·천장·지급은 전부 서버에서. 클라는 결과로 메모리만 갱신하고 연출.
+    bool _busy;
+
     void OnEmployeeGacha(bool special, int count)
     {
-        var pool = EmployeeManager.Instance?.poolEmployees;
-        if (pool == null || pool.Count == 0)
-        {
-            Debug.LogWarning("[Shop] 직원 pool 비어있음");
-            return;
-        }
-        if (OwnedCardManager.Instance == null) return;
-
         int cost = special
             ? (count > 1 ? specialGacha10Cost : specialGachaCost)
             : (count > 1 ? normalGacha10Cost  : normalGachaCost);
-        var wallet = OutGameCurrencyManager.Instance;
-        if (wallet == null) return;
-        if (!CheckDiamond(wallet, cost)) return;
-
-        string label = special ? "스페셜" : "일반";
-        var draws = new List<(EmployeeData emp, EmployeeGrade grade)>(count);
-        for (int i = 0; i < count; i++)
-        {
-            var emp   = pool[Random.Range(0, pool.Count)];
-            var grade = RollEmployeeGrade(special);
-            if (special)
-            {
-                // 천장: 에픽 없이 (pity-1)회 연속이면 이번 회차는 에픽 확정
-                if (grade != EmployeeGrade.Epic && wallet.pityEmployeeSpecial + 1 >= employeeSpecialPity)
-                    grade = EmployeeGrade.Epic;
-                wallet.pityEmployeeSpecial = grade == EmployeeGrade.Epic ? 0 : wallet.pityEmployeeSpecial + 1;
-            }
-            OwnedCardManager.Instance.AddCard(emp.id, grade, stage: 0, save: i == count - 1);
-            Debug.Log($"[Shop] 직원 가챠({label}) → {emp.employeeName} ({grade})");
-            draws.Add((emp, grade));
-        }
-        wallet.SpendDiamond(cost); // 천장 카운트도 같이 저장
-        Debug.Log($"[Shop] 직원 가챠({label}) x{count} -{cost}D (천장 {wallet.pityEmployeeSpecial}/{employeeSpecialPity})");
-
-        ShowDrawsSequential(draws, 0);
+        RequestGacha("employee", special, count, cost);
     }
+
+    void OnTraitGacha(bool special, int count)
+    {
+        int cost = special
+            ? (count > 1 ? traitSpecial10Cost : traitSpecialCost)
+            : (count > 1 ? traitNormal10Cost  : traitNormalCost);
+        RequestGacha("trait", special, count, cost);
+    }
+
+    void RequestGacha(string kind, bool special, int count, int cost)
+    {
+        if (_busy) return; // 응답 전 연타 차단
+        var wallet = OutGameCurrencyManager.Instance;
+        if (wallet == null || OwnedCardManager.Instance == null || OwnedTraitManager.Instance == null) return;
+        if (!CheckDiamond(wallet, cost)) return; // 표시용 사전 체크 — 실제 검증은 서버
+
+        // 디바운스 대기 중인 특성 저장을 먼저 보내서 서버가 최신 row 를 읽게
+        OwnedTraitManager.Instance.FlushPendingSave();
+
+        _busy = true;
+        float sentAt = Time.realtimeSinceStartup;
+        var param = new Param();
+        param.Add("kind", kind);
+        param.Add("special", special);
+        param.Add("count", count);
+        Backend.BFunc.InvokeFunction("gacha", param, bro =>
+        {
+            _busy = false;
+            if (this == null) return;
+            OnGachaResult(kind, special, count, bro, (Time.realtimeSinceStartup - sentAt) * 1000f);
+        });
+    }
+
+    void OnGachaResult(string kind, bool special, int count, BackendReturnObject bro, float elapsedMs)
+    {
+        string label = special ? "스페셜" : "일반";
+        JsonData res = ParseFunctionResult(bro);
+        Debug.Log($"[Shop] gacha 응답 {elapsedMs:0}ms / 서버구간 {(res != null && res.ContainsKey("ms") ? res["ms"].ToString() : "-")}");
+        if (res == null || !res.ContainsKey("ok") || res["ok"].ToString().ToLower() != "true")
+        {
+            string err = res != null && res.ContainsKey("error") ? res["error"].ToString() : bro.ToString();
+            // ponytail: 아웃게임 알림 UI 없음. 실패 팝업 생기면 교체.
+            Debug.LogError($"[Shop] {kind} 가챠({label}) x{count} 실패: {err}");
+            return;
+        }
+
+        OutGameCurrencyManager.Instance.ApplyServerState(
+            ToInt(res["diamond"]), ToInt(res["pityEmployeeSpecial"]), ToInt(res["pityTraitSpecial"]));
+
+        var draws = res["draws"];
+        if (kind == "employee")
+        {
+            var pool = EmployeeManager.Instance?.poolEmployees;
+            var gained = new List<(string, EmployeeGrade)>();
+            var shown  = new List<(EmployeeData emp, EmployeeGrade grade)>();
+            for (int i = 0; i < draws.Count; i++)
+            {
+                string id = draws[i]["id"].ToString();
+                var grade = (EmployeeGrade)ToInt(draws[i]["grade"]);
+                gained.Add((id, grade));
+                var emp = pool?.Find(e => e.id == id);
+                if (emp != null) shown.Add((emp, grade));
+                Debug.Log($"[Shop] 직원 가챠({label}) → {emp?.employeeName ?? id} ({grade})");
+            }
+            OwnedCardManager.Instance.ApplyServerCards(res["cardsJson"].ToString(), gained);
+            ShowDrawsSequential(shown, 0);
+        }
+        else
+        {
+            var cache = TraitChartLoader.Cache;
+            var shown = new List<TraitChartRow>();
+            for (int i = 0; i < draws.Count; i++)
+            {
+                string id = draws[i]["id"].ToString();
+                TraitChartRow row = null;
+                if (cache != null && cache.TryGetValue(id, out row)) shown.Add(row);
+                Debug.Log($"[Shop] 특성 가챠({label}) → {row?.name ?? id}");
+            }
+            OwnedTraitManager.Instance.ApplyServerOwned(res["ownedJson"].ToString());
+            ShowTraitsSequential(shown, 0);
+        }
+        Debug.Log($"[Shop] {kind} 가챠({label}) x{count} 완료 / 잔액 {OutGameCurrencyManager.Instance.Diamond}D");
+    }
+
+    // 펑션 반환값: StringToStream 으로 보낸 JSON 문자열이 {"result":"..."} 로 감싸져 올 수 있음 → 풀어서 반환
+    static JsonData ParseFunctionResult(BackendReturnObject bro)
+    {
+        if (bro == null || !bro.IsSuccess()) return null;
+        try
+        {
+            JsonData rv = bro.GetReturnValuetoJSON();
+            if (rv != null && rv.IsObject && rv.ContainsKey("result") && rv["result"].IsString)
+                return JsonMapper.ToObject(rv["result"].ToString());
+            return rv;
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogError($"[Shop] 가챠 응답 파싱 실패: {e.Message} / {bro}");
+            return null;
+        }
+    }
+
+    static int ToInt(JsonData v) => int.TryParse(v?.ToString(), out var n) ? n : 0;
 
     bool CheckDiamond(OutGameCurrencyManager wallet, int cost)
     {
@@ -213,87 +273,5 @@ public class ShopPanelUI : MonoBehaviour
         if (resultPanel == null || index >= draws.Count) return;
         resultPanel.onClosed = () => ShowTraitsSequential(draws, index + 1);
         resultPanel.ShowTrait(draws[index]);
-    }
-
-    EmployeeGrade RollEmployeeGrade(bool special)
-    {
-        int wn = special ? specialWeightNormal : normalWeightNormal;
-        int wr = special ? specialWeightRare   : normalWeightRare;
-        int we = special ? specialWeightEpic   : normalWeightEpic;
-        int total = Mathf.Max(1, wn + wr + we);
-        int r = Random.Range(0, total);
-        if (r < wn) return EmployeeGrade.Normal;
-        if (r < wn + wr) return EmployeeGrade.Rare;
-        return EmployeeGrade.Epic;
-    }
-
-    // ──────────── 특성 가챠 ────────────
-    void OnTraitGacha(bool special, int count)
-    {
-        if (OwnedTraitManager.Instance == null) return;
-        var cache = TraitChartLoader.Cache;
-        if (cache == null || cache.Count == 0)
-        {
-            Debug.LogWarning("[Shop] 특성 차트 비어있음");
-            return;
-        }
-        var wallet = OutGameCurrencyManager.Instance;
-        if (wallet == null) return;
-
-        int cost = special
-            ? (count > 1 ? traitSpecial10Cost : traitSpecialCost)
-            : (count > 1 ? traitNormal10Cost  : traitNormalCost);
-        if (!CheckDiamond(wallet, cost)) return;
-
-        // 등급별 버킷 (TraitGrade C=0 ~ S=3)
-        var byGrade = new List<TraitChartRow>[4];
-        for (int g = 0; g < 4; g++) byGrade[g] = new List<TraitChartRow>();
-        foreach (var row in cache.Values) byGrade[(int)row.grade].Add(row);
-
-        int[] w = special
-            ? new[] { traitSpecialWeightC, traitSpecialWeightB, traitSpecialWeightA, traitSpecialWeightS }
-            : new[] { traitNormalWeightC,  traitNormalWeightB,  traitNormalWeightA,  traitNormalWeightS };
-        // 차트에 없는 등급은 가중치 0 — 빈 버킷 당첨 방지
-        for (int g = 0; g < 4; g++) if (byGrade[g].Count == 0) w[g] = 0;
-
-        int sIdx = (int)TraitGrade.S;
-        string label = special ? "스페셜" : "일반";
-        var draws = new List<TraitChartRow>(count);
-        for (int i = 0; i < count; i++)
-        {
-            int grade = RollIndex(w);
-            if (special)
-            {
-                // 천장: S 없이 (pity-1)회 연속이면 이번 회차는 S 확정
-                if (grade != sIdx && byGrade[sIdx].Count > 0 && wallet.pityTraitSpecial + 1 >= traitSpecialPity)
-                    grade = sIdx;
-                wallet.pityTraitSpecial = grade == sIdx ? 0 : wallet.pityTraitSpecial + 1;
-            }
-            var bucket = byGrade[grade];
-            if (bucket.Count == 0) continue; // 가중치 전부 0인 차트 — 방어
-            var pick = bucket[Random.Range(0, bucket.Count)];
-            OwnedTraitManager.Instance.AddTrait(pick.traitId);
-            Debug.Log($"[Shop] 특성 가챠({label}) → {pick.name} ({pick.grade})");
-            draws.Add(pick);
-        }
-        wallet.SpendDiamond(cost); // 천장 카운트도 같이 저장
-        Debug.Log($"[Shop] 특성 가챠({label}) x{count} -{cost}D (천장 {wallet.pityTraitSpecial}/{traitSpecialPity})");
-
-        ShowTraitsSequential(draws, 0);
-    }
-
-    // 가중치 비례 추첨 → 인덱스
-    static int RollIndex(int[] weights)
-    {
-        int total = 0;
-        foreach (var x in weights) total += Mathf.Max(0, x);
-        if (total <= 0) return 0;
-        int r = Random.Range(0, total);
-        for (int i = 0; i < weights.Length; i++)
-        {
-            r -= Mathf.Max(0, weights[i]);
-            if (r < 0) return i;
-        }
-        return weights.Length - 1;
     }
 }

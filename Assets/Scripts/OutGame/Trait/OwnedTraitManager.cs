@@ -255,6 +255,14 @@ public class OwnedTraitManager : MonoBehaviour
         OnChanged?.Invoke();
     }
 
+    // 서버(뒤끝 펑션)가 이미 저장한 ownedJson 으로 보유 목록 교체. 장착/해금은 그대로, 저장하지 않음
+    public void ApplyServerOwned(string ownedJson)
+    {
+        _owned.Clear();
+        ParseOwned(ownedJson);
+        OnChanged?.Invoke();
+    }
+
     // 조합용 교환 — consumeIds 를 1장씩 차감하고 addId 1장 지급 (같은 id 가 여러 번 있으면 그만큼 차감).
     // 보유 장수가 모자라면 아무것도 바꾸지 않고 false. 0장이 된 특성은 장착 해제.
     // 재료가 사라지는 되돌릴 수 없는 변경이라 디바운스 없이 즉시 저장한다.

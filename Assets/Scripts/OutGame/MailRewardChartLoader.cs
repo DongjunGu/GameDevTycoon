@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using LitJson;
 using UnityEngine;
 
-// 뒤끝 콘솔 CDN 차트 이름: "MailReward"
+// 뒤끝 콘솔 CDN 차트 이름: "RewardChart" (원본 CSV: MailReward_Chart.csv)
 // 컬럼: mailRewardId, type, amount, description
 //   - mailRewardId : 뒤끝 우편(관리자 우편) 아이템의 "아이템 이름"에 넣는 값 = 이 차트의 키
 //   - type         : "gold" / "diamond" (아웃게임 재화)
@@ -24,7 +24,7 @@ public class MailRewardChartRow
 
 public static class MailRewardChartLoader
 {
-    private const string CHART_NAME = "MailReward";
+    private const string CHART_NAME = "RewardChart";
     private static Dictionary<string, MailRewardChartRow> _cache;
     public static Dictionary<string, MailRewardChartRow> Cache => _cache ?? GetFallback();
 
