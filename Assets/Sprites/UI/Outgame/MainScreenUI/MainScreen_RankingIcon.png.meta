@@ -142,10 +142,10 @@ TextureImporter:
       name: MainScreen_RankingIcon_0
       rect:
         serializedVersion: 2
-        x: 11
-        y: 11
-        width: 101
-        height: 91
+        x: 0
+        y: 0
+        width: 87
+        height: 87
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}

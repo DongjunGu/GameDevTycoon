@@ -142,10 +142,10 @@ TextureImporter:
       name: MainScreen_EmployeeIcon_0
       rect:
         serializedVersion: 2
-        x: 8
-        y: 7
-        width: 101
-        height: 96
+        x: 0
+        y: 0
+        width: 57
+        height: 87
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}

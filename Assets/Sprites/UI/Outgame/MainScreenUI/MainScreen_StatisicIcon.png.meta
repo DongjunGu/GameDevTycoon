@@ -142,10 +142,10 @@ TextureImporter:
       name: MainScreen_StatisicIcon_0
       rect:
         serializedVersion: 2
-        x: 14
-        y: 13
-        width: 115
-        height: 109
+        x: 0
+        y: 0
+        width: 81
+        height: 87
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
