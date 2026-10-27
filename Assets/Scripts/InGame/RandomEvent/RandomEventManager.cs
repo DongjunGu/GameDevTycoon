@@ -120,12 +120,14 @@ public class RandomEventManager : MonoBehaviour
     public bool            debugMode      = false;
     public RandomEventType debugEventType = RandomEventType.NetworkIssue;
 
-    // ── 카테고리 발동 확률 ────────────────────────────────────
-    [Header("카테고리 발동 확률")]
-    [Range(0f, 1f)] public float category1Chance = 0.5f;  //  1~24%
-    [Range(0f, 1f)] public float category2Chance = 0.7f;  // 26~50%
-    [Range(0f, 1f)] public float category3Chance = 0.7f;  // 51~74%
-    [Range(0f, 1f)] public float category4Chance = 0.5f;  // 76~99%
+    // ── 카테고리 발동 확률 / 한도 (이벤트 밸런싱 가이드 §1-1) ──
+    // 사무실 단계 1 = 초반 / 2 = 중반 / 3·4 = 후반. 값은 카테고리 1~4 (진행도 구간) 순.
+    static float[] CategoryChances => EventBalance.ByStage(
+        new[] { 0.5f, 0.7f, 0.7f, 0.5f },
+        new[] { 0.5f, 0.5f, 0.5f, 0.5f },
+        new[] { 0.7f, 0.5f, 0.5f, 0.7f },
+        new[] { 0.7f, 0.5f, 0.5f, 0.7f });
+    static int MaxEventsPerProject => EventBalance.ByStage(2, 3, 4, 4);
 
     // 카테고리별 진행도 범위 (0~1)
     private static readonly (float min, float max)[] CategoryRanges =
@@ -159,6 +161,23 @@ public class RandomEventManager : MonoBehaviour
     public int    InvestmentReward      { get; set; } = 0;
     public bool   PendingInvestmentUI   { get; set; } = false;
     public float  PendingHackyCodePenalty    { get; set; } = 0f;
+
+    // ㉒ 직감적 돌진 / ㉓ 안전제일 — 다음 N번의 팀장 점수 4회차 조준을 강/약 하나로 고정 (LeaderScoreAimButtons)
+    // 남은 횟수는 다음 프로젝트로 이월. GameTime 행에 저장(forcedLeaderAim / forcedLeaderAimLeft) — 재접속해도 유지
+    public LeaderScoreAim ForcedLeaderAim     { get; private set; }
+    public int            ForcedLeaderAimLeft { get; private set; }
+    public void ForceLeaderAim(LeaderScoreAim aim, int count)
+    {
+        ForcedLeaderAim = aim; ForcedLeaderAimLeft = count;
+        GameTimeManager.Instance?.SaveGameTime();
+    }
+    public void LoadForcedLeaderAim(int aim, int left) { ForcedLeaderAim = (LeaderScoreAim)aim; ForcedLeaderAimLeft = left; }
+    public void ConsumeForcedLeaderAim()
+    {
+        if (ForcedLeaderAimLeft <= 0) return;
+        ForcedLeaderAimLeft--;
+        GameTimeManager.Instance?.SaveGameTime();
+    }
     public string PendingHackyCodePortraitId { get; set; } = "";
     public int    PendingHackyCodeWeeksLeft  { get; set; } = 0;
 
@@ -201,6 +220,7 @@ public class RandomEventManager : MonoBehaviour
         HiringPenalty        = 0;
         HiringPenaltyEndYear = -1;
         YoutuberSalesBonus   = 1.0f;
+        ForcedLeaderAimLeft  = 0;
         InvestmentAccepted   = false;
         InvestmentStat       = "";
         InvestmentStatName   = "";
@@ -304,7 +324,9 @@ public class RandomEventManager : MonoBehaviour
                 RandomEventUI.Instance.Show(
                     "야매 코드 문제 발생",
                     portraitId,
-                    $"임시 처리 해둔 코드가 문제가 생겼습니다!\n개발 점수 -{Mathf.RoundToInt(penalty)}",
+                    "임시 처리 해두기로 한 코드에 문제가 생겼습니다!",
+                    $"{{개발점수}} 점수 -{Mathf.RoundToInt(penalty)}",
+                    null,
                     onConfirm: null,
                     titleType: 0
                 );
@@ -468,14 +490,15 @@ public class RandomEventManager : MonoBehaviour
             return;
         }
 
-        float[] chances = { category1Chance, category2Chance, category3Chance, category4Chance };
+        float[] chances = CategoryChances;
+        int maxEvents   = MaxEventsPerProject;
 
         // 이미 다른 카테고리에서 뽑힌 이벤트 타입 추적
         var usedTypes = new HashSet<RandomEventType>();
 
         for (int cat = 1; cat <= 4; cat++)
         {
-            if (_scheduledEvents.Count >= 2) break;
+            if (_scheduledEvents.Count >= maxEvents) break;
             if (UnityEngine.Random.value > chances[cat - 1]) continue;
 
             // 두 풀을 합쳐 카테고리 범위와 중복 여부 확인
@@ -1022,28 +1045,34 @@ public class RandomEventManager : MonoBehaviour
         InvestmentAccepted = false;
         InvestmentProgressUI.Instance?.Hide();
 
-        int reward  = InvestmentReward;
-        int penalty = UnityEngine.Mathf.RoundToInt(reward * 1.5f);
-
+        // 투자금(+R × 5%)은 수락 즉시 지급됨 — 달성 시 추가 보상 없음, 미달 시 후속 이벤트로 위약금 −R × 10%
         if (value >= InvestmentThreshold)
         {
-            MoneyManager.Instance.AddGold(reward);
-            AlertUI.Instance.ShowRandomEventResult(
-                $"투자 이벤트 성공!\n리워드 {reward:N0} G를 얻었습니다",
-                () => onComplete?.Invoke());
+            // 임시 문구 — 엑셀에 달성 이벤트가 없어 안내만 (돈은 수락 때 이미 지급)
+            RandomEventUI.Instance.Show(
+                "약속한 퀄리티 달성 성공",
+                "portrait_secretary",
+                "투자자들이 결과물에 크게 만족했습니다! 다음에도 함께하고 싶다고 하네요",
+                onConfirm: () => onComplete?.Invoke(),
+                titleType: 1);
+            return;
         }
-        else
-        {
-            int goldAfter = MoneyManager.Instance.Gold - penalty;
-            MoneyManager.Instance.ForceSpendGold(penalty);
-            AlertUI.Instance.ShowRandomEventResult(
-                $"투자 이벤트 실패\n위약금 {penalty:N0} G를 잃었습니다",
-                () =>
-                {
-                    if (goldAfter < 0) GameTimeManager.Instance?.TriggerBankruptcy();
-                    else onComplete?.Invoke();
-                });
-        }
+
+        int penalty   = InvestmentReward * 2;
+        int goldAfter = MoneyManager.Instance.Gold - penalty;
+        MoneyManager.Instance.ForceSpendGold(penalty);
+        RandomEventUI.Instance.Show(
+            "약속한 퀄리티 달성 실패",
+            "portrait_secretary",
+            "투자자들이 불만을 표출하면서 돈을 회수하였습니다",
+            $"{{돈}} -{penalty:N0}G 감소",
+            null,
+            onConfirm: () =>
+            {
+                if (goldAfter < 0) GameTimeManager.Instance?.TriggerBankruptcy();
+                else onComplete?.Invoke();
+            },
+            titleType: 0);
     }
 
     // ── 조건 이벤트 ───────────────────────────────────────────

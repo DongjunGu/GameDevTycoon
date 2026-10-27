@@ -144,7 +144,7 @@ public class LeaderScoreAimButtons : MonoBehaviour
         if (btn != null)
             _riseSeq.InsertCallback(delay + riseDuration + riseSettleDuration, () =>
             {
-                if (!suppressAutoUnlock) btn.interactable = true;
+                if (!suppressAutoUnlock && AimAllowed(btn)) btn.interactable = true;
             });
     }
 
@@ -184,8 +184,18 @@ public class LeaderScoreAimButtons : MonoBehaviour
         _riseSeq?.Kill();
     }
 
+    // ㉒/㉓ 이벤트로 조준이 강/약 하나로 고정된 동안엔 그 버튼만 누를 수 있다
+    bool AimAllowed(Button btn)
+    {
+        var m = RandomEventManager.Instance;
+        if (m == null || m.ForcedLeaderAimLeft <= 0) return true;
+        return btn == (m.ForcedLeaderAim == LeaderScoreAim.High ? highButton
+                     : m.ForcedLeaderAim == LeaderScoreAim.Low ? lowButton : midButton);
+    }
+
     void Select(LeaderScoreAim aim)
     {
+        RandomEventManager.Instance?.ConsumeForcedLeaderAim();
         Debug.Log($"[LeaderScoreAimButtons] Select({aim}) 호출됨 — DevelopmentManager.Instance={(DevelopmentManager.Instance != null)}");
         HideButtons();
         DevelopmentManager.Instance.SelectRound4Aim(aim);

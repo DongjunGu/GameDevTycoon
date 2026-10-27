@@ -87,6 +87,7 @@ public class BackendManager : MonoBehaviour
     void LoadAllAndEnterGame()
     {
         ErrorReporter.ReadyToSend = true; // 로그인 완료 시점부터 에러 자동 전송 시작
+        ShopPanelUI.WarmUpGacha(); // 가챠 펑션 콜드 스타트를 로딩 화면 동안 소모
 
         Step("차트 로드");
         // 차트 데이터는 동기 로드 — 로그인 직후 한 번만 실행, 이후 캐시 반환

@@ -36,6 +36,7 @@ public class StageManager : MonoBehaviour
         currentStage = 1;
     }
 
+    // 사무실 단계 단일 소스 (1~4) — 이벤트 수치·상인 아이템·채용 상한·다이얼로그 배경 등 전부 이 값을 본다.
     // [테스트] currentStage에 setter가 없어 외부(TestMenuButtons 등)에서 강제로 올릴 때 사용.
-    public void SetStage(int stage) => currentStage = Mathf.Max(1, stage);
+    public void SetStage(int stage) => currentStage = Mathf.Clamp(stage, 1, 4);
 }

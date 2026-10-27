@@ -89,7 +89,7 @@ public static class RandomEvents_Dev
                     var emp = EmployeeManager.Instance.GetEmployee(avoidEvt.targetEmployeeId);
                     if (emp == null) return;
                     int before = emp.satisfaction;
-                    emp.ChangeSatisfaction(-10);
+                    emp.ChangeSatisfaction(-25); // 가이드 §5-4 — 1인 만족도 −25 (1블록)
                     InfoFeedUI.Instance?.ShowSatisfaction(emp, emp.satisfaction - before);
                 }
             };
@@ -114,7 +114,7 @@ public static class RandomEvents_Dev
                     var employees = EmployeeManager.Instance.ownedEmployees;
                     if (employees.Count == 0) { coldEvt.cancelled = true; return; }
                     coldEmp   = employees[UnityEngine.Random.Range(0, employees.Count)];
-                    coldWeeks = UnityEngine.Random.Range(4, 9);
+                    coldWeeks = EventBalance.PersonalWeeks(); // 개인 디버프 −1블록 (−20%, 기간 L)
                     coldEvt.portraitId    = coldEmp.portraitId;
                     coldEvt.targetEmployeeId = coldEmp.id;
                     if (!string.IsNullOrEmpty(coldEvt.systemMessage))
@@ -157,7 +157,7 @@ public static class RandomEvents_Dev
                     var emp = EmployeeManager.Instance.GetEmployee(badReviewEvt.targetEmployeeId);
                     if (emp == null) return;
                     int before = emp.satisfaction;
-                    emp.ChangeSatisfaction(-10);
+                    emp.ChangeSatisfaction(-25); // 가이드 §5-4 — 1인 만족도 −25 (1블록)
                     InfoFeedUI.Instance?.ShowSatisfaction(emp, emp.satisfaction - before);
                 }
             };
@@ -233,7 +233,7 @@ public static class RandomEvents_Dev
                     var employees = EmployeeManager.Instance.ownedEmployees;
                     if (employees.Count == 0) { drillEvt.cancelled = true; return; }
                     drillEmp   = employees[UnityEngine.Random.Range(0, employees.Count)];
-                    drillWeeks = UnityEngine.Random.Range(4, 9);
+                    drillWeeks = EventBalance.PersonalWeeks(); // 개인 디버프 −1블록 (−20%, 기간 L)
                     drillEvt.portraitId       = drillEmp.portraitId;
                     drillEvt.targetEmployeeId = drillEmp.id;
                     if (!string.IsNullOrEmpty(drillEvt.systemMessage))
@@ -266,30 +266,29 @@ public static class RandomEvents_Dev
                 type = RandomEventType.ThiefEvent,
                 onSetup = () =>
                 {
-                    // 50:50 — 아이템이 없으면 돈 도난으로 fallback
-                    if (UnityEngine.Random.value < 0.5f && ItemManager.Instance != null)
-                        preselectedItemId = ItemManager.Instance.PickRandomItemId();
-
+                    // 가이드 §5-4 — 아이템 1개 + 돈 −R × 3% (아이템 없으면 돈 −R × 5%), 돈은 보유금 10% 상한
+                    preselectedItemId = ItemManager.Instance?.PickRandomItemId();
                     stealItemMode = !string.IsNullOrEmpty(preselectedItemId);
+                    stolenGold = Mathf.Min(EventBalance.Money(stealItemMode ? 3f : 5f),
+                                           Mathf.Max(0, MoneyManager.Instance.Gold / 10));
 
                     if (stealItemMode)
                     {
                         var itemChart = ItemChartLoader.Cache;
                         string itemName = itemChart.TryGetValue(preselectedItemId, out var row)
                             ? row.name : preselectedItemId;
-                        thiefEvt.systemMessage = $"'{itemName}'을(를) 도난당했습니다!";
+                        thiefEvt.systemMessage = $"'{itemName}'을(를) 잃어버렸습니다\n{{돈}} -{stolenGold:N0}G 감소";
                     }
                     else
                     {
-                        stolenGold = Mathf.Max(1, (int)(MoneyManager.Instance.Gold * 0.05f));
-                        thiefEvt.systemMessage = $"{stolenGold}G가 감소하였습니다";
+                        thiefEvt.systemMessage = $"{{돈}} -{stolenGold:N0}G 감소";
                     }
                 },
                 onApply = () =>
                 {
                     if (stealItemMode)
                         ItemManager.Instance?.StealSpecificItem(preselectedItemId);
-                    else
+                    if (stolenGold > 0)
                         MoneyManager.Instance.ForceSpendGold(stolenGold);
                 }
             };
@@ -299,6 +298,9 @@ public static class RandomEvents_Dev
         // ── 26~99% ──────────────────────────────────────────────
 
         // ── 51~99% ──────────────────────────────────────────────
+
+        // 이벤트 밸런싱 가이드 신규 선택지 없는 이벤트 (차트 행이 있는 것만 등록)
+        RandomEvents_New.RegisterDev(pool, mgr, chart);
     }
 
     static void Add(List<RandomEventData> pool,

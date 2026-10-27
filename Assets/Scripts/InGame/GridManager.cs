@@ -6,10 +6,6 @@ public class GridManager : MonoBehaviour
 {
     public static GridManager Instance { get; private set; }
 
-    // 사무실 확장 단계(1/4 — Level1/Level4 테스트 시스템과 동일 기준). 다이얼로그 배경(Resources/Dialog/BG_Office_Lv{N})
-    // 등 "지금 사무실이 몇 레벨인지"가 필요한 곳에서 이 값을 단일 소스로 참조한다.
-    public int CurrentOfficeLevel { get; private set; } = 1;
-
     [Header("Tilemaps")]
     public Tilemap groundTilemap;    // 바닥 타일맵
     public Tilemap obstacleTilemap;  // 장애물 타일맵
@@ -58,15 +54,9 @@ public class GridManager : MonoBehaviour
         elevatorTilemap = elevator;
     }
 
-    // 사무실 레벨 전환 시(현재는 TestMenuButtons.OnClickNextLevel 뿐) 호출 — CurrentOfficeLevel 갱신.
-    public void SetOfficeLevel(int level)
-    {
-        CurrentOfficeLevel = level;
-    }
-
-    // 사무실 레벨별 다이얼로그 배경 — 원래 계획은 Resources/Dialog/BG_Office_Lv{CurrentOfficeLevel}이지만
+    // 사무실 레벨별 다이얼로그 배경 — 원래 계획은 Resources/Dialog/BG_Office_Lv{StageManager.CurrentStage}이지만
     // 아직 Lv1/Lv4용 이미지 2장만 있고 레벨별 확장이 미확정이라(레벨2/3 리소스 없음), 임시로 이 2장을
-    // 호출될 때마다 번갈아 보여준다. Lv2/Lv3 이미지가 준비되면 CurrentOfficeLevel 기반으로 되돌릴 것.
+    // 호출될 때마다 번갈아 보여준다. Lv2/Lv3 이미지가 준비되면 StageManager.CurrentStage 기반으로 되돌릴 것.
     static bool _altBgToggle;
     static readonly string[] _tempBgNames = { "BG_Office_Lv1", "BG_Office_Lv4" };
     public static Sprite LoadDialogBackgroundSprite()

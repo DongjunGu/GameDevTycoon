@@ -2016,7 +2016,8 @@ public class DevelopmentManager : MonoBehaviour
 
         void AfterBurnout()
         {
-            if (jealousyTarget != null && UnityEngine.Random.value < 0.7f)
+            // 가이드 §5-5 — 나도 팀장… : 4연속 미선정 시 70%, 사무실 2단계 이상
+            if (jealousyTarget != null && EventBalance.Stage >= 2 && UnityEngine.Random.value < 0.7f)
                 RandomEvents_Condition.TriggerLeaderJealousyEvent(jealousyTarget, StartDeveloping);
             else
                 StartDeveloping();
@@ -2025,7 +2026,8 @@ public class DevelopmentManager : MonoBehaviour
         void ProceedAfterHunsu()
         {
             // CEO 는 랜덤이벤트 자체 제외 — burnout 트리거 명시적 가드
-            if (!employee.isCEO && leaderCount >= 3 && UnityEngine.Random.value < 0.5f)
+            // 가이드 §5-5 — 팀장 멈춰! : 3연속 선정 시 50%, 사무실 3단계 이상
+            if (!employee.isCEO && leaderCount >= 3 && EventBalance.Stage >= 3 && UnityEngine.Random.value < 0.5f)
                 RandomEvents_Condition.TriggerLeaderBurnoutEvent(employee, leaderCount, AfterBurnout);
             else
                 AfterBurnout();

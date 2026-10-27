@@ -33,8 +33,6 @@ public class PiecePanelUI : MonoBehaviour
     public Color[] trackColors = { Color.white, Color.white, Color.white };
 
     [Header("Currency")]
-    [Tooltip("트랙별 보유 책 수량 (0 기획 / 1 개발 / 2 아트)")]
-    public TMP_Text[] ownedBookTexts = new TMP_Text[3];
     [Tooltip("테스트용 — 누르면 트랙별 책 +20씩 (뒤끝 저장). 상점 추가되면 제거")]
     public Button addBookButton;
     [Tooltip("테스트용 — 누르면 골드 +50,000 (뒤끝 저장)")]
@@ -56,6 +54,8 @@ public class PiecePanelUI : MonoBehaviour
     public float lockedAlpha = 0.4f;
     public Button closeButton;
     public Button levelUpButton;
+    [Tooltip("강화 조건 미충족 시 레벨업 버튼 이미지 (Book_Detail_Frame_BackBtn)")]
+    public Sprite levelUpLockedSprite;
     [Tooltip("레벨업 버튼 안 — 책 소모량")]
     public TMP_Text costBookText;
     [Tooltip("레벨업 버튼 안 — 골드 소모량")]
@@ -69,6 +69,7 @@ public class PiecePanelUI : MonoBehaviour
 
     private CEOManager.Part _selected;
     private GameObject _dim;
+    private Sprite _levelUpSprite; // 레벨업 버튼 원래 이미지
     private bool _subscribed;
 
     void OnEnable()
@@ -147,7 +148,6 @@ public class PiecePanelUI : MonoBehaviour
             if (view == null) continue;
             var part = (CEOManager.Part)i;
             int owned = OwnedBook(part);
-            if (i < ownedBookTexts.Length && ownedBookTexts[i] != null) ownedBookTexts[i].text = owned.ToString("N0");
 
             if (view.levelText != null) view.levelText.text = $"Lv {mgr.GetLevel(part)}";
             if (view.statText != null)  view.statText.text  = mgr.GetStat(part).ToString();
@@ -189,7 +189,12 @@ public class PiecePanelUI : MonoBehaviour
         bool hasNext = BookChartLoader.TryGetCost(level, out int book, out int gold);
         if (costBookText != null) costBookText.text = hasNext ? $"책 {book:N0}" : "MAX";
         if (costGoldText != null) costGoldText.text = hasNext ? $"골드 {gold:N0}" : "";
-        if (levelUpButton != null) levelUpButton.interactable = mgr.CanUpgrade(_selected);
+        if (levelUpButton != null && levelUpButton.image != null)
+        {
+            // interactable 은 건드리지 않음 — ColorTint disabled 가 교체 이미지까지 어둡게 덮음. 클릭 시 TryUpgrade 가 CanUpgrade 로 막음
+            if (_levelUpSprite == null) _levelUpSprite = levelUpButton.image.sprite;
+            levelUpButton.image.sprite = mgr.CanUpgrade(_selected) || levelUpLockedSprite == null ? _levelUpSprite : levelUpLockedSprite;
+        }
     }
 
     // 책 바: 보유 책 / 다음 레벨 필요 책. MAX 레벨이면 가득 채우고 "MAX".

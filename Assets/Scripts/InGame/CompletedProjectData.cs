@@ -20,6 +20,7 @@ public class CompletedProjectData
     public int    criticTotalScore;
     public int    bestRank;          // Sales 중 도달한 가장 높은(작은 숫자) 순위. 0 = 순위권 밖
     public bool   isSequel;          // CompletedProjectsUI.NextProjectButton(차기작)으로 시작된 프로젝트인지 — 리스트에 [차기작] 표시용
+    public int    officeStage;       // 출시 당시 사무실 단계(StageManager.CurrentStage). 0 = 저장 전 구버전 행 — 이벤트 R_ref 규모배율 비교용
 
     public BackEnd.Param ToParam()
     {
@@ -41,6 +42,7 @@ public class CompletedProjectData
         param.Add("criticTotalScore", criticTotalScore);
         param.Add("bestRank",         bestRank);
         param.Add("isSequel",         isSequel ? 1 : 0);
+        param.Add("officeStage",      officeStage);
         return param;
     }
 
@@ -65,6 +67,7 @@ public class CompletedProjectData
         data.criticTotalScore = SafeInt(row,   "criticTotalScore", 0);
         data.bestRank         = SafeInt(row,   "bestRank",         0);
         data.isSequel         = SafeInt(row,   "isSequel",         0) == 1;
+        data.officeStage      = SafeInt(row,   "officeStage",      0);
         return data;
     }
 

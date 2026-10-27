@@ -65,7 +65,6 @@ public class TestMenuButtons : MonoBehaviour
         if (GridManager.Instance != null && newGroundTilemap != null)
         {
             GridManager.Instance.SetTilemaps(newGroundTilemap, newObstacleTilemap, newStairTilemap, newElevatorTilemap);
-            GridManager.Instance.SetOfficeLevel(4); // 이 테스트 버튼은 Level1 → Level4 전환 전용
         }
 
         // 채용 스폰 위치를 새 사무실 쪽으로 교체 — 안 하면 OfficeManager.OnEmployeeHired가 계속 옛
@@ -73,10 +72,8 @@ public class TestMenuButtons : MonoBehaviour
         if (OfficeManager.Instance != null && newSpawnPoint != null)
             OfficeManager.Instance.spawnPoint = newSpawnPoint;
 
-        // [테스트] StageManager 단계를 올려 직원 채용 상한(MaxEmployeeCount)에 안 막히게 — 현재 씬의
-        // maxEmployeePerStage는 4단계(값 [2,4,6,7])까지만 정의돼있고 그 밖은 999(무제한) 폴백이라, 새로
-        // 생긴 desk_05~11까지 다 채워볼 수 있게 배열 범위 밖인 5로 강제.
-        StageManager.Instance?.SetStage(5);
+        // [테스트] 이 버튼은 Level1 → Level4 전환 전용 — 사무실 단계(StageManager, 단일 소스)도 4로.
+        StageManager.Instance?.SetStage(4);
 
         // [테스트] AnnualFeePanel-feeText 고정 표시 — HUDUI.RefreshYearFee가 실제 연세(Year 파생값)로
         // 다시 덮어쓸 때까지는(고용/해고/급여협상 등 RefreshAll 트리거 전까지) 이 값으로 유지된다.

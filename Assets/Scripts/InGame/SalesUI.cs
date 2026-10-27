@@ -189,6 +189,7 @@ public class SalesUI : MonoBehaviour
                 qualityScore     = qualityScore,
                 criticTotalScore = CriticReviewUI.Instance != null ? CriticReviewUI.Instance.LastCriticTotal : 0,
                 isSequel         = ProjectSetupUI.SequelBaseProject != null,
+                officeStage      = EventBalance.Stage,
             };
             CompletedProjectManager.Instance.SaveCompletedProject(_currentSalesProject);
         }

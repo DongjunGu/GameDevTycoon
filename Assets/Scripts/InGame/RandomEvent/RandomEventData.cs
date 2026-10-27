@@ -57,6 +57,39 @@ public enum RandomEventType
     Tut1Event,               // 주말 출근 — 어떤 선택을 해도 대상 직원 만족도 +25
     Tut2Event,               // 표절 논란 — 어떤 선택을 해도 대상 직원 능력치 4주간 -10%
     Tut3Event,               // 나를 피하는 직원 — AvoidingEmployee와 동일 대사, 대상 직원 만족도 -20(원래 -10)
+
+    // 아래는 항상 끝에 추가 — 인스펙터(debugEventType)가 enum 을 정수로 저장하므로 중간 삽입 금지
+    // ── 이벤트 밸런싱 가이드 신규 — 선택지 (RandomEvents_New) ──
+    UsedChair,              // ⑪ 중고 거래 (의자)
+    StrayCat,               // ⑫ 주인없는 고양이
+    LegendUsb,              // ⑬ 전설의 프로젝트 USB
+    MysteryVisitor,         // ⑭ 의문의 방문객
+    LottoNumber,            // ⑮ 로또 번호
+    Outsourcing,            // ⑰ 외주 신청
+    PressureTalk,           // ⑲ 면담 압박
+    Perfectionist,          // ⑳ 완벽주의자 (야근)
+    ProblemEmployee,        // ㉑ 문제 직원 (빌런) — 사무실 2단계 이상
+    BackToBasics,           // ㉔ 초심 회복 훈련
+
+    // ── 이벤트 밸런싱 가이드 신규 — 선택지 없음 (RandomEvents_New) ──
+    NewYearFortune,         // 신년 운세 (1월만)
+    LuckySpot,              // 명당
+    ChairLoot,              // 의자 득템
+    FavoriteGame,           // 최애 게임
+    PeakCondition,          // 컨디션 최상
+    LandlordTyranny,        // 건물주 횡포
+    PlanningFlaw,           // 기획 결함 (기획 −)
+    KeyboardShotgun,        // 키보드 샷건 (개발 −)
+    TabletBroken,           // 태블릿 고장 (아트 −)
+    IdeaExplosion,          // 아이디어 폭발 (기획 +, 기획 팀장 이후)
+    MiracleTypo,            // 기적의 오타 (개발 +, 개발 팀장 이후)
+    GoldenHand,             // 금손 모드 (아트 +, 아트 팀장 이후)
+
+    // ── 신규 선택지 2차 (RandomEvents_New) — ⑯ 스카우트는 기존 EmployeeScout 재사용 ──
+    MysteryBox,             // ⑩ 의문의 택배상자
+    ContestPrize,           // ⑱ 사내 공모전 상금
+    GutRush,                // ㉒ 직감적 돌진 (0~50%)
+    SafetyFirst,            // ㉓ 안전제일 (0~50%)
 }
 
 [Serializable]

@@ -19,6 +19,7 @@ public static class RandomEvents_Choice
         {
             EmployeeData birthdayEmp = null;
             RandomEventChoiceData birthdayEvt = null;
+            int birthdayCost = 0;
             birthdayEvt = new RandomEventChoiceData
             {
                 type        = RandomEventType.Birthday,
@@ -32,28 +33,18 @@ public static class RandomEvents_Choice
                     {
                         onChoose = () =>
                         {
-                            var emp = EmployeeManager.Instance.GetEmployee(birthdayEvt.targetEmployeeId);
-                            if (emp == null) return;
-                            int before = emp.satisfaction;
-                            emp.ChangeSatisfaction(-5);
-                            InfoFeedUI.Instance?.ShowSatisfaction(emp, emp.satisfaction - before);
+                            EventBalance.ChangeSat(EmployeeManager.Instance.GetEmployee(birthdayEvt.targetEmployeeId), -10);
                         }
                     },
-                    // ── 선택지 2: 강아지 생일 챙기기 ────────────
+                    // ── 선택지 2: 강아지 생일 챙기기 — 만족도 +15, 돈 −R × 4.5/4.5/3.5/4.5% (잔액 부족 시 비활성) ──
                     new RandomEventChoiceOption
                     {
                         onChoose = () =>
                         {
                             var emp = EmployeeManager.Instance.GetEmployee(birthdayEvt.targetEmployeeId);
                             if (emp == null) return;
-
-                            int cost = Mathf.Max(1, (int)(emp.salary * 0.03f));
-                            int goldAfter = MoneyManager.Instance.Gold - cost;
-                            MoneyManager.Instance.ForceSpendGold(cost, saveImmediately: false);
-                            int birthdayBefore = emp.satisfaction;
-                            emp.ChangeSatisfaction(10);
-                            InfoFeedUI.Instance?.ShowSatisfaction(emp, emp.satisfaction - birthdayBefore);
-                            if (goldAfter < 0) GameTimeManager.Instance?.TriggerBankruptcy();
+                            MoneyManager.Instance.ForceSpendGold(birthdayCost, saveImmediately: false);
+                            EventBalance.ChangeSat(emp, 15);
                         }
                     }
                 },
@@ -65,12 +56,12 @@ public static class RandomEvents_Choice
                     birthdayEvt.portraitId      = birthdayEmp.portraitId;
                     birthdayEvt.targetEmployeeId = birthdayEmp.id;
 
-                    int cost = Mathf.Max(1, (int)(EmployeeManager.Instance.GetTotalSalary() * 0.03f));
+                    int cost = birthdayCost = EventBalance.Money(EventBalance.ByStage(4.5f, 4.5f, 3.5f, 4.5f));
                     // 결과 팝업 전용(코인 아이콘 인라인 + 노란색) — 버튼 라벨에는 안 붙임, 대신 ConditionText로.
-                    string costTagResult = $"<sprite=\"CoinSpriteAsset\" name=\"coin\"> <color=#F3C01D>-{cost} G</color>";
+                    string costTagResult = EventBalance.CoinTag(-cost);
                     birthdayEvt.choices[1].buttonLabel =
                         birthdayEvt.choices[1].buttonLabel?.Replace("\n(-{N}G)", "").Replace("(-{N}G)", "");
-                    birthdayEvt.choices[1].conditionText = $"자금 -{cost:N0} G";
+                    EventBalance.SetCostChoice(birthdayEvt.choices[1], cost);
 
                     var c0 = birthdayEvt.choices[0];
                     c0.reply1     = c0.reply1?.Replace("{해당직원이름}", birthdayEmp.employeeName);
@@ -120,16 +111,13 @@ public static class RandomEvents_Choice
                             var emp = EmployeeManager.Instance.GetEmployee(equipEvt.targetEmployeeId);
                             if (emp == null) return;
 
-                            int goldAfter = MoneyManager.Instance.Gold - equipCostSnapshot;
+                            // 개인 버프 +1블록 (+20%, 기간 L), 돈 −R × 4.5% (잔액 부족 시 비활성)
                             MoneyManager.Instance.ForceSpendGold(equipCostSnapshot, saveImmediately: false);
-
-                            int buffWeeks = RandomStatBuffWeeksByStage();
-                            emp.ApplyStatBuff(buffWeeks, 10);
+                            int buffWeeks = EventBalance.Buff(emp);
 
                             string weeks = buffWeeks.ToString();
                             var c0 = equipEvt.choices[0];
                             c0.resultMent2 = c0.resultMent2?.Replace("{주수}", weeks);
-                            if (goldAfter < 0) GameTimeManager.Instance?.TriggerBankruptcy();
                         }
                     },
                     // ── 선택지 2: 거절 ───────────────────────────
@@ -164,9 +152,9 @@ public static class RandomEvents_Choice
 
             equipEvt.onSetup = () =>
             {
+                // 가이드 ⑤ — 아트·개발 직원만
                 var candidates = EmployeeManager.Instance.ownedEmployees
-                    .FindAll(e => e.role == EmployeeRole.Planner ||
-                                  e.role == EmployeeRole.Programmer ||
+                    .FindAll(e => e.role == EmployeeRole.Programmer ||
                                   e.role == EmployeeRole.Artist);
                 if (candidates.Count == 0) { equipEvt.cancelled = true; return; }
 
@@ -180,13 +168,13 @@ public static class RandomEvents_Choice
                     ? equipDescArtistTemplate
                     : equipDescDefaultTemplate;
 
-                equipCostSnapshot = Mathf.Max(1, (int)(EmployeeManager.Instance.GetTotalSalary() * 0.03f));
+                equipCostSnapshot = EventBalance.Money(4.5f);
                 // 결과 팝업 전용(코인 아이콘 인라인 + 노란색) — 버튼 라벨에는 안 붙임, 대신 ConditionText로.
-                string costTagResult = $"<sprite=\"CoinSpriteAsset\" name=\"coin\"> <color=#F3C01D>-{equipCostSnapshot} G</color>";
+                string costTagResult = EventBalance.CoinTag(-equipCostSnapshot);
 
                 equipEvt.choices[0].buttonLabel =
                     equipLabel0Template.Replace("\n(-{N}G)", "").Replace("(-{N}G)", "");
-                equipEvt.choices[0].conditionText = $"자금 -{equipCostSnapshot:N0} G";
+                EventBalance.SetCostChoice(equipEvt.choices[0], equipCostSnapshot);
                 equipEvt.choices[0].reply1 = (isArtist && !string.IsNullOrEmpty(equipReplyArtistTemplate))
                     ? equipReplyArtistTemplate
                     : equipReplyDefaultTemplate;
@@ -243,7 +231,6 @@ public static class RandomEvents_Choice
                     {
                         onChoose = () =>
                         {
-                            int goldAfter = MoneyManager.Instance.Gold - dinnerCost5;
                             MoneyManager.Instance.ForceSpendGold(dinnerCost5, saveImmediately: false);
 
                             bool happy = UnityEngine.Random.value < 0.5f;
@@ -262,7 +249,6 @@ public static class RandomEvents_Choice
                             // choice2_resultTitle 컬럼을 재사용해 저장(dinnerMeh1Template).
                             c1.resultMent1 = (happy ? dinnerHappyMent1Template : dinnerMehMent1Template);
                             c1.resultMent2 = dinnerMent2Template.Replace("-{비용}G", costTag);
-                            if (goldAfter < 0) GameTimeManager.Instance?.TriggerBankruptcy();
                         }
                     },
                     // ── 선택지 3: 소고기 ─────────────────────────
@@ -270,11 +256,9 @@ public static class RandomEvents_Choice
                     {
                         onChoose = () =>
                         {
-                            int goldAfter = MoneyManager.Instance.Gold - dinnerCost10;
                             MoneyManager.Instance.ForceSpendGold(dinnerCost10, saveImmediately: false);
                             EmployeeManager.Instance.ChangeAllSatisfaction(10);
                             InfoFeedUI.Instance?.ShowGlobalSatisfaction(10);
-                            if (goldAfter < 0) GameTimeManager.Instance?.TriggerBankruptcy();
                         }
                     }
                 }
@@ -304,14 +288,14 @@ public static class RandomEvents_Choice
 
             dinnerEvt.onSetup = () =>
             {
-                int total    = EmployeeManager.Instance.GetTotalSalary();
-                dinnerCost5  = Mathf.Max(1, (int)(total * 0.05f));
-                dinnerCost10 = Mathf.Max(1, (int)(total * 0.10f));
+                // 삼겹살 −R × 3/5/6.5/9.5% · 소고기 −R × 5.5/10.5/13.5/19.5% (가이드 ⑥, 잔액 부족 시 비활성)
+                dinnerCost5  = EventBalance.Money(EventBalance.ByStage(3f, 5f, 6.5f, 9.5f));
+                dinnerCost10 = EventBalance.Money(EventBalance.ByStage(5.5f, 10.5f, 13.5f, 19.5f));
 
                 dinnerEvt.choices[1].buttonLabel = dinnerLabel1Template.Replace("\n(-{N}G)", "").Replace("(-{N}G)", "");
                 dinnerEvt.choices[2].buttonLabel = dinnerLabel2Template.Replace("\n(-{N}G)", "").Replace("(-{N}G)", "");
-                dinnerEvt.choices[1].conditionText = $"자금 -{dinnerCost5:N0} G";
-                dinnerEvt.choices[2].conditionText = $"자금 -{dinnerCost10:N0} G";
+                EventBalance.SetCostChoice(dinnerEvt.choices[1], dinnerCost5);
+                EventBalance.SetCostChoice(dinnerEvt.choices[2], dinnerCost10);
                 dinnerEvt.choices[1].resultDescriptions.Clear();
                 if (!string.IsNullOrEmpty(dinnerDesc2Happy)) dinnerEvt.choices[1].resultDescriptions.Add(dinnerDesc2Happy);
                 if (!string.IsNullOrEmpty(dinnerDesc2Meh))   dinnerEvt.choices[1].resultDescriptions.Add(dinnerDesc2Meh);
@@ -361,14 +345,11 @@ public static class RandomEvents_Choice
                     {
                         onChoose = () =>
                         {
+                            // 만족도 −5, 개인 버프 +1블록 (+20%, 기간 L)
                             var emp = EmployeeManager.Instance.GetEmployee(gossiperEmp?.id);
                             if (emp == null) return;
-                            int before = emp.satisfaction;
-                            emp.ChangeSatisfaction(-5);
-                            InfoFeedUI.Instance?.ShowSatisfaction(emp, emp.satisfaction - before);
-
-                            int buffWeeks = RandomStatBuffWeeksByStage();
-                            emp.ApplyStatBuff(buffWeeks, 10);
+                            EventBalance.ChangeSat(emp, -5);
+                            int buffWeeks = EventBalance.Buff(emp);
 
                             var c1 = bossGossipEvt.choices[1];
                             c1.resultMent3 = c1.resultMent3?.Replace("{주수}", buffWeeks.ToString());
@@ -390,6 +371,7 @@ public static class RandomEvents_Choice
                 var employees = EmployeeManager.Instance.ownedEmployees;
                 if (employees.Count == 0) { bossGossipEvt.cancelled = true; return; }
                 gossiperEmp = employees[UnityEngine.Random.Range(0, employees.Count)];
+                bossGossipEvt.infoEmployeeIds = new List<string> { gossiperEmp.id };
 
                 bossGossipEvt.description =
                     gossipDescTemplate.Replace("{직원이름}", gossiperEmp.employeeName);
@@ -512,8 +494,8 @@ public static class RandomEvents_Choice
             var fightEvt = new RandomEventChoiceData
             {
                 type                  = RandomEventType.EmployeeFight,
-                weight                = 4f,
-                categoryMin           = 3,
+                weight                = 3f, // 가이드 §4-4 — 4 → 2~3 (차트 값이 우선)
+                categoryMin           = 4, // 75~100%
                 categoryMax           = 4,
                 requiresPatrol        = true,
                 requiredPatrolPointId = "master_desk",
@@ -537,6 +519,7 @@ public static class RandomEvents_Choice
                 fightEvt.portraitId2      = chosen.portraitId2;
                 fightEvt.choices          = chosen.choices;
                 fightEvt.targetEmployeeId = chosen.targetEmployeeId;
+                fightEvt.infoEmployeeIds  = chosen.infoEmployeeIds;
             };
 
             pool.Add(fightEvt);
@@ -570,40 +553,29 @@ public static class RandomEvents_Choice
                     {
                         onChoose = () =>
                         {
+                            // 만족도 −10, 해당 직원 파트 점수 −μ_part × 1/4.5/7/5.5%
                             var emp = EmployeeManager.Instance.GetEmployee(earlyLeaveEvt.targetEmployeeId);
                             if (emp == null) return;
-                            int before = emp.satisfaction;
-                            emp.ChangeSatisfaction(-5);
-                            InfoFeedUI.Instance?.ShowSatisfaction(emp, emp.satisfaction - before);
+                            EventBalance.ChangeSat(emp, -10);
+                            float d = EventBalance.AddPart(emp.role, -EventBalance.ByStage(1f, 4.5f, 7f, 5.5f));
+
+                            var c0 = earlyLeaveEvt.choices[0];
+                            c0.resultMent3 = c0.resultMent3?
+                                .Replace("{파트}", EventBalance.PartName(emp.role))
+                                .Replace("{점수}", Mathf.RoundToInt(Mathf.Abs(d)).ToString("N0"));
                         }
                     },
-                    // ── 선택지 2: 허락 ──────────────────────────────
+                    // ── 선택지 2: 허락 — 만족도 +15, 개발 기간 +1/2/3주 (규모별) ──
                     new RandomEventChoiceOption
                     {
                         onChoose = () =>
                         {
                             var emp = EmployeeManager.Instance.GetEmployee(earlyLeaveEvt.targetEmployeeId);
                             if (emp == null) return;
-                            int before = emp.satisfaction;
-                            emp.ChangeSatisfaction(5);
-                            InfoFeedUI.Instance?.ShowSatisfaction(emp, emp.satisfaction - before);
+                            EventBalance.ChangeSat(emp, 15);
 
-                            int delayWeeks = ProjectSetupUI.SelectedScale switch
-                            {
-                                ProjectScale.Small  => 1,
-                                ProjectScale.Medium => 2,
-                                ProjectScale.Large  => 3,
-                                _ => 1
-                            };
-                            float secondsPerWeek = ProjectSetupUI.SelectedScale switch
-                            {
-                                ProjectScale.Small  => 80f / 16f, // 5.0초/주
-                                ProjectScale.Medium => 80f / 24f, // 3.33초/주
-                                ProjectScale.Large  => 80f / 32f, // 2.5초/주
-                                _ => 80f / 16f
-                            };
-                            DevelopmentManager.Instance.ExtendDevelopmentDuration(delayWeeks * secondsPerWeek, delayWeeks * 2 * secondsPerWeek); // 연장 N주 / 감속 2N주
-                            InfoFeedUI.Instance?.ShowDevelopmentDelay(emp, delayWeeks);
+                            int delayWeeks = EventBalance.ScaleDelayWeeks;
+                            EventBalance.Delay(emp, delayWeeks);
 
                             string weeks = delayWeeks.ToString();
                             var c1 = earlyLeaveEvt.choices[1];
@@ -660,37 +632,24 @@ public static class RandomEvents_Choice
                     {
                         onChoose = () =>
                         {
-                            if (UnityEngine.Random.value < 1f)
+                            // 2주 뒤 50% 확률로 개발 파트 점수 −μ_part × 20/25/30/30% (선택 시점 μ 로 확정)
+                            if (UnityEngine.Random.value < 0.5f)
                             {
-                                float bonus = DevelopmentManager.Instance.LeaderDevelopBonusTotal;
-                                float penalty = Mathf.Max(1f, bonus * 0.1f);
-                                mgr.PendingHackyCodePenalty    = penalty;
+                                float penalty = EventBalance.PartMu(EmployeeRole.Programmer)
+                                                * EventBalance.ByStage(20f, 25f, 30f, 30f) / 100f;
+                                mgr.PendingHackyCodePenalty    = Mathf.Max(1f, penalty);
                                 mgr.PendingHackyCodePortraitId = hackyEvt.portraitId;
                                 mgr.PendingHackyCodeWeeksLeft  = 2;
                             }
                         }
                     },
-                    // ── 선택지 2: 완벽하게 개발 ─────────────────────
+                    // ── 선택지 2: 완벽하게 개발 — 개발 기간 +1/2/3주 (규모별) ──
                     new RandomEventChoiceOption
                     {
                         onChoose = () =>
                         {
-                            int delayWeeks = ProjectSetupUI.SelectedScale switch
-                            {
-                                ProjectScale.Small  => 1,
-                                ProjectScale.Medium => 2,
-                                ProjectScale.Large  => 3,
-                                _ => 1
-                            };
-                            float secondsPerWeek = ProjectSetupUI.SelectedScale switch
-                            {
-                                ProjectScale.Small  => 80f / 16f, // 5.0초/주
-                                ProjectScale.Medium => 80f / 24f, // 3.33초/주
-                                ProjectScale.Large  => 80f / 32f, // 2.5초/주
-                                _ => 80f / 16f
-                            };
-                            DevelopmentManager.Instance.ExtendDevelopmentDuration(delayWeeks * secondsPerWeek, delayWeeks * 2 * secondsPerWeek); // 연장 N주 / 감속 2N주
-                            InfoFeedUI.Instance?.ShowDevelopmentDelay(hackyEmp, delayWeeks);
+                            int delayWeeks = EventBalance.ScaleDelayWeeks;
+                            EventBalance.Delay(hackyEmp, delayWeeks);
                             string weeks = delayWeeks.ToString();
                             var c1 = hackyEvt.choices[1];
                             c1.reply1     = c1.reply1?.Replace("{주수}", weeks);
@@ -720,6 +679,9 @@ public static class RandomEvents_Choice
             };
             pool.Add(hackyEvt);
         }
+
+        // 이벤트 밸런싱 가이드 신규 선택지 이벤트 (차트 행이 있는 것만 등록)
+        RandomEvents_New.RegisterChoice(pool, mgr, chart);
     }
 
     // ── 헬퍼 ─────────────────────────────────────────────────────
@@ -727,16 +689,6 @@ public static class RandomEvents_Choice
                       Dictionary<string, RandomEventChoiceChartRow> chart)
     {
         RandomEventChoiceChartLoader.Apply(data, data.type.ToString(), chart);
-    }
-
-    // 사무실 단계별 스탯버프 지속주수 랜덤(사용자 명세: "1,2단계 5~15 랜덤 / 3,4단계 10~20 랜덤").
-    // StageManager.CurrentStage(사무실 확장 단계) 기준 — 1~2단계 vs 3단계 이상.
-    // internal — RandomEvents_Condition_Choice(CoffeeRequest/EnergyDrinkRequest)도 동일 공식 재사용.
-    internal static int RandomStatBuffWeeksByStage()
-    {
-        int stage = StageManager.Instance != null ? StageManager.Instance.CurrentStage : 1;
-        bool highTier = stage >= 3;
-        return highTier ? UnityEngine.Random.Range(10, 21) : UnityEngine.Random.Range(5, 16);
     }
 
     // 아이템을 소모하는 선택지의 ConditionText — "커피 보유 (현재 2개)" 형태.
@@ -918,6 +870,9 @@ public static class RandomEvents_Choice
         EmployeeData emp1 = null;
         EmployeeData emp2 = null;
         RandomEventChoiceData evt = null;
+        // 가이드 ④ — Δ = 10% × (μ_A + μ_B) ÷ 2, 승자 +Δ / 패자 −Δ (양쪽 같은 절대값)
+        float FightDelta() => emp1 == null || emp2 == null ? 0f
+            : 0.1f * (EventBalance.PartMu(emp1.role) + EventBalance.PartMu(emp2.role)) / 2f;
         evt = new RandomEventChoiceData
         {
             type                  = type,
@@ -934,16 +889,8 @@ public static class RandomEvents_Choice
                     {
                         var winner = EmployeeManager.Instance.GetEmployee(emp1?.id);
                         if (winner == null) return;
-                        int before = winner.satisfaction;
-                        winner.ChangeSatisfaction(10);
-                        InfoFeedUI.Instance?.ShowSatisfaction(winner, winner.satisfaction - before);
-                        float bonus = DevelopmentManager.Instance.GetLeaderBonusByRole(winner.role);
-                        float delta = Mathf.Max(1f, bonus * 0.1f);
-                        DevelopmentPanelUI.Instance.AddValues(
-                            winner.role == EmployeeRole.Planner    ?  delta : 0f,
-                            winner.role == EmployeeRole.Programmer ?  delta : 0f,
-                            winner.role == EmployeeRole.Artist     ?  delta : 0f,
-                            0f, 0f);
+                        EventBalance.ChangeSat(winner, 10);
+                        EventBalance.AddPartAbs(winner.role, FightDelta());
                     }
                 },
                 new RandomEventChoiceOption
@@ -952,16 +899,8 @@ public static class RandomEvents_Choice
                     {
                         var winner = EmployeeManager.Instance.GetEmployee(emp2?.id);
                         if (winner == null) return;
-                        int before = winner.satisfaction;
-                        winner.ChangeSatisfaction(10);
-                        InfoFeedUI.Instance?.ShowSatisfaction(winner, winner.satisfaction - before);
-                        float bonus = DevelopmentManager.Instance.GetLeaderBonusByRole(winner.role);
-                        float delta = Mathf.Max(1f, bonus * 0.1f);
-                        DevelopmentPanelUI.Instance.AddValues(
-                            winner.role == EmployeeRole.Planner    ?  delta : 0f,
-                            winner.role == EmployeeRole.Programmer ?  delta : 0f,
-                            winner.role == EmployeeRole.Artist     ?  delta : 0f,
-                            0f, 0f);
+                        EventBalance.ChangeSat(winner, 10);
+                        EventBalance.AddPartAbs(winner.role, FightDelta());
                     }
                 }
             }
@@ -1033,6 +972,7 @@ public static class RandomEvents_Choice
             evt.portraitId       = emp1.portraitId;
             evt.portraitId2      = emp2.portraitId;
             evt.targetEmployeeId = emp1.id;
+            evt.infoEmployeeIds  = new List<string> { emp1.id, emp2.id };
 
             string role1 = emp1.role switch {
                 EmployeeRole.Planner    => "기획",
@@ -1062,9 +1002,11 @@ public static class RandomEvents_Choice
                 .Replace("{직원2파트}", role2).Replace("{직원2이름}", emp2.employeeName);
 
             // 결과 팝업 — choice0(emp1 편들기): 1차=emp1(승자) 효과, 2차=emp2(패자) 효과. choice1은 반대.
+            string delta = Mathf.RoundToInt(FightDelta()).ToString("N0");
             string Sub(string t) => t
                 .Replace("{직원1파트}", role1).Replace("{직원1이름}", emp1.employeeName)
-                .Replace("{직원2파트}", role2).Replace("{직원2이름}", emp2.employeeName);
+                .Replace("{직원2파트}", role2).Replace("{직원2이름}", emp2.employeeName)
+                .Replace("{점수}", delta);
 
             evt.choices[0].resultMent1   = Sub(ment1_0Template);
             evt.choices[0].resultMent2   = Sub(ment2_0Template);
@@ -1089,16 +1031,8 @@ public static class RandomEvents_Choice
             {
                 var loser = EmployeeManager.Instance.GetEmployee(emp2?.id);
                 if (loser == null) return;
-                int before = loser.satisfaction;
-                loser.ChangeSatisfaction(-10);
-                InfoFeedUI.Instance?.ShowSatisfaction(loser, loser.satisfaction - before);
-                float b = DevelopmentManager.Instance.GetLeaderBonusByRole(loser.role);
-                float d = Mathf.Max(1f, b * 0.1f);
-                DevelopmentPanelUI.Instance.AddValues(
-                    loser.role == EmployeeRole.Planner    ? -d : 0f,
-                    loser.role == EmployeeRole.Programmer ? -d : 0f,
-                    loser.role == EmployeeRole.Artist     ? -d : 0f,
-                    0f, 0f);
+                EventBalance.ChangeSat(loser, -10);
+                EventBalance.AddPartAbs(loser.role, -FightDelta());
             };
 
             evt.choices[1].secondaryPortraitId   = emp1.portraitId;
@@ -1109,16 +1043,8 @@ public static class RandomEvents_Choice
             {
                 var loser = EmployeeManager.Instance.GetEmployee(emp1?.id);
                 if (loser == null) return;
-                int before = loser.satisfaction;
-                loser.ChangeSatisfaction(-10);
-                InfoFeedUI.Instance?.ShowSatisfaction(loser, loser.satisfaction - before);
-                float b = DevelopmentManager.Instance.GetLeaderBonusByRole(loser.role);
-                float d = Mathf.Max(1f, b * 0.1f);
-                DevelopmentPanelUI.Instance.AddValues(
-                    loser.role == EmployeeRole.Planner    ? -d : 0f,
-                    loser.role == EmployeeRole.Programmer ? -d : 0f,
-                    loser.role == EmployeeRole.Artist     ? -d : 0f,
-                    0f, 0f);
+                EventBalance.ChangeSat(loser, -10);
+                EventBalance.AddPartAbs(loser.role, -FightDelta());
             };
         };
 

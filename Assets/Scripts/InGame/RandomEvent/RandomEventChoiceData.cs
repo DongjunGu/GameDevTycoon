@@ -77,6 +77,10 @@ public class RandomEventChoiceData
     // 동적 세팅 (onSetup에서 채움)
     public string targetEmployeeId = "";
 
+    // 선택 전 질문 아래에 이름·파트·만족도를 보여줄 직원 (가이드 §4-3). null 이면 targetEmployeeId 1명 —
+    // 단, 비서가 보고하는 이벤트(portrait_secretary)는 targetEmployeeId 가 내부용일 수 있어 표시 안 함.
+    public List<string> infoEmployeeIds;
+
     public List<RandomEventChoiceOption> choices = new List<RandomEventChoiceOption>();
 
     // onSetup에서 true로 설정하면 이벤트 전체 스킵

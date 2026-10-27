@@ -20,7 +20,7 @@ public class RandomEventUI : MonoBehaviour
     [Header("Panel")]
     public GameObject eventPanel;
 
-    [Tooltip("사무실 레벨(GridManager.CurrentOfficeLevel)에 따라 바뀌는 배경 — Resources/Dialog/BG_Office_Lv{N}")]
+    [Tooltip("사무실 단계(StageManager.CurrentStage)에 따라 바뀌는 배경 — Resources/Dialog/BG_Office_Lv{N}")]
     public Image backgroundImage;
 
     [Header("Portrait / Dialog")]

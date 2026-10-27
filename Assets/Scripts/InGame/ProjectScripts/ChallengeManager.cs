@@ -259,6 +259,25 @@ public class ChallengeManager
         return (mu, sigma);
     }
 
+    // 랜덤이벤트 μ_part — 그 파트의 기대 최종 총점 (파트총점 도전과제와 같은 계산, EventBalance.PartMu)
+    public static float ExpectedPartTotal(LeaderType part) => CalcMuSigma(part, GetBestCandidate(part)).mu;
+
+    // 랜덤이벤트 직원 이탈 Q(EventBalance.EmployeeQ) — 그 직원이 자기 파트 기대 총점에서 차지하는 비율 (팀장 후보면 팀장 기여 포함)
+    public static float ContributionShare(EmployeeData emp)
+    {
+        if (emp == null || emp.isCEO) return 0f;
+        var part = EventBalance.ToPart(emp.role);
+        var leader = GetBestCandidate(part);
+        float mu = CalcMuSigma(part, leader).mu;
+        if (mu <= 0f) return 0f;
+        float c = KTick(emp.GetEffectiveMainStat()) * MuH;
+        if (emp == leader) c += K(GetStatForPart(emp, part)) * MulPot(emp.potential) * MuG[CBand(emp.enhancementLevel)];
+        return Mathf.Clamp01(c / mu);
+    }
+
+    // 랜덤이벤트 '의문의 투자 제안' 목표 — 파트총점 도전과제와 같은 μ + z·σ (팀장 후보 없으면 float.MaxValue)
+    public static float PartTotalTarget(LeaderType part) => CalcPartTotalTarget(part);
+
     // 팀장점수(95/99존) 도전과제 목표 = K×P×BASE_REF[단계]×c[성수구간,티어]×(1+f_target/100)
     static float CalcLeaderZoneTarget(LeaderType part, ChallengeKind kind)
     {

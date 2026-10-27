@@ -107,18 +107,18 @@ public static class RandomEvents_Condition
 
         var emp = employees[Random.Range(0, employees.Count)];
 
-        int stage = StageManager.Instance != null ? StageManager.Instance.CurrentStage : 1;
-        int n = stage <= 2 ? Random.Range(5, 16) : Random.Range(10, 21);
+        // 가이드 §5-5 — 만족도 −10, 개인 디버프 −½블록 (−20%, 기간 L ÷ 2)
+        int n = EventBalance.PersonalWeeks(0.5f);
 
         RandomEventConditionChartRow row = null;
         Chart?.TryGetValue("AnxietyInducing", out row);
 
         string sysMsg = !string.IsNullOrEmpty(row?.systemMessage)
             ? row.systemMessage.Replace("{직원이름}", emp.employeeName)
-            : $"{emp.employeeName} {{만족도}} -5";
+            : $"{emp.employeeName} {{만족도}} -10";
         string sysMsg2 = !string.IsNullOrEmpty(row?.systemMessage2)
             ? row.systemMessage2.Replace("{직원이름}", emp.employeeName).Replace("n주", $"{n}주")
-            : $"{emp.employeeName} {{능력치}} {n}주 동안 -10%";
+            : $"{emp.employeeName} {{능력치}} {n}주 동안 -20%";
 
         RandomEventUI.Instance.Show(
             row?.title ?? "불안감 조성",
@@ -129,11 +129,11 @@ public static class RandomEvents_Condition
             () =>
             {
                 int before = emp.satisfaction;
-                emp.ChangeSatisfaction(-5);
-                emp.ApplyStatBuff(n, -10);
+                emp.ChangeSatisfaction(-10);
+                emp.ApplyStatDebuff(n); // 예전 ApplyStatBuff(n, -10) 은 음수 % 를 무시해 효과가 없었음
                 EmployeeManager.Instance.UpdateEmployee(emp);
                 InfoFeedUI.Instance?.ShowSatisfaction(emp, emp.satisfaction - before);
-                InfoFeedUI.Instance?.ShowStatBuff(emp, n, 10, false);
+                InfoFeedUI.Instance?.ShowStatBuff(emp, n, EventBalance.BuffPercent, false);
                 GameTimeManager.Instance?.ForceStartTime();
                 GameTimeManager.Instance?.SaveGameTime();
             },
@@ -176,8 +176,8 @@ public static class RandomEvents_Condition
         var existingEmp = EmployeeManager.Instance?.GetEmployee(existingEmpId);
         if (newEmp == null || existingEmp == null) return;
 
-        int stage = StageManager.Instance != null ? StageManager.Instance.CurrentStage : 1;
-        int n = stage <= 2 ? Random.Range(5, 16) : Random.Range(10, 21);
+        // 가이드 §5-5 — 두 직원 만족도 +10, 각각 개인 버프 +½블록 (+20%, 기간 L ÷ 2)
+        int n = EventBalance.PersonalWeeks(0.5f);
 
         RandomEventConditionChartRow row = null;
         Chart?.TryGetValue("OfficeRomance", out row);
@@ -195,7 +195,7 @@ public static class RandomEvents_Condition
                 .Replace("{이름1}", existingEmp.employeeName)
                 .Replace("{이름2}", newEmp.employeeName)
                 .Replace("n주", $"{n}주")
-            : $"{n}주간 {{능력치}} +10%";
+            : $"{n}주간 {{능력치}} +20%";
 
         mgr.SetActiveCouple(newEmpId, existingEmpId);
 
@@ -209,8 +209,8 @@ public static class RandomEvents_Condition
             {
                 existingEmp.ChangeSatisfaction(10);
                 newEmp.ChangeSatisfaction(10);
-                existingEmp.romanceBuffWeeksLeft = n;
-                newEmp.romanceBuffWeeksLeft      = n;
+                existingEmp.ApplyStatBuff(n, EventBalance.BuffPercent);
+                newEmp.ApplyStatBuff(n, EventBalance.BuffPercent);
                 EmployeeManager.Instance.UpdateEmployee(existingEmp);
                 EmployeeManager.Instance.UpdateEmployee(newEmp);
                 GameTimeManager.Instance?.SaveGameTime();
@@ -225,6 +225,7 @@ public static class RandomEvents_Condition
     {
         var partner = EmployeeManager.Instance?.GetEmployee(partnerEmpId);
         if (partner == null) return;
+        if (Random.value >= 0.5f) return; // 가이드 §5-5 — 50% 확률로만 동반 퇴사
 
         RandomEventConditionChartRow row = null;
         Chart?.TryGetValue("CoupleResignation", out row);
@@ -286,8 +287,7 @@ public static class RandomEvents_Condition
     // sys: "{직원이름} 능력치 n주간 -20%"  (1·2단계 5~15주 / 3·4단계 10~20주)
     public static void TriggerLeaderBurnoutEvent(EmployeeData emp, int consecutiveCount, System.Action onDone)
     {
-        int stage = StageManager.Instance != null ? StageManager.Instance.CurrentStage : 1;
-        int n = stage <= 2 ? Random.Range(5, 16) : Random.Range(10, 21);
+        int n = EventBalance.PersonalWeeks(); // 가이드 §5-5 — 개인 디버프 −1블록 (−20%, 기간 L)
 
         RandomEventConditionChartRow row = null;
         Chart?.TryGetValue("LeaderBurnout", out row);
@@ -326,7 +326,7 @@ public static class RandomEvents_Condition
         string desc   = row?.descriptions?.Length > 0 ? row.descriptions[0] : "";
         string sysMsg = (row?.systemMessage ?? "").Replace("{직원이름}", emp.employeeName);
 
-        emp.ChangeSatisfaction(-15);
+        emp.ChangeSatisfaction(-25); // 가이드 §5-5 — 만족도 −25
         EmployeeManager.Instance.UpdateEmployee(emp);
 
         RandomEventUI.Instance.Show(

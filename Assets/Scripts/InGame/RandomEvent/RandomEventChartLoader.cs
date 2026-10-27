@@ -21,6 +21,7 @@ public class RandomEventChartRow
 {
     public string title;
     public string description;
+    public string description2; // 대사 분기용 (신년 운세 나쁜 결과)
     public string systemMessage;
     public float  weight;
     public int    categoryMin;
@@ -114,6 +115,7 @@ public static class RandomEventChartLoader
             {
                 title                 = S(row, "title"),
                 description           = S(row, "description"),
+                description2          = S(row, "description2"),
                 systemMessage         = S(row, "systemMessage"),
                 weight                = F(row, "weight"),
                 categoryMin           = N(row, "categoryMin"),

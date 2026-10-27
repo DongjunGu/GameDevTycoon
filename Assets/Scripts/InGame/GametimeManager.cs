@@ -166,6 +166,10 @@ public class GameTimeManager : MonoBehaviour
                         SafeInt(row, "hiringPenalty", 0),
                         SafeInt(row, "hiringPenaltyEndYear", -1)
                     );
+                    RandomEventManager.Instance?.LoadForcedLeaderAim(
+                        SafeInt(row, "forcedLeaderAim", 0),
+                        SafeInt(row, "forcedLeaderAimLeft", 0)
+                    );
                     RandomEventManager.Instance?.LoadRomanceState(
                         SafeString(row, "activeCoupleIds", ""),
                         SafeString(row, "pendingRomance", "")
@@ -354,6 +358,8 @@ public class GameTimeManager : MonoBehaviour
         param.Add("exitCountYear",        EmployeeManager.Instance?.ExitCountYear        ?? 0);
         param.Add("hiringPenalty",        RandomEventManager.Instance?.HiringPenalty        ?? 0);
         param.Add("hiringPenaltyEndYear", RandomEventManager.Instance?.HiringPenaltyEndYear ?? -1);
+        param.Add("forcedLeaderAim",      (int)(RandomEventManager.Instance?.ForcedLeaderAim ?? LeaderScoreAim.Low));
+        param.Add("forcedLeaderAimLeft",  RandomEventManager.Instance?.ForcedLeaderAimLeft  ?? 0);
         param.Add("hiringPendingTier",    EmployeeManager.Instance?.HiringPendingTier   ?? -1);
         param.Add("hiringPendingWeeks",   EmployeeManager.Instance?.HiringPendingWeeks  ?? 0);
         param.Add("hiringListA",          EmployeeManager.Instance?.HiringListAJson      ?? "");

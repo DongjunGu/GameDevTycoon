@@ -121,12 +121,8 @@ public static class RandomEvents_Condition_Choice
             usedDescB[0] = !string.IsNullOrEmpty(descB) && Random.value >= 0.5f;
             evt.description = usedDescB[0] ? descB : descA;
 
-            delayWeeks[0] = ProjectSetupUI.SelectedScale switch
-            {
-                ProjectScale.Small  => 1,
-                ProjectScale.Medium => 2,
-                _                   => 3
-            };
+            // 가이드 ㉕ — 30% 지연은 사무실 단계 기준 1 / 1 / 2 / 2주
+            delayWeeks[0] = EventBalance.ByStage(1, 1, 2, 2);
 
             bool isDeveloping = DevelopmentManager.Instance?.CurrentStage == ProjectStage.Developing;
 
@@ -146,20 +142,18 @@ public static class RandomEvents_Condition_Choice
                     c1.resultPopupType = 3;
                     c1.resultMent1     = spillMent1Tpl;
                     c1.resultMent2     = spillMent2Tpl.Replace("{주수}", delayWeeks[0].ToString());
-                    DevelopmentManager.Instance?.ExtendDevelopmentDuration(
-                        delayWeeks[0] * GetSecondsPerWeek(),
-                        delayWeeks[0] * 2f * GetSecondsPerWeek()); // 연장 N주 / 감속 2N주
-                    InfoFeedUI.Instance?.ShowDevelopmentDelay(targetEmp, delayWeeks[0]);
+                    EventBalance.Delay(targetEmp, delayWeeks[0]); // 연장 N주 / 감속 2N주
                 }
                 else
                 {
+                    int buffWeeks = EventBalance.PersonalWeeks(0.5f); // 개인 버프 +½블록 (+20%, 기간 L ÷ 2)
+
                     c1.reply1          = usedDescB[0] ? okReplyB : okReplyA;
                     c1.resultPopupType = 1;
                     c1.resultMent1     = okMent1Tpl;
-                    c1.resultMent2     = okMent2Tpl.Replace("{직원이름}", targetEmp.employeeName);
-
-                    int buffWeeks = RandomEvents_Choice.RandomStatBuffWeeksByStage();
-                    targetEmp.ApplyStatBuff(buffWeeks, 10);
+                    c1.resultMent2     = okMent2Tpl.Replace("{직원이름}", targetEmp.employeeName)
+                                                   .Replace("{주수}", buffWeeks.ToString());
+                    targetEmp.ApplyStatBuff(buffWeeks, EventBalance.BuffPercent);
 
                     // 커피 아이템 본연의 효과(만족도, Item_Chart "coffee" effectValue) 적용 — 이전엔 이벤트 전용
                     // 능력치 버프만 적용되고 아이템 자체의 만족도 효과가 누락돼 있었음.
@@ -168,7 +162,7 @@ public static class RandomEvents_Condition_Choice
                     targetEmp.ChangeSatisfaction(coffeeSat);
 
                     EmployeeManager.Instance.UpdateEmployee(targetEmp);
-                    InfoFeedUI.Instance?.ShowStatBuff(targetEmp, buffWeeks, 10, true);
+                    InfoFeedUI.Instance?.ShowStatBuff(targetEmp, buffWeeks, EventBalance.BuffPercent, true);
                     InfoFeedUI.Instance?.ShowSatisfaction(targetEmp, targetEmp.satisfaction - coffeeSatBefore);
                 }
                 ItemPanelUI.Instance?.Refresh();
@@ -221,8 +215,8 @@ public static class RandomEvents_Condition_Choice
                     {
                         if (targetEmp == null) return;
                         ItemManager.Instance.UseItemDirect("energyDrink");
-                        int buffWeeks = RandomEvents_Choice.RandomStatBuffWeeksByStage();
-                        targetEmp.ApplyStatBuff(buffWeeks, 10);
+                        int buffWeeks = EventBalance.PersonalWeeks(0.5f); // 개인 버프 +½블록 (+20%, 기간 L ÷ 2)
+                        targetEmp.ApplyStatBuff(buffWeeks, EventBalance.BuffPercent);
 
                         // 에너지드링크 아이템 본연의 효과(만족도, Item_Chart "energyDrink" effectValue) 적용
                         // — CoffeeRequest 와 동일한 누락(능력치 버프만 적용되고 아이템 자체 효과 누락)을 여기도 수정.
@@ -231,7 +225,7 @@ public static class RandomEvents_Condition_Choice
                         targetEmp.ChangeSatisfaction(drinkSat);
 
                         EmployeeManager.Instance.UpdateEmployee(targetEmp);
-                        InfoFeedUI.Instance?.ShowStatBuff(targetEmp, buffWeeks, 10, true);
+                        InfoFeedUI.Instance?.ShowStatBuff(targetEmp, buffWeeks, EventBalance.BuffPercent, true);
                         InfoFeedUI.Instance?.ShowSatisfaction(targetEmp, targetEmp.satisfaction - drinkSatBefore);
                         ItemPanelUI.Instance?.Refresh();
                     }
@@ -288,7 +282,8 @@ public static class RandomEvents_Condition_Choice
             evt.description = (!string.IsNullOrEmpty(descB) && Random.value >= 0.5f) ? descB : descA;
 
             if (!string.IsNullOrEmpty(c1Ment2Tpl))
-                evt.choices[0].resultMent2 = c1Ment2Tpl.Replace("{직원이름}", targetEmp.employeeName);
+                evt.choices[0].resultMent2 = c1Ment2Tpl.Replace("{직원이름}", targetEmp.employeeName)
+                                                       .Replace("{주수}", EventBalance.PersonalWeeks(0.5f).ToString());
             if (!string.IsNullOrEmpty(c2Ment2Tpl))
                 evt.choices[1].resultMent2 = c2Ment2Tpl.Replace("{직원이름}", targetEmp.employeeName);
         };
@@ -310,36 +305,26 @@ public static class RandomEvents_Condition_Choice
         var mgr = RandomEventManager.Instance;
         if (mgr == null) { onComplete?.Invoke(); return; }
 
-        // 과거 프로젝트가 없으면 baseStat 기준이 없어 임계값(=baseStat+5)이 의미 없음 → 이벤트 자체 스킵
-        var history = CompletedProjectManager.Instance?.completedProjects;
-        if (history == null || history.Count == 0)
-        {
-            Debug.Log("[투자] 과거 프로젝트 없음 → 투자 이벤트 스킵");
-            onComplete?.Invoke();
-            return;
-        }
+        // 튜토리얼 런(첫 프로젝트 포함)엔 발동 안 함
+        if (!TutorialController.IsFullyDone()) { onComplete?.Invoke(); return; }
 
-        var statDefs = new (string key, string name)[]
+        var statDefs = new (string key, string name, LeaderType part)[]
         {
-            ("planning", "기획"),
-            ("develop",  "개발"),
-            ("art",      "아트"),
+            ("planning", "기획", LeaderType.Planner),
+            ("develop",  "개발", LeaderType.Programmer),
+            ("art",      "아트", LeaderType.Artist),
         };
         int idx = Random.Range(0, statDefs.Length);
-        mgr.InvestmentStat     = statDefs[idx].key;
-        mgr.InvestmentStatName = statDefs[idx].name;
 
-        var last = history[history.Count - 1];
-        float baseStat = mgr.InvestmentStat switch
-        {
-            "planning" => last.planning,
-            "develop"  => last.develop,
-            "art"      => last.art,
-            _ => 0f
-        };
-        mgr.InvestmentThreshold = baseStat + 5f;
-        mgr.InvestmentReward = Mathf.Max(100,
-            Mathf.RoundToInt(EmployeeManager.Instance.GetTotalSalary() * 0.1f));
+        // 목표 = 파트총점 도전과제 공식 μ_part + z·σ (엑셀 지정). 그 파트 직원이 없으면 스킵
+        float target = ChallengeManager.PartTotalTarget(statDefs[idx].part);
+        if (target >= float.MaxValue) { onComplete?.Invoke(); return; }
+
+        mgr.InvestmentStat      = statDefs[idx].key;
+        mgr.InvestmentStatName  = statDefs[idx].name;
+        mgr.InvestmentThreshold = Mathf.Ceil(target);
+        // 수락 즉시 +R × 5% (위약금 −R × 10% = 이 값 × 2, CheckInvestmentResult)
+        mgr.InvestmentReward    = EventBalance.Money(5f);
 
         // UI 표시 전 저장 — 재시작 시 RandomEventChoiceUI 복원용
         var dm = DevelopmentManager.Instance;
@@ -379,6 +364,7 @@ public static class RandomEvents_Condition_Choice
                     onChoose = () =>
                     {
                         mgr.InvestmentAccepted = true;
+                        MoneyManager.Instance.AddGold(mgr.InvestmentReward);
                         InvestmentProgressUI.Instance?.Show(mgr.InvestmentStatName, mgr.InvestmentThreshold);
                     }
                 },
@@ -422,18 +408,10 @@ public static class RandomEvents_Condition_Choice
 
             evt.choices[0].reply1      = c1Reply1Tpl.Replace("{파트}", partName).Replace("{임계값}", threshold);
             evt.choices[0].resultMent1 = c1Ment1Tpl.Replace("{파트}", partName).Replace("{임계값}", threshold);
-            evt.choices[0].resultMent2 = c1Ment2Tpl;
+            evt.choices[0].resultMent2 = c1Ment2Tpl.Replace("{보상}", mgr.InvestmentReward.ToString("N0"));
         };
 
         evt.onSetup.Invoke();
         RandomEventChoiceUI.Instance?.Show(evt);
     }
-
-    static float GetSecondsPerWeek() =>
-        ProjectSetupUI.SelectedScale switch
-        {
-            ProjectScale.Small  => 80f / 16f, // 5.0초/주
-            ProjectScale.Medium => 80f / 24f, // 3.33초/주
-            _                   => 80f / 32f  // 2.5초/주 (Large)
-        };
 }

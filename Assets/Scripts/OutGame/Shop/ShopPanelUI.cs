@@ -65,13 +65,23 @@ public class ShopPanelUI : MonoBehaviour
         WarmUpGacha();
     }
 
-    // 펑션 콜드 스타트(첫 호출 ~6초)를 상점 여는 순간 미리 소모 — 결과는 무시
-    static void WarmUpGacha()
+    // 펑션 콜드 스타트(첫 호출 ~6초)를 미리 소모 — 로그인 직후(BackendManager) + 상점 열 때. 결과는 무시
+    static bool _pingInFlight;
+    static System.Action _afterPing; // ping 중 들어온 뽑기 — 동시 호출은 새 인스턴스 콜드 스타트를 또 유발하므로 ping 끝난 뒤 보냄
+
+    public static void WarmUpGacha()
     {
-        if (!Backend.IsLogin) return;
+        if (!Backend.IsLogin || _pingInFlight) return;
+        _pingInFlight = true;
         var param = new Param();
         param.Add("kind", "ping");
-        Backend.BFunc.InvokeFunction("gacha", param, _ => { });
+        Backend.BFunc.InvokeFunction("gacha", param, _ =>
+        {
+            _pingInFlight = false;
+            var next = _afterPing;
+            _afterPing = null;
+            next?.Invoke();
+        });
     }
 
     void WireCategories()
@@ -173,12 +183,14 @@ public class ShopPanelUI : MonoBehaviour
         param.Add("kind", kind);
         param.Add("special", special);
         param.Add("count", count);
-        Backend.BFunc.InvokeFunction("gacha", param, bro =>
+        void Send() => Backend.BFunc.InvokeFunction("gacha", param, bro =>
         {
             _busy = false;
             if (this == null) return;
             OnGachaResult(kind, special, count, bro, (Time.realtimeSinceStartup - sentAt) * 1000f);
         });
+        if (_pingInFlight) _afterPing = Send; // _busy 라 대기 중 뽑기는 최대 1개
+        else Send();
     }
 
     void OnGachaResult(string kind, bool special, int count, BackendReturnObject bro, float elapsedMs)

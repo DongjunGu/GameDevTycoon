@@ -13,7 +13,7 @@ public class RandomEventChoiceUI : MonoBehaviour
     [Header("Panel")]
     public GameObject eventPanel;
 
-    [Tooltip("사무실 레벨(GridManager.CurrentOfficeLevel)에 따라 바뀌는 배경 — Resources/Dialog/BG_Office_Lv{N}")]
+    [Tooltip("사무실 단계(StageManager.CurrentStage)에 따라 바뀌는 배경 — Resources/Dialog/BG_Office_Lv{N}")]
     public Image backgroundImage;
 
     [Header("UI")]
@@ -274,12 +274,32 @@ public class RandomEventChoiceUI : MonoBehaviour
         }
     }
 
+    // 가이드 §4-3 — 선택 전 대상 직원의 이름·파트·만족도를 질문 아래 한 줄로 표시 (팀장 여부는 정의 확정 후 추가)
+    static string AppendTargetInfo(string question, RandomEventChoiceData data)
+    {
+        var ids = data.infoEmployeeIds;
+        if (ids == null)
+        {
+            if (string.IsNullOrEmpty(data.targetEmployeeId) || data.portraitId == "portrait_secretary") return question;
+            ids = new List<string> { data.targetEmployeeId };
+        }
+        var parts = new List<string>();
+        foreach (var id in ids)
+        {
+            var e = EmployeeManager.Instance?.GetEmployee(id);
+            if (e != null) parts.Add($"{e.employeeName} · {EventBalance.PartName(e.role)} · 만족도 {e.satisfaction}");
+        }
+        if (parts.Count == 0) return question;
+        string info = $"<size=75%><color=#C5776A>{string.Join("  /  ", parts)}</color></size>";
+        return string.IsNullOrEmpty(question) ? info : question + "\n" + info;
+    }
+
     // 질문(question) 텍스트를 미리 채워두되(타이핑 없음) 오브젝트는 비활성 유지 — 선택지가 실제로
     // 뜨는 시점(SpawnChoiceButtons)에만 활성화한다. 선택지가 있으면 클릭 대기 상태로 전환하고
     // 없으면(정보성 이벤트 — ChoiceButtonContainer 미사용) 확인 버튼을 바로 노출해 닫을 수 있게 함.
     void ShowQuestionThenRevealChoices(RandomEventChoiceData data)
     {
-        if (questionText != null) questionText.text = data.question ?? "";
+        if (questionText != null) questionText.text = AppendTargetInfo(data.question ?? "", data);
 
         if (data.choices != null && data.choices.Count > 0)
         {
